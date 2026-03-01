@@ -31,19 +31,15 @@ void HandleMidiMessage(MidiEvent m)
         case NoteOn:
         {
             NoteOnEvent p = m.AsNoteOn();
-            char        buff[512];
-            sprintf(buff,
-                    "Note Received:\t%d\t%d\t%d\r\n",
-                    m.channel,
-                    m.data[0],
-                    m.data[1]);
-            hw.seed.usb_handle.TransmitInternal((uint8_t *)buff, strlen(buff));
-            // This is to avoid Max/MSP Note outs for now..
-            if(m.data[1] != 0)
+            if(m.data[1] != 0) // NoteOn with velocity > 0 = key press
             {
-                p = m.AsNoteOn();
+                hw.seed.PrintLine("Note ON: Channel %d, Note %d, Velocity %d", m.channel, p.note, p.velocity);
                 osc.SetFreq(mtof(p.note));
                 osc.SetAmp((p.velocity / 127.0f));
+            }
+            else // NoteOn with velocity 0 = key release (per MIDI spec)
+            {
+                hw.seed.PrintLine("Note OFF: Channel %d, Note %d", m.channel, p.note);
             }
         }
         break;
@@ -75,6 +71,7 @@ int main(void)
     // Init
     float samplerate;
     hw.Init();
+    hw.seed.StartLog(true); // Wait for serial connection before continuing
     hw.SetAudioBlockSize(4);
     hw.seed.usb_handle.Init(UsbHandle::FS_INTERNAL);
     System::Delay(250);

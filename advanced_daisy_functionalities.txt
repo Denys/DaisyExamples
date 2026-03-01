@@ -1,0 +1,25 @@
+
+Advanced Daisy functionalities
+
+____________________  Fourier Transform ____________________
+
+https://github.com/amcerbu/DaisySTFT
+https://github.com/Farmer2K5/daisy-fast-stft
+https://arm-software.github.io/CMSIS-DSP/main/group__groupTransforms.html
+https://github.com/ARM-software/CMSIS-DSP
+
+https://fedevel.com/blog/stm32-fast-fourier-transform-cmsis-dsp-fft-phils-lab-111
+
+https://klangstrom.dennisppaul.de/2021/08/30/FFT-with-CMSIS-DSP-Library.html
+
+https://www.pschatzmann.ch/home/2024/07/25/the-power-of-stm32h7-microcontrollers/
+____________________________________________________________
+
+____________________  Neural Networks 	____________________
+
+https://forum.electro-smith.com/t/neural-seed-a-neural-net-powered-guitar-pedal-for-emulating-real-amps-effects/3681
+https://github.com/GuitarML/NeuralSeed
+https://forum.pedalpcb.com/threads/neural-seed-running-neural-networks-on-daisy-seed-for-amp-pedal-emulation.16668/
+https://medium.com/data-science/mini-neural-nets-for-guitar-effects-with-microcontrollers-ea9cdad2a29c
+
+____________________  Machine Learning 	____________________

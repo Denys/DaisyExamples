@@ -181,6 +181,13 @@ void HandleMidiMessage(MidiEvent m)
         case NoteOn:
         {
             NoteOnEvent p = m.AsNoteOn();
+            // Debug output
+            hw.display.Fill(false);
+            char debugStr[32];
+            sprintf(debugStr, "Note: %d Vel: %d", (int)p.note, (int)p.velocity);
+            hw.display.WriteString(debugStr, Font_7x10, true);
+            hw.display.Update();
+            
             // Note Off can come in as Note On w/ 0 Velocity
             if(p.velocity == 0.f)
             {
