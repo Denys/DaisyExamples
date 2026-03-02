@@ -38,6 +38,96 @@ Included as well are:
 - Both libraries as git submodules
 - Scripts for rebuildling the libraries as well as all examples.
 - cube/ folder with .ioc files and example projects that use STM32CubeMX generated code via the STM32 HAL.
+- `MyProjects/` — custom user projects for Daisy Field, Pod, and Seed.
+
+---
+
+## Repository Structure
+
+```mermaid
+graph TD
+    ROOT["DaisyExamples/"]
+
+    subgraph Libraries
+        LIBDAISY["libDaisy/\nHardware abstraction layer"]
+        DAISYSP["DaisySP/\nDSP modules"]
+    end
+
+    subgraph Platforms
+        SEED["seed/\nDaisy Seed examples"]
+        POD["pod/\nDaisy Pod examples"]
+        FIELD["field/\nDaisy Field examples"]
+        PATCH["patch/\nDaisy Patch examples"]
+    end
+
+    subgraph Custom
+        MYPROJECTS["MyProjects/\n_projects/ · _concepts/\nDAISY_QAE/ · noderr/"]
+    end
+
+    ROOT --> Libraries
+    ROOT --> Platforms
+    ROOT --> CUSTOM
+
+    SEED & POD & FIELD & PATCH --> LIBDAISY
+    SEED & POD & FIELD & PATCH --> DAISYSP
+    MYPROJECTS --> LIBDAISY
+    MYPROJECTS --> DAISYSP
+```
+
+---
+
+## Build & Flash Workflow
+
+```mermaid
+flowchart LR
+    subgraph Edit
+        SRC["Edit .cpp source"]
+        MKF["Configure Makefile\n(board, LGPL flags)"]
+    end
+
+    subgraph Build
+        LIBS["Build libraries\n./ci/build_libs.sh"]
+        COMPILE["Compile project\nmake"]
+        ELF["build/*.elf\nbuild/*.bin"]
+    end
+
+    subgraph Flash
+        STLINK["ST-Link / SWD\nmake program"]
+        DFU["USB DFU\nmake program-dfu"]
+        WEB["Daisy Web Programmer\n(browser)"]
+    end
+
+    HW["Daisy Hardware\n(Seed / Pod / Field)"]
+
+    SRC --> COMPILE
+    MKF --> COMPILE
+    LIBS --> COMPILE
+    COMPILE --> ELF
+    ELF --> STLINK & DFU & WEB
+    STLINK & DFU & WEB --> HW
+```
+
+---
+
+## DSP Architecture (libDaisy + DaisySP)
+
+```mermaid
+block-beta
+    columns 3
+
+    hw["libDaisy\nHardware I/O"]:1
+    dsp["DaisySP\nDSP Modules"]:1
+    out["Audio Out\n(codec)"]:1
+
+    midi["MIDI / CV\nInput"]:1
+    osc["Oscillators\nFilters · Effects"]:1
+    adc["Knobs / Gates\nADC / GPIO"]:1
+
+    hw --> dsp
+    midi --> dsp
+    adc --> dsp
+    dsp --> out
+```
 
 ## Getting Started
 
@@ -210,3 +300,88 @@ To check style before the automated style fixing happens, run:
 `./ci/local_style_check.sh`
 
 **Note: this requires clang-format to be installed, and accessible from `$PATH`. Automated style checking and fixing is done with clang-format-10**
+
+---
+
+## MyProjects
+
+`MyProjects/_projects/` contains custom patches built on top of libDaisy + DaisySP.
+
+### Field_AdditiveSynth — 8-voice polyphonic additive synthesizer
+
+8 voices, each running `HarmonicOscillator<16>` + `Adsr`. Global LFO, Chorus, and ReverbSc.
+Dual knob pages (SW1/SW2) with pickup/catch. A1-A8 spectral presets, B1-B8 LFO/performance.
+
+**Signal flow:**
+
+```mermaid
+flowchart LR
+    subgraph Input
+        MIDI["MIDI TRS\nhw.midi"]
+    end
+
+    subgraph PageA["Page A — SW1"]
+        K1A["K1 Rolloff\n0–2"]
+        K2A["K2 Even lvl"]
+        K3A["K3 Odd lvl"]
+        K47A["K4-K7 ADSR"]
+        K8A["K8 Reverb Mix"]
+    end
+
+    subgraph PageB["Page B — SW2"]
+        K1B["K1 LFO Rate\n0.1–20 Hz"]
+        K2B["K2 LFO Depth"]
+        K3B["K3 LFO Target\npitch / amp"]
+        K47B["K4-K7 Chorus"]
+        K8B["K8 Master Vol"]
+    end
+
+    subgraph Keys
+        A18["A1-A8\nSpectral presets"]
+        B14["B1-B4\nLFO waveform"]
+        B58["B5-B8\nLFO sync · bypass · sustain"]
+    end
+
+    subgraph Voices["8 Voices (last-note steal)"]
+        V1["Voice 1\nHarmOsc&lt;16&gt; + ADSR"]
+        V2["Voice 2\nHarmOsc&lt;16&gt; + ADSR"]
+        Vn["Voice 3–8\n..."]
+    end
+
+    subgraph GlobalDSP["Global DSP"]
+        AMP["Amp Calculator\nrolloff · even · odd"]
+        MIX["Voice Mix ÷8"]
+        LFO["LFO\ntutto vibrato / tremolo"]
+        CHO["Chorus\nstereo"]
+        REV["ReverbSc\nstereo LGPL"]
+    end
+
+    OUT["Audio L+R"]
+    OLED["OLED\nspectrum + page + zoom"]
+
+    MIDI -->|NoteOn/Off| V1 & V2 & Vn
+    K1A & K2A & K3A --> AMP
+    A18 --> AMP
+    AMP -->|amps × 16| V1 & V2 & Vn
+    K47A --> V1 & V2 & Vn
+    V1 & V2 & Vn --> MIX
+    K1B & K2B & K3B --> LFO
+    B14 --> LFO
+    LFO -->|pitch mod| V1 & V2 & Vn
+    LFO -->|amp mod| MIX
+    MIX --> CHO
+    K47B --> CHO
+    CHO --> REV
+    K8A --> REV
+    REV --> OUT
+    K8B --> OUT
+    K1A & K47B -.->|zoom| OLED
+```
+
+**Build:**
+
+```sh
+cd MyProjects/_projects/Field_AdditiveSynth
+make
+make program
+```
