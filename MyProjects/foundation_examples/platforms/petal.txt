@@ -1,0 +1,2049 @@
+CONTENTS
+1. CombFilter
+2. Distortion
+3. FilterBank
+4. GeneralFunctionTest
+5. Looper
+6. MultiDelay
+7. MultiEffect
+8. Verb
+9. chorus
+10. flanger
+11. phaser
+12. tremolo
+
+# Makefile
+
+# Project Name
+TARGET = <PROJECT_NAME>
+
+# Sources
+CPP_SOURCES = <PROJECT_NAME>.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../../libDaisy/
+DAISYSP_DIR = ../../../DaisySP/
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+1. CombFilter
+
+__CombFilter README.md__
+## Description
+Simple comb filter. Built in lfo with amplitude and frequency.
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 1 | Lfo Frequency | .1 Hz to 20 Hz |
+| Knob 2 | Lfo Amplitude | 0 to 10 Hz bipolar |
+| Knob 3 | Comb Frequency | .01 to  20 Hz |
+| Knob 4 | Comb Revtime |  |
+| Knob 5 | Dry/Wet |  |
+| Footswitch 1 | Bypass | Led On = Effect On |
+| In 1 | Comb Filter In | |
+| Out 1 2 | Comb Filter Out | |
+
+__CombFilter.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal petal;
+Comb       comb;
+Oscillator lfo;
+CrossFade  fader;
+
+bool  bypassOn;
+float buf[9600];
+
+Parameter lfoFreqParam, lfoAmpParam;
+Parameter combFreqParam, combRevParam;
+Parameter faderPosParam;
+
+float targetCombFreq, combFreq;
+
+void UpdateControls();
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    UpdateControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        fonepole(combFreq, targetCombFreq, .0001f);
+        float f = combFreq + lfo.Process() + 50.f;
+        comb.SetFreq(f);
+
+        float inf     = in[0][i];
+        float process = comb.Process(in[0][i]);
+        out[0][i] = out[1][i] = fader.Process(inf, process);
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    petal.Init();
+    petal.SetAudioBlockSize(4);
+    samplerate = petal.AudioSampleRate();
+
+    lfoFreqParam.Init(petal.knob[0], 0, 2, Parameter::LINEAR);
+    lfoAmpParam.Init(petal.knob[1], 0, 50, Parameter::LINEAR);
+    combFreqParam.Init(petal.knob[2], 25, 300, Parameter::LOGARITHMIC);
+    combRevParam.Init(petal.knob[3], 0, 1, Parameter::LINEAR);
+    faderPosParam.Init(petal.knob[4], 0, 1, Parameter::LINEAR);
+
+    lfo.Init(samplerate);
+    lfo.SetAmp(1);
+    lfo.SetWaveform(Oscillator::WAVE_SIN);
+
+    for(int i = 0; i < 9600; i++)
+    {
+        buf[i] = 0.0f;
+    }
+
+    // initialize Comb object
+    comb.Init(samplerate, buf, 9600);
+
+    fader.Init();
+
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+
+    int i = 0;
+    while(1)
+    {
+        petal.ClearLeds();
+
+        petal.SetFootswitchLed((DaisyPetal::FootswitchLed)0, !bypassOn);
+
+        petal.SetRingLed((DaisyPetal::RingLed)i, 0, 1, 1);
+        i++;
+        i %= 8;
+
+        petal.UpdateLeds();
+        System::Delay(60);
+    }
+}
+
+
+void UpdateControls()
+{
+    petal.ProcessDigitalControls();
+
+    //knobs
+    lfo.SetFreq(lfoFreqParam.Process());
+    lfo.SetAmp(lfoAmpParam.Process());
+
+    targetCombFreq = combFreqParam.Process();
+
+    comb.SetRevTime(combRevParam.Process());
+
+    fader.SetPos(faderPosParam.Process());
+    if(bypassOn)
+    {
+        fader.SetPos(0);
+    }
+
+    //bypass switch
+    if(petal.switches[0].RisingEdge())
+    {
+        bypassOn = !bypassOn;
+    }
+}
+
+________________________________________________________________________________
+
+2. Distortion
+
+__Distortion README.md__
+# Distortion
+
+## Author
+
+Ben Sergentanis
+
+## Description
+Distorts incoming signal. There are two stages, a soft clip and a hard clip. Turn on one or both.  
+Signal path is: (pregain) -> (soft clip) -> (gain) -> (hard clip) -> (output)  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/Distortion)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 3 | Pregain| Give the signal a small boost |
+| Knob 4 | Gain | Give the signal a BIG boost | 
+| Knob 5 | Dry/wet Control | |
+| Footswitch 1 | Turn soft distortion on/off | |
+| Footswitch 2 | Turn hard distortion on/off | |
+| Leds | If the LED is on, that distortion stage is on | |
+| In 1 -2  | Stereo Distortion In | |
+| Out 1 - 2 | Stereo Distortion Out | |
+
+__Distortion.cpp__
+#include "daisysp.h"
+#include "daisy_petal.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPetal petal;
+
+float hardClip(float in)
+{
+    in = in > 1.f ? 1.f : in;
+    in = in < -1.f ? -1.f : in;
+    return in;
+}
+
+float softClip(float in)
+{
+    if(in > 0)
+        return 1 - expf(-in);
+    return -1 + expf(in);
+}
+
+bool        bypassHard, bypassSoft;
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    petal.ProcessAnalogControls();
+    petal.ProcessDigitalControls();
+
+    float Pregain = petal.knob[2].Process() * 10 + 1.2;
+    float Gain    = petal.knob[3].Process() * 100 + 1.2;
+    float drywet  = petal.knob[4].Process();
+
+    bypassSoft = petal.switches[0].RisingEdge() ? !bypassSoft : bypassSoft;
+    bypassHard = petal.switches[1].RisingEdge() ? !bypassHard : bypassHard;
+
+    for(size_t i = 0; i < size; i++)
+    {
+        for(int chn = 0; chn < 2; chn++)
+        {
+            float input = in[chn][i] * Pregain;
+            float wet   = input;
+
+            if(!bypassSoft || !bypassHard)
+            {
+                wet *= Gain;
+            }
+
+            if(!bypassSoft)
+            {
+                wet = softClip(wet);
+            }
+
+            if(!bypassHard)
+            {
+                wet = hardClip(wet);
+            }
+
+            out[chn][i] = wet * drywet + input * (1 - drywet);
+        }
+    }
+}
+
+int main(void)
+{
+    petal.Init();
+    petal.SetAudioBlockSize(4);
+
+    bypassHard = bypassSoft = false;
+
+    // start callback
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+    while(1)
+    {
+        //LED stuff
+        petal.SetFootswitchLed((DaisyPetal::FootswitchLed)0, !bypassSoft);
+        petal.SetFootswitchLed((DaisyPetal::FootswitchLed)1, !bypassHard);
+
+        for(int i = 0; i < 8; i++)
+        {
+            petal.SetRingLed((DaisyPetal::RingLed)i, 1.f, 0.f, 0.f);
+        }
+
+        petal.UpdateLeds();
+        System::Delay(6);
+    }
+}
+
+________________________________________________________________________________
+
+3. FilterBank
+
+__FilterBank README.md__
+# Filter Bank
+
+## Author
+
+Ben Sergentanis
+
+## Description
+Fixed resonant peak filterbank with amplitude control per filter. Try running it with whitenoise, oscillators, or any sound source you please!  
+There are two banks of four filters to control.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/FilterBank)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Encoder Turn | Control Mode | Selects which filters ctrls map to |
+| Ctrl 1-4 | Filter Amplitude | Volume per filter |
+| Audio In 1 | Filter bank Input | |
+| Audio Out 1-2 | Filter Bank Output | |
+| Leds | Brightness 1-8 shows amplitude per filter | Whichever side is purple is the side being controlled |
+
+__FilterBank.cpp__
+#include "daisysp.h"
+#include "daisy_petal.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal petal;
+int        freqs[8];
+
+int bank;
+
+struct ConditionalUpdate
+{
+    float oldVal = 0;
+
+    bool Process(float newVal)
+    {
+        if(abs(newVal - oldVal) > .04)
+        {
+            oldVal = newVal;
+            return true;
+        }
+
+        return false;
+    }
+};
+
+ConditionalUpdate condUpdates[4];
+
+struct Filter
+{
+    Svf   filt;
+    float amp;
+
+    void Init(float samplerate, float freq)
+    {
+        filt.Init(samplerate);
+        filt.SetRes(1);
+        filt.SetDrive(.002);
+        filt.SetFreq(freq);
+        amp = .5f;
+    }
+
+    float Process(float in)
+    {
+        filt.Process(in);
+        return filt.Peak() * amp;
+    }
+};
+
+Filter filters[8];
+bool   passthru;
+void   UpdateControls();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    UpdateControls();
+
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = 0.f;
+        for(int j = 0; j < 8; j++)
+        {
+            sig += filters[j].Process(in[0][i]);
+        }
+        sig *= .06;
+
+        if(!passthru)
+        {
+            out[0][i] = out[1][i] = sig;
+        }
+        else
+        {
+            out[0][i] = in[0][i];
+            out[1][i] = in[1][i];
+        }
+    }
+}
+
+void InitFreqs()
+{
+    freqs[0] = 350;
+    freqs[1] = 500;
+    freqs[2] = 750;
+    freqs[3] = 1100;
+    freqs[4] = 2200;
+    freqs[5] = 3600;
+    freqs[6] = 5200;
+    freqs[7] = 7500;
+}
+
+void InitFilters(float samplerate)
+{
+    for(int i = 0; i < 8; i++)
+    {
+        filters[i].Init(samplerate, freqs[i]);
+    }
+}
+
+
+void UpdateLeds();
+
+int main(void)
+{
+    float samplerate;
+    petal.Init();
+    petal.SetAudioBlockSize(4); // Initialize hardware (daisy seed, and petal)
+    samplerate = petal.AudioSampleRate();
+
+    InitFreqs();
+    InitFilters(samplerate);
+    bank     = 0;
+    passthru = false;
+
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+    while(1)
+    {
+        UpdateLeds();
+        System::Delay(6);
+    }
+}
+
+void UpdateControls()
+{
+    petal.ProcessAnalogControls();
+    petal.ProcessDigitalControls();
+
+    //encoder
+    bank += petal.encoder.Increment();
+    bank = (bank % 2 + 2) % 2;
+
+    bank = petal.encoder.RisingEdge() ? 0 : bank;
+
+    // Toggle Pass thru
+    if(petal.switches[petal.SW_1].RisingEdge())
+        passthru = !passthru;
+
+    //controls
+    for(int i = 0; i < 4; i++)
+    {
+        float val = petal.knob[i + 2].Process();
+        if(condUpdates[i].Process(val))
+        {
+            filters[i + bank * 4].amp = val;
+        }
+    }
+}
+
+void UpdateLeds()
+{
+    for(int i = 0; i < 4; i++)
+    {
+        petal.SetRingLed((DaisyPetal::RingLed)i,
+                         filters[i].amp,
+                         (bank == 0) * filters[i].amp,
+                         filters[i].amp);
+    }
+    for(int i = 4; i < 8; i++)
+    {
+        petal.SetRingLed((DaisyPetal::RingLed)i,
+                         filters[i].amp,
+                         (bank == 1) * filters[i].amp,
+                         filters[i].amp);
+    }
+
+    petal.SetFootswitchLed(DaisyPetal::FOOTSWITCH_LED_1, !passthru);
+
+    petal.UpdateLeds();
+}
+
+________________________________________________________________________________
+
+4. GeneralFunctionTest
+
+__GeneralFunctionTest README.md__
+# General Function Test
+
+## Author
+
+Shensley
+
+## General Function Test
+
+Vegas mode on the LEDs, while all controls' data are sent out via USB.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/GeneralFunctionTest)
+
+## TODO
+
+* Add Encoder Increment checking as this isn't there, and wasn't idiomatic with either of the test loops.
+
+__GeneralFunctionTest.cpp__
+#include <stdio.h>
+#include <string.h>
+#include "daisy_petal.h"
+#include "daisysp.h"
+#include "fatfs.h"
+
+#define KNOB_ID "KNOB_"
+#define SW_ID "SWITCH_"
+#define ENC_ID "ENCODER_"
+
+#define TEST_FILE_NAME "DaisyTestFile.txt"
+#define TEST_FILE_CONTENTS \
+    "This file is used for testing the Daisy breakout boards. Happy Hacking!"
+
+using namespace daisy;
+using namespace daisysp;
+
+int  TestSdCard();
+void UpdateUsb(int sd_sta);
+void UpdateLeds();
+
+// Declare a local daisy_petal for hardware access
+DaisyPetal hw;
+// Handler for SD Card Hardware
+SdmmcHandler   sd;
+FatFSInterface fsi;
+
+// Variable for tracking encoder increments since there is it's not a continuous control like the rest.
+int32_t enc_tracker;
+
+// This runs at a fixed rate to prepare audio samples
+void callback(AudioHandle::InterleavingInputBuffer  in,
+              AudioHandle::InterleavingOutputBuffer out,
+              size_t                                size)
+{
+    int32_t inc;
+    hw.ProcessDigitalControls();
+    hw.ProcessAnalogControls();
+
+    // Handle Enc
+    inc = hw.encoder.Increment();
+    if(inc > 0)
+        enc_tracker += 1;
+    else if(inc < 0)
+        enc_tracker -= 1;
+    // Clip
+    if(enc_tracker > 100)
+        enc_tracker = 100;
+    else if(enc_tracker < 0)
+        enc_tracker = 0;
+
+    // Audio Rate Loop
+    for(size_t i = 0; i < size; i += 2)
+    {
+        out[i]     = in[i];
+        out[i + 1] = in[i + 1];
+    }
+}
+
+int main(void)
+{
+    int      sdfail;
+    uint32_t led_period, usb_period, now;
+    uint32_t last_led_update, last_usb_update;
+
+    // LED Freq = 60Hz
+    // USB Freq= 10Hz
+    led_period = 5;
+    usb_period = 100;
+
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+
+    last_led_update = last_usb_update = now = System::GetNow();
+
+    // Init USB as VCOM for sending Serial Data
+    hw.seed.usb_handle.Init(UsbHandle::FS_INTERNAL);
+
+    sdfail = TestSdCard();
+
+    hw.StartAdc();
+    hw.StartAudio(callback);
+
+
+    while(1)
+    {
+        // Do Stuff InfInitely Here
+        now = System::GetNow();
+
+        // Update LEDs (Vegas Mode)
+        if(now - last_led_update > led_period)
+        {
+            last_led_update = now;
+            UpdateLeds();
+        }
+
+        if(now - last_usb_update > usb_period)
+        {
+            last_usb_update = now;
+            // opposite of sdfail because
+            // sdfail is 1 when fail, 0 when success
+            // we want to display 1 for success in the tester
+            UpdateUsb(!sdfail);
+        }
+    }
+}
+
+/** Global File object for working with test file */
+FIL SDFile;
+
+// Mounts SD card and reads TEST_FILE
+// returns 0 if successful, else failure.
+int TestSdCard()
+{
+    int      sta;
+    char     inbuff[2048];
+    char     refbuff[2048];
+    char *   buff;
+    uint32_t len, bytesread;
+
+    memset(inbuff, 0, 2048);
+    memset(refbuff, 0, 2048);
+
+    // Init SDMMC
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd.Init(sd_cfg);
+    fsi.Init(FatFSInterface::Config::MEDIA_SD);
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    // Fill reference buffer with test contents
+    sprintf(refbuff, "%s", TEST_FILE_CONTENTS);
+    len = strlen(refbuff);
+
+    // Read from file and compare
+    buff = inbuff;
+    if(f_open(&SDFile, TEST_FILE_NAME, FA_READ) == FR_OK)
+    {
+        f_read(&SDFile, buff, len, (UINT *)&bytesread);
+    }
+    if(len == bytesread && strcmp(buff, refbuff) == 0)
+    {
+        sta = 0;
+    }
+    else
+    {
+        sta = 1;
+    }
+    return sta;
+}
+
+// Send Control Data
+// Format:
+// { ctrl_id, ctrl_data }, {ctrl_id, ctrl_data}, etc.
+void UpdateUsb(int sd_sta)
+{
+    char catbuff[4095];
+    char buff[128];
+    memset(catbuff, 0, 4095);
+    memset(buff, 0, 128);
+    // Get Ready to send:
+    // Knobs
+    for(size_t i = 0; i < hw.KNOB_LAST; i++)
+    {
+        sprintf(
+            buff,
+            "{%s%d, %d},",
+            KNOB_ID,
+            i + 1,
+            (int)(hw.GetKnobValue(static_cast<DaisyPetal::Knob>(i)) * 1000.f));
+        strcat(catbuff, buff);
+    }
+    // Expression
+    sprintf(buff, "{EXP_0, %d},", (int)(hw.GetExpression() * 1000.f));
+    strcat(catbuff, buff);
+    // Switches
+    for(size_t i = 0; i < hw.SW_LAST; i++)
+    {
+        sprintf(buff, "{%s%d, %d},", SW_ID, i + 1, hw.switches[i].Pressed());
+        strcat(catbuff, buff);
+    }
+    // Enc
+    sprintf(buff, "{%s_SW, %d},", ENC_ID, hw.encoder.Pressed());
+    strcat(catbuff, buff);
+    sprintf(buff, "{%s_INC, %ld},", ENC_ID, enc_tracker);
+    strcat(catbuff, buff);
+    // SD Card Status
+    sprintf(buff, "{SDMMC, %d}", sd_sta);
+    strcat(catbuff, buff);
+    // EndTx
+    sprintf(buff, "\r\n");
+    strcat(catbuff, buff);
+    hw.seed.usb_handle.TransmitInternal((uint8_t *)catbuff, strlen(catbuff));
+}
+
+void UpdateLeds()
+{
+    uint32_t now;
+    now = System::GetNow();
+    hw.ClearLeds();
+    // Use now as a source for time so we don't have to use any global vars
+    // First gradually pulse all 4 Footswitch LEDs
+    for(size_t i = 0; i < hw.FOOTSWITCH_LED_LAST; i++)
+    {
+        size_t total, base;
+        total        = 511;
+        base         = total / hw.FOOTSWITCH_LED_LAST;
+        float bright = (float)((now + (i * base)) & total) / (float)total;
+        hw.SetFootswitchLed(static_cast<DaisyPetal::FootswitchLed>(i), bright);
+    }
+    // And now the ring
+    for(size_t i = 0; i < hw.RING_LED_LAST; i++)
+    {
+        float    rb, gb, bb;
+        uint32_t total, base;
+        uint32_t col;
+        col = (now >> 10) % 6;
+        //        total = 8191;
+        //        base  = total / (hw.RING_LED_LAST);
+        total        = 1023;
+        base         = total / hw.RING_LED_LAST;
+        float bright = (float)((now + (i * base)) & total) / (float)total;
+        bright       = 1.0f - bright;
+        switch(col)
+        {
+            case 0:
+                rb = bright;
+                gb = 0.0f;
+                bb = 0.0f;
+                break;
+            case 1:
+                rb = 0.6f * bright;
+                gb = 0.0f;
+                bb = 0.7f * bright;
+                break;
+            case 2:
+                rb = 0.0f;
+                gb = bright;
+                bb = 0.0f;
+                break;
+            case 3:
+                rb = 0.0f;
+                gb = 0.0f;
+                bb = bright;
+                break;
+            case 4:
+                rb = 0.75f * bright;
+                gb = 0.75f * bright;
+                bb = 0.0f;
+                break;
+            case 5:
+                rb = 0.0f;
+                bb = 0.85f * bright;
+                gb = 0.85f * bright;
+                break;
+
+            default: rb = gb = bb = bright; break;
+        }
+
+        hw.SetRingLed(static_cast<DaisyPetal::RingLed>(i), rb, gb, bb);
+    }
+    hw.UpdateLeds();
+}
+
+________________________________________________________________________________
+
+5. Looper
+
+__Looper README.md__
+# Looper
+
+## Author
+
+Ben Sergentanis
+
+## Description
+Loops incoming audio at a user defined interval.  
+Use the simple controls to record loops, play and pause them, and record over them.   
+Loops can be very long, or very short.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/Looper)
+  
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Switch 1 | Record | Press to record/SOS. Hold to reset |
+| Switch 2 | Play / Pause| |
+| Leds | Modes | Footswitch Led 1: Record, Footswitch Led 2: Play |
+| Knob 1 | Live In / Loop | Left is in, right is loop |
+
+__Looper.cpp__
+#include "daisysp.h"
+#include "daisy_petal.h"
+
+#define MAX_SIZE (48000 * 60 * 5) // 5 minutes of floats at 48 khz
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPetal petal;
+
+bool first = true;  //first loop (sets length)
+bool rec   = false; //currently recording
+bool play  = false; //currently playing
+
+int                 pos = 0;
+float DSY_SDRAM_BSS buf[MAX_SIZE];
+int                 mod    = MAX_SIZE;
+int                 len    = 0;
+float               drywet = 0;
+bool                res    = false;
+
+void ResetBuffer();
+void Controls();
+
+void NextSamples(float&                               output,
+                 AudioHandle::InterleavingInputBuffer in,
+                 size_t                               i);
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float output = 0;
+
+    Controls();
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        NextSamples(output, in, i);
+
+        // left and right outs
+        out[i] = out[i + 1] = output;
+    }
+}
+
+int main(void)
+{
+    // initialize petal hardware and oscillator daisysp module
+
+    petal.Init();
+    petal.SetAudioBlockSize(4);
+    ResetBuffer();
+
+    // start callback
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        //leds
+        petal.SetFootswitchLed((DaisyPetal::FootswitchLed)1, play);
+        petal.SetFootswitchLed((DaisyPetal::FootswitchLed)0, rec);
+        petal.UpdateLeds();
+        System::Delay(16); // 60Hz
+    }
+}
+
+//Resets the buffer
+void ResetBuffer()
+{
+    play  = false;
+    rec   = false;
+    first = true;
+    pos   = 0;
+    len   = 0;
+    for(int i = 0; i < mod; i++)
+    {
+        buf[i] = 0;
+    }
+    mod = MAX_SIZE;
+}
+
+void UpdateButtons()
+{
+    //switch1 pressed
+    if(petal.switches[0].RisingEdge())
+    {
+        if(first && rec)
+        {
+            first = false;
+            mod   = len;
+            len   = 0;
+        }
+
+        res  = true;
+        play = true;
+        rec  = !rec;
+    }
+
+    //switch1 held
+    if(petal.switches[0].TimeHeldMs() >= 1000 && res)
+    {
+        ResetBuffer();
+        res = false;
+    }
+
+    //switch2 pressed and not empty buffer
+    if(petal.switches[1].RisingEdge() && !(!rec && first))
+    {
+        play = !play;
+        rec  = false;
+    }
+}
+
+//Deals with analog controls
+void Controls()
+{
+    petal.ProcessAnalogControls();
+    petal.ProcessDigitalControls();
+
+    drywet = petal.knob[0].Process();
+
+    UpdateButtons();
+}
+
+void WriteBuffer(AudioHandle::InterleavingInputBuffer in, size_t i)
+{
+    buf[pos] = buf[pos] * 0.5 + in[i] * 0.5;
+    if(first)
+    {
+        len++;
+    }
+}
+
+void NextSamples(float&                               output,
+                 AudioHandle::InterleavingInputBuffer in,
+                 size_t                               i)
+{
+    if(rec)
+    {
+        WriteBuffer(in, i);
+    }
+
+    output = buf[pos];
+
+    //automatic looptime
+    if(len >= MAX_SIZE)
+    {
+        first = false;
+        mod   = MAX_SIZE;
+        len   = 0;
+    }
+
+    if(play)
+    {
+        pos++;
+        pos %= mod;
+    }
+
+    if(!rec)
+    {
+        output = output * drywet + in[i] * (1 - drywet);
+    }
+}
+
+________________________________________________________________________________
+
+6. MultiDelay
+
+__MultiDelay README.md__
+# Multi Delay
+
+## Author
+
+Ben Sergentanis
+
+
+## Description
+Three delay bundled in one. Set their delay times independently. Feedback is controlled globally.
+The three delays mixed with the dry signal is available at all outputs.
+Set the dry/wet amount of this final mix with the encoder.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/MultiDelay)
+
+## Control
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrls 1 - 3 - 5| Delay Time | Time for delays 1 through 3 |
+| Ctrl 2 - 4 - 6 | Feedback | Feedback for delays 1 through 3 |
+| Encoder | Dry/Wet | Set the dry/wet amount for the outputs |
+| SW 1 | Passthru | Illuminated when set to passthru |
+| Audio In 1 | Audio input | |
+| Audio Out 1 - 2 | Mix Out | |
+
+__MultiDelay.cpp__
+#include "daisysp.h"
+#include "daisy_petal.h"
+#include <string>
+
+#define MAX_DELAY static_cast<size_t>(48000 * 1.f)
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal petal;
+
+DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delMems[3];
+
+struct delay
+{
+    DelayLine<float, MAX_DELAY> *del;
+    float                        currentDelay;
+    float                        delayTarget;
+    float                        feedback;
+
+    float Process(float in)
+    {
+        //set delay times
+        fonepole(currentDelay, delayTarget, .0002f);
+        del->SetDelay(currentDelay);
+
+        float read = del->Read();
+        del->Write((feedback * read) + in);
+
+        return read;
+    }
+};
+
+delay     delays[3];
+Parameter params[3];
+
+float feedback;
+int   drywet;
+bool  passThruOn;
+
+void ProcessControls();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    ProcessControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float mix     = 0;
+        float fdrywet = passThruOn ? 0.f : (float)drywet / 100.f;
+
+        //update delayline with feedback
+        for(int d = 0; d < 3; d++)
+        {
+            float sig = delays[d].Process(in[0][i]);
+            mix += sig;
+        }
+
+        //apply drywet and attenuate
+        mix       = fdrywet * mix * .3f + (1.0f - fdrywet) * in[0][i];
+        out[0][i] = out[1][i] = mix;
+    }
+}
+
+void InitDelays(float samplerate)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        //Init delays
+        delMems[i].Init();
+        delays[i].del = &delMems[i];
+        //3 delay times
+        params[i].Init(petal.knob[i * 2],
+                       samplerate * .05,
+                       MAX_DELAY,
+                       Parameter::LOGARITHMIC);
+    }
+}
+
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    petal.Init();
+    petal.SetAudioBlockSize(4); // Initialize hardware (daisy seed, and petal)
+    samplerate = petal.AudioSampleRate();
+
+    InitDelays(samplerate);
+
+    drywet     = 50;
+    passThruOn = false;
+
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+    while(1)
+    {
+        int32_t whole;
+        float   frac;
+        whole = (int32_t)((float)drywet / 12.5f);
+        frac  = (float)drywet / 12.5f - whole;
+        petal.ClearLeds();
+
+        // Set full bright
+        for(int i = 0; i < whole; i++)
+        {
+            petal.SetRingLed(
+                static_cast<DaisyPetal::RingLed>(i), 0.f, 0.f, 1.f);
+        }
+
+        // Set Frac
+        if(whole < 7 && whole > 0)
+            petal.SetRingLed(
+                static_cast<DaisyPetal::RingLed>(whole - 1), 0.f, 0.f, frac);
+
+        // Update Pass thru
+        petal.SetFootswitchLed(DaisyPetal::FOOTSWITCH_LED_1, passThruOn);
+        petal.UpdateLeds();
+        System::Delay(6);
+    }
+}
+
+void ProcessControls()
+{
+    petal.ProcessAnalogControls();
+    petal.ProcessDigitalControls();
+
+    //knobs
+    for(int i = 0; i < 3; i++)
+    {
+        delays[i].delayTarget = params[i].Process();
+        delays[i].feedback    = petal.knob[(i * 2) + 1].Process();
+    }
+
+    //encoder
+    drywet += 5 * petal.encoder.Increment();
+    drywet > 100 ? drywet = 100 : drywet = drywet;
+    drywet < 0 ? drywet = 0 : drywet = drywet;
+
+    //footswitch
+    if(petal.switches[0].RisingEdge())
+    {
+        passThruOn = !passThruOn;
+    }
+}
+
+________________________________________________________________________________
+
+7. MultiEffect
+
+__MultiEffect README.md__
+# Multi Effect
+
+## Author
+
+Ben Sergentanis
+
+## Description
+Simple effects for incoming audio. Includes reverb, delay, downsampling, and autowah.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/MultiEffect)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 1 | Reverb LP Freq | 20Hz - 10kHz |
+| Knob 2 | Reverb Time |  |
+| Knob 3 | Delay Time |  |
+| Knob 4 | Delay Amount |  |
+| Knob 5 | Crush Amount |  |
+| Knob 6 | Wah Amount |  |
+| Encoder Turn | Dry/Wet | |
+| Encoder Press | Effect Dry/Wet | Select which effect's dry/wet to change, or master dry/wet control |
+| Ring Leds | Dry/Wet Indicator | Crush = Red, Wah = Green, Delay = Blue, Reverb = Purple, Master = White |
+| Footswitches | Effect On | Delay, Reverb, Crush, AutoWah |
+| Audio In | Effects In | |
+| Audio Out | Effects Out | |
+
+__MultiEffect.cpp__
+#include "daisysp.h"
+#include "daisy_petal.h"
+
+// Set max delay time to 0.75 of samplerate.
+#define MAX_DELAY static_cast<size_t>(48000 * 2.5f)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPetal petal;
+
+static ReverbSc                                  rev;
+static DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS dell;
+static DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delr;
+static Autowah                                   wah[2];
+static Parameter deltime, reverbLpParam, crushrate;
+
+float currentDelay, feedback, delayTarget, cutoff, dryWet[5];
+
+int   crushmod, crushcount;
+float crushl, crushr;
+bool  effectOn[4];
+
+//Helper functions
+void Controls();
+void UpdateLeds();
+
+void GetCrushSample(float &inl, float &inr);
+void GetWahSample(float &inl, float &inr);
+void GetDelaySample(float &inl, float &inr);
+void GetReverbSample(float &inl, float &inr);
+
+
+enum effectTypes
+{
+    CRUSH,
+    WAH,
+    DEL,
+    REV,
+    ALL,
+    LAST,
+};
+effectTypes dryWetMode;
+
+void GetSample(float &inl, float &inr, effectTypes type)
+{
+    switch(type)
+    {
+        case CRUSH: GetCrushSample(inl, inr); break;
+        case WAH: GetWahSample(inl, inr); break;
+        case DEL: GetDelaySample(inl, inr); break;
+        default: break;
+    }
+}
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    Controls();
+
+    //audio
+    for(size_t i = 0; i < size; i += 2)
+    {
+        float sigl = in[i];
+        float sigr = in[i + 1];
+
+        for(int eff = 0; eff < REV; eff++)
+        {
+            float oldSigL = sigl;
+            float oldSigR = sigr;
+
+            if(effectOn[eff])
+            {
+                GetSample(sigl, sigr, (effectTypes)eff);
+            }
+
+            sigl = sigl * dryWet[eff] + oldSigL * (1 - dryWet[eff]);
+            sigr = sigr * dryWet[eff] + oldSigR * (1 - dryWet[eff]);
+        }
+
+        float verbl = sigl * dryWet[REV];
+        float verbr = sigr * dryWet[REV];
+        GetReverbSample(verbl, verbr);
+
+        out[i]     = sigl * dryWet[ALL] + in[i] * (1 - dryWet[ALL]);
+        out[i + 1] = sigr * dryWet[ALL] + in[i + 1] * (1 - dryWet[ALL]);
+
+        if(effectOn[REV])
+        {
+            out[i] += verbl;
+            out[i + 1] += verbr;
+        }
+    }
+}
+
+int main(void)
+{
+    // initialize petal hardware and oscillator daisysp module
+    float sample_rate;
+
+    //Inits and sample rate
+    petal.Init();
+    petal.SetAudioBlockSize(4);
+    sample_rate = petal.AudioSampleRate();
+    rev.Init(sample_rate);
+    dell.Init();
+    delr.Init();
+
+    //set parameters
+    reverbLpParam.Init(petal.knob[0], 400, 22000, Parameter::LOGARITHMIC);
+    deltime.Init(
+        petal.knob[2], sample_rate * .05, MAX_DELAY, deltime.LOGARITHMIC);
+    crushrate.Init(petal.knob[4], 1, 50, crushrate.LOGARITHMIC);
+
+    //reverb parameters
+    rev.SetLpFreq(18000.0f);
+    rev.SetFeedback(0.85f);
+
+    //delay parameters
+    currentDelay = delayTarget = sample_rate * 0.75f;
+    dell.SetDelay(currentDelay);
+    delr.SetDelay(currentDelay);
+
+    wah[0].Init(sample_rate);
+    wah[1].Init(sample_rate);
+    wah[0].SetLevel(.8f);
+    wah[1].SetLevel(.8f);
+
+    effectOn[0] = effectOn[1] = effectOn[2] = effectOn[3] = false;
+
+    for(int i = 0; i < LAST; i++)
+    {
+        dryWet[i] = 0.6f;
+    }
+
+    dryWetMode = CRUSH;
+
+    // start callback
+    petal.StartAdc();
+    petal.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        UpdateLeds();
+        System::Delay(6);
+    }
+}
+
+void UpdateKnobs()
+{
+    rev.SetLpFreq(reverbLpParam.Process());
+    rev.SetFeedback(petal.knob[1].Process());
+
+    delayTarget = deltime.Process();
+    feedback    = petal.knob[3].Process();
+
+    crushmod = (int)crushrate.Process();
+
+    wah[0].SetWah(petal.knob[5].Process());
+    wah[1].SetWah(petal.knob[5].Process());
+}
+
+void UpdateEncoder()
+{
+    //press
+    if(petal.encoder.RisingEdge())
+    {
+        dryWetMode = (effectTypes)(dryWetMode + 1);
+        dryWetMode = (effectTypes)(dryWetMode % LAST);
+    }
+
+    //turn
+    dryWet[dryWetMode] += petal.encoder.Increment() * .05f;
+    dryWet[dryWetMode] = dryWet[dryWetMode] > 1.0f ? 1.0f : dryWet[dryWetMode];
+    dryWet[dryWetMode] = dryWet[dryWetMode] < 0.0f ? 0.0f : dryWet[dryWetMode];
+}
+
+void UpdateLeds()
+{
+    petal.ClearLeds();
+
+    //footswitch leds
+    petal.SetFootswitchLed((DaisyPetal::FootswitchLed)0, effectOn[REV]);
+    petal.SetFootswitchLed((DaisyPetal::FootswitchLed)1, effectOn[DEL]);
+    petal.SetFootswitchLed((DaisyPetal::FootswitchLed)2, effectOn[CRUSH]);
+    petal.SetFootswitchLed((DaisyPetal::FootswitchLed)3, effectOn[WAH]);
+
+
+    //ring leds
+    int32_t whole;
+    float   frac;
+    whole = (int32_t)(dryWet[dryWetMode] / .125f);
+    frac  = dryWet[dryWetMode] / .125f - whole;
+
+    // Set full bright
+    for(int i = 0; i < whole; i++)
+    {
+        petal.SetRingLed(
+            static_cast<DaisyPetal::RingLed>(i),
+            (dryWetMode == CRUSH || dryWetMode == REV || dryWetMode == ALL)
+                * 1.f,                                      //red
+            (dryWetMode == WAH || dryWetMode == ALL) * 1.f, //green
+            (dryWetMode == DEL || dryWetMode == REV || dryWetMode == ALL)
+                * 1.f); //blue
+    }
+
+    // Set Frac
+    if(whole < 7 && whole > 0)
+    {
+        petal.SetRingLed(
+            static_cast<DaisyPetal::RingLed>(whole - 1),
+            (dryWetMode == CRUSH || dryWetMode == REV || dryWetMode == ALL)
+                * frac,                                      //red
+            (dryWetMode == WAH || dryWetMode == ALL) * frac, //green
+            (dryWetMode == DEL || dryWetMode == REV || dryWetMode == ALL)
+                * frac); //blue
+    }
+
+    petal.UpdateLeds();
+}
+
+void UpdateSwitches()
+{
+    //turn the effect on or off if a footswitch is pressed
+
+    effectOn[REV]
+        = petal.switches[0].RisingEdge() ? !effectOn[REV] : effectOn[REV];
+    effectOn[DEL]
+        = petal.switches[1].RisingEdge() ? !effectOn[DEL] : effectOn[DEL];
+    effectOn[CRUSH]
+        = petal.switches[2].RisingEdge() ? !effectOn[CRUSH] : effectOn[CRUSH];
+    effectOn[WAH]
+        = petal.switches[3].RisingEdge() ? !effectOn[WAH] : effectOn[WAH];
+}
+
+void Controls()
+{
+    petal.ProcessAnalogControls();
+    petal.ProcessDigitalControls();
+
+    UpdateKnobs();
+
+    UpdateEncoder();
+
+    UpdateSwitches();
+}
+
+void GetReverbSample(float &inl, float &inr)
+{
+    rev.Process(inl, inr, &inl, &inr);
+}
+
+void GetDelaySample(float &inl, float &inr)
+{
+    fonepole(currentDelay, delayTarget, .00007f);
+    delr.SetDelay(currentDelay);
+    dell.SetDelay(currentDelay);
+    float outl = dell.Read();
+    float outr = delr.Read();
+
+    dell.Write((feedback * outl) + inl);
+    inl = (feedback * outl) + ((1.0f - feedback) * inl);
+
+    delr.Write((feedback * outr) + inr);
+    inr = (feedback * outr) + ((1.0f - feedback) * inr);
+}
+
+void GetCrushSample(float &inl, float &inr)
+{
+    crushcount++;
+    crushcount %= crushmod;
+    if(crushcount == 0)
+    {
+        crushr = inr;
+        crushl = inl;
+    }
+
+    inr = crushr;
+    inl = crushl;
+}
+
+void GetWahSample(float &inl, float &inr)
+{
+    inl = wah[0].Process(inl);
+    inr = wah[1].Process(inr);
+}
+
+________________________________________________________________________________
+
+8. Verb
+
+__Verb README.md__
+# Verb
+
+## Author
+
+Shensley
+
+## Verb
+
+Simple Stereo Reverb for Daisy Petal
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/Verb)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 1 | Reverb Time | Small room to near-infinite |
+| Knob 2 | Reverb Damping | Internal Cutoff filter from about 500Hz to 20kHz |
+| Knob 3 | Send Amount | Controls amount of dry signal sent to reverb |
+| Switch 1 | Pass Thru | Disables the wet signal, passing the input directly to the output when LED is illuminated |
+
+__Verb.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+// Declare a local daisy_petal for hardware access
+DaisyPetal hw;
+
+Parameter vtime, vfreq, vsend;
+bool      bypass;
+ReverbSc  verb;
+
+// This runs at a fixed rate, to prepare audio samples
+void callback(AudioHandle::InterleavingInputBuffer  in,
+              AudioHandle::InterleavingOutputBuffer out,
+              size_t                                size)
+{
+    float dryl, dryr, wetl, wetr, sendl, sendr;
+    hw.ProcessDigitalControls();
+    verb.SetFeedback(vtime.Process());
+    verb.SetLpFreq(vfreq.Process());
+    vsend.Process(); // Process Send to use later
+    //bypass = hw.switches[DaisyPetal::SW_5].Pressed();
+    if(hw.switches[DaisyPetal::SW_1].RisingEdge())
+        bypass = !bypass;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        dryl  = in[i];
+        dryr  = in[i + 1];
+        sendl = dryl * vsend.Value();
+        sendr = dryr * vsend.Value();
+        verb.Process(sendl, sendr, &wetl, &wetr);
+        if(bypass)
+        {
+            out[i]     = in[i];     // left
+            out[i + 1] = in[i + 1]; // right
+        }
+        else
+        {
+            out[i]     = dryl + wetl;
+            out[i + 1] = dryr + wetr;
+        }
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    samplerate = hw.AudioSampleRate();
+
+    vtime.Init(hw.knob[hw.KNOB_1], 0.6f, 0.999f, Parameter::LOGARITHMIC);
+    vfreq.Init(hw.knob[hw.KNOB_2], 500.0f, 20000.0f, Parameter::LOGARITHMIC);
+    vsend.Init(hw.knob[hw.KNOB_3], 0.0f, 1.0f, Parameter::LINEAR);
+    verb.Init(samplerate);
+
+    hw.StartAdc();
+    hw.StartAudio(callback);
+    while(1)
+    {
+        // Do Stuff InfInitely Here
+        System::Delay(10);
+        hw.ClearLeds();
+        hw.SetFootswitchLed(hw.FOOTSWITCH_LED_1, bypass ? 0.0f : 1.0f);
+        hw.UpdateLeds();
+    }
+}
+
+________________________________________________________________________________
+
+9. chorus
+
+__chorus README.md__
+# Chorus Petal
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Chorus effect for Daisy Petal.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/chorus)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 3 | Lfo Freq | |
+| Knob 4 | Lfo Depth | |
+| Knob 5 | Delay Time | |
+| Knob 6 | Feedback Amount | |
+| Encoder Turn | Dry / Wet | |
+| Encoder Press | Dry / Wet Reset | |
+| Switch 1 | Effect On | Led On = Effect On |
+
+__chorus.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal hw;
+Chorus     ch;
+
+bool  effectOn;
+float wet;
+
+float deltarget, del;
+float lfotarget, lfo;
+
+void Controls()
+{
+    hw.ProcessAllControls();
+
+    //knobs
+    float k = hw.knob[2].Process();
+    ch.SetLfoFreq(k * k * 20.f);
+    lfo = hw.knob[3].Process();
+    del = hw.knob[4].Process();
+    ch.SetFeedback(hw.knob[5].Process());
+
+    //footswitch
+    effectOn ^= hw.switches[0].RisingEdge();
+
+    //encoder
+    wet += hw.encoder.Increment() * .05f;
+    wet = fclamp(wet, 0.f, 1.f);
+
+    wet = hw.encoder.RisingEdge() ? .9f : wet;
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    Controls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        fonepole(del, deltarget, .0001f); //smooth at audio rate
+        ch.SetDelay(del);
+
+        fonepole(lfo, lfotarget, .0001f); //smooth at audio rate
+        ch.SetLfoDepth(lfo);
+
+
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+
+        if(effectOn)
+        {
+            ch.Process(in[0][i]);
+
+            out[0][i] = ch.GetLeft() * wet + in[0][i] * (1.f - wet);
+            out[1][i] = ch.GetRight() * wet + in[1][i] * (1.f - wet);
+        }
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    ch.Init(sample_rate);
+
+    effectOn  = true;
+    wet       = .9f;
+    deltarget = del = 0.f;
+    lfotarget = lfo = 0.f;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        hw.DelayMs(6);
+
+        hw.ClearLeds();
+        hw.SetFootswitchLed((DaisyPetal::FootswitchLed)0, (float)effectOn);
+
+        int   wet_int  = (int)(wet * 8.f);
+        float wet_frac = wet - wet_int;
+        for(int i = 0; i < wet_int; i++)
+        {
+            hw.SetRingLed((DaisyPetal::RingLed)i, 1.f, 0.f, 0.f);
+        }
+
+        if(wet_int < 8)
+        {
+            hw.SetRingLed((DaisyPetal::RingLed)wet_int, wet_frac, 0.f, 0.f);
+        }
+
+        hw.UpdateLeds();
+    }
+}
+
+________________________________________________________________________________
+
+10. flanger
+
+__flanger README.md__
+# Flanger Example
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Flanger effect for Daisy Petal.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/flanger)
+
+## Controls
+
+| Control | Description |
+| --- | --- |
+| Knob 3 | Delay Time |
+| Knob 4 | Feedback Amount |
+| Knob 5 | Lfo Frequency |
+| Knob 6 | Lfo Depth |
+| Footswitch 1 | Effect On |
+| Encoder Rotate | Dry Wet |
+| Encoder Press | Reset Dry Wet |
+
+__flanger.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+Flanger    flanger;
+DaisyPetal hw;
+
+bool  effectOn = true;
+float wet;
+float deltarget, del;
+float lfotarget, lfo;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+
+    deltarget = hw.knob[2].Process();
+    flanger.SetFeedback(hw.knob[3].Process());
+    float val = hw.knob[4].Process();
+    flanger.SetLfoFreq(val * val * 10.f);
+    lfotarget = hw.knob[5].Process();
+
+    effectOn ^= hw.switches[0].RisingEdge();
+
+    //encoder
+    wet += hw.encoder.Increment() * .05f;
+    wet = fclamp(wet, 0.f, 1.f);
+
+    wet = hw.encoder.RisingEdge() ? .9f : wet;
+
+    for(size_t i = 0; i < size; i++)
+    {
+        fonepole(del, deltarget, .0001f); //smooth at audio rate
+        flanger.SetDelay(del);
+
+        fonepole(lfo, lfotarget, .0001f); //smooth at audio rate
+        flanger.SetLfoDepth(lfo);
+
+        out[0][i] = out[1][i] = in[0][i];
+
+        if(effectOn)
+        {
+            float sig = flanger.Process(in[0][i]);
+            out[0][i] = out[1][i] = sig * wet + in[0][i] * (1.f - wet);
+        }
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    deltarget = del = 0.f;
+    lfotarget = lfo = 0.f;
+    flanger.Init(sample_rate);
+
+    wet = .9f;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        hw.DelayMs(6);
+
+        hw.ClearLeds();
+        hw.SetFootswitchLed((DaisyPetal::FootswitchLed)0, (float)effectOn);
+
+        int   wet_int  = (int)(wet * 8.f);
+        float wet_frac = wet - wet_int;
+        for(int i = 0; i < wet_int; i++)
+        {
+            hw.SetRingLed((DaisyPetal::RingLed)i, 1.f, 0.f, 0.f);
+        }
+
+        if(wet_int < 8)
+        {
+            hw.SetRingLed((DaisyPetal::RingLed)wet_int, wet_frac, 0.f, 0.f);
+        }
+
+        hw.UpdateLeds();
+    }
+}
+
+________________________________________________________________________________
+
+11. phaser
+
+__phaser README.md__
+# Phaser
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Phaser for Daisy Petal.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/phaser)
+  
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Switch 1 | Effect On | Led indicates effect on |
+| Encoder | Number of Poles | 1 - 8, press to reset |
+| Knob 1 |  Dry/Wet | |
+| Knob 3 |  Lfo Frequency | |
+| Knob 4 |  Lfo Depth | |
+| Knob 5 |  Phaser Frequency | |
+| Knob 6 |  Feedback Amount | |
+
+__phaser.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal hw;
+Phaser     phaser;
+
+bool  effectOn;
+float wet;
+
+float freqtarget, freq;
+float lfotarget, lfo;
+int   numstages;
+
+void Controls()
+{
+    hw.ProcessAllControls();
+
+    wet = hw.knob[0].Process();
+
+    //knobs
+    float k = hw.knob[2].Process();
+    phaser.SetLfoFreq(k * k * 20.f);
+    lfo  = hw.knob[3].Process();
+    k    = hw.knob[4].Process();
+    freq = k * k * 7000; //0 - 10 kHz, square curve
+    phaser.SetFeedback(hw.knob[5].Process());
+
+    //footswitch
+    effectOn ^= hw.switches[0].RisingEdge();
+
+    //encoder
+    numstages += hw.encoder.Increment();
+    numstages = DSY_CLAMP(numstages, 1, 8);
+    numstages = hw.encoder.RisingEdge() ? 4 : numstages;
+    phaser.SetPoles(numstages);
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    Controls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        fonepole(freq, freqtarget, .0001f); //smooth at audio rate
+        phaser.SetFreq(freq);
+
+        fonepole(lfo, lfotarget, .0001f); //smooth at audio rate
+        phaser.SetLfoDepth(lfo);
+
+        out[0][i] = in[0][i];
+        out[1][i] = in[0][i];
+
+        if(effectOn)
+        {
+            out[0][i] = out[1][i]
+                = phaser.Process(in[0][i]) * wet + in[0][i] * (1.f - wet);
+        }
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    phaser.Init(sample_rate);
+
+    effectOn   = true;
+    wet        = .9f;
+    freqtarget = freq = 0.f;
+    lfotarget = lfo = 0.f;
+    numstages       = 4;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        hw.DelayMs(6);
+
+        hw.ClearLeds();
+        hw.SetFootswitchLed((DaisyPetal::FootswitchLed)0, (float)effectOn);
+
+        for(int i = 0; i < numstages; i++)
+        {
+            hw.SetRingLed((DaisyPetal::RingLed)i, 1.f, 0.f, 0.f);
+        }
+
+        hw.UpdateLeds();
+    }
+}
+
+________________________________________________________________________________
+
+12. tremolo
+
+__tremolo README.md__
+# Tremolo Example
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Tremolo effect for Daisy Petal.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/petal/Tremolo)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Knob 3 | Frequency | 0 - 20 Hz | 
+| Knob 4 | Depth | 0 - 1 | 
+| Encoder Rotate | Select Waveform | Led Color = Waveform | 
+| Encoder Press | Reset Waveform to Sine | | 
+| Switch 1 | Effect On | Led On = Effect On | 
+
+| Color | Waveform | 
+| Red | Sine |
+| Green | Triangle |
+| Yellow | Saw |
+| Blue | Ramp |
+| Pink | Square |
+
+__tremolo.cpp__
+#include "daisy_petal.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPetal hw;
+Tremolo    treml, tremr;
+
+bool effectOn;
+int  waveform;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+
+    treml.SetFreq(hw.knob[2].Process() * 20.f); //0 - 20 Hz
+    tremr.SetFreq(hw.knob[2].Value() * 20.f);
+
+    treml.SetDepth(hw.knob[3].Process());
+    tremr.SetDepth(hw.knob[3].Value());
+
+    waveform += hw.encoder.Increment();
+    waveform = (waveform % 5 + 5) % 5;
+    waveform *= !(hw.encoder.RisingEdge()); //reset wf to 0 if pressed
+    treml.SetWaveform(waveform);
+    tremr.SetWaveform(waveform);
+
+    effectOn ^= hw.switches[0].RisingEdge(); //flip effectOn when you press fs
+
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = effectOn ? treml.Process(in[0][i]) : in[0][i];
+        out[1][i] = effectOn ? tremr.Process(in[1][i]) : in[1][i];
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    treml.Init(sample_rate);
+    tremr.Init(sample_rate);
+
+    waveform = 0;
+    effectOn = true;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        hw.DelayMs(6);
+
+        hw.ClearLeds();
+        hw.SetFootswitchLed(hw.FOOTSWITCH_LED_1, (float)effectOn);
+        for(int i = 0; i < 8; i++)
+        {
+            int tmp = waveform + 1;
+            hw.SetRingLed(static_cast<DaisyPetal::RingLed>(i),
+                          (float)(tmp & 1),
+                          (float)(tmp & 2),
+                          (float)(tmp & 4));
+        }
+        hw.UpdateLeds();
+    }
+}
+
+__END_OF_FILE__
+
+

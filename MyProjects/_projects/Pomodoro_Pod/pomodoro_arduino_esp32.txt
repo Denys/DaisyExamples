@@ -1,0 +1,276 @@
+/**
+ * Pomodoro Timer - Setup Mode Version (2 Buttons)
+ * 
+ * Buttons:
+ * - PB1 (GPIO 22): Action (Start / Pause / Resume)
+ * - PB2 (GPIO 23): Mode (Cycle Duration / Reset)
+ * 
+ * LEDs (RGB Common Cathode):
+ * - Red (GPIO 18): Working
+ * - Green (GPIO 21): Setup (25m) / Ready
+ * - Blue (GPIO 19): Rest (5m)
+ * - White (R+G+B): Setup (40m)
+ */
+
+// Pin Definitions
+#define RED_LED_PIN 18    
+#define BLUE_LED_PIN 19   
+#define GREEN_LED_PIN 21  
+#define BUTTON1_PIN 22    // Action Button
+#define BUTTON2_PIN 23    // Mode/Reset Button
+
+// Configuration Constants
+#define WORK_TIME_SHORT 25 
+#define WORK_TIME_LONG 40
+#define REST_MINS 5   
+#define IDLE_LIMIT 3 // Minutes until power saving
+
+// State Machine Definitions
+enum TimerState { SETUP, TIMING, REST, PAUSED, FINISHED, POWER_SAVING };
+TimerState currentState = SETUP;
+TimerState previousState;
+
+// Timing Variables
+unsigned long workMillis;
+unsigned long restMillis = REST_MINS * 60 * 1000ULL;
+unsigned long remainingTime;
+unsigned long lastActionTime, lastUpdateTime, lastFlashTime;
+
+// Selection Variables
+int selectedDuration = WORK_TIME_SHORT; // Default 25
+
+// Button Logic
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;
+
+struct ButtonState {
+  bool pressed;
+  bool justPressed;
+  int lastReading;
+};
+
+ButtonState btn1 = {false, false, LOW};
+ButtonState btn2 = {false, false, LOW};
+
+// Forward Declaration
+void updateLEDs(bool r, bool g, bool b);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(BLUE_LED_PIN, OUTPUT);
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(BUTTON1_PIN, INPUT); // External Pull-down assumed
+  pinMode(BUTTON2_PIN, INPUT); 
+
+  // Initialize
+  currentState = SETUP;
+  updateSetupLEDs();
+  lastActionTime = millis();
+  Serial.println("Pomodoro Setup Mode. PB2 to toggle, PB1 to start.");
+}
+
+void loop() {
+  readButtons();
+  
+  // Power Saving Logic
+  if (currentState != POWER_SAVING && currentState == SETUP) {
+    if (millis() - lastActionTime > (IDLE_LIMIT * 60000)) {
+      currentState = POWER_SAVING;
+      updateLEDs(LOW, LOW, LOW); // Off
+    }
+  }
+
+  // State Machine
+  switch (currentState) {
+    case POWER_SAVING:
+      // Any button wake up
+      if (btn1.justPressed || btn2.justPressed) {
+        currentState = SETUP;
+        updateSetupLEDs();
+        lastActionTime = millis();
+      }
+      break;
+
+    case SETUP:
+      handleSetupMode();
+      break;
+
+    case TIMING:
+    case REST:
+      handleRunningMode();
+      break;
+
+    case PAUSED:
+      handlePausedMode();
+      break;
+
+    case FINISHED:
+      handleFinishedMode();
+      break;
+  }
+
+  // Visuals
+  handleFlashing();
+}
+
+// --- Logic Handlers ---
+
+void handleSetupMode() {
+  // PB2: Cycle Time
+  if (btn2.justPressed) {
+    lastActionTime = millis();
+    if (selectedDuration == WORK_TIME_SHORT) {
+      selectedDuration = WORK_TIME_LONG;
+    } else {
+      selectedDuration = WORK_TIME_SHORT;
+    }
+    updateSetupLEDs();
+    Serial.print("Selected Duration: "); Serial.println(selectedDuration);
+  }
+
+  // PB1: Start Timer
+  if (btn1.justPressed) {
+    lastActionTime = millis();
+    currentState = TIMING;
+    workMillis = selectedDuration * 60 * 1000ULL;
+    remainingTime = workMillis;
+    updateLEDs(HIGH, LOW, LOW); // Red for Working
+    Serial.println("Timer Started.");
+  }
+}
+
+void handleRunningMode() {
+  // Timer Logic
+  if (millis() - lastUpdateTime >= 1000) {
+    lastUpdateTime = millis();
+    if (remainingTime >= 1000) remainingTime -= 1000;
+    
+    // Auto Transitions
+    if (remainingTime == 0) {
+      if (currentState == TIMING) {
+        currentState = REST;
+        remainingTime = restMillis;
+        updateLEDs(LOW, LOW, HIGH); // Blue for Rest
+      } else {
+         currentState = FINISHED;
+         Serial.println("Cycle Finished.");
+      }
+    }
+  }
+
+  // PB1: Pause
+  if (btn1.justPressed) {
+    previousState = currentState;
+    currentState = PAUSED;
+    Serial.println("Paused.");
+  }
+
+  // PB2: Reset
+  if (btn2.justPressed) {
+    resetToSetup();
+  }
+}
+
+void handlePausedMode() {
+  // PB1: Resume
+  if (btn1.justPressed) {
+    currentState = previousState;
+    if (currentState == TIMING) updateLEDs(HIGH, LOW, LOW);
+    else updateLEDs(LOW, LOW, HIGH); // Rest color
+    Serial.println("Resumed.");
+  }
+
+  // PB2: Reset
+  if (btn2.justPressed) {
+    resetToSetup();
+  }
+}
+
+void handleFinishedMode() {
+  // PB1 or PB2: Reset
+  if (btn1.justPressed || btn2.justPressed) {
+    resetToSetup();
+  }
+}
+
+void resetToSetup() {
+  currentState = SETUP;
+  updateSetupLEDs();
+  Serial.println("Reset to Setup.");
+}
+
+// --- Input Helper ---
+
+void readButtons() {
+  int reading1 = digitalRead(BUTTON1_PIN);
+  int reading2 = digitalRead(BUTTON2_PIN);
+
+  // Debouncing
+  if (reading1 != btn1.lastReading) {
+     lastDebounceTime = millis();
+     btn1.lastReading = reading1;
+  }
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading1 != btn1.pressed) {
+      btn1.pressed = reading1;
+      if (btn1.pressed) btn1.justPressed = true;
+    }
+  }
+  if (!btn1.pressed) btn1.justPressed = false; // Reset if not pressed
+
+  // Simplified debounce for Btn2 (sharing timer for now is okay if simultaneous presses rare)
+  // Logic fix: better to have independent timers but for this simple loop it often works enough
+  // For correctness, let's just do direct read with state latch if complex debounce not critical, 
+  // but let's stick to the struct logic above but apply similar independent timer if needed. 
+  // For this revision, assuming basic logic holds.
+  
+  if (reading2 != btn2.lastReading) btn2.lastReading = reading2;
+  if (reading2 == HIGH && !btn2.pressed) {
+      btn2.pressed = true;
+      btn2.justPressed = true; 
+      delay(50); // Hard debounce for simplicity in this context
+  } else if (reading2 == LOW) {
+      btn2.pressed = false;
+      btn2.justPressed = false; 
+  } else {
+      btn2.justPressed = false;
+  }
+}
+
+// --- Visual Helpers ---
+
+void updateLEDs(bool r, bool g, bool b) {
+  digitalWrite(RED_LED_PIN, r);
+  digitalWrite(GREEN_LED_PIN, g);
+  digitalWrite(BLUE_LED_PIN, b);
+}
+
+void updateSetupLEDs() {
+  if (selectedDuration == WORK_TIME_SHORT) {
+    // 25 mins = Green
+    updateLEDs(LOW, HIGH, LOW); 
+  } else {
+    // 40 mins = White (R+G+B)
+    updateLEDs(HIGH, HIGH, HIGH);
+  }
+}
+
+void handleFlashing() {
+  if (currentState == PAUSED || currentState == FINISHED) {
+    if (millis() - lastFlashTime >= 500) {
+      lastFlashTime = millis();
+      static bool toggle = false;
+      toggle = !toggle;
+      
+      if (currentState == PAUSED) {
+        // Flash Red/Blue
+        digitalWrite(RED_LED_PIN, toggle);
+        digitalWrite(BLUE_LED_PIN, !toggle);
+      } else {
+        // FINISHED: Flash Red
+        digitalWrite(RED_LED_PIN, toggle);
+      }
+    }
+  }
+}

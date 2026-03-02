@@ -1,0 +1,2063 @@
+CONTENTS:
+ 1. ChordMachine.cpp
+ 2. EncoderMain.cpp
+ 3. EuclideanDrums.cpp
+ 4. Looper.cpp
+ 5. Midi.cpp
+ 6. MultiEffect.cpp
+ 7. MusicBox.cpp
+ 8. SimpleButton.cpp
+ 9. SimpleLed.cpp
+10. SimpleOscillator.cpp
+11. StepSequencer.cpp
+12. SynthVoice.cpp
+
+=================================================================================
+
+# Daisy Pod
+
+Micro-breakout board for the Daisy Seed.
+
+Powered off Daisy Seed's Micro USB Input.
+
+## Features
+
+- Stereo Audio I/O (Line Level)
+- Headphone Output (with headphone volume rotary pot).
+- 2 Potentiometers
+- 1 Encoder (with built-in click switch).
+- TRS MIDI In
+- Two buttons
+- USB Micro (x2 -- one on Seed, one on Pod)
+- MicroSD Port
+- Two RGB LEDs
+- All headers have additional female pin for jumping out to other (custom) hardware
+
+## Project Ideas
+
+- Generative Music Box
+- Simple Sample Player
+- Sound Effect Machine
+
+=================================================================================
+
+___Makefile template___
+# Project Name
+TARGET = ProjectName
+
+# Sources
+CPP_SOURCES = ProjectName.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# Uncomment for LGPL modules (StringVoice, ModalVoice, ReverbSc)
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+_________________________
+
+___ChordMachine.cpp___
+#include "daisy_pod.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod   hw;
+Oscillator osc[4];
+Parameter  p_freq, p_inversion;
+int        notes[4];
+int        chord[10][3];
+Color      colors[10];
+int        chordNum = 0;
+
+void UpdateControls();
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    UpdateControls();
+
+    for(int i = 0; i < 4; i++)
+    {
+        osc[i].SetFreq(mtof(notes[i]));
+    }
+
+    // Audio Loop
+    for(size_t i = 0; i < size; i += 2)
+    {
+        float sig = 0;
+        for(int i = 0; i < 4; i++)
+        {
+            sig += osc[i].Process();
+        }
+
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+void InitSynth(float samplerate)
+{
+    // Init freq Parameter to knob1 using MIDI note numbers
+    // min 10, max 127, curve linear
+    p_freq.Init(hw.knob1, 0, 127, Parameter::LINEAR);
+    p_inversion.Init(hw.knob2, 0, 5, Parameter::LINEAR);
+
+    for(int i = 0; i < 4; i++)
+    {
+        osc[i].Init(samplerate);
+        osc[i].SetAmp(0.1f);
+        osc[i].SetWaveform(Oscillator::WAVE_SIN);
+        notes[i] = 30;
+    }
+}
+
+void InitChords()
+{
+    // Maj, min, Aug, Dim
+    // Maj7, min7, dom7, min/Maj7
+    // dim7, half dim7
+
+    //set thirds
+    for(int i = 0; i < 8; i++)
+    {
+        //every other chord, maj third, min third
+        chord[i][0] = 3 + ((i + 1) % 2);
+    }
+    //min 3rds
+    chord[8][0] = chord[9][0] = 3;
+
+    //set fifths
+    // perfect 5th
+    chord[0][1] = chord[1][1] = chord[4][1] = chord[5][1] = chord[6][1]
+        = chord[7][1]                                     = 7;
+    // diminished 5th
+    chord[3][1] = chord[8][1] = chord[9][1] = 6;
+    // augmented 5th
+    chord[2][1] = 8;
+
+    //set sevenths
+    // triads (octave since triad has no 7th)
+    chord[0][2] = chord[1][2] = chord[2][2] = chord[3][2] = 12;
+    // major 7th
+    chord[4][2] = chord[7][2] = 11;
+    // minor 7th
+    chord[5][2] = chord[6][2] = chord[9][2] = 10;
+    // diminished 7th
+    chord[8][2] = 9;
+}
+
+void InitColors()
+{
+    for(int i = 0; i < 7; i++)
+    {
+        colors[i].Init((Color::PresetColor)i);
+    }
+    colors[7].Init(1, 1, 0);
+    colors[8].Init(1, 0, 1);
+    colors[9].Init(0, .7, .4);
+}
+
+int main(void)
+{
+    float samplerate;
+
+    // Init everything
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    samplerate = hw.AudioSampleRate();
+
+    InitSynth(samplerate);
+    InitChords();
+    InitColors();
+
+    // start callbacks
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+void UpdateEncoder()
+{
+    if(hw.encoder.RisingEdge())
+    {
+        chordNum = 0;
+    }
+
+    chordNum += hw.encoder.Increment();
+    chordNum = (chordNum % 10 + 10) % 10;
+}
+
+void UpdateKnobs()
+{
+    int freq      = (int)p_freq.Process();
+    int inversion = (int)p_inversion.Process();
+
+    notes[0] = freq + (12 * (inversion >= 1));
+    notes[1] = freq + chord[chordNum][0] + (12 * (inversion >= 2));
+    notes[2] = freq + chord[chordNum][1] + (12 * (inversion >= 3));
+    notes[3] = freq + chord[chordNum][2] + (12 * (inversion >= 4));
+}
+
+void UpdateLeds()
+{
+    hw.led1.SetColor(colors[chordNum]);
+    hw.led2.SetColor(colors[chordNum]);
+    hw.UpdateLeds();
+}
+
+void UpdateControls()
+{
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+
+    UpdateEncoder();
+    UpdateKnobs();
+    UpdateLeds();
+}
+
+_________________________
+
+___EncoderMain.cpp___
+#include "daisy_pod.h"
+
+using namespace daisy;
+
+static DaisyPod hw;
+static uint8_t  led_sel;
+static int32_t  inc;
+
+#define NUM_COLORS 5
+
+Color my_colors[5];
+
+static void callback(AudioHandle::InterleavingInputBuffer  in,
+                     AudioHandle::InterleavingOutputBuffer out,
+                     size_t                                size)
+{
+    // Debounce the Encoder at a steady, fixed rate.
+    hw.encoder.Debounce();
+    inc = hw.encoder.Increment();
+    // Change the selected LED based on the increment.
+    if(inc > 0)
+    {
+        led_sel += 1;
+        // Wrap around
+        if(led_sel > NUM_COLORS - 1)
+        {
+            led_sel = 0;
+        }
+    }
+    else if(inc < 0)
+    {
+        // Wrap around
+        if(led_sel == 0)
+        {
+            led_sel = NUM_COLORS - 1;
+        }
+        else
+        {
+            led_sel -= 1;
+        }
+    }
+    if(hw.encoder.RisingEdge())
+    {
+        led_sel = 4;
+    }
+    hw.ClearLeds();
+    hw.led1.SetColor(my_colors[led_sel]);
+    hw.led2.SetColor(my_colors[led_sel]);
+    hw.UpdateLeds();
+}
+
+int main(void)
+{
+    hw.Init();
+    led_sel = 0;
+    inc     = 0;
+    my_colors[0].Init(Color::PresetColor::RED);
+    my_colors[1].Init(Color::PresetColor::GREEN);
+    my_colors[2].Init(Color::PresetColor::BLUE);
+    my_colors[3].Init(Color::PresetColor::WHITE);
+    my_colors[4].Init(Color::PresetColor::OFF);
+    // until we have fixed timer callbacks we'll use the audio callback
+    hw.StartAudio(callback);
+    while(1)
+    {
+        //hw.ClearLeds();
+        //hw.SetLed(static_cast<DaisyPod::Led>(led_sel), 1);
+    }
+}
+
+_________________________
+
+___EuclideanDrums.cpp___
+#include "daisysp.h"
+#include "daisy_pod.h"
+
+#define UINT32_MSB 0x80000000U
+#define MAX_LENGTH 32U
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod hardware;
+
+Oscillator osc;
+WhiteNoise noise;
+
+AdEnv     kickVolEnv, kickPitchEnv, snareEnv;
+Metro     tick;
+Parameter lengthParam;
+
+bool    kickSeq[MAX_LENGTH];
+bool    snareSeq[MAX_LENGTH];
+uint8_t kickStep  = 0;
+uint8_t snareStep = 0;
+
+void ProcessTick();
+void ProcessControls();
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float osc_out, noise_out, snr_env_out, kck_env_out, sig;
+
+    ProcessTick();
+
+    ProcessControls();
+
+    //audio
+    for(size_t i = 0; i < size; i += 2)
+    {
+        snr_env_out = snareEnv.Process();
+        kck_env_out = kickVolEnv.Process();
+
+        osc.SetFreq(kickPitchEnv.Process());
+        osc.SetAmp(kck_env_out);
+        osc_out = osc.Process();
+
+        noise_out = noise.Process();
+        noise_out *= snr_env_out;
+
+        sig = .5 * noise_out + .5 * osc_out;
+
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+void SetupDrums(float samplerate)
+{
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_TRI);
+    osc.SetAmp(1);
+
+    noise.Init();
+
+    snareEnv.Init(samplerate);
+    snareEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    snareEnv.SetTime(ADENV_SEG_DECAY, .2);
+    snareEnv.SetMax(1);
+    snareEnv.SetMin(0);
+
+    kickPitchEnv.Init(samplerate);
+    kickPitchEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    kickPitchEnv.SetTime(ADENV_SEG_DECAY, .05);
+    kickPitchEnv.SetMax(400);
+    kickPitchEnv.SetMin(50);
+
+    kickVolEnv.Init(samplerate);
+    kickVolEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    kickVolEnv.SetTime(ADENV_SEG_DECAY, 1);
+    kickVolEnv.SetMax(1);
+    kickVolEnv.SetMin(0);
+}
+
+void SetSeq(bool* seq, bool in)
+{
+    for(uint32_t i = 0; i < MAX_LENGTH; i++)
+    {
+        seq[i] = in;
+    }
+}
+
+int main(void)
+{
+    hardware.Init();
+    hardware.SetAudioBlockSize(4);
+    float samplerate   = hardware.AudioSampleRate();
+    float callbackrate = hardware.AudioCallbackRate();
+
+    //setup the drum sounds
+    SetupDrums(samplerate);
+
+    tick.Init(5, callbackrate);
+
+    lengthParam.Init(hardware.knob2, 1, 32, lengthParam.LINEAR);
+
+    SetSeq(snareSeq, 0);
+    SetSeq(kickSeq, 0);
+
+    hardware.StartAdc();
+    hardware.StartAudio(AudioCallback);
+
+    // Loop forever
+    for(;;) {}
+}
+
+float snareLength = 32.f;
+float kickLength  = 32.f;
+
+void IncrementSteps()
+{
+    snareStep++;
+    kickStep++;
+    snareStep %= (int)snareLength;
+    kickStep %= (int)kickLength;
+}
+
+void ProcessTick()
+{
+    if(tick.Process())
+    {
+        IncrementSteps();
+
+        if(kickSeq[kickStep])
+        {
+            kickVolEnv.Trigger();
+            kickPitchEnv.Trigger();
+        }
+
+        if(snareSeq[snareStep])
+        {
+            snareEnv.Trigger();
+        }
+    }
+}
+
+void SetArray(bool* seq, int arrayLen, float density)
+{
+    SetSeq(seq, 0);
+
+    int ones  = (int)round(arrayLen * density);
+    int zeros = arrayLen - ones;
+
+    if(ones == 0)
+        return;
+
+    if(zeros == 0)
+    {
+        SetSeq(seq, 1);
+        return;
+    }
+
+    int oneArr[ones];
+    int zeroArr[ones];
+
+    for(int i = 0; i < ones; i++)
+    {
+        oneArr[i] = zeroArr[i] = 0;
+    }
+
+    //how many zeroes per each one
+    int idx = 0;
+    for(int i = 0; i < zeros; i++)
+    {
+        zeroArr[idx] += 1;
+        idx++;
+        idx %= ones;
+    }
+
+    //how many ones remain
+    int rem = 0;
+    for(int i = 0; i < ones; i++)
+    {
+        if(zeroArr[i] == 0)
+            rem++;
+    }
+
+    //how many ones on each prior one
+    idx = 0;
+    for(int i = 0; i < rem; i++)
+    {
+        oneArr[idx] += 1;
+        idx++;
+        idx %= ones - rem;
+    }
+
+    //fill the global seq
+    idx = 0;
+    for(int i = 0; i < (ones - rem); i++)
+    {
+        seq[idx] = 1;
+        idx++;
+
+        for(int j = 0; j < zeroArr[i]; j++)
+        {
+            seq[idx] = 0;
+            idx++;
+        }
+
+        for(int j = 0; j < oneArr[i]; j++)
+        {
+            seq[idx] = 1;
+            idx++;
+        }
+    }
+}
+
+uint8_t mode = 0;
+void    UpdateEncoder()
+{
+    mode += hardware.encoder.Increment();
+    mode = (mode % 2 + 2) % 2;
+    hardware.led2.Set(0, !mode, mode);
+}
+
+void ConditionalParameter(float o, float n, float& param, float update)
+{
+    if(abs(o - n) > 0.00005)
+    {
+        param = update;
+    }
+}
+
+float snareAmount, kickAmount = 0.f;
+float k1old, k2old            = 0.f;
+void  UpdateKnobs()
+{
+    float k1 = hardware.knob1.Process();
+    float k2 = hardware.knob2.Process();
+
+    if(mode)
+    {
+        ConditionalParameter(k1old, k1, snareAmount, k1);
+        ConditionalParameter(k2old, k2, snareLength, lengthParam.Process());
+    }
+    else
+    {
+        ConditionalParameter(k1old, k1, kickAmount, k1);
+        ConditionalParameter(k2old, k2, kickLength, lengthParam.Process());
+    }
+
+    k1old = k1;
+    k2old = k2;
+}
+
+float tempo = 3;
+void  UpdateButtons()
+{
+    if(hardware.button2.Pressed())
+    {
+        tempo += .0015;
+    }
+
+    else if(hardware.button1.Pressed())
+    {
+        tempo -= .0015;
+    }
+
+    tempo = std::fminf(tempo, 10.f);
+    tempo = std::fmaxf(.5f, tempo);
+
+    tick.SetFreq(tempo);
+    hardware.led1.Set(tempo / 10.f, 0, 0);
+}
+
+void UpdateVars()
+{
+    SetArray(snareSeq, (int)round(snareLength), snareAmount);
+    SetArray(kickSeq, (int)round(kickLength), kickAmount);
+}
+
+void ProcessControls()
+{
+    hardware.ProcessDigitalControls();
+    hardware.ProcessAnalogControls();
+
+    UpdateEncoder();
+
+    UpdateKnobs();
+
+    UpdateButtons();
+
+    UpdateVars();
+
+    hardware.UpdateLeds();
+}
+
+_________________________
+
+___Looper.cpp___
+#include "daisysp.h"
+#include "daisy_pod.h"
+
+#define MAX_SIZE (48000 * 60 * 5) // 5 minutes of floats at 48 khz
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPod pod;
+
+bool first = true;  //first loop (sets length)
+bool rec   = false; //currently recording
+bool play  = false; //currently playing
+
+int                 pos = 0;
+float DSY_SDRAM_BSS buf[MAX_SIZE];
+int                 mod    = MAX_SIZE;
+int                 len    = 0;
+float               drywet = 0;
+bool                res    = false;
+
+void ResetBuffer();
+void Controls();
+
+void NextSamples(float&                               output,
+                 AudioHandle::InterleavingInputBuffer in,
+                 size_t                               i);
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float output = 0;
+
+    Controls();
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        NextSamples(output, in, i);
+
+        // left and right outs
+        out[i] = out[i + 1] = output;
+    }
+}
+
+int main(void)
+{
+    // initialize pod hardware and oscillator daisysp module
+
+    pod.Init();
+    pod.SetAudioBlockSize(4);
+    ResetBuffer();
+
+    // start callback
+    pod.StartAdc();
+    pod.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+//Resets the buffer
+void ResetBuffer()
+{
+    play  = false;
+    rec   = false;
+    first = true;
+    pos   = 0;
+    len   = 0;
+    for(int i = 0; i < mod; i++)
+    {
+        buf[i] = 0;
+    }
+    mod = MAX_SIZE;
+}
+
+void UpdateButtons()
+{
+    //button1 pressed
+    if(pod.button2.RisingEdge())
+    {
+        if(first && rec)
+        {
+            first = false;
+            mod   = len;
+            len   = 0;
+        }
+
+        res  = true;
+        play = true;
+        rec  = !rec;
+    }
+
+    //button1 held
+    if(pod.button2.TimeHeldMs() >= 1000 && res)
+    {
+        ResetBuffer();
+        res = false;
+    }
+
+    //button2 pressed and not empty buffer
+    if(pod.button1.RisingEdge() && !(!rec && first))
+    {
+        play = !play;
+        rec  = false;
+    }
+}
+
+//Deals with analog controls
+void Controls()
+{
+    pod.ProcessAnalogControls();
+    pod.ProcessDigitalControls();
+
+    drywet = pod.knob1.Process();
+
+    UpdateButtons();
+
+    //leds
+    pod.led1.Set(0, play == true, 0);
+    pod.led2.Set(rec == true, 0, 0);
+
+    pod.UpdateLeds();
+}
+
+void WriteBuffer(AudioHandle::InterleavingInputBuffer in, size_t i)
+{
+    buf[pos] = buf[pos] * 0.5 + in[i] * 0.5;
+    if(first)
+    {
+        len++;
+    }
+}
+
+void NextSamples(float&                               output,
+                 AudioHandle::InterleavingInputBuffer in,
+                 size_t                               i)
+{
+    if(rec)
+    {
+        WriteBuffer(in, i);
+    }
+
+    output = buf[pos];
+
+    //automatic looptime
+    if(len >= MAX_SIZE)
+    {
+        first = false;
+        mod   = MAX_SIZE;
+        len   = 0;
+    }
+
+    if(play)
+    {
+        pos++;
+        pos %= mod;
+    }
+
+    if(!rec)
+    {
+        output = output * drywet + in[i] * (1 - drywet);
+    }
+}
+
+_________________________
+
+___Midi.cpp___
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+// Global variables
+DaisyField hardware;
+MidiUartHandler   midi;
+
+// Sequencer variables
+const int NUM_TRACKS = 4;
+const int NUM_STEPS = 8;
+bool step_active[NUM_TRACKS][NUM_STEPS];
+uint8_t step_note[NUM_TRACKS][NUM_STEPS];
+uint8_t step_velocity[NUM_TRACKS][NUM_STEPS];
+float step_gate_length[NUM_TRACKS][NUM_STEPS];
+uint8_t track_channel[NUM_TRACKS];
+bool track_mute[NUM_TRACKS];
+
+uint8_t current_step = 0;
+float bpm = 120.0f;
+float step_duration_ms = 0;
+bool sequencer_running = false;
+bool clock_tick = false;
+
+// MIDI clock variables
+bool sending_midi_clock = false;
+uint32_t last_clock_time = 0;
+float clock_interval_ms = 0;
+uint8_t ppq_counter = 0;
+
+// Scheduled notes
+const int MAX_SCHEDULED_NOTES = 32;
+struct ScheduledNote {
+    uint8_t channel;
+    uint8_t note;
+    uint8_t velocity;
+    float gate_length;
+    uint32_t start_time;
+    uint32_t duration;
+    bool active;
+};
+ScheduledNote scheduled_notes[MAX_SCHEDULED_NOTES];
+
+// Error handling
+bool midi_error_occurred = false;
+uint32_t last_error_time = 0;
+const uint32_t ERROR_DISPLAY_DURATION = 3000;
+
+// Function prototypes
+void InitMidi();
+void InitSequencer();
+void InitScheduledNotes();
+void StartSequencer();
+void StopSequencer();
+void ProcessSequencerStep();
+void SendMidiNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
+void SendMidiNoteOff(uint8_t channel, uint8_t note, uint8_t velocity = 0);
+void ScheduleNote(uint8_t channel, uint8_t note, uint8_t velocity, float gate_length, float step_duration_ms);
+void ProcessScheduledNotes();
+void StartMidiClock(float bpm);
+void StopMidiClock();
+void ProcessMidiClock();
+void CheckMidiErrors();
+void DisplayMidiError(OledDisplay<SSD130x4WireSpi128x64Driver>& display);
+
+// Audio callback
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = out[1][i] = 0.0f;
+    }
+}
+
+int main(void)
+{
+    hardware.Init();
+    hardware.StartAdc();
+    
+    InitMidi();
+    InitSequencer();
+    InitScheduledNotes();
+    
+    hardware.display.Init();
+    hardware.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        hardware.ProcessAllControls();
+        
+        midi.Listen();
+        
+        while(midi.HasEvents())
+        {
+            auto event = midi.PopEvent();
+        }
+        
+        if(hardware.GetSwitch(DaisyField::SW_1)->RisingEdge())
+        {
+            if(sequencer_running)
+                StopSequencer();
+            else
+                StartSequencer();
+        }
+        
+        float new_bpm = 60.0f + hardware.GetKnobValue(DaisyField::KNOB_1) * 180.0f;
+        if(abs(new_bpm - bpm) > 0.5f)
+        {
+            bpm = new_bpm;
+            step_duration_ms = (60000.0f / bpm) / 4.0f;
+            
+            if(sending_midi_clock)
+            {
+                clock_interval_ms = (60000.0f / bpm) / 24.0f;
+            }
+        }
+        
+        ProcessMidiClock();
+        
+        if(sending_midi_clock && ppq_counter % 6 == 0)
+        {
+            clock_tick = true;
+        }
+        else
+        {
+            clock_tick = false;
+        }
+        
+        if(clock_tick)
+        {
+            ProcessSequencerStep();
+        }
+        
+        ProcessScheduledNotes();
+        CheckMidiErrors();
+        
+        hardware.display.Fill(false);
+        hardware.display.SetCursor(0, 0);
+        hardware.display.WriteString(sequencer_running ? "Running" : "Stopped", Font_7x10, true);
+        
+        hardware.display.SetCursor(0, 12);
+        char bpm_str[16];
+        sprintf(bpm_str, "BPM: %.1f", bpm);
+        hardware.display.WriteString(bpm_str, Font_7x10, true);
+        
+        hardware.display.SetCursor(0, 24);
+        char step_str[16];
+        sprintf(step_str, "Step: %d", current_step + 1);
+        hardware.display.WriteString(step_str, Font_7x10, true);
+        
+        if(midi_error_occurred)
+        {
+            hardware.display.SetCursor(0, 36);
+            hardware.display.WriteString("MIDI Error", Font_7x10, true);
+        }
+        
+        hardware.display.Update();
+        
+        for(int i = 0; i < NUM_STEPS; i++)
+        {
+            bool is_current = (i == current_step && sequencer_running);
+            bool is_active = step_active[0][i];
+            
+            float brightness = 0.0f;
+            if(is_current && is_active)
+                brightness = 1.0f;
+            else if(is_current)
+                brightness = 0.5f;
+            else if(is_active)
+                brightness = 0.2f;
+            
+            hardware.led_driver.SetLed(DaisyField::LED_KEY_B1 + i, brightness);
+        }
+        hardware.led_driver.Update();
+        
+        System::Delay(1);
+    }
+}
+
+void InitMidi()
+{
+    midi.Init(MidiUartHandler ::INPUT_MODE_UART1, MidiUartHandler ::OUTPUT_MODE_UART1);
+    midi.StartReceive();
+}
+
+void InitSequencer()
+{
+    for(int t = 0; t < NUM_TRACKS; t++)
+    {
+        track_channel[t] = t;
+        track_mute[t] = false;
+        
+        for(int s = 0; s < NUM_STEPS; s++)
+        {
+            step_active[t][s] = false;
+            step_note[t][s] = 60 + t;
+            step_velocity[t][s] = 100;
+            step_gate_length[t][s] = 0.5f;
+        }
+    }
+    
+    step_duration_ms = (60000.0f / bpm) / 4.0f;
+}
+
+void InitScheduledNotes()
+{
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        scheduled_notes[i].active = false;
+    }
+}
+
+void StartSequencer()
+{
+    sequencer_running = true;
+    current_step = 0;
+    StartMidiClock(bpm);
+}
+
+void StopSequencer()
+{
+    sequencer_running = false;
+    StopMidiClock();
+    
+    for(int c = 0; c < 16; c++)
+    {
+        SendMidiCc(c, 123, 0);
+    }
+}
+
+void ProcessSequencerStep()
+{
+    for(int t = 0; t < NUM_TRACKS; t++)
+    {
+        if(!track_mute[t] && step_active[t][current_step])
+        {
+            ScheduleNote(
+                track_channel[t],
+                step_note[t][current_step],
+                step_velocity[t][current_step],
+                step_gate_length[t][current_step],
+                step_duration_ms
+            );
+        }
+    }
+    
+    current_step = (current_step + 1) % NUM_STEPS;
+}
+
+void SendMidiNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+    midi.SendNoteOn(channel, note, velocity);
+}
+
+void SendMidiNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+    midi.SendNoteOff(channel, note, velocity);
+}
+
+void SendMidiCc(uint8_t channel, uint8_t control_number, uint8_t value)
+{
+    midi.SendControlChange(channel, control_number, value);
+}
+
+void ScheduleNote(uint8_t channel, uint8_t note, uint8_t velocity, float gate_length, float step_duration_ms)
+{
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        if(!scheduled_notes[i].active)
+        {
+            scheduled_notes[i].channel = channel;
+            scheduled_notes[i].note = note;
+            scheduled_notes[i].velocity = velocity;
+            scheduled_notes[i].gate_length = gate_length;
+            scheduled_notes[i].start_time = System::GetNow();
+            scheduled_notes[i].duration = step_duration_ms * gate_length;
+            scheduled_notes[i].active = true;
+            
+            SendMidiNoteOn(channel, note, velocity);
+            return;
+        }
+    }
+}
+
+void ProcessScheduledNotes()
+{
+    uint32_t current_time = System::GetNow();
+    
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        if(scheduled_notes[i].active)
+        {
+            if(current_time - scheduled_notes[i].start_time >= scheduled_notes[i].duration)
+            {
+                SendMidiNoteOff(scheduled_notes[i].channel, scheduled_notes[i].note);
+                scheduled_notes[i].active = false;
+            }
+        }
+    }
+}
+
+void StartMidiClock(float bpm)
+{
+    clock_interval_ms = (60000.0f / bpm) / 24.0f;
+    sending_midi_clock = true;
+    ppq_counter = 0;
+    last_clock_time = System::GetNow();
+    
+    midi.SendStart();
+}
+
+void StopMidiClock()
+{
+    sending_midi_clock = false;
+    midi.SendStop();
+}
+
+void ProcessMidiClock()
+{
+    if(!sending_midi_clock)
+        return;
+    
+    uint32_t current_time = System::GetNow();
+    
+    if(current_time - last_clock_time >= clock_interval_ms)
+    {
+        midi.SendClock();
+        last_clock_time = current_time;
+        ppq_counter = (ppq_counter + 1) % 24;
+    }
+}
+
+void CheckMidiErrors()
+{
+    if(midi.HasErrors())
+    {
+        midi_error_occurred = true;
+        last_error_time = System::GetNow();
+        
+        uint8_t error_code = midi.GetError();
+        midi.ClearError();
+        
+        midi.StopReceive();
+        System::Delay(10);
+        midi.StartReceive();
+    }
+    
+    if(midi_error_occurred && System::GetNow() - last_error_time > ERROR_DISPLAY_DURATION)
+    {
+        midi_error_occurred = false;
+    }
+}
+
+void DisplayMidiError(OledDisplay<SSD130x4WireSpi128x64Driver>& display)
+{
+    if(midi_error_occurred)
+    {
+        display.SetCursor(0, 48);
+        display.WriteString("MIDI Error", Font_7x10, true);
+    }
+}
+
+_________________________
+
+___MultiEffect.cpp___
+#include "daisysp.h"
+#include "daisy_pod.h"
+
+// Set max delay time to 0.75 of samplerate.
+#define MAX_DELAY static_cast<size_t>(48000 * 2.5f)
+#define REV 0
+#define DEL 1
+#define CRU 2
+
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPod pod;
+
+static ReverbSc                                  rev;
+static DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS dell;
+static DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delr;
+static Tone                                      tone;
+static Parameter deltime, cutoffParam, crushrate;
+int              mode = REV;
+
+float currentDelay, feedback, delayTarget, cutoff;
+
+int   crushmod, crushcount;
+float crushsl, crushsr, drywet;
+
+
+//Helper functions
+void Controls();
+
+void GetReverbSample(float &outl, float &outr, float inl, float inr);
+
+void GetDelaySample(float &outl, float &outr, float inl, float inr);
+
+void GetCrushSample(float &outl, float &outr, float inl, float inr);
+
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float outl, outr, inl, inr;
+
+    Controls();
+
+    //audio
+    for(size_t i = 0; i < size; i += 2)
+    {
+        inl = in[i];
+        inr = in[i + 1];
+
+        switch(mode)
+        {
+            case REV: GetReverbSample(outl, outr, inl, inr); break;
+            case DEL: GetDelaySample(outl, outr, inl, inr); break;
+            case CRU: GetCrushSample(outl, outr, inl, inr); break;
+            default: outl = outr = 0;
+        }
+
+        // left out
+        out[i] = outl;
+
+        // right out
+        out[i + 1] = outr;
+    }
+}
+
+int main(void)
+{
+    // initialize pod hardware and oscillator daisysp module
+    float sample_rate;
+
+    //Inits and sample rate
+    pod.Init();
+    pod.SetAudioBlockSize(4);
+    sample_rate = pod.AudioSampleRate();
+    rev.Init(sample_rate);
+    dell.Init();
+    delr.Init();
+    tone.Init(sample_rate);
+
+    //set parameters
+    deltime.Init(pod.knob1, sample_rate * .05, MAX_DELAY, deltime.LOGARITHMIC);
+    cutoffParam.Init(pod.knob1, 500, 20000, cutoffParam.LOGARITHMIC);
+    crushrate.Init(pod.knob2, 1, 50, crushrate.LOGARITHMIC);
+
+    //reverb parameters
+    rev.SetLpFreq(18000.0f);
+    rev.SetFeedback(0.85f);
+
+    //delay parameters
+    currentDelay = delayTarget = sample_rate * 0.75f;
+    dell.SetDelay(currentDelay);
+    delr.SetDelay(currentDelay);
+
+    // start callback
+    pod.StartAdc();
+    pod.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+void UpdateKnobs(float &k1, float &k2)
+{
+    k1 = pod.knob1.Process();
+    k2 = pod.knob2.Process();
+
+    switch(mode)
+    {
+        case REV:
+            drywet = k1;
+            rev.SetFeedback(k2);
+            break;
+        case DEL:
+            delayTarget = deltime.Process();
+            feedback    = k2;
+            break;
+        case CRU:
+            cutoff = cutoffParam.Process();
+            tone.SetFreq(cutoff);
+            crushmod = (int)crushrate.Process();
+    }
+}
+
+void UpdateEncoder()
+{
+    mode = mode + pod.encoder.Increment();
+    mode = (mode % 3 + 3) % 3;
+}
+
+void UpdateLeds(float k1, float k2)
+{
+    pod.led1.Set(
+        k1 * (mode == 2), k1 * (mode == 1), k1 * (mode == 0 || mode == 2));
+    pod.led2.Set(
+        k2 * (mode == 2), k2 * (mode == 1), k2 * (mode == 0 || mode == 2));
+
+    pod.UpdateLeds();
+}
+
+void Controls()
+{
+    float k1, k2;
+    delayTarget = feedback = drywet = 0;
+
+    pod.ProcessAnalogControls();
+    pod.ProcessDigitalControls();
+
+    UpdateKnobs(k1, k2);
+
+    UpdateEncoder();
+
+    UpdateLeds(k1, k2);
+}
+
+void GetReverbSample(float &outl, float &outr, float inl, float inr)
+{
+    rev.Process(inl, inr, &outl, &outr);
+    outl = drywet * outl + (1 - drywet) * inl;
+    outr = drywet * outr + (1 - drywet) * inr;
+}
+
+void GetDelaySample(float &outl, float &outr, float inl, float inr)
+{
+    fonepole(currentDelay, delayTarget, .00007f);
+    delr.SetDelay(currentDelay);
+    dell.SetDelay(currentDelay);
+    outl = dell.Read();
+    outr = delr.Read();
+
+    dell.Write((feedback * outl) + inl);
+    outl = (feedback * outl) + ((1.0f - feedback) * inl);
+
+    delr.Write((feedback * outr) + inr);
+    outr = (feedback * outr) + ((1.0f - feedback) * inr);
+}
+
+void GetCrushSample(float &outl, float &outr, float inl, float inr)
+{
+    crushcount++;
+    crushcount %= crushmod;
+    if(crushcount == 0)
+    {
+        crushsr = inr;
+        crushsl = inl;
+    }
+    outl = tone.Process(crushsl);
+    outr = tone.Process(crushsr);
+}
+
+_________________________
+
+___MusicBox.cpp___
+#include "daisy_pod.h"
+#include "daisysp.h"
+#include <math.h>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod   hw;
+Oscillator osc;
+Svf        filt;
+ReverbSc   verb;
+AdEnv      env;
+Parameter  p_xf, p_vamt, p_dec, p_vtime;
+
+const static float scale[7] = {0, 2, 4, 5, 7, 9, 11};
+
+static float get_new_note()
+{
+    int32_t val, oct, idx;
+    val = myrand() % 14;
+    oct = val / 7;
+    idx = val % 7;
+    return scale[idx] + (12 * oct);
+}
+
+static float freq;
+float        sig, rawsig, filtsig, sendsig, wetvl, wetvr;
+float        xf, vamt, dec, time;
+static void  audio(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    hw.ProcessDigitalControls();
+    if(hw.button1.RisingEdge())
+    {
+        freq = mtof(48.0f + get_new_note());
+        osc.SetFreq(freq);
+        env.SetTime(ADENV_SEG_DECAY, dec);
+        env.Trigger();
+    }
+
+    // Get Parameters
+    xf   = p_xf.Process();
+    vamt = p_vamt.Process();
+    dec  = p_dec.Process();
+
+    // Audio Loop
+    for(size_t i = 0; i < size; i += 2)
+    {
+        // Process
+        rawsig = osc.Process();
+        sig    = rawsig * env.Process();
+        filt.Process(sig);
+        filtsig = filt.Low();
+        sendsig = filtsig * vamt;
+        verb.Process(sendsig, sendsig, &wetvl, &wetvr);
+        out[i]     = (filtsig + (wetvl)) * 0.707f;
+        out[i + 1] = (filtsig + (wetvr)) * 0.707f;
+    }
+}
+
+void InitSynth(float samplerate)
+{
+    // Synth Parameters.
+    p_xf.Init(hw.knob1, 10.0f, 12000.0f, Parameter::LOGARITHMIC);
+    p_dec.Init(hw.knob1, 0.2f, 5.0f, Parameter::EXPONENTIAL);
+    p_vamt.Init(hw.knob2, 0.0f, 1.0f, Parameter::LINEAR);
+    p_vtime.Init(hw.knob2, 0.4f, 0.95f, Parameter::LINEAR);
+    dec = 0.62;
+    // Init Osc and Nse
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    osc.SetFreq(100.0f);
+    osc.SetAmp(.5f);
+    env.Init(samplerate);
+    env.SetCurve(-15.0f);
+    env.SetTime(ADENV_SEG_ATTACK, 0.002f);
+    env.SetTime(ADENV_SEG_DECAY, 2.6f);
+    env.SetMax(1.f);
+    env.SetMin(0.f);
+    filt.Init(samplerate);
+    filt.SetRes(0.5f);
+    filt.SetDrive(0.8f);
+    filt.SetFreq(2400.0f);
+    verb.Init(samplerate);
+    verb.SetFeedback(0.87);
+    verb.SetLpFreq(10000.0f);
+}
+
+int main(void)
+{
+    float samplerate;
+    // Init
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    samplerate = hw.AudioSampleRate();
+    InitSynth(samplerate);
+    // Start Callbacks
+    hw.StartAdc();
+    hw.StartAudio(audio);
+    while(1) {}
+}
+
+_________________________
+
+___SimpleButton.cpp___
+#include "daisy_pod.h"
+
+using namespace daisy;
+
+DaisyPod hw;
+
+int main(void)
+{
+    bool brightness1, brightness2;
+    brightness1 = false;
+    brightness2 = false;
+    hw.Init();
+
+    while(1)
+    {
+        hw.ProcessDigitalControls();
+
+        // using button1 as momentary switch for turning on/off led1
+        brightness1 = hw.button1.Pressed();
+
+        // using button2 as latching switch for toggling led2
+        if(hw.button2.RisingEdge())
+            brightness2 = !brightness2;
+
+        // assign brightness levels to each led (R, G, B)
+        hw.led1.Set(brightness1, brightness1, brightness1);
+        hw.led2.Set(brightness2, brightness2, brightness2);
+        hw.UpdateLeds();
+    }
+}
+
+_________________________
+
+___SimpleLed.cpp___
+#include "daisy_pod.h"
+
+using namespace daisy;
+
+DaisyPod  hw;
+Parameter p_knob1, p_knob2;
+
+int main(void)
+{
+    hw.Init();
+    float r = 0, g = 0, b = 0;
+    p_knob1.Init(hw.knob1, 0, 1, Parameter::LINEAR);
+    p_knob2.Init(hw.knob2, 0, 1, Parameter::LINEAR);
+
+    hw.StartAdc();
+
+    while(1)
+    {
+        r = p_knob1.Process();
+        g = p_knob2.Process();
+
+        hw.led1.Set(r, g, b);
+
+        hw.UpdateLeds();
+    }
+}
+
+_________________________
+
+___SimpleOscillator.cpp___
+#include "daisy_pod.h"
+#include "daisysp.h"
+
+#define NUM_WAVEFORMS 4
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod   hw;
+Oscillator osc;
+Parameter  p_freq;
+
+uint8_t waveforms[NUM_WAVEFORMS] = {
+    Oscillator::WAVE_SIN,
+    Oscillator::WAVE_TRI,
+    Oscillator::WAVE_POLYBLEP_SAW,
+    Oscillator::WAVE_POLYBLEP_SQUARE,
+};
+
+static float freq;
+float        sig;
+static int   waveform, octave;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    hw.ProcessDigitalControls();
+
+    waveform += hw.encoder.Increment();
+    waveform = DSY_CLAMP(waveform, 0, NUM_WAVEFORMS);
+    osc.SetWaveform(waveforms[waveform]);
+
+    if(hw.button2.RisingEdge())
+        octave++;
+    if(hw.button1.RisingEdge())
+        octave--;
+    octave = DSY_CLAMP(octave, 0, 4);
+
+    // convert MIDI to frequency and multiply by octave size
+    freq = mtof(p_freq.Process() + (octave * 12));
+    osc.SetFreq(freq);
+
+    // Audio Loop
+    for(size_t i = 0; i < size; i += 2)
+    {
+        // Process
+        sig        = osc.Process();
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+void InitSynth(float samplerate)
+{
+    // Init freq Parameter to knob1 using MIDI note numbers
+    // min 10, max 127, curve linear
+    p_freq.Init(hw.knob1, 0, 127, Parameter::LINEAR);
+
+    osc.Init(samplerate);
+    osc.SetAmp(1.f);
+
+    waveform = 0;
+    octave   = 0;
+}
+
+int main(void)
+{
+    float samplerate;
+
+    // Init everything
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    samplerate = hw.AudioSampleRate();
+    InitSynth(samplerate);
+
+    // start callbacks
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+_________________________
+
+___StepSequencer.cpp___
+#include "daisy_pod.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod pod;
+
+Oscillator osc;
+AdEnv      env;
+Parameter  decayTimeParam, pitchParam, tickFreqParam, filterFreqParam;
+Metro      tick;
+MoogLadder flt;
+
+bool    edit; //if we aren't editing, we're playing
+bool    editCycle;
+uint8_t step;
+uint8_t wave;
+float   dec[8];
+float   pitch[8];
+bool    active[8];
+float   env_out;
+
+Color colors[8];
+float pent[] = {110.f, 128.33f, 146.66f, 174.166f, 192.5f};
+
+float oldk1, oldk2;
+float tickFrequency, filterFrequency;
+float k1, k2;
+
+void Controls();
+
+void NextSamples(float &sig);
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sig;
+
+    Controls();
+
+    // Audio Loop
+    sig = 0;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        NextSamples(sig);
+
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    pod.Init();
+    pod.SetAudioBlockSize(4);
+    sample_rate     = pod.AudioSampleRate();
+    tickFrequency   = 3.f;
+    filterFrequency = 20000.f;
+    k1 = k2 = 0.f;
+
+    osc.Init(sample_rate);
+    env.Init(sample_rate);
+    tick.Init(3, sample_rate);
+    flt.Init(sample_rate);
+
+    //Set up parameters
+    decayTimeParam.Init(pod.knob1, .03, 1, decayTimeParam.LINEAR);
+    pitchParam.Init(pod.knob2, 0, 10, pitchParam.LINEAR);
+    tickFreqParam.Init(pod.knob1, 4, 13, tickFreqParam.LINEAR);
+    filterFreqParam.Init(pod.knob2, 100, 10000, filterFreqParam.LOGARITHMIC);
+
+    //Osc parameters
+    osc.SetWaveform(osc.WAVE_TRI);
+
+    //Envelope parameters
+    env.SetTime(ADENV_SEG_ATTACK, 0.01);
+    env.SetMin(0.0);
+    env.SetMax(1);
+
+    //Set filter parameters
+    flt.SetFreq(20000);
+    flt.SetRes(0.7);
+
+    //Global variables
+    oldk1 = oldk2 = 0;
+    edit          = true;
+    editCycle     = false;
+    step          = 0;
+    env_out       = 0;
+    wave          = 2;
+
+    for(int i = 0; i < 8; i++)
+    {
+        dec[i]    = .5;
+        active[i] = false;
+        pitch[i]  = 110;
+        colors[i].Init((Color::PresetColor)i);
+    }
+    colors[7].Init(1, 1, 0);
+
+    pod.StartAdc();
+    pod.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+void ConditionalParameter(float o, float n, float &param, float update)
+{
+    if(abs(o - n) > 0.00005)
+    {
+        param = update;
+    }
+}
+
+void UpdateEncoderPressed()
+{
+    //switch modes
+    if(pod.encoder.RisingEdge())
+    {
+        edit = !edit;
+        step = 0;
+    }
+    if(edit == false)
+    {
+        editCycle = false;
+    }
+}
+
+void UpdateEncoderIncrement()
+{
+    if(edit)
+    {
+        step += pod.encoder.Increment();
+        step = (step % 8 + 8) % 8;
+    }
+    else
+    {
+        wave += pod.encoder.Increment();
+        wave = ((wave % 2 + 2) % 2);
+        osc.SetWaveform(wave + 3);
+    }
+}
+
+void UpdateButtons()
+{
+    if(edit)
+    {
+        if(pod.button2.RisingEdge())
+        {
+            active[step] = !active[step];
+        }
+        if(pod.button1.RisingEdge())
+        {
+            editCycle = !editCycle;
+        }
+    }
+}
+
+void UpdateKnobs()
+{
+    k1 = pod.knob1.Process();
+    k2 = pod.knob2.Process();
+
+    if(edit)
+    {
+        ConditionalParameter(oldk1, k1, dec[step], decayTimeParam.Process());
+
+        int temp = (int)pitchParam.Process();
+        ConditionalParameter(
+            oldk2, k2, pitch[step], pent[temp % 5] * (temp / (int)5 + 1));
+        osc.SetFreq(pitch[step]);
+    }
+
+    else
+    {
+        ConditionalParameter(oldk1, k1, tickFrequency, tickFreqParam.Process());
+        ConditionalParameter(
+            oldk2, k2, filterFrequency, filterFreqParam.Process());
+
+        tick.SetFreq(tickFrequency);
+        flt.SetFreq(filterFrequency);
+    }
+
+    oldk1 = k1;
+    oldk2 = k2;
+}
+
+void UpdateLedEdit()
+{
+    Color cur_color = colors[step];
+    pod.led1.SetColor(cur_color);
+
+    if(active[step])
+    {
+        pod.led2.SetColor(cur_color);
+    }
+
+    else
+    {
+        pod.led2.Set(0, 0, 0);
+    }
+
+    pod.UpdateLeds();
+}
+
+void UpdateLeds()
+{
+    if(edit)
+    {
+        UpdateLedEdit();
+    }
+    else
+    {
+        pod.led2.Set(0, env_out, 0);
+        pod.led1.Set(0, env_out, 0);
+    }
+    pod.UpdateLeds();
+}
+
+void Controls()
+{
+    pod.ProcessDigitalControls();
+    pod.ProcessAnalogControls();
+
+    UpdateEncoderPressed();
+
+    UpdateEncoderIncrement();
+
+    UpdateButtons();
+
+    UpdateKnobs();
+
+    UpdateLeds();
+}
+
+void NextSamples(float &sig)
+{
+    env_out = env.Process();
+    osc.SetAmp(env_out);
+    sig = osc.Process();
+    sig = flt.Process(sig);
+
+    if(tick.Process() && !edit)
+    {
+        step++;
+        step %= 8;
+        if(active[step])
+        {
+            env.Trigger();
+        }
+    }
+
+    if(active[step])
+    {
+        env.SetTime(ADENV_SEG_DECAY, dec[step]);
+        osc.SetFreq(pitch[step]);
+    }
+    if(!env.IsRunning() && editCycle)
+    {
+        env.Trigger();
+    }
+}
+
+_________________________
+
+___SynthVoice.cpp___
+#include "daisysp.h"
+#include "daisy_pod.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisyPod   pod;
+static Oscillator osc, lfo;
+static MoogLadder flt;
+static AdEnv      ad;
+static Parameter  pitchParam, cutoffParam, lfoParam;
+
+int   wave, mode;
+float vibrato, oscFreq, lfoFreq, lfoAmp, attack, release, cutoff;
+float oldk1, oldk2, k1, k2;
+bool  selfCycle;
+
+void ConditionalParameter(float  oldVal,
+                          float  newVal,
+                          float &param,
+                          float  update);
+
+void Controls();
+
+void NextSamples(float &sig)
+{
+    float ad_out = ad.Process();
+    vibrato      = lfo.Process();
+
+    osc.SetFreq(oscFreq + vibrato);
+
+    sig = osc.Process();
+    sig = flt.Process(sig);
+    sig *= ad_out;
+}
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    Controls();
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        float sig;
+        NextSamples(sig);
+
+        // left out
+        out[i] = sig;
+
+        // right out
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    // Set global variables
+    float sample_rate;
+    mode    = 0;
+    vibrato = 0.0f;
+    oscFreq = 1000.0f;
+    oldk1 = oldk2 = 0;
+    k1 = k2   = 0;
+    attack    = .01f;
+    release   = .2f;
+    cutoff    = 10000;
+    lfoAmp    = 1.0f;
+    lfoFreq   = 0.1f;
+    selfCycle = false;
+
+    //Init everything
+    pod.Init();
+    pod.SetAudioBlockSize(4);
+    sample_rate = pod.AudioSampleRate();
+    osc.Init(sample_rate);
+    flt.Init(sample_rate);
+    ad.Init(sample_rate);
+    lfo.Init(sample_rate);
+
+    //Set filter parameters
+    flt.SetFreq(10000);
+    flt.SetRes(0.8);
+
+    // Set parameters for oscillator
+    osc.SetWaveform(osc.WAVE_SAW);
+    wave = osc.WAVE_SAW;
+    osc.SetFreq(440);
+    osc.SetAmp(1);
+
+    // Set parameters for lfo
+    lfo.SetWaveform(osc.WAVE_SIN);
+    lfo.SetFreq(0.1);
+    lfo.SetAmp(1);
+
+    //Set envelope parameters
+    ad.SetTime(ADENV_SEG_ATTACK, 0.01);
+    ad.SetTime(ADENV_SEG_DECAY, .2);
+    ad.SetMax(1);
+    ad.SetMin(0);
+    ad.SetCurve(0.5);
+
+    //set parameter parameters
+    cutoffParam.Init(pod.knob1, 100, 20000, cutoffParam.LOGARITHMIC);
+    pitchParam.Init(pod.knob2, 50, 5000, pitchParam.LOGARITHMIC);
+    lfoParam.Init(pod.knob1, 0.25, 1000, lfoParam.LOGARITHMIC);
+
+    // start callback
+    pod.StartAdc();
+    pod.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+//Updates values if knob had changed
+void ConditionalParameter(float  oldVal,
+                          float  newVal,
+                          float &param,
+                          float  update)
+{
+    if(abs(oldVal - newVal) > 0.00005)
+    {
+        param = update;
+    }
+}
+
+
+//Controls Helpers
+void UpdateEncoder()
+{
+    wave += pod.encoder.RisingEdge();
+    wave %= osc.WAVE_POLYBLEP_TRI;
+
+    //skip ramp since it sounds like saw
+    if(wave == 3)
+    {
+        wave = 4;
+    }
+
+    osc.SetWaveform(wave);
+
+    mode += pod.encoder.Increment();
+    mode = (mode % 3 + 3) % 3;
+}
+
+void UpdateKnobs()
+{
+    k1 = pod.knob1.Process();
+    k2 = pod.knob2.Process();
+
+    switch(mode)
+    {
+        case 0:
+            ConditionalParameter(oldk1, k1, cutoff, cutoffParam.Process());
+            ConditionalParameter(oldk2, k2, oscFreq, pitchParam.Process());
+            flt.SetFreq(cutoff);
+            break;
+        case 1:
+            ConditionalParameter(oldk1, k1, attack, pod.knob1.Process());
+            ConditionalParameter(oldk2, k2, release, pod.knob2.Process());
+            ad.SetTime(ADENV_SEG_ATTACK, attack);
+            ad.SetTime(ADENV_SEG_DECAY, release);
+            break;
+        case 2:
+            ConditionalParameter(oldk1, k1, lfoFreq, lfoParam.Process());
+            ConditionalParameter(oldk2, k2, lfoAmp, pod.knob2.Process());
+            lfo.SetFreq(lfoFreq);
+            lfo.SetAmp(lfoAmp * 100);
+        default: break;
+    }
+}
+
+void UpdateLeds()
+{
+    pod.led1.Set(mode == 2, mode == 1, mode == 0);
+    pod.led2.Set(0, selfCycle, selfCycle);
+
+    oldk1 = k1;
+    oldk2 = k2;
+
+    pod.UpdateLeds();
+}
+
+void UpdateButtons()
+{
+    if(pod.button1.RisingEdge() || (selfCycle && !ad.IsRunning()))
+    {
+        ad.Trigger();
+    }
+
+    if(pod.button2.RisingEdge())
+    {
+        selfCycle = !selfCycle;
+    }
+}
+
+void Controls()
+{
+    pod.ProcessAnalogControls();
+    pod.ProcessDigitalControls();
+
+    UpdateEncoder();
+
+    UpdateKnobs();
+
+    UpdateLeds();
+
+    UpdateButtons();
+}

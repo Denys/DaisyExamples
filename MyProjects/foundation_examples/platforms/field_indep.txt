@@ -1,0 +1,559 @@
+CONTENTS:
+ 1. DaisyField Hardware Access Pattern
+ 2. DaisyField LED Control Pattern
+ 3. DaisyField Display Pattern
+ 4. Chorus Effect with Field Controls
+ 5. Polyphonic Keyboard Synth Pattern
+ 6. MIDI Polyphonic Synth Pattern
+ 7. Physical Modeling with Keyboard (ModalVoice)
+ 8. Makefile Template for Field Projects
+
+================================================================================
+                    DAISY FIELD INTEGRATION EXAMPLES
+              Higher-Level Abstraction with Cross-References
+================================================================================
+
+This document provides Daisy Field examples that reference building blocks from:
+  • examples/dsp/              → Audio DSP classes (Chorus, Oscillator, etc.)
+  • examples/lib/libdaisy.txt  → Hardware peripheral handling (OLED, MIDI, ADC)
+  • examples/platforms/seed.txt → Basic audio callback patterns
+
+The DaisyField hardware includes:
+  • 8 rotary knobs (analog)
+  • 2 momentary switches
+  • 16-key capacitive touch keyboard
+  • OLED display (128x64)
+  • LED driver (21 LEDs: 8 knob + 13 keyboard)
+  • 4 CV inputs, Gate input
+  • Stereo audio I/O
+  • MIDI via USB
+
+================================================================================
+
+___DaisyField Hardware Access Pattern___
+
+// CROSS-REFERENCE: For DaisySeed basics → see Seed-code-examples.txt (Blink.cpp)
+// CROSS-REFERENCE: For ADC setup → see libDaisy-code-examples.txt (ADCMulti.cpp)
+
+#include "daisy_field.h"
+using namespace daisy;
+
+DaisyField hw;
+
+// Initialization
+hw.Init();                          // Initializes all Field hardware
+hw.StartAdc();                      // Start analog input processing
+hw.StartAudio(AudioCallback);       // Start audio with callback
+
+// Control Processing (call each audio block)
+hw.ProcessAllControls();            // Combined: ADC + digital controls
+// OR separately:
+hw.ProcessAnalogControls();         // Just knobs/CV
+hw.ProcessDigitalControls();        // Just switches/keys
+
+// Knob Access (8 knobs, 0-7)
+float val = hw.knob[0].Process();   // Returns 0.0 to 1.0
+float val = hw.GetKnobValue(0);     // Alternate method
+
+// Switch Access (2 switches, 0-1)
+bool pressed = hw.sw[0].Pressed();
+bool rising = hw.sw[0].RisingEdge();
+bool falling = hw.sw[0].FallingEdge();
+
+// Keyboard Access (16 keys, 0-15)
+bool key_on = hw.KeyboardState(i);
+bool key_just_pressed = hw.KeyboardRisingEdge(i);
+
+// CV Inputs (4 inputs, 0-3)
+float cv = hw.GetCvValue(i);
+
+// Gate Input
+bool gate = hw.gate.State();
+
+_________________________
+
+___DaisyField LED Control Pattern___
+
+// CROSS-REFERENCE: For GPIO basics → see libDaisy-code-examples.txt (GPIO_Output.cpp)
+
+// LED indices for knobs
+size_t knob_leds[] = {
+    DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+    DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+    DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+    DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+};
+
+// LED indices for keyboard (13 playable keys)
+size_t keyboard_leds[] = {
+    DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+    DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+    DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+    DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+    DaisyField::LED_KEY_B2, DaisyField::LED_KEY_B3,
+    DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+    DaisyField::LED_KEY_B7,
+};
+
+// Set LED brightness (0.0 to 1.0)
+hw.led_driver.SetLed(DaisyField::LED_KNOB_1, brightness);
+
+// Update LEDs (call after setting values)
+hw.led_driver.SwapBuffersAndTransmit();
+
+_________________________
+
+___DaisyField Display Pattern___
+
+// CROSS-REFERENCE: For OLED details → see libDaisy-code-examples.txt (OLED_SSD130x4WireSPI.cpp)
+// CROSS-REFERENCE: For display usage → see Seed-code-examples.txt (OLED.cpp)
+
+// Display is already initialized by hw.Init()
+hw.display.Fill(false);                          // Clear display
+hw.display.SetCursor(0, 0);                      // Position cursor
+hw.display.WriteString("Hello", Font_7x10, true);// Write text
+hw.display.Update();                             // Push to screen
+
+// Available fonts: Font_6x8, Font_7x10, Font_11x18, Font_16x26
+
+_________________________
+
+___Chorus Effect with Field Controls___
+
+// CROSS-REFERENCE: For Chorus DSP class → see DSP-code-examples.txt (chorus.cpp)
+// This example shows how to map Field knobs to Chorus parameters
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Chorus     ch;
+bool       effectOn = true;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Map knobs to chorus parameters (Field-specific integration)
+    float pan = hw.knob[0].Process() * 0.5f;
+    ch.SetPan(0.5f - pan, 0.5f + pan);
+    
+    float lfoFreq = hw.knob[1].Process();
+    ch.SetLfoFreq(lfoFreq * lfoFreq * 20.f);  // Quadratic scaling for better feel
+    
+    ch.SetLfoDepth(hw.knob[2].Process());
+    ch.SetDelay(hw.knob[3].Process(), hw.knob[4].Process());
+    ch.SetFeedback(hw.knob[5].Process());
+    
+    // Toggle effect with switch
+    effectOn ^= hw.sw[0].RisingEdge();
+    
+    // Audio processing (same as DSP-code-examples)
+    for(size_t i = 0; i < size; i++)
+    {
+        ch.Process(in[0][i]);
+        out[0][i] = effectOn ? ch.GetLeft() : in[0][i];
+        out[1][i] = effectOn ? ch.GetRight() : in[0][i];
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    ch.Init(hw.AudioSampleRate());
+    effectOn = true;
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        // Display status
+        hw.display.Fill(false);
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(effectOn ? "Chorus: ON" : "Chorus: OFF", Font_7x10, true);
+        hw.display.Update();
+    }
+}
+
+_________________________
+
+___Polyphonic Keyboard Synth Pattern___
+
+// CROSS-REFERENCE: For Oscillator class → see DSP-code-examples.txt (oscillator.cpp)
+// CROSS-REFERENCE: For ADSR envelope → see DSP-code-examples.txt (adsr.cpp)
+// CROSS-REFERENCE: For ReverbSc → see DSP-code-examples.txt (reverb.cpp)
+
+// This shows the Field keyboard integration pattern
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+#define NUM_VOICES 16
+
+DaisyField hw;
+
+// Voice structure (uses DaisySP Oscillator from DSP-code-examples)
+struct Voice
+{
+    Oscillator osc;
+    float      amp;
+    bool       on;
+    
+    void Init(float sr)
+    {
+        osc.Init(sr);
+        osc.SetAmp(0.7f);
+        osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+        amp = 0.0f;
+        on = false;
+    }
+    
+    float Process()
+    {
+        // Simple envelope: smooth transition
+        amp += 0.0025f * ((on ? 1.0f : 0.0f) - amp);
+        return osc.Process() * amp;
+    }
+    
+    void SetNote(float midi) { osc.SetFreq(mtof(midi)); }
+};
+
+Voice voices[NUM_VOICES];
+
+// Major scale mapping for 16-key keyboard
+// Keys 8, 11, 15 are unused (black key gaps)
+float scale[16] = {
+    0, 2, 4, 5, 7, 9, 11, 12,    // Bottom row: C major scale
+    0, 1, 3, 0, 6, 8, 10, 0      // Top row: sharps/flats
+};
+
+int8_t octave = 2;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Octave control via switches
+    if(hw.sw[0].RisingEdge() && octave > 0) octave--;
+    if(hw.sw[1].RisingEdge() && octave < 4) octave++;
+    
+    // Keyboard to voice mapping (Field-specific)
+    for(size_t i = 0; i < 16; i++)
+    {
+        voices[i].on = hw.KeyboardState(i);
+    }
+    
+    // Audio processing
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = 0.0f;
+        for(int v = 0; v < NUM_VOICES; v++)
+        {
+            // Skip unused keys
+            if(v != 8 && v != 11 && v != 15)
+                sig += voices[v].Process();
+        }
+        out[0][i] = out[1][i] = sig * 0.15f;  // Mix down
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    // Initialize voices with scale notes
+    for(int i = 0; i < NUM_VOICES; i++)
+    {
+        voices[i].Init(sr);
+        voices[i].SetNote((12.0f * octave) + 24.0f + scale[i]);
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+_________________________
+
+___MIDI Polyphonic Synth Pattern___
+
+// CROSS-REFERENCE: For MIDI input → see libDaisy-code-examples.txt (MIDI_UART_Input.cpp)
+// CROSS-REFERENCE: For Oscillator → see DSP-code-examples.txt (oscillator.cpp)
+// CROSS-REFERENCE: For SVF filter → see DSP-code-examples.txt (svf.cpp)
+// CROSS-REFERENCE: For ADSR → see DSP-code-examples.txt (adsr.cpp)
+
+// Field MIDI is accessed via hw.midi (already configured)
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// Voice class combining DSP building blocks
+class Voice
+{
+public:
+    void Init(float sr)
+    {
+        osc.Init(sr);
+        osc.SetAmp(0.75f);
+        osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+        
+        env.Init(sr);
+        env.SetTime(ADSR_SEG_ATTACK, 0.005f);
+        env.SetTime(ADSR_SEG_DECAY, 0.005f);
+        env.SetTime(ADSR_SEG_RELEASE, 0.2f);
+        env.SetSustainLevel(0.5f);
+        
+        filt.Init(sr);
+        filt.SetFreq(6000.f);
+        filt.SetRes(0.6f);
+        
+        active = false;
+    }
+    
+    float Process()
+    {
+        if(!active) return 0.f;
+        
+        float amp = env.Process(gate);
+        if(!env.IsRunning()) active = false;
+        
+        float sig = osc.Process();
+        filt.Process(sig);
+        return filt.Low() * (velocity / 127.f) * amp;
+    }
+    
+    void NoteOn(float n, float v)
+    {
+        note = n;
+        velocity = v;
+        osc.SetFreq(mtof(note));
+        active = true;
+        gate = true;
+    }
+    
+    void NoteOff() { gate = false; }
+    void SetCutoff(float f) { filt.SetFreq(f); }
+    
+    bool IsActive() { return active; }
+    float GetNote() { return note; }
+    
+private:
+    Oscillator osc;
+    Svf        filt;
+    Adsr       env;
+    float      note, velocity;
+    bool       active, gate;
+};
+
+#define MAX_VOICES 24
+Voice voices[MAX_VOICES];
+
+// MIDI message handler
+void HandleMidi(MidiEvent m)
+{
+    if(m.type == NoteOn)
+    {
+        NoteOnEvent p = m.AsNoteOn();
+        if(p.velocity == 0)
+        {
+            // Note Off via velocity 0
+            for(int i = 0; i < MAX_VOICES; i++)
+                if(voices[i].IsActive() && voices[i].GetNote() == p.note)
+                    voices[i].NoteOff();
+        }
+        else
+        {
+            // Find free voice
+            for(int i = 0; i < MAX_VOICES; i++)
+            {
+                if(!voices[i].IsActive())
+                {
+                    voices[i].NoteOn(p.note, p.velocity);
+                    break;
+                }
+            }
+        }
+    }
+    else if(m.type == NoteOff)
+    {
+        NoteOnEvent p = m.AsNoteOn();
+        for(int i = 0; i < MAX_VOICES; i++)
+            if(voices[i].IsActive() && voices[i].GetNote() == p.note)
+                voices[i].NoteOff();
+    }
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Knob 1 controls filter cutoff
+    float cutoff = 250.f + hw.GetKnobValue(0) * 8000.f;
+    for(int i = 0; i < MAX_VOICES; i++)
+        voices[i].SetCutoff(cutoff);
+    
+    // Panic button (switch 1)
+    if(hw.sw[0].FallingEdge())
+        for(int i = 0; i < MAX_VOICES; i++)
+            voices[i].NoteOff();
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        float sum = 0.f;
+        for(int v = 0; v < MAX_VOICES; v++)
+            sum += voices[v].Process();
+        out[0][i] = out[1][i] = sum * 0.5f;
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    for(int i = 0; i < MAX_VOICES; i++)
+        voices[i].Init(sr);
+    
+    hw.display.WriteString("MIDI Synth", Font_7x10, true);
+    hw.display.Update();
+    
+    hw.midi.StartReceive();
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        hw.midi.Listen();
+        while(hw.midi.HasEvents())
+            HandleMidi(hw.midi.PopEvent());
+    }
+}
+
+_________________________
+
+___Physical Modeling with Keyboard (ModalVoice)___
+
+// CROSS-REFERENCE: For ModalVoice DSP → see DSP-code-examples.txt (modalvoice.cpp)
+// Field integration: keyboard triggers + knob parameters
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField  hw;
+ModalVoice  modal;
+int8_t      octave = 2;
+
+float scale[16] = {0,2,4,5,7,9,11,12, 0,1,3,0,6,8,10,0};
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Octave control
+    octave += hw.sw[0].RisingEdge() ? -1 : 0;
+    octave += hw.sw[1].RisingEdge() ? 1 : 0;
+    octave = DSY_MIN(DSY_MAX(0, octave), 4);
+    
+    // ModalVoice parameters from knobs
+    modal.SetBrightness(hw.GetKnobValue(0));
+    modal.SetStructure(hw.GetKnobValue(1));
+    modal.SetDamping(hw.GetKnobValue(2));
+    modal.SetAccent(hw.GetKnobValue(3));
+    
+    // Keyboard triggers modal voice
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            modal.Trig();
+            float midi = (12.0f * octave) + 24.0f + scale[i];
+            modal.SetFreq(mtof(midi));
+        }
+    }
+    
+    for(size_t i = 0; i < size; i++)
+        out[0][i] = out[1][i] = modal.Process();
+}
+
+int main(void)
+{
+    hw.Init();
+    modal.Init(hw.AudioSampleRate());
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+_________________________
+
+___Makefile Template for Field Projects___
+
+# Project Name
+TARGET = MyFieldProject
+
+# Sources
+CPP_SOURCES = MyFieldProject.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# For physical modeling (ModalVoice, StringVoice, ReverbSc):
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+================================================================================
+                           CROSS-REFERENCE SUMMARY
+================================================================================
+
+When building Field projects, reference these files for implementation details:
+
+DSP CLASSES (examples/dsp/):
+  • Oscillator, Chorus, Reverb, DelayLine
+  • AdEnv, Adsr (envelopes)
+  • Svf, Moog (filters)
+  • ModalVoice, StringVoice (physical modeling)
+
+HARDWARE PERIPHERALS (libDaisy-code-examples.txt):
+  • OLED display setup and usage
+  • MIDI input/output handling
+  • ADC configuration for custom setups
+  • GPIO, SPI, UART communication
+
+BASIC PATTERNS (Seed-code-examples.txt):
+  • Audio callback structure
+  • Button debouncing
+  • Basic synth architecture
+
+The DaisyField class wraps all these into a convenient API:
+  hw.knob[], hw.sw[], hw.KeyboardState(), hw.display, hw.midi, hw.led_driver
+
+================================================================================

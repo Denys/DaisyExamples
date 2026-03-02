@@ -1,0 +1,292 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Field Arpeggiator v2",
+      "author": "DVPE",
+      "description": "Full-featured MIDI arpeggiator for Daisy Field with modes, octave range, gate length, swing, and MoogLadder filter. Based on FieldArpeggiator project.",
+      "created": "2026-01-27T19:15:00Z",
+      "modified": "2026-01-27T19:15:00Z",
+      "version": "2.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "hardwareConfig": {
+      "platform": "field",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    },
+    "blocks": [
+      {
+        "id": "midi-note-1",
+        "definitionId": "midi_note",
+        "position": { "x": -700, "y": -300 },
+        "parameterValues": { "channel": 1 },
+        "selected": false
+      },
+      {
+        "id": "knob-bpm",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": -100 },
+        "parameterValues": { "channel": "0", "min": 40, "max": 240, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-octave-range",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 0 },
+        "parameterValues": { "channel": "1", "min": 1, "max": 3, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-gate-length",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 100 },
+        "parameterValues": { "channel": "2", "min": 0.1, "max": 1.0, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-swing",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 200 },
+        "parameterValues": { "channel": "3", "min": 0, "max": 0.5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-attack",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 300 },
+        "parameterValues": { "channel": "4", "min": 0.005, "max": 0.5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-decay",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 400 },
+        "parameterValues": { "channel": "5", "min": 0.01, "max": 0.5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-sustain",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 500 },
+        "parameterValues": { "channel": "6", "min": 0, "max": 1, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-release",
+        "definitionId": "knob",
+        "position": { "x": -700, "y": 600 },
+        "parameterValues": { "channel": "7", "min": 0.01, "max": 1.0, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "metro-clock",
+        "definitionId": "metro",
+        "position": { "x": -400, "y": -100 },
+        "parameterValues": { "freq": 4.0 },
+        "enabledCvPorts": ["freq"],
+        "selected": false
+      },
+      {
+        "id": "arp-1",
+        "definitionId": "arpeggiator",
+        "position": { "x": -100, "y": -200 },
+        "parameterValues": { "mode": 0, "octave_range": 1, "gate_length": 0.5 },
+        "enabledCvPorts": ["mode", "octave_range", "gate_length"],
+        "selected": false
+      },
+      {
+        "id": "osc-saw",
+        "definitionId": "oscillator",
+        "position": { "x": 200, "y": -300 },
+        "parameterValues": { "freq": 220, "amp": 0.8, "waveform": "WAVE_SAW", "pw": 0.5 },
+        "enabledCvPorts": ["freq"],
+        "selected": false
+      },
+      {
+        "id": "moog-filter",
+        "definitionId": "moog_ladder",
+        "position": { "x": 450, "y": -300 },
+        "parameterValues": { "freq": 2000, "res": 0.3 },
+        "enabledCvPorts": ["freq"],
+        "selected": false
+      },
+      {
+        "id": "adsr-amp",
+        "definitionId": "adsr",
+        "position": { "x": 200, "y": 0 },
+        "parameterValues": { "attack": 0.01, "decay": 0.1, "sustain": 0.7, "release": 0.1 },
+        "enabledCvPorts": ["attack", "decay", "sustain", "release"],
+        "selected": false
+      },
+      {
+        "id": "vca-main",
+        "definitionId": "vca",
+        "position": { "x": 700, "y": -300 },
+        "parameterValues": { "gain": 0.5 },
+        "enabledCvPorts": ["gain"],
+        "selected": false
+      },
+      {
+        "id": "audio-output",
+        "definitionId": "audio_output",
+        "position": { "x": 950, "y": -300 },
+        "parameterValues": {},
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "c-midi-arp",
+        "sourceBlockId": "midi-note-1",
+        "sourcePortId": "pitch",
+        "targetBlockId": "arp-1",
+        "targetPortId": "note_in",
+        "type": "cv"
+      },
+      {
+        "id": "c-midi-gate-arp",
+        "sourceBlockId": "midi-note-1",
+        "sourcePortId": "gate",
+        "targetBlockId": "arp-1",
+        "targetPortId": "gate_in",
+        "type": "trigger"
+      },
+      {
+        "id": "c-knob-bpm-metro",
+        "sourceBlockId": "knob-bpm",
+        "sourcePortId": "out",
+        "targetBlockId": "metro-clock",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-octave-arp",
+        "sourceBlockId": "knob-octave-range",
+        "sourcePortId": "out",
+        "targetBlockId": "arp-1",
+        "targetPortId": "octave_range_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-gate-arp",
+        "sourceBlockId": "knob-gate-length",
+        "sourcePortId": "out",
+        "targetBlockId": "arp-1",
+        "targetPortId": "gate_length_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-attack-adsr",
+        "sourceBlockId": "knob-attack",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "attack_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-decay-adsr",
+        "sourceBlockId": "knob-decay",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-sustain-adsr",
+        "sourceBlockId": "knob-sustain",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "sustain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-release-adsr",
+        "sourceBlockId": "knob-release",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "release_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-sustain-filter",
+        "sourceBlockId": "knob-sustain",
+        "sourcePortId": "out",
+        "targetBlockId": "moog-filter",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-metro-arp-clock",
+        "sourceBlockId": "metro-clock",
+        "sourcePortId": "out",
+        "targetBlockId": "arp-1",
+        "targetPortId": "clock",
+        "type": "trigger"
+      },
+      {
+        "id": "c-arp-pitch-osc",
+        "sourceBlockId": "arp-1",
+        "sourcePortId": "pitch",
+        "targetBlockId": "osc-saw",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-arp-gate-adsr",
+        "sourceBlockId": "arp-1",
+        "sourcePortId": "gate",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "c-osc-filter",
+        "sourceBlockId": "osc-saw",
+        "sourcePortId": "out",
+        "targetBlockId": "moog-filter",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-filter-vca",
+        "sourceBlockId": "moog-filter",
+        "sourcePortId": "out",
+        "targetBlockId": "vca-main",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-adsr-vca",
+        "sourceBlockId": "adsr-amp",
+        "sourcePortId": "out",
+        "targetBlockId": "vca-main",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-vca-out-left",
+        "sourceBlockId": "vca-main",
+        "sourcePortId": "out",
+        "targetBlockId": "audio-output",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "c-vca-out-right",
+        "sourceBlockId": "vca-main",
+        "sourcePortId": "out",
+        "targetBlockId": "audio-output",
+        "targetPortId": "right",
+        "type": "audio"
+      }
+    ]
+  }
+}

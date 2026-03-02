@@ -1,0 +1,317 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Super Saw Pluck",
+      "author": "DVPE",
+      "description": "Massive detuned saw stack for trance/dance leads with pluck envelope.",
+      "created": "2026-02-08T20:30:00Z",
+      "modified": "2026-02-08T20:30:00Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "hardwareConfig": {
+      "platform": "field",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": true,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    },
+    "blocks": [
+      {
+        "id": "midi-note",
+        "definitionId": "midi_note",
+        "position": { "x": -800, "y": 0 },
+        "parameterValues": { "channel": 1 },
+        "selected": false
+      },
+      {
+        "id": "knob-detune",
+        "definitionId": "knob",
+        "position": { "x": -800, "y": -200 },
+        "parameterValues": { "channel": "0", "min": 0, "max": 0.04, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-cutoff",
+        "definitionId": "knob",
+        "position": { "x": -800, "y": 200 },
+        "parameterValues": { "channel": "1", "min": 0, "max": 1, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-decay",
+        "definitionId": "knob",
+        "position": { "x": -800, "y": 400 },
+        "parameterValues": { "channel": "2", "min": 0.1, "max": 2.0, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-reverb",
+        "definitionId": "knob",
+        "position": { "x": -800, "y": 600 },
+        "parameterValues": { "channel": "3", "min": 0, "max": 0.5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "add-detune",
+        "definitionId": "add",
+        "position": { "x": -500, "y": -150 },
+        "parameterValues": { "inputCount": "2" },
+        "selected": false
+      },
+      {
+        "id": "sub-detune",
+        "definitionId": "subtract",
+        "position": { "x": -500, "y": -50 },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "osc-center",
+        "definitionId": "oscillator",
+        "position": { "x": -200, "y": -250 },
+        "parameterValues": { "freq": 440, "amp": 0.33, "waveform": "WAVE_POLYBLEP_SAW", "pw": 0.5 },
+        "enabledCvPorts": ["freq_cv"],
+        "selected": false
+      },
+      {
+        "id": "osc-right",
+        "definitionId": "oscillator",
+        "position": { "x": -200, "y": -150 },
+        "parameterValues": { "freq": 440, "amp": 0.33, "waveform": "WAVE_POLYBLEP_SAW", "pw": 0.5 },
+        "enabledCvPorts": ["freq_cv"],
+        "selected": false
+      },
+      {
+        "id": "osc-left",
+        "definitionId": "oscillator",
+        "position": { "x": -200, "y": -50 },
+        "parameterValues": { "freq": 440, "amp": 0.33, "waveform": "WAVE_POLYBLEP_SAW", "pw": 0.5 },
+        "enabledCvPorts": ["freq_cv"],
+        "selected": false
+      },
+      {
+        "id": "mixer-oscs",
+        "definitionId": "mixer",
+        "position": { "x": 100, "y": -150 },
+        "parameterValues": { "inputCount": "3", "master": 0.8 },
+        "enabledCvPorts": [],
+        "selected": false
+      },
+      {
+        "id": "adsr-env",
+        "definitionId": "adsr",
+        "position": { "x": 100, "y": 200 },
+        "parameterValues": { "attack": 0.01, "decay": 0.5, "sustain": 0.0, "release": 0.2 },
+        "enabledCvPorts": ["decay"],
+        "selected": false
+      },
+      {
+        "id": "add-cutoff",
+        "definitionId": "add",
+        "position": { "x": 300, "y": 200 },
+        "parameterValues": { "inputCount": "2" },
+        "selected": false
+      },
+      {
+        "id": "filter",
+        "definitionId": "moog_ladder",
+        "position": { "x": 400, "y": 0 },
+        "parameterValues": { "freq": 20, "res": 0.4 },
+        "enabledCvPorts": ["freq_cv"],
+        "selected": false
+      },
+      {
+        "id": "reverb",
+        "definitionId": "reverb_sc",
+        "position": { "x": 650, "y": 0 },
+        "parameterValues": { "feedback": 0.85, "lpfreq": 10000, "wet_dry": 0.3 },
+        "enabledCvPorts": ["wet_dry_cv"],
+        "selected": false
+      },
+      {
+        "id": "output",
+        "definitionId": "audio_output",
+        "position": { "x": 900, "y": 0 },
+        "parameterValues": {},
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "c1",
+        "sourceBlockId": "midi-note",
+        "sourcePortId": "pitch",
+        "targetBlockId": "osc-center",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c2",
+        "sourceBlockId": "midi-note",
+        "sourcePortId": "pitch",
+        "targetBlockId": "add-detune",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "c3",
+        "sourceBlockId": "knob-detune",
+        "sourcePortId": "out",
+        "targetBlockId": "add-detune",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "c4",
+        "sourceBlockId": "add-detune",
+        "sourcePortId": "out",
+        "targetBlockId": "osc-right",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c5",
+        "sourceBlockId": "midi-note",
+        "sourcePortId": "pitch",
+        "targetBlockId": "sub-detune",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "c6",
+        "sourceBlockId": "knob-detune",
+        "sourcePortId": "out",
+        "targetBlockId": "sub-detune",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "c7",
+        "sourceBlockId": "sub-detune",
+        "sourcePortId": "out",
+        "targetBlockId": "osc-left",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c8",
+        "sourceBlockId": "osc-center",
+        "sourcePortId": "out",
+        "targetBlockId": "mixer-oscs",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "c9",
+        "sourceBlockId": "osc-right",
+        "sourcePortId": "out",
+        "targetBlockId": "mixer-oscs",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "c10",
+        "sourceBlockId": "osc-left",
+        "sourcePortId": "out",
+        "targetBlockId": "mixer-oscs",
+        "targetPortId": "in_3",
+        "type": "audio"
+      },
+      {
+        "id": "c11",
+        "sourceBlockId": "midi-note",
+        "sourcePortId": "gate",
+        "targetBlockId": "adsr-env",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "c12",
+        "sourceBlockId": "knob-decay",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-env",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c13",
+        "sourceBlockId": "knob-cutoff",
+        "sourcePortId": "out",
+        "targetBlockId": "add-cutoff",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "c14",
+        "sourceBlockId": "adsr-env",
+        "sourcePortId": "out",
+        "targetBlockId": "add-cutoff",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "c15",
+        "sourceBlockId": "add-cutoff",
+        "sourcePortId": "out",
+        "targetBlockId": "filter",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c16",
+        "sourceBlockId": "mixer-oscs",
+        "sourcePortId": "out",
+        "targetBlockId": "filter",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c17",
+        "sourceBlockId": "filter",
+        "sourcePortId": "out",
+        "targetBlockId": "reverb",
+        "targetPortId": "in_l",
+        "type": "audio"
+      },
+      {
+        "id": "c18",
+        "sourceBlockId": "filter",
+        "sourcePortId": "out",
+        "targetBlockId": "reverb",
+        "targetPortId": "in_r",
+        "type": "audio"
+      },
+      {
+        "id": "c19",
+        "sourceBlockId": "knob-reverb",
+        "sourcePortId": "out",
+        "targetBlockId": "reverb",
+        "targetPortId": "wet_dry_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c20",
+        "sourceBlockId": "reverb",
+        "sourcePortId": "out_l",
+        "targetBlockId": "output",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "c21",
+        "sourceBlockId": "reverb",
+        "sourcePortId": "out_r",
+        "targetBlockId": "output",
+        "targetPortId": "right",
+        "type": "audio"
+      }
+    ]
+  }
+}

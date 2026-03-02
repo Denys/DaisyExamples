@@ -1,0 +1,2933 @@
+CONTENTS (Synthesizers & Generators)
+1. ChordMachine
+2. EnvelopeOscillator
+3. EuclideanDrums
+4. lfo
+5. MusicBox
+6. Noise
+7. PluckEcho
+8. PolyOsc
+9. Sequencer
+10. vco
+
+________________________________________________________________________________
+
+Makefile template
+________________________________________________________________________________
+
+# Project Name
+TARGET = __ProjectName__
+
+# Sources
+CPP_SOURCES = __ProjectName__.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# Uncomment for LGPL modules (StringVoice, ModalVoice, ReverbSc)
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+
+ChordMachine
+
+__ChordMachine README.md__
+# Chord Machine
+
+## Description
+4-voice chord synthesizer with 10 chord types and keyboard control.
+
+## Chord Types
+Maj, min, Aug, Dim, Maj7, min7, Dom7, mM7, dim7, hdim7
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Inversion (0-4) |
+| Knob 2 | Voicing Spread |
+| Knob 3 | Attack |
+| Knob 4 | Release |
+| Knob 5 | Osc 1+2 Level |
+| Knob 6 | Osc 3+4 Level |
+| Knob 7 | Filter Cutoff |
+| Knob 8 | Output Level |
+| Keys 0-9 | Chord type |
+| Keys 10-15 | Root note |
+| SW1 | Waveform cycle |
+| SW2 | Octave shift |
+
+__ChordMachine.cpp__
+/**
+ * ChordMachine - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Pod ChordMachine
+ * Platform: Daisy Field
+ * 
+ * 4-voice chord player with 10 chord types and keyboard control.
+ * 
+ * Control Mapping:
+ * Knob 0: Inversion (0-4)
+ * Knob 1: Voicing Spread
+ * Knob 2: Attack Time
+ * Knob 3: Release Time
+ * Knob 4: Osc 1+2 Level
+ * Knob 5: Osc 3+4 Level
+ * Knob 6: Filter Cutoff
+ * Knob 7: Output Level
+ * Keys 0-7: Select chord type
+ * Keys 8-15: Play root note (C through C octave)
+ * sw[0]: Waveform cycle
+ * sw[1]: Octave shift
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Oscillator osc[4];
+Adsr       env;
+Svf        filt;
+
+// Chord intervals: [third, fifth, seventh]
+// Each chord has 3 intervals from root
+int chord[10][3] = {
+    {4, 7, 12},  // Major
+    {3, 7, 12},  // Minor
+    {4, 8, 12},  // Augmented
+    {3, 6, 12},  // Diminished
+    {4, 7, 11},  // Major 7
+    {3, 7, 10},  // Minor 7
+    {4, 7, 10},  // Dominant 7
+    {3, 7, 11},  // Minor/Major 7
+    {3, 6, 9},   // Diminished 7
+    {3, 6, 10}   // Half-diminished 7
+};
+
+const char* chordNames[10] = {
+    "Maj", "min", "Aug", "Dim",
+    "Maj7", "min7", "Dom7", "mM7",
+    "dim7", "hdim7"
+};
+
+// Scale for root notes (C major scale + octave)
+float rootNotes[8] = {48.f, 50.f, 52.f, 53.f, 55.f, 57.f, 59.f, 60.f};  // C3-C4
+
+int      notes[4];
+int      chordNum = 0;
+int      inversion = 0;
+float    rootNote = 48.f;
+bool     gate = false;
+float    envValue = 0.f;
+int      waveform = 0;
+int8_t   octaveShift = 0;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    // Bottom row: chord type selection
+    for(size_t i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], i == (size_t)chordNum ? 1.0f : 0.2f);
+    }
+    // Keys 8-9 for remaining chord types
+    hw.led_driver.SetLed(keyboard_leds[8], chordNum == 8 ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[9], chordNum == 9 ? 1.0f : 0.2f);
+    
+    // Keys 10-15: Root note visualization (with envelope)
+    for(size_t i = 10; i < 16; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], envValue * 0.8f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void CalculateChord()
+{
+    int base = static_cast<int>(rootNote) + (octaveShift * 12);
+    
+    notes[0] = base + (12 * (inversion >= 1));
+    notes[1] = base + chord[chordNum][0] + (12 * (inversion >= 2));
+    notes[2] = base + chord[chordNum][1] + (12 * (inversion >= 3));
+    notes[3] = base + chord[chordNum][2] + (12 * (inversion >= 4));
+    
+    for(int i = 0; i < 4; i++)
+        osc[i].SetFreq(mtof(notes[i]));
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Waveform cycle
+    if(hw.sw[0].RisingEdge())
+    {
+        waveform = (waveform + 1) % 4;
+        uint8_t waves[] = {Oscillator::WAVE_SIN, Oscillator::WAVE_TRI, 
+                           Oscillator::WAVE_SAW, Oscillator::WAVE_SQUARE};
+        for(int i = 0; i < 4; i++)
+            osc[i].SetWaveform(waves[waveform]);
+    }
+    
+    // Octave shift
+    if(hw.sw[1].RisingEdge())
+    {
+        octaveShift = (octaveShift + 1) % 3 - 1;  // -1, 0, +1
+    }
+    
+    // Chord type selection (keys 0-9)
+    for(size_t i = 0; i < 10; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+            chordNum = i;
+    }
+    
+    // Root note (keys 10-15 + sw for remaining)
+    bool anyRootPressed = false;
+    for(size_t i = 10; i < 16; i++)
+    {
+        if(hw.KeyboardState(i))
+        {
+            rootNote = rootNotes[i - 10];
+            anyRootPressed = true;
+        }
+    }
+    
+    // Also use first 2 chord keys as root when held with top row
+    if(hw.KeyboardState(0) && anyRootPressed)
+        rootNote = rootNotes[6];
+    if(hw.KeyboardState(1) && anyRootPressed)
+        rootNote = rootNotes[7];
+    
+    gate = anyRootPressed;
+    
+    // Parameters
+    inversion = static_cast<int>(hw.knob[0].Process() * 4.99f);
+    float spread = hw.knob[1].Process();
+    float attack = 0.001f + hw.knob[2].Process() * 0.499f;
+    float release = 0.01f + hw.knob[3].Process() * 0.99f;
+    float level12 = hw.knob[4].Process();
+    float level34 = hw.knob[5].Process();
+    float cutoff = 200.f + hw.knob[6].Process() * 9800.f;
+    float outputLevel = hw.knob[7].Process();
+    
+    env.SetTime(ADSR_SEG_ATTACK, attack);
+    env.SetTime(ADSR_SEG_RELEASE, release);
+    filt.SetFreq(cutoff);
+    
+    CalculateChord();
+    
+    // Set oscillator amplitudes
+    osc[0].SetAmp(0.2f * level12);
+    osc[1].SetAmp(0.2f * level12);
+    osc[2].SetAmp(0.2f * level34);
+    osc[3].SetAmp(0.2f * level34);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        envValue = env.Process(gate);
+        
+        float sig = 0.f;
+        for(int j = 0; j < 4; j++)
+            sig += osc[j].Process();
+        
+        sig *= envValue;
+        
+        filt.Process(sig);
+        sig = filt.Low();
+        
+        sig *= outputLevel;
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("CHORD MACHINE", Font_7x10, true);
+    
+    char buf[32];
+    
+    const char* waveNames[] = {"SIN", "TRI", "SAW", "SQR"};
+    
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Chord: %s  Oct:%+d", chordNames[chordNum], octaveShift);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Root:%.0f  Inv:%d  %s", rootNote, inversion, waveNames[waveform]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Show chord notes
+    hw.display.SetCursor(0, 40);
+    sprintf(buf, "Notes: %d %d %d %d", notes[0], notes[1], notes[2], notes[3]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    for(int i = 0; i < 4; i++)
+    {
+        osc[i].Init(sr);
+        osc[i].SetWaveform(Oscillator::WAVE_SIN);
+        osc[i].SetAmp(0.2f);
+    }
+    
+    env.Init(sr);
+    env.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    env.SetTime(ADSR_SEG_DECAY, 0.1f);
+    env.SetSustainLevel(0.8f);
+    env.SetTime(ADSR_SEG_RELEASE, 0.3f);
+    
+    filt.Init(sr);
+    filt.SetFreq(5000.f);
+    filt.SetRes(0.3f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+EnvelopeOscillator
+
+__EnvelopeOscillator README.md__
+# Envelope Oscillator
+
+## Author
+Adapted from Patch version by C.M.Barth (allotrope ijk)
+
+## Description
+Basic oscillator with built-in ADSR envelope generator. Play notes using the Field's capacitive keyboard - each key triggers the envelope and sets the pitch based on a piano-style layout.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Base Pitch | C1 - C6 (MIDI 24-84) |
+| Knob 2 | Waveform Morph | Sine→Tri→Saw→Square |
+| Knob 3 | Attack Time | 1ms - 2s |
+| Knob 4 | Decay Time | 1ms - 2s |
+| Knob 5 | Sustain Level | 0 - 100% |
+| Knob 6 | Release Time | 1ms - 3s |
+| Knob 7 | Envelope Curve | Reserved |
+| Knob 8 | Output Level | 0 - 100% |
+| SW1 | Manual Trigger | Hold to trigger envelope |
+| Keyboard | Play Notes | Piano-style layout + trigger |
+| Audio Out L/R | Oscillator Output | |
+| CV Out 1/2 | Envelope Value | 0-5V |
+
+## Keyboard Layout
+```
+Bottom Row: C  D  E  F  G  A  B  C
+Top Row:    C# D# -  F# G# A# -
+```
+Keys 8, 11, 15 are inactive (black key gaps).
+
+## Features
+- **Playable Keyboard**: Touch keys to play notes with envelope
+- **LED Feedback**: Active key pulses with envelope, playable keys dim-lit
+- **CV Output**: Envelope value on both CV outputs
+- **Visual Bar**: OLED shows envelope level
+
+__EnvelopeOscillator.cpp__
+/**
+ * EnvelopeOscillator - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch EnvelopeOscillator
+ * Platform: Daisy Field
+ * 
+ * Oscillator with built-in ADSR envelope, playable via keyboard.
+ * 
+ * Control Mapping:
+ * Knob 0: Base Pitch (C1 - C6)
+ * Knob 1: Waveform Morph (sine → tri → saw → square)
+ * Knob 2: Attack Time (1ms - 2s)
+ * Knob 3: Decay Time (1ms - 2s)
+ * Knob 4: Sustain Level (0 - 100%)
+ * Knob 5: Release Time (1ms - 3s)
+ * Knob 6: Envelope Curve (-4 to +4)
+ * Knob 7: Output Level
+ * sw[0]: Trigger envelope manually
+ * Keyboard: Play notes (triggers envelope + sets pitch)
+ * 
+ * Outputs:
+ * Audio Out L/R: Oscillator with envelope
+ * CV Out 1/2: Envelope value
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Oscillator osc;
+Adsr       env;
+
+// Piano-style layout matching existing Field projects
+float scale[16] = {
+    0.f, 2.f, 4.f, 5.f, 7.f, 9.f, 11.f, 12.f,   // C D E F G A B C (bottom row)
+    0.f, 1.f, 3.f, 0.f, 6.f, 8.f, 10.f, 0.0f    // C# D# - F# G# A# - (top row)
+};
+
+float    basePitch = 48.f;  // C3
+float    currentNote = 0.f;
+bool     gate = false;
+uint8_t  activeKey = 255;
+float    envValue = 0.f;
+float    outputLevel = 1.f;
+
+// Parameter names for display
+const char* waveformNames[] = {"SIN", "TRI", "SAW", "SQR"};
+
+int GetWaveformIndex(float morph)
+{
+    if(morph < 0.25f) return 0;
+    else if(morph < 0.5f) return 1;
+    else if(morph < 0.75f) return 2;
+    else return 3;
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs show parameter values
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Keyboard LEDs: playable keys on, current key brighter with envelope
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(i == 8 || i == 11 || i == 15)
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], 0.f);  // Gap keys off
+        }
+        else if(i == activeKey)
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], envValue);  // Active key pulses
+        }
+        else
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], 0.2f);  // Playable keys dim
+        }
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Manual trigger button
+    bool manualTrig = hw.sw[0].Pressed();
+    
+    // Keyboard input
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            currentNote = scale[i];
+            activeKey = i;
+            gate = true;
+        }
+        if(hw.KeyboardFallingEdge(i) && i == activeKey)
+        {
+            gate = false;
+            activeKey = 255;
+        }
+    }
+    
+    // Combine keyboard gate with manual trigger
+    bool envGate = gate || manualTrig;
+    
+    // Read parameters
+    basePitch = 24.f + hw.knob[0].Process() * 60.f;  // C1 to C6
+    
+    float morph = hw.knob[1].Process();
+    if(morph < 0.25f)
+        osc.SetWaveform(Oscillator::WAVE_SIN);
+    else if(morph < 0.5f)
+        osc.SetWaveform(Oscillator::WAVE_TRI);
+    else if(morph < 0.75f)
+        osc.SetWaveform(Oscillator::WAVE_SAW);
+    else
+        osc.SetWaveform(Oscillator::WAVE_SQUARE);
+    
+    // ADSR parameters
+    float attack = 0.001f + hw.knob[2].Process() * 1.999f;   // 1ms - 2s
+    float decay = 0.001f + hw.knob[3].Process() * 1.999f;    // 1ms - 2s
+    float sustain = hw.knob[4].Process();                     // 0 - 1
+    float release = 0.001f + hw.knob[5].Process() * 2.999f;  // 1ms - 3s
+    
+    env.SetTime(ADSR_SEG_ATTACK, attack);
+    env.SetTime(ADSR_SEG_DECAY, decay);
+    env.SetSustainLevel(sustain);
+    env.SetTime(ADSR_SEG_RELEASE, release);
+    
+    outputLevel = hw.knob[7].Process();
+    
+    // Set oscillator frequency
+    float midiNote = basePitch + currentNote;
+    osc.SetFreq(mtof(midiNote));
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        envValue = env.Process(envGate);
+        float sig = osc.Process() * envValue * outputLevel;
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+    
+    // CV output: envelope value (0-5V)
+    uint16_t cvVal = static_cast<uint16_t>(envValue * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::BOTH, cvVal);
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("ENV OSCILLATOR", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Current note and waveform
+    float midiNote = basePitch + currentNote;
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Note:%.0f  %s", midiNote, waveformNames[GetWaveformIndex(hw.knob[1].Process())]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // ADSR values
+    float attack = 0.001f + hw.knob[2].Process() * 1.999f;
+    float decay = 0.001f + hw.knob[3].Process() * 1.999f;
+    hw.display.SetCursor(0, 24);
+    sprintf(buf, "A:%.0fms D:%.0fms", attack * 1000, decay * 1000);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    float sustain = hw.knob[4].Process();
+    float release = 0.001f + hw.knob[5].Process() * 2.999f;
+    hw.display.SetCursor(0, 34);
+    sprintf(buf, "S:%.0f%% R:%.0fms", sustain * 100, release * 1000);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Envelope indicator bar
+    int barWidth = static_cast<int>(envValue * 120.f);
+    hw.display.DrawRect(0, 50, 127, 58, true, false);
+    hw.display.DrawRect(1, 51, 1 + barWidth, 57, true, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    osc.Init(sr);
+    osc.SetWaveform(Oscillator::WAVE_SIN);
+    osc.SetAmp(0.5f);
+    
+    env.Init(sr);
+    env.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    env.SetTime(ADSR_SEG_DECAY, 0.1f);
+    env.SetSustainLevel(0.7f);
+    env.SetTime(ADSR_SEG_RELEASE, 0.3f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+EuclideanDrums
+
+__EuclideanDrums README.md__
+# Euclidean Drums
+
+## Description
+3-voice drum machine using Euclidean rhythm patterns. Generates kick, snare, and hi-hat patterns algorithmically.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Kick Density |
+| Knob 2 | Kick Length |
+| Knob 3 | Snare Density |
+| Knob 4 | Snare Length |
+| Knob 5 | Hat Density |
+| Knob 6 | Hat Length |
+| Knob 7 | Tempo |
+| Knob 8 | Swing |
+| Keys 0-7 | Pattern presets |
+| Keys 8-10 | Manual triggers |
+| Keys 12-15 | Pattern length |
+| SW1 | Start/Stop |
+| SW2 | Reset |
+
+## Pattern Lengths
+8, 16, 24, or 32 steps
+
+__EuclideanDrums.cpp__
+/**
+ * EuclideanDrums - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Pod EuclideanDrums
+ * Platform: Daisy Field
+ * 
+ * Euclidean rhythm generator with 3 drum voices.
+ * 
+ * Control Mapping:
+ * Knob 0: Kick Density
+ * Knob 1: Kick Length
+ * Knob 2: Snare Density
+ * Knob 3: Snare Length
+ * Knob 4: Hat Density
+ * Knob 5: Hat Length
+ * Knob 6: Tempo
+ * Knob 7: Swing
+ * Keys 0-7: Pattern presets
+ * Keys 8-10: Manual kick/snare/hat trigger
+ * Keys 11-15: Pattern length (8/12/16/24/32)
+ * sw[0]: Start/Stop
+ * sw[1]: Reset to step 1
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+#define MAX_LENGTH 32
+
+DaisyField hw;
+
+Oscillator kickOsc;
+WhiteNoise noise;
+AdEnv      kickVolEnv, kickPitchEnv, snareEnv, hatEnv;
+Metro      tick;
+
+bool     kickSeq[MAX_LENGTH];
+bool     snareSeq[MAX_LENGTH];
+bool     hatSeq[MAX_LENGTH];
+uint8_t  kickStep = 0;
+uint8_t  snareStep = 0;
+uint8_t  hatStep = 0;
+uint8_t  patternLength = 16;
+float    tempo = 120.f;
+float    swing = 0.f;
+bool     playing = true;
+uint8_t  swingStep = 0;
+
+// Pattern presets (density values)
+float presets[8][3] = {
+    {0.25f, 0.25f, 0.5f},   // Basic
+    {0.5f,  0.25f, 0.75f},  // Busy
+    {0.125f, 0.125f, 0.25f}, // Sparse
+    {0.375f, 0.375f, 0.625f}, // Funk
+    {0.5f,  0.5f,  0.5f},   // Half
+    {0.25f, 0.5f,  0.25f},  // Backbeat
+    {0.625f, 0.25f, 0.875f}, // Complex
+    {0.125f, 0.5f,  0.375f}  // Offbeat
+};
+
+void SetEuclidean(bool* seq, int length, float density)
+{
+    for(int i = 0; i < MAX_LENGTH; i++)
+        seq[i] = false;
+    
+    int ones = static_cast<int>(roundf(length * density));
+    if(ones == 0) return;
+    if(ones >= length)
+    {
+        for(int i = 0; i < length; i++)
+            seq[i] = true;
+        return;
+    }
+    
+    // Bresenham-style Euclidean distribution
+    float slope = (float)ones / (float)length;
+    float error = 0.f;
+    int count = 0;
+    
+    for(int i = 0; i < length && count < ones; i++)
+    {
+        error += slope;
+        if(error >= 0.5f)
+        {
+            seq[i] = true;
+            error -= 1.f;
+            count++;
+        }
+    }
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    // Bottom row: step visualization (first 8 steps of kick)
+    for(size_t i = 0; i < 8; i++)
+    {
+        bool isStep = (kickStep == i);
+        bool isActive = kickSeq[i];
+        hw.led_driver.SetLed(keyboard_leds[i], isStep ? 1.0f : (isActive ? 0.4f : 0.1f));
+    }
+    
+    // Top row: drum triggers + status
+    float kickEnv = kickVolEnv.GetValue();
+    float snareEnvVal = snareEnv.GetValue();
+    float hatEnvVal = hatEnv.GetValue();
+    
+    hw.led_driver.SetLed(keyboard_leds[8], kickEnv);
+    hw.led_driver.SetLed(keyboard_leds[9], snareEnvVal);
+    hw.led_driver.SetLed(keyboard_leds[10], hatEnvVal);
+    hw.led_driver.SetLed(keyboard_leds[11], playing ? 1.0f : 0.2f);
+    
+    // Pattern length indicators
+    hw.led_driver.SetLed(keyboard_leds[12], patternLength == 8 ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[13], patternLength == 16 ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[14], patternLength == 24 ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[15], patternLength == 32 ? 1.0f : 0.2f);
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Start/Stop
+    if(hw.sw[0].RisingEdge())
+        playing = !playing;
+    
+    // Reset
+    if(hw.sw[1].RisingEdge())
+    {
+        kickStep = snareStep = hatStep = 0;
+        swingStep = 0;
+    }
+    
+    // Pattern presets (keys 0-7)
+    for(size_t i = 0; i < 8; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            SetEuclidean(kickSeq, patternLength, presets[i][0]);
+            SetEuclidean(snareSeq, patternLength, presets[i][1]);
+            SetEuclidean(hatSeq, patternLength, presets[i][2]);
+        }
+    }
+    
+    // Manual triggers (keys 8-10)
+    if(hw.KeyboardRisingEdge(8))
+    {
+        kickVolEnv.Trigger();
+        kickPitchEnv.Trigger();
+    }
+    if(hw.KeyboardRisingEdge(9))
+        snareEnv.Trigger();
+    if(hw.KeyboardRisingEdge(10))
+        hatEnv.Trigger();
+    
+    // Pattern length (keys 12-15)
+    if(hw.KeyboardRisingEdge(12)) patternLength = 8;
+    if(hw.KeyboardRisingEdge(13)) patternLength = 16;
+    if(hw.KeyboardRisingEdge(14)) patternLength = 24;
+    if(hw.KeyboardRisingEdge(15)) patternLength = 32;
+    
+    // Parameters
+    float kickDensity = hw.knob[0].Process();
+    float kickLen = 8.f + hw.knob[1].Process() * 24.f;
+    float snareDensity = hw.knob[2].Process();
+    float snareLen = 8.f + hw.knob[3].Process() * 24.f;
+    float hatDensity = hw.knob[4].Process();
+    float hatLen = 8.f + hw.knob[5].Process() * 24.f;
+    tempo = 60.f + hw.knob[6].Process() * 180.f;
+    swing = hw.knob[7].Process() * 0.5f;
+    
+    // Update patterns
+    SetEuclidean(kickSeq, patternLength, kickDensity);
+    SetEuclidean(snareSeq, patternLength, snareDensity);
+    SetEuclidean(hatSeq, patternLength, hatDensity);
+    
+    // Set envelope decay times
+    kickVolEnv.SetTime(ADENV_SEG_DECAY, 0.2f + kickLen * 0.02f);
+    snareEnv.SetTime(ADENV_SEG_DECAY, 0.05f + snareLen * 0.01f);
+    hatEnv.SetTime(ADENV_SEG_DECAY, 0.02f + hatLen * 0.005f);
+    
+    // Calculate tempo with swing
+    float baseInterval = 60.f / tempo / 4.f;  // 16th notes
+    bool swingBeat = (swingStep % 2 == 1);
+    float interval = baseInterval * (swingBeat ? (1.f + swing) : (1.f - swing * 0.5f));
+    tick.SetFreq(1.f / interval);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        // Check tick
+        if(tick.Process() && playing)
+        {
+            kickStep = (kickStep + 1) % patternLength;
+            snareStep = (snareStep + 1) % patternLength;
+            hatStep = (hatStep + 1) % patternLength;
+            swingStep++;
+            
+            if(kickSeq[kickStep])
+            {
+                kickVolEnv.Trigger();
+                kickPitchEnv.Trigger();
+            }
+            if(snareSeq[snareStep])
+                snareEnv.Trigger();
+            if(hatSeq[hatStep])
+                hatEnv.Trigger();
+        }
+        
+        // Synthesize drums
+        float kickFreq = kickPitchEnv.Process();
+        kickOsc.SetFreq(kickFreq);
+        kickOsc.SetAmp(kickVolEnv.Process());
+        float kick = kickOsc.Process();
+        
+        float snare = noise.Process() * snareEnv.Process() * 0.7f;
+        float hat = noise.Process() * hatEnv.Process() * 0.3f;
+        
+        float sig = kick + snare + hat;
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(playing ? "EUCLID DRUMS" : "EUCLID [STOP]", Font_7x10, true);
+    
+    char buf[32];
+    
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "BPM:%.0f Swing:%.0f%% Len:%d", tempo, swing * 100.f, patternLength);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Pattern visualization
+    hw.display.SetCursor(0, 28);
+    char pattern[17] = "----------------";
+    for(int i = 0; i < 16 && i < patternLength; i++)
+    {
+        if(kickSeq[i]) pattern[i] = 'K';
+        else if(snareSeq[i]) pattern[i] = 'S';
+        else if(hatSeq[i]) pattern[i] = 'H';
+    }
+    pattern[kickStep % 16] = '*';
+    hw.display.WriteString(pattern, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    float cr = hw.AudioCallbackRate();
+    
+    kickOsc.Init(sr);
+    kickOsc.SetWaveform(Oscillator::WAVE_TRI);
+    
+    noise.Init();
+    
+    kickVolEnv.Init(sr);
+    kickVolEnv.SetTime(ADENV_SEG_ATTACK, 0.01f);
+    kickVolEnv.SetTime(ADENV_SEG_DECAY, 0.3f);
+    kickVolEnv.SetMax(1.f);
+    kickVolEnv.SetMin(0.f);
+    
+    kickPitchEnv.Init(sr);
+    kickPitchEnv.SetTime(ADENV_SEG_ATTACK, 0.001f);
+    kickPitchEnv.SetTime(ADENV_SEG_DECAY, 0.05f);
+    kickPitchEnv.SetMax(400.f);
+    kickPitchEnv.SetMin(50.f);
+    
+    snareEnv.Init(sr);
+    snareEnv.SetTime(ADENV_SEG_ATTACK, 0.001f);
+    snareEnv.SetTime(ADENV_SEG_DECAY, 0.2f);
+    snareEnv.SetMax(1.f);
+    snareEnv.SetMin(0.f);
+    
+    hatEnv.Init(sr);
+    hatEnv.SetTime(ADENV_SEG_ATTACK, 0.001f);
+    hatEnv.SetTime(ADENV_SEG_DECAY, 0.05f);
+    hatEnv.SetMax(1.f);
+    hatEnv.SetMin(0.f);
+    
+    tick.Init(2.f, cr);
+    
+    // Initialize patterns
+    SetEuclidean(kickSeq, patternLength, 0.25f);
+    SetEuclidean(snareSeq, patternLength, 0.25f);
+    SetEuclidean(hatSeq, patternLength, 0.5f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+lfo
+
+__lfo README.md__
+# Dual LFO
+
+## Author
+Adapted from Patch version
+
+## Description
+Dual Low Frequency Oscillator with waveform morphing. Each LFO can smoothly transition between sine, triangle, saw, and square waveforms. Outputs are available on both CV outputs.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | LFO 1 Frequency | 0.1 - 20 Hz |
+| Knob 2 | LFO 1 Amplitude | 0 - 100% |
+| Knob 3 | LFO 2 Frequency | 0.1 - 20 Hz |
+| Knob 4 | LFO 2 Amplitude | 0 - 100% |
+| Knob 5 | LFO 1 Waveform | Sine→Tri→Saw→Square |
+| Knob 6 | LFO 2 Waveform | Sine→Tri→Saw→Square |
+| Knob 7 | Phase Offset | LFO 2 phase offset |
+| Knob 8 | Rate Multiplier | 0.1x - 10x |
+| SW1 | Reset LFO 1 | Sync to zero phase |
+| SW2 | Reset LFO 2 | Sync to zero phase |
+| CV Out 1 | LFO 1 Output | 0-5V |
+| CV Out 2 | LFO 2 Output | 0-5V |
+
+## Features
+- **Waveform Morphing**: Smooth transitions between sine, triangle, saw, square
+- **Rate Multiplier**: Scale both LFO rates from 0.1x to 10x
+- **Visual Feedback**: LED bar graphs show current LFO values
+- **Reset/Sync**: Manually reset phase for synchronization
+
+__lfo.cpp__
+/**
+ * Dual LFO - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch lfo
+ * Platform: Daisy Field
+ * 
+ * Two independent LFOs with waveform morphing.
+ * 
+ * Control Mapping:
+ * Knob 0: LFO 1 Frequency (0.1 - 20 Hz)
+ * Knob 1: LFO 1 Amplitude
+ * Knob 2: LFO 2 Frequency (0.1 - 20 Hz)
+ * Knob 3: LFO 2 Amplitude
+ * Knob 4: LFO 1 Waveform (sine→tri→saw→square)
+ * Knob 5: LFO 2 Waveform (sine→tri→saw→square)
+ * Knob 6: Phase offset LFO 2 relative to LFO 1
+ * Knob 7: Global rate multiplier (0.1x - 10x)
+ * sw[0]: Reset/sync LFO 1
+ * sw[1]: Reset/sync LFO 2
+ * 
+ * Outputs:
+ * CV Out 1: LFO 1
+ * CV Out 2: LFO 2
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <cmath>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// Custom LFO with waveform morphing
+class MorphingLFO
+{
+public:
+    void Init(float sampleRate)
+    {
+        sr_ = sampleRate;
+        phase_ = 0.f;
+        freq_ = 1.f;
+        amp_ = 1.f;
+        morph_ = 0.f;
+    }
+    
+    void SetFreq(float freq) { freq_ = freq; }
+    void SetAmp(float amp) { amp_ = amp; }
+    void SetMorph(float morph) { morph_ = fclamp(morph, 0.f, 1.f); }
+    void Reset() { phase_ = 0.f; }
+    void SetPhase(float phase) { phase_ = fmodf(phase, 1.f); }
+    float GetPhase() { return phase_; }
+    
+    float Process()
+    {
+        // Advance phase
+        phase_ += freq_ / sr_;
+        if(phase_ >= 1.f) phase_ -= 1.f;
+        
+        // Generate waveforms
+        float sine = sinf(phase_ * TWOPI_F);
+        float tri = 4.f * fabsf(phase_ - 0.5f) - 1.f;
+        float saw = 2.f * phase_ - 1.f;
+        float square = phase_ < 0.5f ? 1.f : -1.f;
+        
+        // Morph between waveforms (0=sine, 0.33=tri, 0.66=saw, 1=square)
+        float out;
+        if(morph_ < 0.33f)
+        {
+            float t = morph_ / 0.33f;
+            out = sine * (1.f - t) + tri * t;
+        }
+        else if(morph_ < 0.66f)
+        {
+            float t = (morph_ - 0.33f) / 0.33f;
+            out = tri * (1.f - t) + saw * t;
+        }
+        else
+        {
+            float t = (morph_ - 0.66f) / 0.34f;
+            out = saw * (1.f - t) + square * t;
+        }
+        
+        return out * amp_;
+    }
+    
+private:
+    float sr_;
+    float phase_;
+    float freq_;
+    float amp_;
+    float morph_;
+};
+
+MorphingLFO lfo1, lfo2;
+
+float lfo1Val = 0.f;
+float lfo2Val = 0.f;
+float rateMultiplier = 1.f;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    // First 6 knobs show their values
+    for(int i = 0; i < 6; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Knob 7/8 LEDs pulse with LFO outputs
+    hw.led_driver.SetLed(knob_leds[6], (lfo1Val + 1.f) * 0.5f);
+    hw.led_driver.SetLed(knob_leds[7], (lfo2Val + 1.f) * 0.5f);
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Reset/sync buttons
+    if(hw.sw[0].RisingEdge())
+        lfo1.Reset();
+    if(hw.sw[1].RisingEdge())
+        lfo2.Reset();
+    
+    // Rate multiplier (0.1x to 10x logarithmic)
+    float multKnob = hw.knob[7].Process();
+    rateMultiplier = powf(10.f, (multKnob - 0.5f) * 2.f);  // 0.1 to 10
+    
+    // LFO 1 parameters
+    float freq1 = 0.1f + hw.knob[0].Process() * 19.9f;  // 0.1 - 20 Hz
+    lfo1.SetFreq(freq1 * rateMultiplier);
+    lfo1.SetAmp(hw.knob[1].Process());
+    lfo1.SetMorph(hw.knob[4].Process());
+    
+    // LFO 2 parameters
+    float freq2 = 0.1f + hw.knob[2].Process() * 19.9f;
+    lfo2.SetFreq(freq2 * rateMultiplier);
+    lfo2.SetAmp(hw.knob[3].Process());
+    lfo2.SetMorph(hw.knob[5].Process());
+    
+    // Phase offset for LFO 2
+    float phaseOffset = hw.knob[6].Process();
+    
+    // Process LFOs at audio rate for smooth CV output
+    for(size_t i = 0; i < size; i++)
+    {
+        lfo1Val = lfo1.Process();
+        lfo2Val = lfo2.Process();
+        
+        // Audio passthrough
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+    }
+    
+    // Write to CV outputs (0-5V range, so map -1..1 to 0..5V = 0..4095)
+    uint16_t cv1 = static_cast<uint16_t>((lfo1Val + 1.f) * 0.5f * 4095.f);
+    uint16_t cv2 = static_cast<uint16_t>((lfo2Val + 1.f) * 0.5f * 4095.f);
+    
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+}
+
+const char* GetWaveformName(float morph)
+{
+    if(morph < 0.17f) return "SIN";
+    else if(morph < 0.5f) return "TRI";
+    else if(morph < 0.83f) return "SAW";
+    else return "SQR";
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("DUAL LFO", Font_7x10, true);
+    
+    char buf[32];
+    
+    // LFO 1 info
+    float freq1 = (0.1f + hw.knob[0].Process() * 19.9f) * rateMultiplier;
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "L1:%.1fHz %s", freq1, GetWaveformName(hw.knob[4].Process()));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // LFO 2 info
+    float freq2 = (0.1f + hw.knob[2].Process() * 19.9f) * rateMultiplier;
+    hw.display.SetCursor(0, 24);
+    sprintf(buf, "L2:%.1fHz %s", freq2, GetWaveformName(hw.knob[5].Process()));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Rate multiplier
+    hw.display.SetCursor(0, 36);
+    sprintf(buf, "Rate: x%.2f", rateMultiplier);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Visual LFO indicators (simple bar graphs)
+    int bar1 = static_cast<int>((lfo1Val + 1.f) * 0.5f * 60.f);
+    int bar2 = static_cast<int>((lfo2Val + 1.f) * 0.5f * 60.f);
+    
+    hw.display.DrawRect(0, 50, bar1, 54, true, true);
+    hw.display.DrawRect(64, 50, 64 + bar2, 54, true, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    lfo1.Init(sr);
+    lfo2.Init(sr);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(33);  // ~30fps
+    }
+}
+
+________________________________________________________________________________
+
+MusicBox
+
+__MusicBox README.md__
+# Music Box
+
+## Description
+Random melodic generator with multiple scales, reverb, and keyboard override.
+
+## Scales
+Major, Minor, Pentatonic, Blues, Whole Tone
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Scale Select |
+| Knob 2 | Octave Range |
+| Knob 3 | Note Decay |
+| Knob 4 | Filter Cutoff |
+| Knob 5 | Reverb Amount |
+| Knob 6 | Reverb Time |
+| Knob 7 | Auto Rate |
+| Knob 8 | Output Level |
+| Keyboard | Play notes directly |
+| SW1 | Auto on/off |
+| SW2 | Random/Sequential |
+
+__MusicBox.cpp__
+/**
+ * MusicBox - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Pod MusicBox
+ * Platform: Daisy Field
+ * 
+ * Random melodic generator with reverb and keyboard override.
+ * 
+ * Control Mapping:
+ * Knob 0: Scale select
+ * Knob 1: Octave range
+ * Knob 2: Note decay
+ * Knob 3: Filter cutoff
+ * Knob 4: Reverb amount
+ * Knob 5: Reverb time
+ * Knob 6: Auto-trigger rate
+ * Knob 7: Output level
+ * Keys 0-7: Play notes directly (C major scale)
+ * Keys 8-15: Play notes (chromatic/accidentals)
+ * sw[0]: Auto mode on/off
+ * sw[1]: Random/sequential mode
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <cstdlib>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Oscillator osc;
+Svf        filt;
+ReverbSc   verb;
+AdEnv      env;
+
+// Scale patterns
+float scales[5][7] = {
+    {0, 2, 4, 5, 7, 9, 11},   // Major
+    {0, 2, 3, 5, 7, 8, 10},   // Minor
+    {0, 2, 4, 7, 9, 0, 0},    // Pentatonic (5 notes)
+    {0, 3, 5, 6, 7, 10, 0},   // Blues (6 notes)
+    {0, 2, 4, 6, 8, 10, 0}    // Whole tone (6 notes)
+};
+
+int scaleNotes[5] = {7, 7, 5, 6, 6};  // Notes per scale
+const char* scaleNames[5] = {"Major", "Minor", "Penta", "Blues", "WTone"};
+
+int      currentScale = 0;
+float    baseNote = 60.f;  // C4
+float    playingNote = 60.f;
+float    octaveRange = 2.f;
+bool     autoMode = true;
+bool     sequential = false;
+int      sequenceIdx = 0;
+uint32_t lastAutoTime = 0;
+float    autoRate = 2.f;  // Notes per second
+float    envValue = 0.f;
+
+float GetRandomNote()
+{
+    int numNotes = scaleNotes[currentScale];
+    int noteIdx, octave;
+    
+    if(sequential)
+    {
+        noteIdx = sequenceIdx % numNotes;
+        octave = (sequenceIdx / numNotes) % static_cast<int>(octaveRange);
+        sequenceIdx = (sequenceIdx + 1) % (numNotes * static_cast<int>(octaveRange));
+    }
+    else
+    {
+        noteIdx = rand() % numNotes;
+        octave = rand() % static_cast<int>(octaveRange);
+    }
+    
+    return baseNote + scales[currentScale][noteIdx] + (12.f * octave);
+}
+
+void TriggerNote(float note)
+{
+    playingNote = note;
+    osc.SetFreq(mtof(playingNote));
+    env.Trigger();
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    // Keyboard: pulse with envelope
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(i == 8 || i == 11 || i == 15)
+            hw.led_driver.SetLed(keyboard_leds[i], 0.f);
+        else
+            hw.led_driver.SetLed(keyboard_leds[i], 0.2f + envValue * 0.6f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Auto mode toggle
+    if(hw.sw[0].RisingEdge())
+        autoMode = !autoMode;
+    
+    // Sequential/random toggle
+    if(hw.sw[1].RisingEdge())
+        sequential = !sequential;
+    
+    // Keyboard input
+    float keyNotes[16] = {
+        60, 62, 64, 65, 67, 69, 71, 72,  // C D E F G A B C
+        60, 61, 63, 60, 66, 68, 70, 60   // C C# D# - F# G# A# -
+    };
+    
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            TriggerNote(keyNotes[i]);
+        }
+    }
+    
+    // Parameters
+    currentScale = static_cast<int>(hw.knob[0].Process() * 4.99f);
+    octaveRange = 1.f + hw.knob[1].Process() * 3.f;
+    float decay = 0.1f + hw.knob[2].Process() * 2.9f;
+    float cutoff = 200.f + hw.knob[3].Process() * 9800.f;
+    float verbAmount = hw.knob[4].Process();
+    float verbTime = 0.5f + hw.knob[5].Process() * 0.49f;
+    autoRate = 0.5f + hw.knob[6].Process() * 9.5f;
+    float outputLevel = hw.knob[7].Process();
+    
+    env.SetTime(ADENV_SEG_DECAY, decay);
+    filt.SetFreq(cutoff);
+    verb.SetFeedback(verbTime);
+    
+    // Auto trigger
+    if(autoMode)
+    {
+        uint32_t interval = static_cast<uint32_t>(1000.f / autoRate);
+        uint32_t now = System::GetNow();
+        if(now - lastAutoTime > interval)
+        {
+            TriggerNote(GetRandomNote());
+            lastAutoTime = now;
+        }
+    }
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        envValue = env.Process();
+        
+        float sig = osc.Process() * envValue;
+        
+        filt.Process(sig);
+        sig = filt.Low();
+        
+        float wetL, wetR;
+        verb.Process(sig * verbAmount, sig * verbAmount, &wetL, &wetR);
+        
+        float outL = (sig + wetL) * outputLevel * 0.7f;
+        float outR = (sig + wetR) * outputLevel * 0.7f;
+        
+        out[0][i] = outL;
+        out[1][i] = outR;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(autoMode ? "MUSIC BOX [AUTO]" : "MUSIC BOX", Font_7x10, true);
+    
+    char buf[32];
+    
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Scale: %s  Oct:%.0f", scaleNames[currentScale], octaveRange);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Note:%.0f  Rate:%.1f/s", playingNote, autoRate);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 38);
+    sprintf(buf, "Mode: %s", sequential ? "SEQ" : "RAND");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    osc.Init(sr);
+    osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    osc.SetAmp(0.5f);
+    osc.SetFreq(440.f);
+    
+    env.Init(sr);
+    env.SetCurve(-15.f);
+    env.SetTime(ADENV_SEG_ATTACK, 0.002f);
+    env.SetTime(ADENV_SEG_DECAY, 1.5f);
+    env.SetMax(1.f);
+    env.SetMin(0.f);
+    
+    filt.Init(sr);
+    filt.SetRes(0.5f);
+    filt.SetDrive(0.3f);
+    filt.SetFreq(3000.f);
+    
+    verb.Init(sr);
+    verb.SetFeedback(0.85f);
+    verb.SetLpFreq(10000.f);
+    
+    srand(System::GetNow());
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+Noise
+
+__Noise README.md__
+# Noise Generator
+
+## Description
+Multi-type noise with white/pink/brown colors, filtering, sample & hold, and AM modulation.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Filter Cutoff |
+| Knob 2 | Resonance |
+| Knob 3 | Noise Type (W→P→B) |
+| Knob 4 | S&H Rate |
+| Knob 5 | AM Rate |
+| Knob 6 | AM Depth |
+| Knob 7 | Dust/Crackle |
+| Knob 8 | Output Level |
+| SW1 | Filter On/Off |
+| SW2 | S&H On/Off |
+
+__Noise.cpp__
+/**
+ * Noise Generator - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch Noise
+ * Platform: Daisy Field
+ * 
+ * Multi-type noise generator with filtering.
+ * 
+ * Control Mapping:
+ * Knob 0: Filter Cutoff
+ * Knob 1: Filter Resonance
+ * Knob 2: Noise Type (white→pink→brown)
+ * Knob 3: Sample & Hold Rate
+ * Knob 4: Amplitude Modulation Rate
+ * Knob 5: AM Depth
+ * Knob 6: Dust/Crackle density
+ * Knob 7: Output Level
+ * sw[0]: Filter On/Off
+ * sw[1]: S&H On/Off
+ * Keyboard: Trigger burst of noise
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+WhiteNoise white;
+Svf        filt;
+Oscillator lfo;
+
+float    outputLevel = 0.5f;
+float    cutoff = 5000.f;
+float    resonance = 0.5f;
+bool     filterOn = true;
+bool     shOn = false;
+float    shValue = 0.f;
+float    shRate = 10.f;
+uint32_t lastShTime = 0;
+float    dustDensity = 0.f;
+float    amDepth = 0.f;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Toggles
+    if(hw.sw[0].RisingEdge())
+        filterOn = !filterOn;
+    if(hw.sw[1].RisingEdge())
+        shOn = !shOn;
+    
+    // Parameters
+    cutoff = 100.f + hw.knob[0].Process() * 19900.f;
+    resonance = hw.knob[1].Process();
+    float noiseType = hw.knob[2].Process();
+    shRate = 1.f + hw.knob[3].Process() * 99.f;
+    float amRate = 0.1f + hw.knob[4].Process() * 19.9f;
+    amDepth = hw.knob[5].Process();
+    dustDensity = hw.knob[6].Process();
+    outputLevel = hw.knob[7].Process();
+    
+    filt.SetFreq(cutoff);
+    filt.SetRes(resonance);
+    lfo.SetFreq(amRate);
+    
+    uint32_t shInterval = static_cast<uint32_t>(1000.f / shRate);
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        // Generate white noise
+        float noise = white.Process();
+        
+        // Noise color (simple filtering for pink/brown approximation)
+        if(noiseType > 0.66f)
+        {
+            // Brown: heavy LP filter
+            static float brownAcc = 0.f;
+            brownAcc = brownAcc * 0.99f + noise * 0.01f;
+            noise = brownAcc * 10.f;
+        }
+        else if(noiseType > 0.33f)
+        {
+            // Pink: mild LP
+            static float pinkAcc = 0.f;
+            pinkAcc = pinkAcc * 0.9f + noise * 0.1f;
+            noise = pinkAcc * 3.f;
+        }
+        
+        // Dust/crackle
+        if(dustDensity > 0.01f)
+        {
+            if(white.Process() > (1.f - dustDensity * 0.1f))
+            {
+                noise += (white.Process() > 0.5f ? 1.f : -1.f) * 0.5f;
+            }
+        }
+        
+        // Sample & Hold
+        if(shOn)
+        {
+            uint32_t now = System::GetNow();
+            if(now - lastShTime > shInterval)
+            {
+                shValue = noise;
+                lastShTime = now;
+            }
+            noise = shValue;
+        }
+        
+        // Filter
+        if(filterOn)
+        {
+            filt.Process(noise);
+            noise = filt.Low();
+        }
+        
+        // AM
+        float am = 1.f - (lfo.Process() + 1.f) * 0.5f * amDepth;
+        noise *= am;
+        
+        noise *= outputLevel;
+        
+        out[0][i] = noise;
+        out[1][i] = noise;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("NOISE", Font_7x10, true);
+    
+    char buf[32];
+    
+    float noiseType = hw.knob[2].Process();
+    const char* typeName = noiseType > 0.66f ? "Brown" : (noiseType > 0.33f ? "Pink" : "White");
+    
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Type:%s  Filt:%s", typeName, filterOn ? "ON" : "OFF");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Freq:%.0fHz S&H:%s", cutoff, shOn ? "ON" : "OFF");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    white.Init();
+    filt.Init(sr);
+    filt.SetFreq(5000.f);
+    filt.SetRes(0.5f);
+    
+    lfo.Init(sr);
+    lfo.SetWaveform(Oscillator::WAVE_SIN);
+    lfo.SetAmp(1.f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+PluckEcho
+
+__PluckEcho README.md__
+# Pluck Echo
+
+## Description
+Karplus-Strong pluck synthesizer with delay and reverb. Play via keyboard.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Pluck Decay |
+| Knob 2 | Brightness |
+| Knob 3 | Delay Time |
+| Knob 4 | Delay Feedback |
+| Knob 5 | Delay Mix |
+| Knob 7 | Reverb Mix |
+| Knob 8 | Output Level |
+| Keyboard | Trigger pluck |
+
+__PluckEcho.cpp__
+/**
+ * PluckEcho - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch PluckEcho
+ * Platform: Daisy Field
+ * 
+ * Karplus-Strong pluck synth with delay.
+ * 
+ * Control Mapping:
+ * Knob 0: Decay
+ * Knob 1: Brightness (damping)
+ * Knob 2: Delay Time
+ * Knob 3: Delay Feedback
+ * Knob 4: Delay Mix
+ * Knob 5: Detune (chorus effect)
+ * Knob 6: Reverb amount
+ * Knob 7: Output Level
+ * Keyboard: Trigger pluck at note pitch
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+#define MAX_DELAY static_cast<size_t>(48000 * 1.f)
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Pluck      pluck;
+DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delay;
+ReverbSc   verb;
+
+// Keyboard scale
+float scale[16] = {
+    48.f, 50.f, 52.f, 53.f, 55.f, 57.f, 59.f, 60.f,  // C3 scale
+    48.f, 49.f, 51.f, 48.f, 54.f, 56.f, 58.f, 48.f   // Chromatic
+};
+
+float    currentNote = 48.f;
+float    delayTime = 0.25f;
+float    delayFb = 0.5f;
+float    delayMix = 0.3f;
+float    reverbMix = 0.2f;
+float    outputLevel = 0.8f;
+uint8_t  activeKey = 255;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(i == 8 || i == 11 || i == 15)
+            hw.led_driver.SetLed(keyboard_leds[i], 0.f);
+        else if(i == activeKey)
+            hw.led_driver.SetLed(keyboard_leds[i], 1.f);
+        else
+            hw.led_driver.SetLed(keyboard_leds[i], 0.3f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Keyboard trigger
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            currentNote = scale[i];
+            pluck.SetFreq(mtof(currentNote));
+            pluck.Trig();
+            activeKey = i;
+        }
+    }
+    
+    // Parameters
+    float decay = 0.5f + hw.knob[0].Process() * 0.49f;
+    float brightness = hw.knob[1].Process();
+    delayTime = 0.05f + hw.knob[2].Process() * 0.95f;
+    delayFb = hw.knob[3].Process() * 0.9f;
+    delayMix = hw.knob[4].Process();
+    reverbMix = hw.knob[6].Process() * 0.5f;
+    outputLevel = hw.knob[7].Process();
+    
+    pluck.SetDecay(decay);
+    pluck.SetDamp(brightness);
+    delay.SetDelay(delayTime * 48000.f);
+    verb.SetFeedback(0.85f);
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        float pluckSig = pluck.Process();
+        
+        // Delay
+        float delayRead = delay.Read();
+        delay.Write(pluckSig + delayRead * delayFb);
+        float delaySig = pluckSig * (1.f - delayMix) + delayRead * delayMix;
+        
+        // Reverb
+        float verbL, verbR;
+        verb.Process(delaySig, delaySig, &verbL, &verbR);
+        
+        float outL = delaySig * (1.f - reverbMix) + verbL * reverbMix;
+        float outR = delaySig * (1.f - reverbMix) + verbR * reverbMix;
+        
+        out[0][i] = outL * outputLevel;
+        out[1][i] = outR * outputLevel;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("PLUCK ECHO", Font_7x10, true);
+    
+    char buf[32];
+    
+    hw.display.SetCursor(0, 16);
+    sprintf(buf, "Note:%.0f  Freq:%.0fHz", currentNote, mtof(currentNote));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 28);
+    sprintf(buf, "Dly:%.0fms Fb:%.0f%%", delayTime * 1000.f, delayFb * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    pluck.Init(sr, 48000 / 20);  // Min freq ~20Hz
+    pluck.SetFreq(440.f);
+    pluck.SetDecay(0.9f);
+    pluck.SetDamp(0.8f);
+    pluck.SetAmp(0.5f);
+    
+    delay.Init();
+    verb.Init(sr);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+PolyOsc
+
+__PolyOsc README.md__
+# PolyOsc (Polyphonic Oscillator)
+
+## Author
+Adapted from Patch version
+
+## Description
+Three oscillators with independent pitch offsets and levels, playable via keyboard. Create harmonies, chords, or thick unison sounds with adjustable intervals.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Osc 1 Pitch Offset | -12 to +12 semitones |
+| Knob 2 | Osc 2 Pitch Offset | -12 to +12 semitones |
+| Knob 3 | Osc 3 Pitch Offset | -12 to +12 semitones |
+| Knob 4 | Global Pitch Offset | -12 to +12 semitones |
+| Knob 5 | Osc 1 Level | 0-100% |
+| Knob 6 | Osc 2 Level | 0-100% |
+| Knob 7 | Osc 3 Level | 0-100% |
+| Knob 8 | Waveform Morph | Sine→Tri→Saw→Square |
+| SW1 | Octave Up | +2 max |
+| SW2 | Octave Down | -2 max |
+| Keyboard | Play Notes | Piano layout |
+| Audio Out L | Osc 1 + Osc 2 | |
+| Audio Out R | Osc 2 + Osc 3 | |
+
+## Features
+- **Interval Control**: Set each oscillator's offset in semitones
+- **Stereo Spread**: Oscillators distributed across L/R
+- **Shared Waveform**: All oscillators morph together
+- **Chord Presets**: Set intervals to 0/4/7 for major, 0/3/7 for minor
+
+__PolyOsc.cpp__
+/**
+ * PolyOsc - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch PolyOsc
+ * Platform: Daisy Field
+ * 
+ * Three oscillators playable via keyboard with interval relationships.
+ * 
+ * Control Mapping:
+ * Knob 0: Oscillator 1 Frequency Offset
+ * Knob 1: Oscillator 2 Frequency Offset (interval from osc1)
+ * Knob 2: Oscillator 3 Frequency Offset (interval from osc1)
+ * Knob 3: Global Pitch Offset
+ * Knob 4: Oscillator 1 Level
+ * Knob 5: Oscillator 2 Level
+ * Knob 6: Oscillator 3 Level
+ * Knob 7: Waveform Morph (all oscillators)
+ * sw[0]: Octave Up
+ * sw[1]: Octave Down
+ * Keyboard: Set base pitch
+ * 
+ * Outputs:
+ * Audio Out L: Osc1 + Osc2 mix
+ * Audio Out R: Osc2 + Osc3 mix
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Oscillator osc[3];
+
+// Keyboard scale
+float scale[16] = {
+    0.f, 2.f, 4.f, 5.f, 7.f, 9.f, 11.f, 12.f,
+    0.f, 1.f, 3.f, 0.f, 6.f, 8.f, 10.f, 0.0f
+};
+
+float    baseNote = 48.f;  // C3
+float    currentNote = 0.f;
+int8_t   octaveOffset = 0;
+uint8_t  activeKey = 255;
+bool     noteOn = false;
+
+float    oscFreq[3];
+float    oscLevel[3] = {0.5f, 0.5f, 0.5f};
+float    oscOffset[3] = {0.f, 0.f, 0.f};
+
+const char* waveNames[] = {"SIN", "TRI", "SAW", "SQR"};
+
+void SetOscWaveform(float morph)
+{
+    uint8_t waveform;
+    if(morph < 0.25f)
+        waveform = Oscillator::WAVE_SIN;
+    else if(morph < 0.5f)
+        waveform = Oscillator::WAVE_TRI;
+    else if(morph < 0.75f)
+        waveform = Oscillator::WAVE_SAW;
+    else
+        waveform = Oscillator::WAVE_SQUARE;
+    
+    for(int i = 0; i < 3; i++)
+        osc[i].SetWaveform(waveform);
+}
+
+int GetWaveIndex(float morph)
+{
+    if(morph < 0.25f) return 0;
+    else if(morph < 0.5f) return 1;
+    else if(morph < 0.75f) return 2;
+    else return 3;
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs - levels for oscs 1-3 on knobs 5-7
+    for(int i = 0; i < 4; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    for(int i = 0; i < 3; i++)
+        hw.led_driver.SetLed(knob_leds[4 + i], oscLevel[i]);
+    
+    hw.led_driver.SetLed(knob_leds[7], hw.knob[7].Process());
+    
+    // Keyboard
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(i == 8 || i == 11 || i == 15)
+            hw.led_driver.SetLed(keyboard_leds[i], 0.f);
+        else if(i == activeKey)
+            hw.led_driver.SetLed(keyboard_leds[i], 1.f);
+        else
+            hw.led_driver.SetLed(keyboard_leds[i], 0.3f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Octave control
+    if(hw.sw[0].RisingEdge() && octaveOffset < 2)
+        octaveOffset++;
+    if(hw.sw[1].RisingEdge() && octaveOffset > -2)
+        octaveOffset--;
+    
+    // Keyboard input
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            currentNote = scale[i];
+            activeKey = i;
+            noteOn = true;
+        }
+        if(hw.KeyboardFallingEdge(i) && i == activeKey)
+        {
+            noteOn = false;
+            activeKey = 255;
+        }
+    }
+    
+    // Read parameters
+    oscOffset[0] = (hw.knob[0].Process() - 0.5f) * 24.f;  // -12 to +12 semi
+    oscOffset[1] = (hw.knob[1].Process() - 0.5f) * 24.f;
+    oscOffset[2] = (hw.knob[2].Process() - 0.5f) * 24.f;
+    float globalOffset = (hw.knob[3].Process() - 0.5f) * 24.f;
+    
+    oscLevel[0] = hw.knob[4].Process();
+    oscLevel[1] = hw.knob[5].Process();
+    oscLevel[2] = hw.knob[6].Process();
+    
+    float waveform = hw.knob[7].Process();
+    SetOscWaveform(waveform);
+    
+    // Calculate frequencies
+    float baseMidi = baseNote + currentNote + (octaveOffset * 12.f) + globalOffset;
+    
+    for(int i = 0; i < 3; i++)
+    {
+        oscFreq[i] = mtof(baseMidi + oscOffset[i]);
+        osc[i].SetFreq(oscFreq[i]);
+        osc[i].SetAmp(noteOn ? oscLevel[i] : 0.f);
+    }
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig1 = osc[0].Process();
+        float sig2 = osc[1].Process();
+        float sig3 = osc[2].Process();
+        
+        // Stereo spread: L = osc1+osc2, R = osc2+osc3
+        out[0][i] = (sig1 + sig2) * 0.5f;
+        out[1][i] = (sig2 + sig3) * 0.5f;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("POLY OSC", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Waveform and octave
+    hw.display.SetCursor(70, 0);
+    sprintf(buf, "%s Oct%+d", waveNames[GetWaveIndex(hw.knob[7].Process())], octaveOffset);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Oscillator frequencies
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "O1:%.0fHz  L:%.0f%%", oscFreq[0], oscLevel[0] * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 24);
+    sprintf(buf, "O2:%.0fHz  L:%.0f%%", oscFreq[1], oscLevel[1] * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 34);
+    sprintf(buf, "O3:%.0fHz  L:%.0f%%", oscFreq[2], oscLevel[2] * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Intervals (semitones from osc1)
+    hw.display.SetCursor(0, 46);
+    sprintf(buf, "Int: %+.0f / %+.0f / %+.0f", oscOffset[0], oscOffset[1], oscOffset[2]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    for(int i = 0; i < 3; i++)
+    {
+        osc[i].Init(sr);
+        osc[i].SetWaveform(Oscillator::WAVE_SAW);
+        osc[i].SetAmp(0.5f);
+        osc[i].SetFreq(440.f);
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+Sequencer
+
+__Sequencer README.md__
+# 8-Step Sequencer
+
+## Author
+Adapted from Patch version (5-step), expanded to 8 steps
+
+## Description
+Step sequencer with keyboard-based step selection. Uses the bottom keyboard row (8 keys) for step selection/toggling, with visual LED feedback showing sequence state. Features swing timing, variable length, and record mode.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Selected Step Pitch | 0-127 MIDI |
+| Knob 2 | Selected Step Gate Length | 0-100% |
+| Knob 3 | Tempo | 30-300 BPM |
+| Knob 4 | Swing | 0-50% |
+| Knob 5 | Pitch Offset | -12 to +12 semitones |
+| Knob 6 | Gate Output Multiplier | |
+| Knob 7 | Sequence Length | 1-8 steps |
+| Knob 8 | Output Level | |
+| SW1 | Play/Stop | Toggle |
+| SW2 | Record Mode | Toggle step on/off |
+| Keyboard 0-7 | Step Select/Toggle | Bottom row |
+| CV Out 1 | Pitch | 1V/oct |
+| CV Out 2 | Gate | 0V/5V |
+
+## LED Feedback
+- **Bottom Row (0-7)**: Sequence steps
+  - Dim: Inactive step
+  - Medium: Active step  
+  - Bright: Selected step
+  - Full: Current playing step
+- **Top Row**:
+  - Key 8: Play status
+  - Key 9: Record status
+  - Keys 10-15: Pitch level meter
+
+## Modes
+- **Edit Mode** (default): Touch keys to select step for editing
+- **Record Mode** (SW2): Touch keys to toggle step active/inactive
+
+__Sequencer.cpp__
+/**
+ * 8-Step Sequencer - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch Sequencer (5-step)
+ * Platform: Daisy Field
+ * 
+ * Enhanced 8-step sequencer using keyboard for step selection.
+ * 
+ * Control Mapping:
+ * Knob 0: Selected Step Pitch (0-127 MIDI)
+ * Knob 1: Selected Step Gate Length (0-100%)
+ * Knob 2: Tempo/BPM (30-300)
+ * Knob 3: Swing Amount (0-50%)
+ * Knob 4: Global Pitch Offset
+ * Knob 5: Gate Output Length
+ * Knob 6: Sequence Length (1-8 steps)
+ * Knob 7: Output Level
+ * sw[0]: Play/Stop toggle
+ * sw[1]: Record mode toggle
+ * Keyboard 0-7: Select step for editing / Toggle step active
+ * Gate In: External clock
+ * Gate Out: Trigger on each step
+ * CV Out 1: Pitch (1V/oct)
+ * CV Out 2: Gate
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Oscillator osc;
+
+struct Step
+{
+    float pitch;      // MIDI note
+    float gateLen;    // 0-1
+    bool  active;     // Step on/off
+};
+
+Step sequence[8];
+
+uint8_t  currentStep = 0;
+uint8_t  selectedStep = 0;
+uint8_t  seqLength = 8;
+float    tempo = 120.f;
+float    swing = 0.f;
+bool     playing = false;
+bool     recording = false;
+uint32_t lastStepTime = 0;
+uint32_t stepInterval = 500;  // ms
+bool     gateHigh = false;
+uint32_t gateStartTime = 0;
+float    pitchOffset = 0.f;
+float    outputLevel = 0.8f;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Bottom row (0-7): Sequence steps
+    for(size_t i = 0; i < 8; i++)
+    {
+        float brightness = 0.1f;  // Inactive step
+        
+        if(sequence[i].active)
+            brightness = 0.4f;    // Active step
+        
+        if(i == selectedStep)
+            brightness = 0.7f;    // Selected step
+        
+        if(playing && i == currentStep)
+            brightness = 1.0f;    // Current playing step
+        
+        if(i >= seqLength)
+            brightness = 0.0f;    // Beyond sequence length
+        
+        hw.led_driver.SetLed(keyboard_leds[i], brightness);
+    }
+    
+    // Top row (8-15): Status indicators
+    // Key 8-9: Play/Record status
+    hw.led_driver.SetLed(keyboard_leds[8], playing ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[9], recording ? 1.0f : 0.2f);
+    
+    // Keys 10-15: Pitch indicator for selected step
+    float pitchNorm = sequence[selectedStep].pitch / 127.f;
+    for(int i = 10; i < 16; i++)
+    {
+        float thresh = (float)(i - 10) / 6.f;
+        hw.led_driver.SetLed(keyboard_leds[i], pitchNorm > thresh ? 0.5f : 0.1f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AdvanceStep()
+{
+    currentStep = (currentStep + 1) % seqLength;
+    lastStepTime = System::GetNow();
+    
+    // Trigger gate if step is active
+    if(sequence[currentStep].active)
+    {
+        gateHigh = true;
+        gateStartTime = System::GetNow();
+        
+        // Set oscillator frequency
+        float note = sequence[currentStep].pitch + pitchOffset;
+        osc.SetFreq(mtof(note));
+    }
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Play/Stop toggle
+    if(hw.sw[0].RisingEdge())
+    {
+        playing = !playing;
+        if(playing)
+        {
+            currentStep = 0;
+            lastStepTime = System::GetNow();
+        }
+    }
+    
+    // Record mode toggle
+    if(hw.sw[1].RisingEdge())
+    {
+        recording = !recording;
+    }
+    
+    // Keyboard step selection (bottom row 0-7)
+    for(size_t i = 0; i < 8; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            if(recording)
+            {
+                // In record mode: toggle step active
+                sequence[i].active = !sequence[i].active;
+            }
+            else
+            {
+                // In edit mode: select step
+                selectedStep = i;
+            }
+        }
+    }
+    
+    // Read parameters
+    if(!playing || currentStep != selectedStep)
+    {
+        // Only update selected step params when not playing current step
+        sequence[selectedStep].pitch = hw.knob[0].Process() * 127.f;
+        sequence[selectedStep].gateLen = hw.knob[1].Process();
+    }
+    
+    tempo = 30.f + hw.knob[2].Process() * 270.f;  // 30-300 BPM
+    swing = hw.knob[3].Process() * 0.5f;          // 0-50%
+    pitchOffset = (hw.knob[4].Process() - 0.5f) * 24.f;  // -12 to +12 semitones
+    float gateLenMult = hw.knob[5].Process();
+    seqLength = 1 + static_cast<uint8_t>(hw.knob[6].Process() * 7.f);  // 1-8
+    outputLevel = hw.knob[7].Process();
+    
+    // Calculate step interval with swing
+    float baseInterval = 60000.f / tempo / 4.f;  // 16th notes
+    bool swingStep = (currentStep % 2 == 1);
+    stepInterval = static_cast<uint32_t>(baseInterval * (swingStep ? (1.f + swing) : (1.f - swing * 0.5f)));
+    
+    // CV outputs
+    float pitchCV = (sequence[currentStep].pitch + pitchOffset) / 127.f;
+    uint16_t cv1 = static_cast<uint16_t>(fclamp(pitchCV, 0.f, 1.f) * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    
+    uint16_t cv2 = gateHigh ? 4095 : 0;
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = 0.f;
+        
+        if(gateHigh && sequence[currentStep].active)
+        {
+            sig = osc.Process() * outputLevel;
+        }
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateSequencer()
+{
+    uint32_t now = System::GetNow();
+    
+    // Check gate off
+    if(gateHigh)
+    {
+        float gateLen = sequence[currentStep].gateLen * hw.knob[5].Process();
+        uint32_t gateDuration = static_cast<uint32_t>(stepInterval * gateLen);
+        if(now - gateStartTime > gateDuration)
+        {
+            gateHigh = false;
+        }
+    }
+    
+    // Check step advance
+    if(playing && (now - lastStepTime >= stepInterval))
+    {
+        AdvanceStep();
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(playing ? "SEQ [PLAY]" : "SEQ [STOP]", Font_7x10, true);
+    
+    if(recording)
+    {
+        hw.display.SetCursor(80, 0);
+        hw.display.WriteString("REC", Font_7x10, true);
+    }
+    
+    char buf[32];
+    
+    // Current step and tempo
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Step:%d/%d  %.0fBPM", currentStep + 1, seqLength, tempo);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Selected step info
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Edit:%d P:%.0f G:%.0f%%", 
+            selectedStep + 1,
+            sequence[selectedStep].pitch,
+            sequence[selectedStep].gateLen * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Swing
+    hw.display.SetCursor(0, 38);
+    sprintf(buf, "Swing:%.0f%%  Off:%+.0f", swing * 100.f, pitchOffset);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Step pattern visualization
+    hw.display.SetCursor(0, 50);
+    char pattern[17] = "--------";
+    for(int i = 0; i < 8; i++)
+    {
+        if(i >= seqLength)
+            pattern[i] = '.';
+        else if(i == currentStep && playing)
+            pattern[i] = 'O';
+        else if(sequence[i].active)
+            pattern[i] = 'X';
+        else
+            pattern[i] = '-';
+    }
+    pattern[8] = '\0';
+    hw.display.WriteString(pattern, Font_7x10, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    osc.Init(sr);
+    osc.SetWaveform(Oscillator::WAVE_SAW);
+    osc.SetAmp(0.5f);
+    osc.SetFreq(440.f);
+    
+    // Initialize sequence with default values
+    for(int i = 0; i < 8; i++)
+    {
+        sequence[i].pitch = 48.f + i * 2.f;  // C3 scale
+        sequence[i].gateLen = 0.5f;
+        sequence[i].active = (i < 4);  // First 4 steps active
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateSequencer();
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(10);
+    }
+}
+
+________________________________________________________________________________
+
+vco
+
+__vco README.md__
+# VCO (Voltage Controlled Oscillator)
+
+## Author
+Adapted from Patch version
+
+## Description
+Full-featured VCO playable via the Field's capacitive keyboard. Features waveform morphing, sub oscillator, portamento glide, and CV outputs for integration with modular systems.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Coarse Pitch | C1 - C6 |
+| Knob 2 | Fine Tune | -50 to +50 cents |
+| Knob 3 | Waveform Morph | Sine→Tri→Saw→Square |
+| Knob 4 | Pulse Width | 10% - 90% |
+| Knob 5 | Sub Oscillator Level | 0 - 100% |
+| Knob 6 | Sub Octave | -1 or -2 octaves |
+| Knob 7 | Portamento | 0 - 100ms glide |
+| Knob 8 | Output Level | 0 - 100% |
+| SW1 | Octave Up | +2 max |
+| SW2 | Octave Down | -2 max |
+| Keyboard | Play Notes | Piano layout |
+| Audio Out L/R | VCO Output | |
+| CV Out 1 | Pitch | 1V/oct scaled |
+| CV Out 2 | Gate | 0V/5V |
+
+## Features
+- **Sub Oscillator**: Sine wave 1-2 octaves below main
+- **Portamento**: Smooth pitch glide between notes
+- **Pulse Width**: Adjustable for square wave timbre
+- **CV Outputs**: Pitch and Gate for external gear
+
+__vco.cpp__
+/**
+ * VCO - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch vco
+ * Platform: Daisy Field
+ * 
+ * Voltage Controlled Oscillator playable via keyboard.
+ * 
+ * Control Mapping:
+ * Knob 0: Coarse Pitch (C1-C6, 5 octaves)
+ * Knob 1: Fine Tune (-50 to +50 cents)
+ * Knob 2: Waveform Morph (sine→tri→saw→square)
+ * Knob 3: Pulse Width (for square wave)
+ * Knob 4: Sub Oscillator Level
+ * Knob 5: Sub Oscillator Octave (-1 or -2)
+ * Knob 6: Portamento/Glide Time
+ * Knob 7: Output Level
+ * sw[0]: Octave Up
+ * sw[1]: Octave Down
+ * Keyboard: Play notes (quantized to scale)
+ * 
+ * Outputs:
+ * Audio Out L/R: VCO output (mono)
+ * CV Out 1: Pitch CV (1V/oct scaled)
+ * CV Out 2: Gate CV
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Oscillator osc;
+Oscillator subOsc;
+
+// Piano-style keyboard layout
+float scale[16] = {
+    0.f, 2.f, 4.f, 5.f, 7.f, 9.f, 11.f, 12.f,   // C D E F G A B C
+    0.f, 1.f, 3.f, 0.f, 6.f, 8.f, 10.f, 0.0f    // C# D# - F# G# A# -
+};
+
+int8_t   octaveOffset = 0;
+float    basePitch = 48.f;     // C3
+float    currentNote = 0.f;
+float    targetFreq = 261.63f; // C4
+float    currentFreq = 261.63f;
+float    portamento = 0.f;
+bool     gate = false;
+uint8_t  activeKey = 255;
+float    pulseWidth = 0.5f;
+
+const char* waveNames[] = {"SIN", "TRI", "SAW", "SQR"};
+
+int GetWaveIndex(float morph)
+{
+    if(morph < 0.25f) return 0;
+    else if(morph < 0.5f) return 1;
+    else if(morph < 0.75f) return 2;
+    else return 3;
+}
+
+void SetOscWaveform(Oscillator& oscillator, float morph)
+{
+    if(morph < 0.25f)
+        oscillator.SetWaveform(Oscillator::WAVE_SIN);
+    else if(morph < 0.5f)
+        oscillator.SetWaveform(Oscillator::WAVE_TRI);
+    else if(morph < 0.75f)
+        oscillator.SetWaveform(Oscillator::WAVE_SAW);
+    else
+        oscillator.SetWaveform(Oscillator::WAVE_SQUARE);
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Keyboard: playable keys lit, active key bright
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(i == 8 || i == 11 || i == 15)
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], 0.f);
+        }
+        else if(i == activeKey)
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], 1.f);
+        }
+        else
+        {
+            hw.led_driver.SetLed(keyboard_leds[i], 0.3f);
+        }
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Octave control
+    if(hw.sw[0].RisingEdge() && octaveOffset < 2)
+        octaveOffset++;
+    if(hw.sw[1].RisingEdge() && octaveOffset > -2)
+        octaveOffset--;
+    
+    // Keyboard input
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i) && i != 8 && i != 11 && i != 15)
+        {
+            currentNote = scale[i];
+            activeKey = i;
+            gate = true;
+        }
+        if(hw.KeyboardFallingEdge(i) && i == activeKey)
+        {
+            gate = false;
+            activeKey = 255;
+        }
+    }
+    
+    // Read parameters
+    basePitch = 24.f + hw.knob[0].Process() * 60.f;  // C1-C6
+    float fineTune = (hw.knob[1].Process() - 0.5f) * 100.f;  // -50 to +50 cents
+    float waveform = hw.knob[2].Process();
+    pulseWidth = 0.1f + hw.knob[3].Process() * 0.8f;  // 10%-90%
+    float subLevel = hw.knob[4].Process();
+    float subOctave = hw.knob[5].Process() < 0.5f ? 1.f : 2.f;  // -1 or -2 octaves
+    portamento = hw.knob[6].Process() * 0.1f;  // 0-100ms glide
+    float outputLevel = hw.knob[7].Process();
+    
+    // Calculate target frequency
+    float midiNote = basePitch + currentNote + (octaveOffset * 12.f) + (fineTune / 100.f);
+    targetFreq = mtof(midiNote);
+    
+    // Set waveforms
+    SetOscWaveform(osc, waveform);
+    subOsc.SetWaveform(Oscillator::WAVE_SIN);  // Sub is always sine
+    
+    // CV outputs
+    // CV1: Pitch (scale to 0-5V for ~5 octaves)
+    float pitchCV = (midiNote - 24.f) / 60.f;  // Normalize C1-C6 to 0-1
+    uint16_t cv1 = static_cast<uint16_t>(fclamp(pitchCV, 0.f, 1.f) * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    
+    // CV2: Gate
+    uint16_t cv2 = gate ? 4095 : 0;
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        // Apply portamento
+        fonepole(currentFreq, targetFreq, portamento > 0.001f ? portamento : 1.f);
+        
+        osc.SetFreq(currentFreq);
+        osc.SetPw(pulseWidth);
+        
+        subOsc.SetFreq(currentFreq / powf(2.f, subOctave));
+        
+        float mainSig = osc.Process();
+        float subSig = subOsc.Process() * subLevel;
+        
+        float sig = (mainSig + subSig) * outputLevel;
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("VCO", Font_11x18, true);
+    
+    char buf[32];
+    
+    // Frequency and note
+    hw.display.SetCursor(40, 4);
+    sprintf(buf, "%.1fHz", currentFreq);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Waveform and octave
+    hw.display.SetCursor(0, 22);
+    sprintf(buf, "%s  Oct:%+d  PW:%.0f%%", 
+            waveNames[GetWaveIndex(hw.knob[2].Process())],
+            octaveOffset,
+            pulseWidth * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Sub oscillator
+    hw.display.SetCursor(0, 34);
+    float subLevel = hw.knob[4].Process();
+    float subOct = hw.knob[5].Process() < 0.5f ? 1.f : 2.f;
+    sprintf(buf, "Sub:%.0f%% (-%d oct)", subLevel * 100.f, (int)subOct);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Portamento
+    hw.display.SetCursor(0, 46);
+    sprintf(buf, "Port:%.0fms  %s", portamento * 1000.f, gate ? "[GATE]" : "");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    osc.Init(sr);
+    osc.SetWaveform(Oscillator::WAVE_SAW);
+    osc.SetAmp(0.5f);
+    
+    subOsc.Init(sr);
+    subOsc.SetWaveform(Oscillator::WAVE_SIN);
+    subOsc.SetAmp(0.5f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________

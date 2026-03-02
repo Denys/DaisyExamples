@@ -71,7 +71,7 @@ int main(void)
     // Init
     float samplerate;
     hw.Init();
-    hw.seed.StartLog(true); // Wait for serial connection before continuing
+    hw.seed.StartLog(); // Non-blocking serial log
     hw.SetAudioBlockSize(4);
     hw.seed.usb_handle.Init(UsbHandle::FS_INTERNAL);
     System::Delay(250);

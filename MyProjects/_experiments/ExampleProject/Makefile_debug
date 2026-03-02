@@ -1,0 +1,21 @@
+TARGET = ExampleProjectDebug
+
+USE_DAISYSP_LGPL = 1
+
+# Sources
+CPP_SOURCES = ExampleProject_debug.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# Add HID path (for logger.h)
+CPPFLAGS += -I$(LIBDAISY_DIR)/src/hid
+
+# Debug-specific flags
+CPPFLAGS += -DDEBUG_ENABLED=1 -DDEBUG_LEVEL=DEBUG_NORMAL
+CPPFLAGS += -O0 -g -Wall -Wextra
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile

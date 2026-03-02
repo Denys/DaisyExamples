@@ -1,0 +1,283 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Field Wavetable Morph Synth",
+      "author": "DVPE",
+      "description": "Wavetable synthesizer with morphing, filter, ADSR, and chorus for Daisy Field. Based on field_wavetable_morph_synth project.",
+      "created": "2026-01-27T19:15:00Z",
+      "modified": "2026-01-27T19:15:00Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "hardwareConfig": {
+      "platform": "field",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": true,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    },
+    "blocks": [
+      {
+        "id": "midi-note-1",
+        "definitionId": "midi_note",
+        "position": { "x": -600, "y": -400 },
+        "parameterValues": { "channel": 1 },
+        "selected": false
+      },
+      {
+        "id": "knob-position",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": -200 },
+        "parameterValues": { "channel": "0", "min": 0, "max": 1, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-morph-speed",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": -100 },
+        "parameterValues": { "channel": "1", "min": 0, "max": 10, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-filter-cutoff",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 0 },
+        "parameterValues": { "channel": "2", "min": 20, "max": 20000, "curve": "exponential" },
+        "selected": false
+      },
+      {
+        "id": "knob-attack",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 100 },
+        "parameterValues": { "channel": "3", "min": 0, "max": 5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-decay",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 200 },
+        "parameterValues": { "channel": "4", "min": 0, "max": 5, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-sustain",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 300 },
+        "parameterValues": { "channel": "5", "min": 0, "max": 1, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-release",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 400 },
+        "parameterValues": { "channel": "6", "min": 0, "max": 10, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "knob-volume",
+        "definitionId": "knob",
+        "position": { "x": -600, "y": 500 },
+        "parameterValues": { "channel": "7", "min": 0, "max": 1, "curve": "linear" },
+        "selected": false
+      },
+      {
+        "id": "lfo-morph",
+        "definitionId": "lfo",
+        "position": { "x": -300, "y": -150 },
+        "parameterValues": { "freq": 1.0, "amp": 1.0, "waveform": 0 },
+        "enabledCvPorts": ["freq"],
+        "selected": false
+      },
+      {
+        "id": "osc-1",
+        "definitionId": "oscillator",
+        "position": { "x": -100, "y": -350 },
+        "parameterValues": { "freq": 440, "amp": 0.5, "waveform": "WAVE_POLYBLEP_SAW", "pw": 0.5 },
+        "enabledCvPorts": ["freq", "amp"],
+        "selected": false
+      },
+      {
+        "id": "svf-filter",
+        "definitionId": "svf",
+        "position": { "x": 200, "y": -350 },
+        "parameterValues": { "freq": 1000, "res": 0.4, "drive": 0.0 },
+        "enabledCvPorts": ["freq"],
+        "selected": false
+      },
+      {
+        "id": "adsr-amp",
+        "definitionId": "adsr",
+        "position": { "x": -100, "y": -50 },
+        "parameterValues": { "attack": 0.1, "decay": 0.1, "sustain": 0.8, "release": 0.2 },
+        "enabledCvPorts": ["attack", "decay", "sustain", "release"],
+        "selected": false
+      },
+      {
+        "id": "vca-main",
+        "definitionId": "vca",
+        "position": { "x": 450, "y": -350 },
+        "parameterValues": { "gain": 1.0 },
+        "enabledCvPorts": ["gain"],
+        "selected": false
+      },
+      {
+        "id": "chorus-fx",
+        "definitionId": "chorus",
+        "position": { "x": 700, "y": -350 },
+        "parameterValues": { "rate": 0.5, "depth": 0.5 },
+        "selected": false
+      },
+      {
+        "id": "vca-volume",
+        "definitionId": "vca",
+        "position": { "x": 950, "y": -350 },
+        "parameterValues": { "gain": 0.5 },
+        "enabledCvPorts": ["gain"],
+        "selected": false
+      },
+      {
+        "id": "audio-output",
+        "definitionId": "audio_output",
+        "position": { "x": 1200, "y": -350 },
+        "parameterValues": {},
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "c-midi-pitch-osc",
+        "sourceBlockId": "midi-note-1",
+        "sourcePortId": "pitch",
+        "targetBlockId": "osc-1",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-midi-gate-adsr",
+        "sourceBlockId": "midi-note-1",
+        "sourcePortId": "gate",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "c-knob-position-lfo",
+        "sourceBlockId": "knob-position",
+        "sourcePortId": "out",
+        "targetBlockId": "lfo-morph",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-cutoff-filter",
+        "sourceBlockId": "knob-filter-cutoff",
+        "sourcePortId": "out",
+        "targetBlockId": "svf-filter",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-attack",
+        "sourceBlockId": "knob-attack",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "attack_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-decay",
+        "sourceBlockId": "knob-decay",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-sustain",
+        "sourceBlockId": "knob-sustain",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "sustain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-release",
+        "sourceBlockId": "knob-release",
+        "sourcePortId": "out",
+        "targetBlockId": "adsr-amp",
+        "targetPortId": "release_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-knob-volume-vca",
+        "sourceBlockId": "knob-volume",
+        "sourcePortId": "out",
+        "targetBlockId": "vca-volume",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-osc-filter",
+        "sourceBlockId": "osc-1",
+        "sourcePortId": "out",
+        "targetBlockId": "svf-filter",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-filter-vca",
+        "sourceBlockId": "svf-filter",
+        "sourcePortId": "lowpass",
+        "targetBlockId": "vca-main",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-adsr-vca",
+        "sourceBlockId": "adsr-amp",
+        "sourcePortId": "out",
+        "targetBlockId": "vca-main",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "c-vca-chorus",
+        "sourceBlockId": "vca-main",
+        "sourcePortId": "out",
+        "targetBlockId": "chorus-fx",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-chorus-volume",
+        "sourceBlockId": "chorus-fx",
+        "sourcePortId": "out",
+        "targetBlockId": "vca-volume",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "c-volume-out-left",
+        "sourceBlockId": "vca-volume",
+        "sourcePortId": "out",
+        "targetBlockId": "audio-output",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "c-volume-out-right",
+        "sourceBlockId": "vca-volume",
+        "sourcePortId": "out",
+        "targetBlockId": "audio-output",
+        "targetPortId": "right",
+        "type": "audio"
+      }
+    ]
+  }
+}

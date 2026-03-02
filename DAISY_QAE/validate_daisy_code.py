@@ -4,6 +4,19 @@
 Checks for common anti-patterns and missing initialization patterns
 documented in DAISY_DEVELOPMENT_STANDARDS.md and DAISY_BUGS.md.
 
+Rules:
+    CTRL-IN-CALLBACK    ProcessAllControls() inside AudioCallback
+    ALLOC-IN-CALLBACK   malloc/new/printf/PrintLine inside AudioCallback
+    NO-INIT             DSP module declared but never Init'd
+    NO-START-ADC        StartAudio() without StartAdc()
+    ADC-AFTER-AUDIO     StartAdc() called after StartAudio()
+    NO-LOOP-DELAY       Main while(1) missing System::Delay()
+    MISSING-INCLUDE     DaisyField used without #include
+    STL-USAGE           std::vector/map/string/function detected
+    MAKEFILE-NO-LIBDAISY/NO-DAISYSP  Makefile missing directories
+    LGPL-FLAG-MISSING   LGPL module used without USE_DAISYSP_LGPL = 1
+    HALLUCINATED-API    Known fabricated DaisySP method name detected
+
 Usage:
     python validate_daisy_code.py <file.cpp>
     python validate_daisy_code.py MyProjects/_projects/*/  # check all projects
@@ -192,6 +205,40 @@ def check_file(filepath: str) -> List[Finding]:
                 "ERROR", 0, "LGPL-FLAG-MISSING",
                 "Code uses LGPL module but Makefile lacks USE_DAISYSP_LGPL = 1"
             ))
+
+    # ── Rule 9: Hallucinated DaisySP API names ──
+    # These method names are invented by LLMs and do not exist in DaisySP.
+    # Each entry: wrong_name -> (correct_name, affected_class)
+    hallucinated_apis = [
+        (r'\bSetCutoff\s*\(',           'SetFreq()',                  'MoogLadder/Svf/Tone'),
+        (r'\bSetCutoffFrequency\s*\(',  'SetFreq()',                  'MoogLadder/Svf'),
+        (r'\bSetQ\s*\(',                'SetRes()',                   'MoogLadder/Svf/Biquad'),
+        (r'\bSetResonance\s*\(',        'SetRes()',                   'MoogLadder/Svf/Biquad'),
+        (r'\bSetAttack\s*\(',           'SetTime(ADSR_SEG_ATTACK, t)', 'Adsr'),
+        # NOTE: SetDecay is VALID on AnalogBassDrum, AnalogSnareDrum, HiHat.
+        # Only flag if called on an Adsr object (variable names: adsr, env, envelope).
+        # Using a negative lookbehind to skip drum module calls.
+        (r'(?:adsr|env|envelope|Adsr|Env|Envelope)\s*\.\s*SetDecay\s*\(',
+                                        'SetTime(ADSR_SEG_DECAY, t)',  'Adsr'),
+        (r'\bSetRelease\s*\(',          'SetTime(ADSR_SEG_RELEASE, t)','Adsr'),
+        (r'\bSetWaveType\s*\(',         'SetWaveform()',              'Oscillator/BlOsc/Tremolo'),
+        (r'\.setFreq\s*\(',             'SetFreq() (PascalCase)',     'All DaisySP classes'),
+        (r'\.setAmp\s*\(',              'SetAmp() (PascalCase)',      'Oscillator/WhiteNoise'),
+        (r'\.setCutoff\s*\(',           'SetFreq() (PascalCase)',     'MoogLadder/Svf'),
+        (r'\bsetCutoffFrequency\s*\(',  'SetFreq()',                  'MoogLadder/Svf'),
+    ]
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith('//'):
+            continue  # Skip comments
+        for bad_pattern, correct, context in hallucinated_apis:
+            if re.search(bad_pattern, line):
+                bad_name = re.search(bad_pattern, line).group(0).rstrip('(')
+                findings.append(Finding(
+                    "ERROR", i + 1, "HALLUCINATED-API",
+                    f"{bad_name.strip()} does not exist in DaisySP "
+                    f"({context}) — use {correct} instead"
+                ))
 
     return findings
 

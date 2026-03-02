@@ -1,0 +1,2944 @@
+CONTENTS:
+ 1. ADCMulti.cpp
+ 2. ADCMux.cpp
+ 3. AudioOutput.cpp
+ 4. AudioPassthru.cpp
+ 5. BootloaderBlink_main.cpp
+ 6. CopyingWavs.cpp
+ 7. DAC_Polling_Output.cpp
+ 8. Encoder.cpp
+ 9. ExternalCodec.cpp
+10. FileTable_main.cpp
+11. GateInput.cpp
+12. GPIO_Input.cpp
+13. GPIO_Output.cpp
+14. MIDI_UART_Input.cpp
+15. MIDI_USBH_Input.cpp
+16. OledSoftSPI.cpp
+17. OledSPI.cpp
+18. OLED_SSD130x4WireSPI.cpp
+19. PWM_Output.cpp
+20. QSPI_ReadAndWrite_main.cpp
+21. SDMMC_HelloWorld.cpp
+22. SerialPrint.cpp
+23. SerialRead.cpp
+24. SpiBlockingTransmit.cpp
+25. SpiDmaTransmit.cpp
+26. SR_4021.cpp
+27. Switch.cpp
+28. Switch3.cpp
+29. TIM_SingleCallback.cpp
+30. Blocking_Receive.cpp
+31. Blocking_Transmit.cpp
+32. Blocking_Transmit_Dma_Receive.cpp
+33. Blocking_Transmit_Fifo_Receive.cpp
+34. Dma_Fifo_Receive.cpp
+35. Dma_Receive.cpp
+36. Dma_Transmit.cpp
+37. Dma_Transmit_Blocking_Receive.cpp
+38. Dma_Transmit_Dma_Receive.cpp
+39. WavParser_main.cpp
+40. WavPlayer_main.cpp
+41. WavWriter.cpp
+
+=================================================================================
+
+___Makefile template___
+# Project Name
+TARGET = ProjectName
+
+# Sources
+CPP_SOURCES = ProjectName.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+_________________________
+
+
+___ADCMulti.cpp___
+/** Example of initializing multiple ADC inputs */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Configure the ADC
+     * 
+     *  Three CV inputs (-5V to 5V -> 3V3 to 0V)
+     *  A0, A6, and A2
+     * 
+     *  This example was made for the Daisy Seed2 DFM, but the pins can be swapped for other hardware.
+     */
+    AdcChannelConfig adc_cfg[3];
+    adc_cfg[0].InitSingle(seed::A0);
+    adc_cfg[1].InitSingle(seed::A6);
+    adc_cfg[2].InitSingle(seed::A2);
+
+    /** Initialize the ADC with our configuration */
+    hw.adc.Init(adc_cfg, 3);
+
+    /** Start the ADC conversions in the background */
+    hw.adc.Start();
+
+    /** Startup the USB Serial port */
+    hw.StartLog();
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** Print the values via Serial every 250ms 
+         *  Values will be 0 when inputs are 0V
+         *  Values will be 65536 when inputs are 3v3
+         * 
+         *  Based on the CV input circuit this means that
+         *  Values will be 0 when input is 5V
+         *  Values will be ~32768 when input is ~0V
+         *  Values will be 65536 when input is -5V
+         */
+        System::Delay(250);
+        hw.PrintLine("Input 1: %d", hw.adc.Get(0));
+        hw.PrintLine("Input 2: %d", hw.adc.Get(1));
+        hw.PrintLine("Input 3: %d", hw.adc.Get(2));
+    }
+}
+_________________________
+
+___ADCMux.cpp___
+/** Example of using a CD4051 multiplexor to expand the ADC inputs */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Configure the ADC
+     * 
+     *  One channel configured for four inputs via CD4051 mux
+     *  The Analog signal coming from the multiplexor is connected to pin A3
+     *  The select pins from the Daisy are D12, and D31 (we only need two SEL pins since we're using 4 inputs)
+     * 
+     *  This example was made for the Daisy Seed2 DFM, but the pins can be swapped for other hardware.
+     */
+    AdcChannelConfig adc_cfg;
+    adc_cfg.InitMux(seed::A3, 4, seed::D12, seed::D31);
+
+    /** Initialize the ADC with our configuration */
+    hw.adc.Init(&adc_cfg, 1);
+
+    /** Start the ADC conversions in the background */
+    hw.adc.Start();
+
+    /** Startup the USB Serial port */
+    hw.StartLog();
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** Print the values via Serial every 250ms 
+         *  Values will be 0 when inputs are 0V
+         *  Values will be 65536 when inputs are 3v3
+         */
+        System::Delay(250);
+        hw.PrintLine("Input 1: %d", hw.adc.GetMux(0, 0));
+        hw.PrintLine("Input 2: %d", hw.adc.GetMux(0, 1));
+        hw.PrintLine("Input 3: %d", hw.adc.GetMux(0, 2));
+        hw.PrintLine("Input 4: %d", hw.adc.GetMux(0, 3));
+    }
+}
+_________________________
+
+___AudioOutput.cpp___
+/** Generation of a simple Audio signal */
+#include "daisy_seed.h"
+#include <cmath>
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** An increment for generating a 220Hz wave form at 48kHz sample rate
+ *  Check out DaisySP for a more complete Oscillator implementation for your project.
+ */
+const float kSignalIncrement = (M_TWOPI * 220) * (1.0 / 48000);
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Global phase value for generated signal */
+float phs;
+
+/** Function that gets called at a regular interval by the hardware to 
+ *  process, and/or generate audio signals
+*/
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        /** 
+         * Generate the next sample of our output signal 
+         * 
+         * This is a very basic sine-wave oscillator with a fixed increment to generate
+         * a 220Hz waveform at 48kHz samplerate
+         */
+        float signal = sin(phs) * 0.5f;
+        phs += kSignalIncrement;
+        if(phs > M_TWOPI)
+            phs -= M_TWOPI;
+
+        /** Set each of our outputs to the value of this sine wave */
+        OUT_L[i] = signal;
+        OUT_R[i] = signal;
+    }
+}
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Set our initial phs value for the oscillator to 0 */
+    phs = 0.0;
+
+    /** Start the Audio engine, and call the "AudioCallback" function to fill new data */
+    hw.StartAudio(AudioCallback);
+
+    /** Infinite Loop */
+    while(1) {}
+}
+_________________________
+
+___AudioPassthru.cpp___
+/** Demonstration of running audio through the codec 
+ *  Passes the audio input directly out to the audio output.
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Function that gets called at a regular interval by the hardware to 
+ *  process, and/or generate audio signals
+*/
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        /** Set each of our outputs to the value of this sine wave */
+        OUT_L[i] = IN_L[i];
+        OUT_R[i] = IN_R[i];
+    }
+}
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Start the Audio engine, and call the "AudioCallback" function to fill new data */
+    hw.StartAudio(AudioCallback);
+
+    /** Infinite Loop */
+    while(1) {}
+}
+_________________________
+
+___BootloaderBlink_main.cpp___
+/** Daisy Blink Example for external DFU bootloader
+ *
+ *  This example blinks the Daisy Seed's LED
+ *
+ *  This project is made to demonstrate testing DAisy's v6 bootloader
+ *  with external USB DFU configuration.
+ *
+ *  The application can use any method it wants to jump to the bootloader.
+ *  With the infinite timeout below, the unit will stay in the bootloader
+ *  indefinitely, or until power cycled.
+ *
+ *  As a test, you can recompile this project with different blink delays
+ *
+ *  To enter the bootloader connect D27 to GND, and then release.
+ *  This is SW 1 on the Daisy Pod, but can be replaced with any method of your preference.
+ *
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hardware;
+Switch bootloader_switch;
+
+int main()
+{
+    hardware.Init();
+    bool blinkState = false;
+
+    /** Initialize the boot switch */
+    bootloader_switch.Init(seed::D27);
+
+    uint32_t blink_rate = 50; /**< Change me to test tweaking the program! */
+
+    /** Timing variables */
+    uint32_t now, blink_time;
+    now = blink_time = System::GetNow();
+
+    while (true)
+    {
+        now = System::GetNow();
+
+        /** Blink without blocking the loop */
+        if (now - blink_time > blink_rate)
+        {
+            hardware.SetLed(blinkState);
+            blinkState = !blinkState;
+            blink_time = now;
+        }
+
+        /** debounce the button and check for release */
+        bootloader_switch.Debounce();
+        if (bootloader_switch.FallingEdge())
+        {
+            System::ResetToBootloader(System::DAISY_INFINITE_TIMEOUT);
+        }
+
+        /** 1ms delay for predictable debouncing time */
+        System::Delay(1);
+    }
+}
+
+_________________________
+
+___CopyingWavs.cpp___
+// WAV Copying
+// Example of how to copy WAV file over to QSPI flash
+//
+// Setup:
+// * Insert an SD card into a connected SDMMC receptacle
+//
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hw;
+
+// These classes are necessary for interacting with FatFS
+SdmmcHandler sd;
+FatFSInterface fsi;
+FIL file;
+
+// Powers of two are best for this data buffer to keep QSPI
+// writes aligned to the sectors.
+#define DATA_BUFFER_LEN 4096
+uint8_t data_buffer[DATA_BUFFER_LEN];
+
+// Change this to the file you'd like to copy
+#define FILE_NAME "my_wav.wav"
+
+// You can find the information on the QSPI's length
+// in the linker scripts, among other places
+#define QSPI_LEN     0x00800000U
+
+#define SECTOR_SIZE  65536
+
+void copy_wav(const char* filename);
+
+int main(void)
+{
+    // Initialize the Daisy Seed
+    hw.Init();
+
+    // Run the copy routine
+    copy_wav(FILE_NAME);
+
+    // The LED will illuminate when the copying is complete. For
+    // large files, this can take some time.
+    hw.SetLed(true);
+
+    while(1);
+}
+
+void copy_wav(const char* filename)
+{
+    // Initialize the SDMMC interface and FatFS drivers
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd.Init(sd_cfg);
+    fsi.Init(FatFSInterface::Config::MEDIA_SD);
+
+    if (f_mount(&fsi.GetSDFileSystem(), fsi.GetSDPath(), 1) != FR_OK)
+    {
+        // If some error is encountered in mounting the card, then simply return.
+        return;
+    }
+
+    if (f_open(&file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK)
+    {
+        // If some error is encountered in opening the file, then simply return.
+        f_close(&file);
+        return;
+    }
+
+    UINT data_read;
+    WAV_FormatTypeDef wav_header;
+
+    // This will populate the wav_header struct with all the data we 
+    // need to parse the wav file. Currently, the code doesn't actually use this header,
+    // but you could write code that converts from the
+    // several possible WAV storage types to int16_t or float for consistency.
+    // It seems easier to simply ensure your WAV files are all in the same format, though.
+
+    // You could also write this header along with the audio data if you'd like to
+    // parse the wav file in your actual project.
+
+    f_read(&file, &wav_header, sizeof(wav_header), &data_read);
+
+    // This helps us keep track of the QSPI address to write to
+    // between file data chunks. You can set its initial value to
+    // whatever you want -- you'll just need to remember where that
+    // is so your target application can load it from QSPI.
+    uint32_t current_qspi_offset = 0;
+
+    do
+    {
+        // This avoids attempted writes beyond the QSPI's address space
+        if (current_qspi_offset >= QSPI_LEN)
+            break;
+        
+        // The QSPI chip must be erased before any writes can be made,
+        // and it can only be erased in certain sizes (4K, 32K, 64K, and full chip erase).
+        // 64K is the fastest per byte without being too large, so that's what we'll use.
+        if (current_qspi_offset % SECTOR_SIZE == 0)
+        {
+            hw.qspi.Erase(current_qspi_offset, current_qspi_offset + SECTOR_SIZE);
+        }
+        f_read(&file, data_buffer, DATA_BUFFER_LEN, &data_read);
+
+        hw.qspi.Write(current_qspi_offset, data_read, data_buffer);
+        current_qspi_offset += data_read;
+    } while (data_read == DATA_BUFFER_LEN);
+
+    f_close(&file);
+}
+_________________________
+
+___DAC_Polling_Output.cpp___
+/** Example of DAC Output using basic Polling implementation
+ *  
+ *  This will use A8 to demonstrate DAC output
+ *  This will generate a ramp wave from 0-3v3
+ * 
+ *  A7 will output a ramp, and output A8 will output an inverted ramp
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Configure and Initialize the DAC */
+    DacHandle::Config dac_cfg;
+    dac_cfg.bitdepth   = DacHandle::BitDepth::BITS_12;
+    dac_cfg.buff_state = DacHandle::BufferState::ENABLED;
+    dac_cfg.mode       = DacHandle::Mode::POLLING;
+    dac_cfg.chn        = DacHandle::Channel::BOTH;
+    hw.dac.Init(dac_cfg);
+
+    /** Variable for output */
+    int output_val_1 = 0;
+    int output_val_2 = 0;
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** Every 1millisecond we'll increment our 12-bit value
+         *  The value will go from 0-4095
+         *  The full ramp waveform will have a period of about 4 seconds
+         *  The secondary waveform will be an inverted ramp (saw) 
+         *  at the same frequency
+         */
+        System::Delay(1);
+
+        /** increment our output value, and wrap around if it goes out range. */
+        output_val_1 += 1;
+        if(output_val_1 > 4095)
+            output_val_1 = 0;
+
+        /** This sets our second output to the opposite of the first */
+        output_val_2 = 4095 - output_val_1;
+
+        /** And write our 12-bit value to the output */
+        hw.dac.WriteValue(DacHandle::Channel::ONE, output_val_1);
+        hw.dac.WriteValue(DacHandle::Channel::TWO, output_val_2);
+    }
+}
+_________________________
+
+___Encoder.cpp___
+/** Example of using a quadrature encoder (like a PEC11)
+ *  
+ *  This will use D20 and D16 as the encoder's A and B inputs
+ *  The click will be connected to D19
+ *  The center pin on the encoder and the other side of the switch should be grounded.
+ * 
+ *  During this example, a value will be printed through the serial port
+ *  The number will increase when rotating the encoder clockwise
+ *  The number will decrease when rotating the encoder counter clockwise
+ *  The number will reset to zero when the encoder is clicked.
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Global button object */
+Encoder encoder;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Initialize our Encoder */
+    encoder.Init(seed::D20, seed::D16, seed::D19);
+
+    /** Start Serial COM Port logging via USB 
+     *  The program will wait until a connection is made to move on from here.
+     */
+    hw.StartLog(true);
+    hw.PrintLine("Turn or click the encoder to start");
+
+    /** Create a variable to store the value we'll print out to USB */
+    int output_value = 0;
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** The Encoder class uses "debouncing" to make sure that hardware activity 
+         *  read into the Daisy matches what the user is doing, and prevents
+         *  a lot of fast transitions that sometimes occur on hardware when engaging/disengaging 
+         *  a switch, or rotating an encoder.
+         */
+        encoder.Debounce();
+
+        /* This will return a -1 if the encoder was turned counter clockwise, or 
+         * a 1 if the encoder was turned clockwise, or 0 if the encoder was not rotated.
+         */
+        int increment = encoder.Increment();
+
+        if(increment > 0)
+        {
+            /** increase our output value and print it */
+            output_value += 1;
+            hw.PrintLine("Output Value:\t%d", output_value);
+        }
+        else if(increment < 0)
+        {
+            /** decrease our output value and print it */
+            output_value -= 1;
+            hw.PrintLine("Output Value:\t%d", output_value);
+        }
+
+        /** if the encoder was just clicked down, reset our output value to 0 */
+        if(encoder.RisingEdge())
+        {
+            /** reset the output value to 0, and print it */
+            output_value = 0;
+            hw.PrintLine("Output Value:\t%d", output_value);
+        }
+    }
+}
+_________________________
+
+___ExternalCodec.cpp___
+/** Example of multichannel audio with two SAIs configured for 
+ *  i2s codecs
+ * 
+ *  This example is based on the seed2 DFM hardware.
+ *  Both codecs are PCM3060
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+        out[2][i] = in[2][i];
+        out[3][i] = in[3][i];
+    }
+}
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Configure the SAI2 peripheral for our secondary codec. */
+    SaiHandle         external_sai_handle;
+    SaiHandle::Config external_sai_cfg;
+    external_sai_cfg.periph          = SaiHandle::Config::Peripheral::SAI_2;
+    external_sai_cfg.sr              = SaiHandle::Config::SampleRate::SAI_48KHZ;
+    external_sai_cfg.bit_depth       = SaiHandle::Config::BitDepth::SAI_24BIT;
+    external_sai_cfg.a_sync          = SaiHandle::Config::Sync::SLAVE;
+    external_sai_cfg.b_sync          = SaiHandle::Config::Sync::MASTER;
+    external_sai_cfg.a_dir           = SaiHandle::Config::Direction::TRANSMIT;
+    external_sai_cfg.b_dir           = SaiHandle::Config::Direction::RECEIVE;
+    external_sai_cfg.pin_config.fs   = seed::D27;
+    external_sai_cfg.pin_config.mclk = seed::D24;
+    external_sai_cfg.pin_config.sck  = seed::D28;
+    external_sai_cfg.pin_config.sb   = seed::D25;
+    external_sai_cfg.pin_config.sa   = seed::D26;
+
+    /** Initialize the SAI new handle */
+    external_sai_handle.Init(external_sai_cfg);
+
+    /** Reconfigure Audio for two codecs 
+     * 
+     *  Default eurorack circuit has an extra 6dB headroom 
+     *  so the 0.5 here makes it so that a -1 to 1 audio signal
+     *  will correspond to a -5V to 5V (10Vpp) audio signal.
+     *  Audio will clip at -2 to 2, and result 20Vpp output.
+     */
+    AudioHandle::Config audio_cfg;
+    audio_cfg.blocksize  = 48;
+    audio_cfg.samplerate = SaiHandle::Config::SampleRate::SAI_48KHZ;
+    audio_cfg.postgain   = 0.5f;
+
+    /** Initialize for two SAIs, including the built-in SAI that is 
+     *  configured during hw.Init()
+     */
+    hw.audio_handle.Init(audio_cfg, hw.AudioSaiHandle(), external_sai_handle);
+
+    /** Finally start the audio */
+    hw.StartAudio(AudioCallback);
+
+    /** Infinite Loop */
+    while(1) {}
+}
+_________________________
+
+___FileTable_main.cpp___
+/** Simple example of FileTable class
+ *
+ *  This demonstrates quickly indexing a subset of files on a disk.
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+static constexpr const size_t kMaxFiles = 32;
+
+static DaisySeed                hw;
+static SdmmcHandler             sdmmc;
+static FatFSInterface           fsi;
+static FileTable<kMaxFiles>     file_table;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init(true);
+
+    /** SD Card / FatFS Interface Init */
+    SdmmcHandler::Config sdcfg;
+    sdcfg.Defaults();
+    sdcfg.speed = SdmmcHandler::Speed::STANDARD;
+    sdcfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sdmmc.Init(sdcfg);
+    fsi.Init(FatFSInterface::Config::Media::MEDIA_SD);
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    /** Fill the table with any files found in the root directory
+     *  This will only fill up to the number of files specified
+     *  in the template parameter for the class.
+     *
+     *  Without a second argument, this will include any files.
+     */
+    file_table.Fill("/");
+
+    /** Write a log file containing tab separated information about
+     *  each file including the file name, position, size
+     */
+    file_table.WriteLog("file_table-all.txt");
+
+    /** Empty the table of its contents */
+    file_table.Clear();
+
+    /** Instead, if we supply a second argument, we can limit
+     *  the files to those with a specific sub-string at the
+     *  end (like file extensions).
+     */
+    file_table.Fill("/", ".txt");
+    file_table.WriteLog("file_table-text.txt");
+
+    /** And we'll do the same again for WAV files. */
+    file_table.Clear();
+    file_table.Fill("/", ".wav");
+    file_table.WriteLog("file_table-wav.txt");
+
+    /** We can loop through the files, checking their sizes */
+    size_t largest_size = 0;
+    int slot = -1;
+    for (size_t i = 0; i < file_table.GetNumFiles(); i++) {
+      auto fsize = file_table.GetFileSize(i);
+      if (fsize > largest_size)  {
+        largest_size = fsize;
+        slot = i;
+      }
+    }
+
+    /** Print this once the device is connected to serial. */
+    hw.StartLog(true);
+    System::Delay(100);
+    hw.PrintLine("File Info:");
+    if (slot >= 0) {
+      hw.PrintLine("The largest file at %d bytes is: %s",
+                   file_table.GetFileSize(slot),
+                   file_table.GetFileName(slot));
+    } else {
+      hw.PrintLine("No files found..");
+    }
+
+    while(1){}
+}
+
+_________________________
+
+___GateInput.cpp___
+/** Example of setting up a Gate Input
+ * 
+ *  This connects a BJT Gate Input circuit to the D11 pin
+ *  The LED will indicate the State of the input.
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Global gate input object */
+GateIn gate_in;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Initialize our Gate Input */
+    gate_in.Init(seed::D11);
+
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** If the Gate Input signal is high, we light up the LED 
+         *  This could also be written as: hw.SetLed(gate_in.State())
+         */
+        if(gate_in.State())
+            hw.SetLed(true);
+        else
+            hw.SetLed(false);
+    }
+}
+_________________________
+
+___GPIO_Input.cpp___
+// GPIO Input
+// Example of using a simple button
+//
+// Setup:
+// * Connect one end of a button to GND
+// * Connect other end to pin D0 on the Daisy Seed
+//
+#include "daisy_seed.h"
+
+using namespace daisy;
+using namespace daisy::seed;
+
+DaisySeed hw;
+
+int main(void)
+{
+    // Initialize the Daisy Seed
+    hw.Init();
+
+    // Start the Serial Logger
+    hw.StartLog();
+
+    // Create a GPIO object
+    GPIO my_button;
+
+    // Initialize the GPIO object
+    // Mode: INPUT - because we want to read from the button
+    // Pullup: Internal resistor to prevent needing extra components
+    my_button.Init(D0, GPIO::Mode::INPUT, GPIO::Pull::PULLUP);
+
+    while(1)
+    {
+        // And let's store the state of the button in a variable called "button_state"
+        bool button_state = my_button.Read();
+
+        // Set the USER LED to the button state
+        hw.SetLed(button_state);
+
+        // Print the Button state
+        hw.PrintLine("Button State: %s", button_state ? "true" : "false");
+    }
+}
+
+_________________________
+
+___GPIO_Output.cpp___
+// GPIO Output
+// Example of toggling an LED on/off
+//
+// Setup:
+// * Connect the CATHODE (negative leg) of the LED to GND
+// * Connect the ANODE (positive leg, usually longer) of the LED to one side of a resistor (1K)
+// * Connect other end of resistor to pin D1 on the daisy.
+//
+#include "daisy_seed.h"
+
+using namespace daisy;
+using namespace daisy::seed;
+
+DaisySeed hw;
+
+int main(void)
+{
+    // Initialize the Daisy Seed hardware
+    hw.Init();
+
+    // Create an LED
+    GPIO my_led;
+
+    // Initialize it to pin D1 as an OUTPUT
+    my_led.Init(D1, GPIO::Mode::OUTPUT);
+
+    // In an infinite loop, we'll continuously turn the LED on/off.
+    while(1)
+    {
+        // Set the pin HIGH
+        my_led.Write(true);
+        // Wait half a second (500ms)
+        System::Delay(500);
+        // Set the pin LOW
+        my_led.Write(false);
+        // Wait another half a second (500ms)
+        System::Delay(500);
+        // You can also use Toggle to change the state
+        my_led.Toggle();
+        // Wait another half a second (500ms)
+        System::Delay(500);
+        // And once more to flip it back
+        my_led.Toggle();
+    }
+}
+
+_________________________
+
+___MIDI_UART_Input.cpp___
+/** Example of setting reading MIDI Input via UART
+ *
+ *
+ *  This can be used with any 5-pin DIN or TRS connector that has been wired up
+ *  to one of the UART Rx pins on Daisy.
+ *  This will use D14 as the UART 1 Rx pin
+ *
+ *  This example will also log incoming messages to the serial port for general MIDI troubleshooting
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed       hw;
+MidiUartHandler midi;
+
+/** FIFO to hold messages as we're ready to print them */
+FIFO<MidiEvent, 128> event_log;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    hw.StartLog();
+
+    MidiUartHandler::Config midi_config;
+    midi.Init(midi_config);
+
+    midi.StartReceive();
+
+    uint32_t now      = System::GetNow();
+    uint32_t log_time = System::GetNow();
+
+    /** Infinite Loop */
+    while(1)
+    {
+        now = System::GetNow();
+
+        /** Process MIDI in the background */
+        midi.Listen();
+
+        /** Loop through any MIDI Events */
+        while(midi.HasEvents())
+        {
+            MidiEvent msg = midi.PopEvent();
+
+            /** Handle messages as they come in
+             *  See DaisyExamples for some examples of this
+             */
+            switch(msg.type)
+            {
+                case NoteOn:
+                    // Do something on Note On events
+                    {
+                        uint8_t bytes[3] = {0x90, 0x00, 0x00};
+                        bytes[1] = msg.data[0];
+                        bytes[2] = msg.data[1];
+                        midi.SendMessage(bytes, 3);
+                    }
+                    break;
+                default: break;
+            }
+
+            /** Regardless of message, let's add the message data to our queue to output */
+            event_log.PushBack(msg);
+        }
+
+        /** Now separately, every 5ms we'll print the top message in our queue if there is one */
+        if(now - log_time > 5)
+        {
+            log_time = now;
+            if(!event_log.IsEmpty())
+            {
+                auto msg = event_log.PopFront();
+                char outstr[128];
+                const char* type_str = MidiEvent::GetTypeAsString(msg);
+                sprintf(outstr,
+                        "time:\t%ld\ttype: %s\tChannel:  %d\tData MSB: "
+                        "%d\tData LSB: %d\n",
+                        now,
+                        type_str,
+                        msg.channel,
+                        msg.data[0],
+                        msg.data[1]);
+                hw.PrintLine(outstr);
+            }
+        }
+    }
+}
+
+_________________________
+
+___MIDI_USBH_Input.cpp___
+/** Example of setting reading MIDI Input via USB Host
+ *  
+ * 
+ *  This requires a USB-A connector
+ * 
+ *  This example will also log incoming messages to the serial port for general MIDI troubleshooting
+ */
+#include "daisy_seed.h"
+#include "usbh_midi.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed       hw;
+MidiUsbHandler midi;
+USBHostHandle usbHost;
+
+/** FIFO to hold messages as we're ready to print them */
+FIFO<MidiEvent, 128> event_log;
+
+void USBH_Connect(void* data)
+{
+    hw.PrintLine("device connected");
+}
+
+void USBH_Disconnect(void* data)
+{
+    hw.PrintLine("device disconnected");
+}
+
+void USBH_ClassActive(void* data)
+{
+    if(usbHost.IsActiveClass(USBH_MIDI_CLASS))
+    {
+        hw.PrintLine("MIDI device class active");
+        MidiUsbHandler::Config midi_config;
+        midi_config.transport_config.periph = MidiUsbTransport::Config::Periph::HOST;
+        midi.Init(midi_config);
+        midi.StartReceive();
+    }
+}
+
+void USBH_Error(void* data)
+{
+    hw.PrintLine("USB device error");
+}
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    hw.StartLog(true);
+
+    hw.PrintLine("MIDI USB Host start");
+
+    /** Configure USB host */
+    USBHostHandle::Config usbhConfig;
+    usbhConfig.connect_callback = USBH_Connect,
+    usbhConfig.disconnect_callback = USBH_Disconnect,
+    usbhConfig.class_active_callback = USBH_ClassActive,
+    usbhConfig.error_callback = USBH_Error,
+    usbHost.Init(usbhConfig);
+
+    usbHost.RegisterClass(USBH_MIDI_CLASS);
+
+    uint32_t now      = System::GetNow();
+    uint32_t log_time = System::GetNow();
+    uint32_t blink_time = 0;
+    bool ledState = false;
+
+    hw.PrintLine("MIDI USB Host initialized");
+
+    /** Infinite Loop */
+    while(1)
+    {
+        now = System::GetNow();
+
+        if (now > blink_time)
+        {
+            hw.SetLed(ledState);
+            ledState = !ledState;
+            if (usbHost.GetPresent())
+                blink_time = now + 400;
+            else
+                blink_time = now + 80;
+        }
+        /** Run USB host process */
+        usbHost.Process();
+
+        if(usbHost.IsActiveClass(USBH_MIDI_CLASS) && midi.RxActive())
+        {
+            /** Process MIDI in the background */
+            midi.Listen();
+
+            /** Loop through any MIDI Events */
+            while(midi.HasEvents())
+            {
+                MidiEvent msg = midi.PopEvent();
+
+                /** Handle messages as they come in 
+                 *  See DaisyExamples for some examples of this
+                 */
+                switch(msg.type)
+                {
+                    case NoteOn:
+                        // Do something on Note On events
+                        {
+                            uint8_t bytes[3] = {0x90, 0x00, 0x00};
+                            bytes[1] = msg.data[0];
+                            bytes[2] = msg.data[1];
+                            midi.SendMessage(bytes, 3);
+                        }
+                        break;
+                    default: break;
+                }
+
+                /** Regardless of message, let's add the message data to our queue to output */
+                event_log.PushBack(msg);
+            }
+
+            /** Now separately, every 5ms we'll print the top message in our queue if there is one */
+            if(now - log_time > 5)
+            {
+                log_time = now;
+                if(!event_log.IsEmpty())
+                {
+                    auto msg = event_log.PopFront();
+                    char outstr[128];
+                    const char* type_str = MidiEvent::GetTypeAsString(msg);
+                    sprintf(outstr,
+                            "time:\t%ld\ttype: %s\tChannel:  %d\tData MSB: "
+                            "%d\tData LSB: %d\n",
+                            now,
+                            type_str,
+                            msg.channel,
+                            msg.data[0],
+                            msg.data[1]);
+                    hw.PrintLine(outstr);
+                }
+            }
+        }
+    }
+}
+
+_________________________
+
+___OledSoftSPI.cpp___
+/**
+ * @author eh2k
+ * @brief 
+ * @date 2022-12-01
+ * 
+ * OLED using software spi
+ * Shows how to setup an OLED display on the Daisy Patch SM using software spi.
+ * Currently there seems to be some kind of problems with the hardware spi.
+ * Here is the possibility to run the oled via software spi. Should work on any gpio pins without interrupt blocking.
+ */
+
+
+#include "daisy_patch_sm.h"
+#include "dev/oled_ssd130x.h"
+
+using namespace daisy;
+using namespace patch_sm;
+
+DaisyPatchSM hw;
+
+using namespace daisy;
+using namespace daisy::patch_sm;
+
+using MyDisplay = OledDisplay<SSD130x4WireSoftSpi128x64Driver>;
+MyDisplay display;
+
+int main(void)
+{
+    // Initialize the hardware
+    hw.Init();
+
+    MyDisplay::Config display_config;
+    display_config.driver_config.transport_config.pin_config.sclk
+        = DaisyPatchSM::D10;
+    display_config.driver_config.transport_config.pin_config.sclk_delay = 0;
+    display_config.driver_config.transport_config.pin_config.mosi
+        = DaisyPatchSM::D9;
+    display_config.driver_config.transport_config.pin_config.dc
+        = DaisyPatchSM::D2;
+    display_config.driver_config.transport_config.pin_config.reset
+        = DaisyPatchSM::D3;
+    display.Init(display_config);
+
+    char tmp[64];
+
+    // loop forever
+    while(1)
+    {
+        display.Fill(false);
+        display.SetCursor(0, 0);
+        sprintf(tmp, "%d", System::GetUs());
+        display.WriteString(tmp, Font_6x8, true);
+        display.Update();
+    }
+}
+
+_________________________
+
+___OledSPI.cpp___
+/**
+ * @author eh2k
+ * @brief 
+ * @date 2023-01-08
+ * 
+ * OLED using hardware spi
+ * Shows how to setup an OLED display on the Daisy Patch SM using hardware spi.
+ */
+
+#include "daisy_patch_sm.h"
+#include "dev/oled_ssd130x.h"
+
+using namespace daisy;
+using namespace patch_sm;
+
+DaisyPatchSM hw;
+
+using namespace daisy;
+using namespace daisy::patch_sm;
+
+using MyDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
+MyDisplay display;
+
+void AudioCallback(AudioHandle::InputBuffer in,
+                   AudioHandle::OutputBuffer out,
+                   size_t size)
+{
+    //
+}
+
+int main(void)
+{
+    // Initialize the hardware
+    hw.Init();
+    hw.StartAudio(AudioCallback);
+
+    MyDisplay::Config display_config;
+
+    SpiHandle::Config& spi_conf = display_config.driver_config.transport_config.spi_config;
+
+    spi_conf.mode = SpiHandle::Config::Mode::MASTER;             // we're in charge
+    spi_conf.periph = SpiHandle::Config::Peripheral::SPI_2;      // Use the SPI_2 Peripheral
+    spi_conf.direction = SpiHandle::Config::Direction::ONE_LINE; // TWO_LINES_TX_ONLY;
+
+    spi_conf.datasize = 8;
+    spi_conf.clock_polarity = SpiHandle::Config::ClockPolarity::LOW;
+    spi_conf.clock_phase = SpiHandle::Config::ClockPhase::ONE_EDGE;
+    // spi_conf.nss = SpiHandle::Config::NSS::HARD_OUTPUT;
+    spi_conf.baud_prescaler = SpiHandle::Config::BaudPrescaler::PS_128;
+
+    // Pins to use. These must be available on the selected peripheral
+    spi_conf.pin_config.sclk = DaisyPatchSM::D10; // Use pin D10 as SCLK
+    spi_conf.pin_config.miso = Pin();             // We won't need this
+    spi_conf.pin_config.mosi = DaisyPatchSM::D9;  // Use D9 as MOSI
+    spi_conf.pin_config.nss = Pin();              // DaisyPatchSM::D1;   // use D1 as NSS
+
+    // data will flow from master to slave over just the MOSI line
+
+    // The master will output on the NSS line
+    spi_conf.nss = SpiHandle::Config::NSS::SOFT;
+
+    display_config.driver_config.transport_config.pin_config.dc
+        = DaisyPatchSM::D2;
+    display_config.driver_config.transport_config.pin_config.reset
+        = DaisyPatchSM::D3;
+    display.Init(display_config);
+
+    char tmp[64];
+
+    // loop forever
+    while(1)
+    {
+        ScopedIrqBlocker _;
+
+        display.Fill(false);
+        display.SetCursor(0, 0);
+        sprintf(tmp, "%d", System::GetUs());
+        display.WriteString(tmp, Font_6x8, true);
+        display.Update();
+    }
+}
+
+_________________________
+
+___OLED_SSD130x4WireSPI.cpp___
+/** Example of setting up an SSD130x OLED display using 4-wire SPI
+ * 
+ *  This example will print out the number of seconds since 
+ *  bootup on the display.
+ * 
+ *  The number of seconds will loop back around after about 50 days
+ */
+#include "daisy_seed.h"
+
+/** Includes the oled display header (not included in Daisy?)*/
+#include "dev/oled_ssd130x.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    OledDisplay<SSD130x4WireSpi128x64Driver>         display;
+    OledDisplay<SSD130x4WireSpi128x64Driver>::Config display_cfg;
+
+
+    /** SPI Configuration 
+     * 
+     *  Most default values are still used, but here are a few 
+     *  settings that are most likely to be edited for custom hw
+     */
+    display_cfg.driver_config.transport_config.spi_config.periph
+        = SpiHandle::Config::Peripheral::SPI_1;
+    display_cfg.driver_config.transport_config.spi_config.baud_prescaler
+        = SpiHandle::Config::BaudPrescaler::PS_8;
+    /** Set up the SPI Pins for SPI1 */
+    display_cfg.driver_config.transport_config.spi_config.pin_config.sclk
+        = seed::D8;
+    display_cfg.driver_config.transport_config.spi_config.pin_config.miso
+        = Pin();
+    display_cfg.driver_config.transport_config.spi_config.pin_config.mosi
+        = seed::D10;
+    display_cfg.driver_config.transport_config.spi_config.pin_config.nss
+        = seed::D7;
+    /** Command and Reset Pins */
+    display_cfg.driver_config.transport_config.pin_config.dc    = seed::D0;
+    display_cfg.driver_config.transport_config.pin_config.reset = seed::D32;
+
+    /** Initialize it */
+    display.Init(display_cfg);
+    /** Set it to black until we start updating. */
+    display.Fill(false);
+    display.Update();
+
+    /** Infinite Loop */
+    while(1)
+    {
+        System::Delay(1000);
+
+        /** Get the number of seconds since the program started */
+        int seconds = System::GetNow() / 1000.0;
+
+        /** Clear the display */
+        display.Fill(false);
+        /** Set the cursor away from the edge of the screen */
+        display.SetCursor(4, 16);
+        /** Write the following, starting at the cursor */
+        display.WriteString("Time since startup:", Font_6x8, true);
+        /** Update the cursor to the next space below the string */
+        display.SetCursor(4, 32);
+
+        /** Create a string representation of the */
+        FixedCapStr<16> str("");
+        str.AppendInt(seconds);
+        /** Write the value to the display */
+        display.WriteString(str, Font_11x18, true);
+
+        /** And finally push the updated screen contents to the hardware */
+        display.Update();
+    }
+}
+_________________________
+
+___PWM_Output.cpp___
+// Hardware PWM demo
+//
+// Demonstrates how to use a PWMHandle to output hardware-generated PWM.
+// No special setup is required, as the built-in LED on the Seed is used for display.
+//
+#include "daisy_seed.h"
+#include <cmath>
+
+using namespace daisy;
+using namespace daisy::seed;
+
+DaisySeed hw;
+
+const float TWO_PI = 6.2831853072f;
+
+int main(void)
+{
+    // Initialize the Daisy Seed hardware
+    hw.Init();
+    hw.StartLog(false);
+
+    // First, we'll create a PWMHandle that enables PWM mode on a given timer. Each handle provides up to 4 output channels.
+    PWMHandle pwm_tim3;
+
+    {
+        // Configure the PWM peripheral
+        PWMHandle::Config pwm_config;
+        // We'll use TIM3 for PWM output.
+        pwm_config.periph = PWMHandle::Config::Peripheral::TIM_3;
+        // TIM3 is a 16-bit timer, so the max period is 0xffff. We'll use 0xff to give a higher-frequency PWM signal at the expense of lower precision.
+        pwm_config.period = 0xff;
+
+        // Initialize
+        if(pwm_tim3.Init(pwm_config) != PWMHandle::Result::OK)
+        {
+            hw.PrintLine("Could not initialize PWM handle");
+        }
+
+        // You can also create the config inline when initializing:
+        // pwm_tim3.Init({PWMHandle::Config::Peripheral::TIM_3});
+    }
+
+    {
+        // Next, configure an individual channel. We'll use Channel 2, which can connect to the Seed's internal LED
+        PWMHandle::Channel::Config channel_config;
+        // Each timer and channel supports a different set of pins. If no pin is selected, the default for that channel will be selected.
+        channel_config.pin = {PORTC, 7};
+        // Polarity can be changed for individual channels
+        channel_config.polarity = PWMHandle::Channel::Config::Polarity::HIGH;
+
+        // Initialize
+        if(pwm_tim3.Channel2().Init(channel_config) != PWMHandle::Result::OK)
+        {
+            hw.PrintLine("Could not initialize PWM channel");
+        }
+
+        // Like before, you can also create the config inline, or leave it blank to use defaults.
+        // pwm_tim3.Channel2().Init();
+
+        // Each PWMHandle supports up to 4 channels at once.
+    }
+
+    // Instead of calling pwm_tim3.Channel2() every time, you can also store a reference. Note that this reference is valid even if taken before initialization,
+    // but it must be initialized after the PWMHandle and before calling Set().
+    auto& led_pwm = pwm_tim3.Channel2();
+
+    float phase = 0.0f;
+    while(1)
+    {
+        // Generate a 1 Hz pulse
+        float brightness = std::cos(TWO_PI * phase) * 0.5f + 0.5f;
+
+        // Set the PWM channel duty cycle. We also apply a cubic gamma correction factor here to linearize the LED's brightness
+        // When calling this method with a float, the value is normalized to [0, period]
+        led_pwm.Set(brightness * brightness * brightness);
+
+        // You can also call SetRaw to directly set the duty cycle.
+        // led_pwm.SetRaw(0x7f);
+
+        phase += 0.01f;
+        if(phase > 1.0f)
+            phase -= 1.0f;
+
+        hw.DelayMs(10);
+    }
+}
+
+_________________________
+
+___QSPI_ReadAndWrite_main.cpp___
+/** Generation of a simple Audio signal */
+#include "daisy_seed.h"
+#include <cmath>
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+DaisySeed hw;
+
+/** 4kB for fast test */
+static constexpr size_t kTestSize = 0x1000;
+
+/** statically allocated workspace for creation/validation of data */
+static uint8_t workspace[kTestSize];
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Start Log */
+    hw.StartLog(true);
+
+    /** Erase a section of QSPI Memory
+     *  4kB chunk at beginning of flash
+     */
+    hw.PrintLine("Erasing 4kB from QSPI memory...");
+    uint32_t start_addr = 0;
+    uint32_t end_addr   = start_addr + kTestSize;
+    if(hw.qspi.Erase(0, end_addr) == QSPIHandle::Result::OK)
+        hw.PrintLine("Success");
+    else
+        hw.PrintLine("Failed to erase...");
+
+    /** Validate by reading directly from that memory location */
+    hw.PrintLine("Validating erasure...");
+    uint32_t fail_cnt = 0;
+    dsy_dma_invalidate_cache_for_buffer((uint8_t*)(0x90000000) + start_addr,
+                                        kTestSize);
+    for(size_t i = 0; i < kTestSize; i++)
+    {
+        uint32_t addr      = 0x90000000 + (start_addr + i);
+        uint8_t* qspi_byte = (uint8_t*)addr;
+        if(*qspi_byte != 0xff)
+            fail_cnt++;
+    }
+    hw.PrintLine("Done: %d unerased values", fail_cnt);
+
+    /** Now write all zeroes using preallocated static workspace */
+    hw.PrintLine("Writing all zeroes to 4kB section of QSPI...");
+    std::fill(workspace, workspace + kTestSize, 0x00);
+    if(hw.qspi.Write(start_addr, end_addr, workspace) == QSPIHandle::Result::OK)
+        hw.PrintLine("Success");
+    else
+        hw.PrintLine("Failed to write...");
+
+    /** Validate by reading directly from that memory location */
+    hw.PrintLine("Validating write success...");
+    fail_cnt = 0;
+    dsy_dma_invalidate_cache_for_buffer((uint8_t*)(0x90000000) + start_addr,
+                                        kTestSize);
+    for(size_t i = 0; i < kTestSize; i++)
+    {
+        uint32_t addr      = 0x90000000 + (start_addr + i);
+        uint8_t* qspi_byte = (uint8_t*)addr;
+        if(*qspi_byte != 0x00)
+            fail_cnt++;
+    }
+    hw.PrintLine("Done: %d unwritten values", fail_cnt);
+
+    /** Infinite Loop */
+    while(1)
+    {
+        hw.SetLed((System::GetNow() & 511) > 255);
+    }
+}
+_________________________
+
+___SDMMC_HelloWorld.cpp___
+/** Example of writing a "Hello World" to a text file on an SD Card 
+ *  If the SD Card is present, and writing is successful the onboard LED will blink rapidly.
+ *  Otherwise, the SD Card will blink once every two seconds.
+ */
+#include "daisy_seed.h"
+
+#include "fatfs.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** SDMMC Configuration */
+SdmmcHandler sdmmc;
+/** FatFS Interface for libDaisy */
+FatFSInterface fsi;
+/** Global File object */
+FIL file;
+
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Initialize the SDMMC Hardware 
+     *  For this example we'll use:
+     *  Medium (25MHz), 4-bit, w/out power save settings
+     */
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.speed = SdmmcHandler::Speed::STANDARD;
+    sdmmc.Init(sd_cfg);
+
+    /** Setup our interface to the FatFS middleware */
+    FatFSInterface::Config fsi_config;
+    fsi_config.media = FatFSInterface::Config::MEDIA_SD;
+    fsi.Init(fsi_config);
+
+    /** Get the reference to the FATFS Filesystem for use in mounting the hardware. */
+    FATFS& fs = fsi.GetSDFileSystem();
+
+    /** default to a known error 
+     *  by the end of the next if-statement it should be FR_OK
+     */
+    FRESULT res = FR_NO_FILESYSTEM;
+
+    /** mount the filesystem to the root directory 
+     *  fsi.GetSDPath can be used when mounting multiple filesystems on different media
+     */
+    if(f_mount(&fs, "/", 0) == FR_OK)
+    {
+        if(f_open(&file, "helloworld.txt", (FA_CREATE_ALWAYS | FA_WRITE))
+           == FR_OK)
+        {
+            FixedCapStr<20> str = "Hello World!";
+            UINT            bytes_written;
+            res = f_write(&file, str.Cstr(), str.Size(), &bytes_written);
+            f_close(&file);
+        }
+    }
+
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** Very basic blink to indicate success or failure */
+        uint32_t blink_rate;
+        if(res == FR_OK)
+            blink_rate = 125;
+        else
+            blink_rate = 1000;
+        System::Delay(blink_rate);
+        hw.SetLed(true);
+        System::Delay(blink_rate);
+        hw.SetLed(false);
+    }
+}
+
+_________________________
+
+___SerialPrint.cpp___
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hw;
+
+int main(void)
+{
+    // Initialize the Daisy Seed
+    hw.Init();
+    // Start the log, and wait for connection
+    hw.StartLog(true);
+    // Print "Hello World" to the Serial Monitor
+    hw.PrintLine("Hello World!");
+    while(1) {}
+}
+
+_________________________
+
+___SerialRead.cpp___
+/** Example showing serial reception
+ *  This program initializes the daisy, and then waits for connection to a serial monitor.
+ *
+ *  Once the connection has been established, messages received over serial will be echoed back.
+ *  This is done by writing the input to a FIFO of messages as they are received, and
+ *  then from within the main while() loop, messages are popped from the FIFO, and printed back over serial.
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hw;
+
+/** Create a FIFO for receiving messages to echo out. */
+FIFO<FixedCapStr<128>, 16> msg_fifo;
+
+/** Callback that fires whenever new data is sent from the serial port */
+void UsbCallback(uint8_t *buff, uint32_t *length)
+{
+    if(buff && length) /**< Check that our inputs are not null */
+    {
+        // Create a new string, and push it to the FIFO
+        FixedCapStr<128> rx((const char *)buff, *length);
+        msg_fifo.PushBack(rx);
+
+        /** Something like this below _can_ work. (where outbuff is a global char array)
+         *  However, it is ideal to leave this callback as quickly as possible.
+         *  So it is recommended to handle any responses to the input elsewhere.
+         */
+        // strncpy(outbuff, (const char*)buff, *length);
+        // hw.PrintLine(outbuff);
+    }
+}
+
+int main(void)
+{
+    // Initialize the Daisy Seed
+    hw.Init();
+
+    // Start the log, and wait for connection
+    hw.StartLog(true);
+
+    // Set USB callback
+    hw.usb_handle.SetReceiveCallback(UsbCallback,
+                                     UsbHandle::UsbPeriph::FS_INTERNAL);
+
+    /** Print an initial message once the connection occurs */
+    hw.PrintLine("Send messages in your Serial Monitor!");
+
+    while(1)
+    {
+        /** Whenever the FIFO has contents,
+         * go through and print each message that has been received */
+        while(!msg_fifo.IsEmpty())
+        {
+            auto msg = msg_fifo.PopFront();
+            hw.Print("Received Message: ");
+            hw.PrintLine(msg.Cstr());
+        }
+
+        /** Blink LED to show program is running (this indicates to
+         * the user that the Serial Monitor Connection has been established) */
+        hw.SetLed((System::GetNow() & 1023) > 511);
+    }
+}
+
+_________________________
+
+___SpiBlockingTransmit.cpp___
+/**
+ * @author beserge
+ * @brief 
+ * @date 2022-05-19
+ * 
+ * SPI Blocking Transmit Example
+ * Shows how to transmit some data over SPI on the Daisy Seed in a blocking manner.
+ * This means the code will wait while the transmission is occurring.
+ */
+
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hw;
+
+int main(void)
+{
+	// Initialize the hardware
+	hw.Init();
+
+	// Handle we'll use to interact with SPI
+	SpiHandle spi_handle;
+
+	// Structure to configure the SPI handle
+	SpiHandle::Config spi_conf;
+
+	spi_conf.mode = SpiHandle::Config::Mode::MASTER; // we're in charge
+
+	spi_conf.periph = SpiHandle::Config::Peripheral::SPI_1; // Use the SPI_1 Peripheral
+
+	// Pins to use. These must be available on the selected peripheral
+	spi_conf.pin_config.sclk = seed::D8; // Use pin D8 as SCLK
+	spi_conf.pin_config.miso = Pin(); // We won't need this
+	spi_conf.pin_config.mosi = seed::D10; // Use D10 as MOSI
+	spi_conf.pin_config.nss = seed::D7; // use D7 as NSS
+
+	// data will flow from master to slave over just the MOSI line
+	spi_conf.direction = SpiHandle::Config::Direction::TWO_LINES_TX_ONLY;
+
+	// The master will output on the NSS line
+	spi_conf.nss = SpiHandle::Config::NSS::HARD_OUTPUT;
+
+	// Initialize the SPI Handle
+	spi_handle.Init(spi_conf);
+
+	// loop forever
+	while(1) 
+	{
+		// put these four bytes in a buffer
+		uint8_t buffer[4] = {0, 1, 2, 3};
+
+		// transmit those 4 bytes
+		spi_handle.BlockingTransmit(buffer, 4);
+
+		// wait 500 ms
+		System::Delay(500);
+	}
+}
+
+_________________________
+
+___SpiDmaTransmit.cpp___
+/**
+ * @author beserge
+ * @brief 
+ * @date 2022-05-19
+ * 
+ * SPI DMA Transmit
+ * Shows how to transmit some data over SPI on the Daisy Patch SM using DMA.
+ * (DMA = Direct Memory Access). This method is non-blocking, meaning the hardware will
+ * handle the transfer in the background, and the code is free to continue on.
+ */
+
+#include "daisy_patch_sm.h"
+
+using namespace daisy;
+using namespace patch_sm;
+
+DaisyPatchSM hw;
+
+// put these four bytes in a buffer. It has to be in a special memory section to be used with DMA
+uint8_t DMA_BUFFER_MEM_SECTION buffer[4] = {0, 1, 2, 3};
+
+int main(void)
+{
+	// Initialize the hardware
+	hw.Init();
+
+	// Handle we'll use to interact with SPI
+	SpiHandle spi_handle;
+
+	// Structure to configure the SPI handle
+	SpiHandle::Config spi_conf;
+
+	spi_conf.mode = SpiHandle::Config::Mode::MASTER; // we're in charge
+
+	spi_conf.periph = SpiHandle::Config::Peripheral::SPI_2; // Use the SPI_2 Peripheral
+
+	// Pins to use. These must be available on the selected peripheral
+	spi_conf.pin_config.sclk = DaisyPatchSM::D10; // Use pin D10 as SCLK
+	spi_conf.pin_config.miso = Pin(); // We won't need this
+	spi_conf.pin_config.mosi = DaisyPatchSM::D9; // Use D9 as MOSI
+	spi_conf.pin_config.nss = DaisyPatchSM::D1; // use D1 as NSS
+
+	// data will flow from master to slave over just the MOSI line
+	spi_conf.direction = SpiHandle::Config::Direction::TWO_LINES_TX_ONLY;
+
+	// The master will output on the NSS line
+	spi_conf.nss = SpiHandle::Config::NSS::HARD_OUTPUT;
+
+	// Initialize the SPI Handle
+	spi_handle.Init(spi_conf);
+
+	// loop forever
+	while(1) 
+	{
+		// Use DMA to Transmit those 4 bytes. We don't have to wait for this to complete, we could go on and do other things here
+		// We won't use the callback or callback data features either, so we'll set them to NULL
+		spi_handle.DmaTransmit(buffer, 4, NULL, NULL, NULL);
+
+		// wait 500 ms
+		System::Delay(500);
+	}
+}
+
+_________________________
+
+___SR_4021.cpp___
+/**
+ * SR 4021 Example
+ * This demonstrates the use of an CD4021 input shift register to read 8 buttons.
+ * Some auxillary code is included to debounce, and time the length presses.
+ *
+ * The AudioCallback is utilized to read the buttons at 1kHz.
+ * Values are output via the USB Micro port.
+ */
+#include "daisy_seed.h"
+
+// Typedef for simplifcation of init/config
+using ButtonSr = daisy::ShiftRegister4021<1, 1>;
+
+// Period for printing button data over USB.
+static constexpr uint32_t kUsbPrintPeriod = 250;
+
+// Consts for pin locations on the seed -- customize as needed.
+// The 4021 operates through "bit-banging" so any GPIO is usable.
+static constexpr daisy::Pin kPinSrClk    = daisy::seed::D7;
+static constexpr daisy::Pin kPinSrData   = daisy::seed::D19;
+static constexpr daisy::Pin kPinSrLatch  = daisy::seed::D21;
+static constexpr daisy::Pin kCallbackPin = daisy::seed::D23;
+
+// Global Variables
+daisy::DaisySeed hw;
+daisy::GPIO      callback_pin;
+ButtonSr         btn_shiftreg;
+uint8_t          btn_data[8];
+uint32_t         btn_rising_edge_time[8];
+
+
+void AudioCallback(daisy::AudioHandle::InputBuffer  in,
+                   daisy::AudioHandle::OutputBuffer out,
+                   size_t                           size)
+{
+    callback_pin.Write(true);
+    btn_shiftreg.Update();
+    for(size_t i = 0; i < 8; i++)
+    {
+        auto datum  = btn_shiftreg.State(i);
+        btn_data[i] = (btn_data[i] << 1) | (datum ? 0 : 1);
+        if(btn_data[i] == 0x7f)
+            btn_rising_edge_time[i] = daisy::System::GetNow();
+    }
+    callback_pin.Write(false);
+}
+
+int main(void)
+{
+    // Initialize the Daisy Seed hardware
+    hw.Init(true);
+
+    ButtonSr::Config sr_cfg;
+    sr_cfg.clk     = kPinSrClk;
+    sr_cfg.latch   = kPinSrLatch;
+    sr_cfg.data[0] = kPinSrData;
+    btn_shiftreg.Init(sr_cfg);
+
+    callback_pin.Init(kCallbackPin, daisy::GPIO::Mode::OUTPUT);
+
+    hw.StartAudio(AudioCallback);
+
+    hw.StartLog(false);
+
+    uint32_t now, usb_time;
+    now = usb_time = daisy::System::GetNow();
+
+    while(1)
+    {
+        now = daisy::System::GetNow();
+        if(now - usb_time > kUsbPrintPeriod)
+        {
+            // Do the printing of the stuff.
+            hw.PrintLine("Button Data:");
+            hw.PrintLine("------------");
+            for(size_t i = 0; i < 8; i++)
+            {
+                uint32_t timeheld
+                    = btn_data[i] == 0xff ? now - btn_rising_edge_time[i] : 0;
+                hw.PrintLine("Button %d: %s -- %d",
+                             i,
+                             btn_data[i] == 0xff ? "Pressed" : "Released",
+                             timeheld);
+            }
+            usb_time = now;
+        }
+    }
+}
+
+_________________________
+
+___Switch.cpp___
+/** Example of setting up a switch
+ *  
+ *  This will use D9 on one side of the switch
+ *  The other side of the switch should be grounded.
+ * 
+ *  Pressing, or engaging the switch will turn on the built-in LED
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Global button object */
+Switch button;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Initialize our Toggle */
+    button.Init(seed::D9);
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** The Switch class uses "debouncing" to make sure that button activity 
+         *  read into the Daisy matches what the user is doing, and prevents
+         *  a lot of fast transitions that sometimes occur on hardware when engaging/disengaging 
+         *  a switch.
+         */
+        button.Debounce();
+
+        /** Now we check if it's pressed, and turn the LED on or not
+         * 
+         *  This could be simplified to: 
+         *  hw.SetLed(button.Pressed());
+         */
+        if(button.Pressed())
+            hw.SetLed(true);
+        else
+            hw.SetLed(false);
+    }
+}
+_________________________
+
+___Switch3.cpp___
+/** Example of setting up a three way (ON-OFF-ON) switch and reading it's position 
+ *  
+ *  This will use D29, and D30 on the two outside legs of the switch.
+ *  The center leg should be grounded.
+ * 
+ *  When the toggle is in the left position, the onboard USER LED will be off
+ *  When the toggle is in the center position, the onboard USER LED will blink slowly
+ *  When the toggle is in the right position, the onboard USER LED will blink quickly
+ */
+#include "daisy_seed.h"
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+/** Global Hardware access */
+DaisySeed hw;
+
+/** Global Toggle object */
+Switch3 toggle;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Initialize our Toggle */
+    toggle.Init(seed::D29, seed::D30);
+
+    /** Infinite Loop */
+    while(1)
+    {
+        /** TODO: simplify and/or explain.
+         *  These variable use the system millisecond timer to toggle between true/false
+         *  The (now & number) will cause the millisecond counter to be looped in the scope of 0-that value 
+         *  These have to be values that function as bit-masks (i.e. (2^x)-1) for this to work
+         * 
+         *  Proposed simplification 1: just use modulo?
+         *  Proposed simplification 2: use delays for each blink below? (would require making the example quite a bit longer)
+         */
+        bool slow_blink = (System::GetNow() & 1023) < 511;
+        bool fast_blink = (System::GetNow() & 511) < 255;
+
+        /** Read the toggle position, and to the expected blink action */
+        switch(toggle.Read())
+        {
+            case Switch3::POS_LEFT: hw.SetLed(false); break;
+            case Switch3::POS_CENTER: hw.SetLed(slow_blink); break;
+            case Switch3::POS_RIGHT: hw.SetLed(fast_blink); break;
+        }
+    }
+}
+_________________________
+
+___TIM_SingleCallback.cpp___
+/** TIM Single Callback 
+ *  Example of setting up and using a TIM peripheral
+ *  to generate periodic callbacks
+ * 
+ *  To demonstrate, the LED will be toggled from the callback
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+/** Create Daisy Seed object */
+DaisySeed hw;
+
+/** This is our Timer-generated callback
+ * 
+ *  Once the timer has been configured, and started, this function will be called
+ *  at the end of each timer period.
+ */
+void Callback(void* data)
+{
+    /** Use system time to blink LED once per second (1023ms) */
+    bool led_state = (System::GetNow() & 1023) > 511;
+    /** Set LED */
+    hw.SetLed(led_state);
+}
+
+int main(void)
+{
+    /** Initialize Daisy Seed */
+    hw.Init();
+
+    /** Create Handle and config 
+     *  We'll use TIM5 here, but TIM3, and TIM4 are also available
+     *  At this time, TIM2 is used by the System class for sub-millisecond time/delay functions 
+     */
+    TimerHandle         tim5;
+    TimerHandle::Config tim_cfg;
+
+    /** TIM5 with IRQ enabled */
+    tim_cfg.periph     = TimerHandle::Config::Peripheral::TIM_5;
+    tim_cfg.enable_irq = true;
+
+    /** Configure frequency (30Hz) */
+    auto tim_target_freq = 30;
+    auto tim_base_freq   = System::GetPClk2Freq();
+    tim_cfg.period       = tim_base_freq / tim_target_freq;
+
+    /** Initialize timer */
+    tim5.Init(tim_cfg);
+    tim5.SetCallback(Callback);
+
+    /** Start the timer, and generate callbacks at the end of each period */
+    tim5.Start();
+
+    /** Do nothing here, and rely on callback to toggle LED */
+    while(1) {}
+}
+
+_________________________
+
+___Blocking_Receive.cpp___
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+DaisyPatch hw;
+UartHandler uart;
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX_RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral, and start reading
+    uart.Init(uart_conf);
+
+    uint8_t rx[4] = {0,0,0,0};
+    while(1)
+    {
+        // blocking rx
+        uart.BlockingReceive(rx, 4, 1000);
+
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart Blocking Rx");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the receive buffer contents
+        sprintf(cstr, "%d %d %d %d", rx[0], rx[1], rx[2], rx[3]);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Blocking_Transmit.cpp___
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed    hw;
+UartHandler uart;
+
+int main(void)
+{
+    // Initialize the daisy hardware
+    hw.Init();
+
+    // Configure the Uart Peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // Initialize the uart peripheral and start the DMA transmit
+    uart.Init(uart_conf);
+
+    uint8_t tx = 0;
+    while(1) {
+        uart.BlockingTransmit(&tx, 1, 1000);
+        tx++;
+        System::Delay(200);
+    }
+}
+
+_________________________
+
+___Blocking_Transmit_Dma_Receive.cpp___
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+DaisyPatch hw;
+UartHandler uart;
+
+// buffer to send from
+uint8_t DMA_BUFFER_MEM_SECTION buff[4];
+
+bool dma_ready = true;
+
+// dma end callback, will start a new DMA transfer
+void RestartUart(void* state, UartHandler::Result res)
+{
+    dma_ready = true;
+}
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX_RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral
+    uart.Init(uart_conf);
+    for(int i = 0; i < 4; i++){
+        buff[i] = i;
+    }
+    while(1)
+    {
+        // blocking tx
+        uart.BlockingTransmit(buff, 4, 100);
+
+        if(dma_ready)
+        {
+            uart.DmaReceive(buff, 4, NULL, RestartUart, NULL);
+            dma_ready = false;
+        }
+
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart DMA Test");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the receive buffer contents
+        sprintf(cstr, "%d %d %d %d", buff[0], buff[1], buff[2], buff[3]);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Blocking_Transmit_Fifo_Receive.cpp___
+/** TODO fix / remove this example 
+ *  anticipated issue that it only shows 1 byte every 100ms
+ *  which may be misleading to user
+ *  
+ *  also, it should probably use serial print to pipe out
+ *  data instead of the patch's display.
+ */
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+/** Consts */
+const size_t kUartBufferSize = 512;
+
+/** Globals */
+DaisyPatch  hw;
+UartHandler uart;
+uint8_t     uart_buffer[kUartBufferSize];
+char        receive_str[kUartBufferSize];
+
+/** Happens automatically whenever transaction completes */
+void uartCallback(uint8_t*            data,
+                  size_t              size,
+                  void*               context,
+                  UartHandler::Result res)
+{
+    /** Clear receive_str */
+    std::fill(&receive_str[0], &receive_str[kUartBufferSize - 1], 0);
+    /** Copy new data into the receive str */
+    std::copy(&data[0], &data[size - 1], &receive_str[0]);
+}
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX_RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral, and start reading
+    uart.Init(uart_conf);
+    uart.DmaListenStart(uart_buffer, kUartBufferSize, uartCallback, nullptr);
+
+    uint8_t pop  = 0;
+    uint8_t send = 0;
+    while(1)
+    {
+        // send the data in a blocking fashion
+        uart.BlockingTransmit(&send, 1);
+        send++;
+
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart DMA Test");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the latest receive buffer contents
+        sprintf(receive_str, "%d", pop);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(receive_str, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Dma_Fifo_Receive.cpp___
+/** TODO fix / remove this example 
+ *  anticipated issue that it only shows 1 byte every 100ms
+ *  which may be misleading to user
+ *  
+ *  also, it should probably use serial print to pipe out
+ *  data instead of the patch's display.
+ */
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+/** Consts */
+const size_t kUartBufferSize = 512;
+
+DaisyPatch  hw;
+UartHandler uart;
+uint8_t     uart_buffer[kUartBufferSize];
+char        receive_str[kUartBufferSize];
+
+/** Happens automatically whenever transaction completes */
+void uartCallback(uint8_t*            data,
+                  size_t              size,
+                  void*               context,
+                  UartHandler::Result res)
+{
+    /** Clear receive_str */
+    std::fill(&receive_str[0], &receive_str[kUartBufferSize - 1], 0);
+    /** Copy new data into the receive str */
+    std::copy(&data[0], &data[size - 1], &receive_str[0]);
+}
+
+int main(void)
+{
+    // Initialize the Daisy Patch
+    hw.Init();
+
+    // Configure the Uart Peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // Initialize the Uart Peripheral
+    uart.Init(uart_conf);
+    uart.DmaListenStart(uart_buffer, kUartBufferSize, uartCallback, nullptr);
+
+    while(1)
+    {
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[26];
+        sprintf(cstr, "Uart DMA Fifo Rx");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the last popped data
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(receive_str, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Dma_Receive.cpp___
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+DaisyPatch  hw;
+UartHandler uart;
+
+// buffer to read into
+uint8_t DMA_BUFFER_MEM_SECTION buff[4];
+
+void RestartUart(void* state, UartHandler::Result res);
+
+// dma end callback, will start a new DMA transfer
+void RestartUart(void* state, UartHandler::Result res)
+{
+    uart.DmaReceive(buff, 4, NULL, RestartUart, NULL);
+}
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // reset our receive buffer
+    for(int i = 0; i < 4; i++)
+    {
+        buff[i] = 0;
+    }
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral, and start reading
+    uart.Init(uart_conf);
+    uart.DmaReceive(buff, 4, NULL, RestartUart, NULL);
+
+    while(1)
+    {
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart DMA Rx Test");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the receive buffer contents
+        sprintf(cstr, "%d %d %d %d", buff[0], buff[1], buff[2], buff[3]);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Dma_Transmit.cpp___
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed    hw;
+UartHandler uart;
+
+#define BUFF_SIZE 256
+
+// buffer to be dma transmitted
+static uint8_t DMA_BUFFER_MEM_SECTION buff[BUFF_SIZE];
+
+void RestartUart(void* state, UartHandler::Result res);
+
+// dma end callback, will start a new DMA transfer
+void RestartUart(void* state, UartHandler::Result res)
+{
+    if(res != UartHandler::Result::ERR)
+    {
+        uart.DmaTransmit(buff, BUFF_SIZE, NULL, RestartUart, NULL);
+    }
+}
+
+int main(void)
+{
+    // Initialize the daisy hardware
+    hw.Init();
+
+    // initilize the buffer
+    for(int i = 0; i < BUFF_SIZE; i++)
+    {
+        buff[i] = i;
+    }
+
+    // Configure the Uart Peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // Initialize the uart peripheral and start the DMA transmit
+    uart.Init(uart_conf);
+    uart.DmaTransmit(buff, BUFF_SIZE, NULL, RestartUart, NULL);
+
+    // loop forever
+    while(1) {}
+}
+
+_________________________
+
+___Dma_Transmit_Blocking_Receive.cpp___
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+DaisyPatch hw;
+UartHandler uart;
+
+// buffer to send from
+uint8_t DMA_BUFFER_MEM_SECTION buff[256];
+
+bool dma_ready = true;
+
+// dma end callback, will start a new DMA transfer
+void RestartUart(void* state, UartHandler::Result res)
+{
+    dma_ready = true;
+}
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // init the tx buffer
+    for(int i = 0; i < 256; i++)
+    {
+        buff[i] = i;
+    }
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX_RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral, and start reading
+    uart.Init(uart_conf);
+
+    uint8_t rx[4] = {0,0,0,0};
+    while(1)
+    {
+        // blocking rx
+        uart.BlockingReceive(rx, 4, 1000);
+
+        if(dma_ready)
+        {
+            uart.DmaTransmit(buff, 256, NULL, RestartUart, NULL);
+            dma_ready = false;
+        }
+
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart DMA Test");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the receive buffer contents
+        sprintf(cstr, "%d %d %d %d", rx[0], rx[1], rx[2], rx[3]);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___Dma_Transmit_Dma_Receive.cpp___
+#include "daisy_field.h"
+#include "daisy_patch.h"
+
+using namespace daisy;
+
+// DaisyField  hw;
+DaisyPatch  hw;
+UartHandler uart;
+
+// rx / tx buffers
+uint8_t DMA_BUFFER_MEM_SECTION rx_buff[4];
+uint8_t DMA_BUFFER_MEM_SECTION tx_buff[10];
+
+void RestartUartTx(void* state, UartHandler::Result res);
+
+void RestartUartRx(void* state, UartHandler::Result res){
+}
+
+void RestartUartTx(void* state, UartHandler::Result res)
+{
+    uart.DmaReceive(rx_buff, 4, NULL, RestartUartRx, NULL);
+    uart.DmaTransmit(tx_buff, 10, NULL, RestartUartTx, NULL);
+}
+
+int main(void)
+{
+    // start the Daisy Patch
+    hw.Init();
+
+    // reset our dma buffers
+    for(int i = 0; i < 10; i++)
+    {
+        tx_buff[i] = i;
+    }
+
+    // set up our UART peripheral
+    UartHandler::Config uart_conf;
+    uart_conf.periph        = UartHandler::Config::Peripheral::USART_1;
+    uart_conf.mode          = UartHandler::Config::Mode::TX_RX;
+    uart_conf.pin_config.tx = Pin(PORTB, 6);
+    uart_conf.pin_config.rx = Pin(PORTB, 7);
+
+    // initialize the UART peripheral, and start reading
+    uart.Init(uart_conf);
+
+    uart.DmaReceive(rx_buff, 4, NULL, NULL, NULL);
+    uart.DmaTransmit(tx_buff, 10, NULL, RestartUartTx, NULL);
+    while(1)
+    {
+        // clear the display
+        hw.display.Fill(false);
+
+        // draw the title text
+        char cstr[22];
+        sprintf(cstr, "Uart DMA TxRx Test");
+        hw.display.SetCursor(0, 0);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // draw the receive buffer contents
+        sprintf(cstr, "%d %d %d %d", rx_buff[0], rx_buff[1], rx_buff[2], rx_buff[3]);
+        hw.display.SetCursor(0, 12);
+        hw.display.WriteString(cstr, Font_7x10, true);
+
+        // update the display
+        hw.display.Update();
+
+        // wait 100 ms
+        System::Delay(100);
+    }
+}
+
+_________________________
+
+___WavParser_main.cpp___
+/** Simple example of WavParser class
+ *
+ *  Prints out some information about the WAV files on
+ *  an attached SD card.
+ *
+ *  To run this:
+ *  1. Put some WAV files on an SD Card
+ *     (This program will look at the first four it finds).
+ *  2. Program the Daisy with this example, and the SD Card connected.
+ *  3. Connect to the Daisy via USB Serial
+ *  4. A list of the files found with some audio info will be output
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+static constexpr const size_t kMaxFiles = 4;
+
+static DaisySeed            hw;
+static SdmmcHandler         sdmmc;
+static FatFSInterface       fsi;
+static FileTable<kMaxFiles> file_table;
+static FIL                  file;
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init(true);
+    hw.StartLog(true);
+
+    /** SD Card / FatFS Interface Init */
+    SdmmcHandler::Config sdcfg;
+    sdcfg.Defaults();
+    sdcfg.speed = SdmmcHandler::Speed::STANDARD;
+    sdcfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sdmmc.Init(sdcfg);
+    fsi.Init(FatFSInterface::Config::Media::MEDIA_SD);
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    /** We'll fill up the table with WAV files and
+     *  then parse those, and present some info.
+     */
+    file_table.Fill("/", ".wav");
+
+
+    if(file_table.GetNumFiles() > 0)
+    {
+        for(size_t i = 0; i < file_table.GetNumFiles(); i++)
+        {
+            auto sta = f_open(
+                &file, file_table.GetFileName(i), (FA_OPEN_EXISTING | FA_READ));
+            if(sta != FR_OK)
+            {
+                hw.PrintLine("Could not open: %s", file_table.GetFileName(i));
+                continue;
+            }
+            FileReader reader(&file);
+            WavParser  parser;
+            if(!parser.parse(reader))
+            {
+                hw.PrintLine("Error parsing file: %s",
+                             file_table.GetFileName(i));
+                continue;
+            }
+
+            const auto& info = parser.info();
+            hw.PrintLine("File Information: %s", file_table.GetFileName(i));
+            hw.PrintLine("\tSample Rate:\t%d", info.sampleRate);
+            hw.PrintLine("\tChannels:\t%d", info.numChannels);
+            hw.PrintLine("\tBit Depth:\t%d", info.bitsPerSample);
+
+            /** File Duration in seconds */
+            size_t dur_samples
+                = parser.dataSize()
+                  / ((info.bitsPerSample / 8) * info.numChannels);
+            float dur_seconds = static_cast<float>(dur_samples)
+                                / static_cast<float>(info.sampleRate);
+            float frac = dur_seconds - static_cast<int>(dur_seconds);
+            hw.PrintLine("\tDuration (seconds):\t%d.%02d",
+                         static_cast<size_t>(dur_seconds),
+                         static_cast<size_t>(frac * 100.f));
+
+            /** Number of metadata chunks */
+            hw.PrintLine("\tMetaData Chunks:\t%d", parser.metadataCount());
+        }
+    }
+
+
+    while(1) {}
+}
+
+_________________________
+
+___WavPlayer_main.cpp___
+/** Simple demonstration of WAV file playback
+ *
+ *  When the program starts, it will attempt to load, and start looping
+ *  the file, "loop.wav".
+ *
+ *  The "loop.wav" file used here is included in the repo for convenience.
+ *  The file is a 48kHz stereo, 16-bit sine wave at 440Hz -6dB
+ *
+ *  Any 16-bit WAV file can be used with this class, but sample-rate
+ *  is not automatically adjusted for.
+ *
+ *  The included file was created with sox, using the following command:
+ *  sox -n -r 48000 -b 16 -c 2 loop.wav synth 1 sine 440 gain -6
+ */
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+static constexpr const size_t kTransferSize = 16384;
+
+static DaisySeed                hw;
+static SdmmcHandler             sdmmc;
+static FatFSInterface           fsi;
+static WavPlayer<kTransferSize> player;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        // Fill two channels of data per sample
+        float samps[2];
+        player.Stream(samps, 2);
+        out[0][i] = samps[0];
+        out[1][i] = samps[1];
+    }
+}
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init(true);
+
+    /** The SD Card/FatFS Initialization remains unchanged
+     *  For multiple WavPlayer objects, or playback at
+     *  faster playback speeds or sample rates it is recommended
+     *  to use 4-bit I/O, and as fast a speed as the PCB layout permits.
+     *
+     *  These settings are minimal for demonstration purposes.
+     */
+    SdmmcHandler::Config sdcfg;
+    sdcfg.Defaults();
+    sdcfg.speed = SdmmcHandler::Speed::STANDARD;
+    sdcfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sdmmc.Init(sdcfg);
+    fsi.Init(FatFSInterface::Config::Media::MEDIA_SD);
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    /** Open Loop.WAV
+     *  And blink very fast if there's a problem
+     */
+    if (player.Init("loop.wav") != WavPlayer<kTransferSize>::Result::Ok) {
+      // Error..
+      while(true) {
+        // Blink really fast if there was a problem
+        hw.SetLed((System::GetNow() & 127) < 63);
+      }
+    }
+
+    /** Enable Looping playback of the audio file */
+    player.SetLooping(true);
+    player.SetPlaying(true);
+    player.Restart();
+
+    /** Start the Audio */
+    hw.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        /** Blink Slower in normal operation */
+        hw.SetLed((System::GetNow() & 511) < 255);
+
+        /** This does the actual Disk I/O whenever the Audio FIFOs are low */
+        player.Prepare();
+    }
+}
+
+_________________________
+
+___WavWriter.cpp___
+/** Generation of a simple Audio signal */
+#include "daisy_seed.h"
+#include <cmath>
+
+/** This prevents us from having to type "daisy::" in front of a lot of things. */
+using namespace daisy;
+
+static constexpr float  kTargetSr     = 48000.f;
+static constexpr size_t kTransferSize = 16384;
+
+/** Global Hardware access */
+DaisySeed                hw;
+SdmmcHandler             sdmmc;
+FatFSInterface           fsi;
+WavWriter<kTransferSize> wav_writer;
+
+/** Basic Fixed-frequency oscillator */
+struct SimpleOsc
+{
+    static constexpr float kTargetFreq = 220.f;
+    static constexpr float kSignalIncrement
+        = (M_TWOPI * kTargetFreq) * (1.f / kTargetSr);
+    float phs_;
+    SimpleOsc() : phs_(0.f) {}
+
+    inline float RenderSample()
+    {
+        float signal = sin(phs_) * 0.5f;
+        phs_ += kSignalIncrement;
+        if(phs_ > M_TWOPI)
+            phs_ -= M_TWOPI;
+        return signal;
+    }
+};
+
+int main(void)
+{
+    /** Initialize our hardware */
+    hw.Init();
+
+    /** Set up SD Card */
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd_cfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sdmmc.Init(sd_cfg);
+    FatFSInterface::Config fsi_cfg;
+    fsi_cfg.media = FatFSInterface::Config::MEDIA_SD;
+    fsi.Init(fsi_cfg);
+    if(f_mount(&fsi.GetSDFileSystem(), "/", 0) != FR_OK)
+    {
+        while(1)
+        {
+            hw.SetLed((System::GetNow() & 127) > 63);
+        }
+    }
+    hw.SetLed(true);
+
+    /** Set up WAV File */
+    WavWriter<kTransferSize>::Config cfg;
+    cfg.bitspersample = 16;
+    cfg.channels      = 2;
+    cfg.samplerate    = kTargetSr;
+    wav_writer.Init(cfg);
+
+    /** Prepare to record a 1s 220Hz Audio File */
+    SimpleOsc oscillator;
+    size_t    duration_sec      = 1;
+    size_t    duration_in_samps = duration_sec * kTargetSr;
+
+    wav_writer.OpenFile("ExampleWavFile.wav");
+    for(size_t i = 0; i < duration_in_samps; i++)
+    {
+        // If recording Realtime Audio:
+        // The rendering/sampling should occur in the realtime audio interrupt
+        float sample            = oscillator.RenderSample();
+        float samps_to_write[2] = {sample, sample};
+        wav_writer.Sample(samps_to_write);
+
+        // The actual DiskIO should happen outside of the realtime audio interrupt
+        // For offline-rendering, it is okay to do this check on every sample.
+        wav_writer.Write();
+    }
+    // Flush and Close
+    wav_writer.SaveFile();
+
+    while(1)
+    {
+        // Blink Afterwards to show success
+        hw.SetLed((System::GetNow() & 511) > 255);
+    }
+}
+_________________________

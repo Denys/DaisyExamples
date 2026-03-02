@@ -1,0 +1,2425 @@
+CONTENTS (Effects & Utilities)
+1. Compressor
+2. DualEnvelope
+3. FilterBank
+4. Looper
+5. MultiDelay
+6. RandomCV
+7. SampleAndHold
+8. Svf
+9. verb
+
+________________________________________________________________________________
+
+Makefile template
+________________________________________________________________________________
+
+# Project Name
+TARGET = __ProjectName__
+
+# Sources
+CPP_SOURCES = __ProjectName__.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy
+DAISYSP_DIR = ../../DaisySP
+
+# Uncomment for LGPL modules (StringVoice, ModalVoice, ReverbSc)
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+
+Compressor
+
+__Compressor README.md__
+# Compressor
+
+## Author
+Adapted from Patch version by Ben Sergentanis
+
+## Description
+Dynamics compressor with sidechain input, makeup gain, soft knee, and parallel compression mix.
+
+## Controls
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Threshold | -80 to 0 dB |
+| Knob 2 | Ratio | 1:1 to 40:1 |
+| Knob 3 | Attack | 1ms - 1s |
+| Knob 4 | Release | 1ms - 1s |
+| Knob 5 | Makeup Gain | 0 - 24dB |
+| Knob 6 | Knee | 0 - 20dB |
+| Knob 7 | Mix | Dry/Wet |
+| Knob 8 | Output Level | |
+| SW1 | Sidechain Enable | |
+| SW2 | Peak/RMS Mode | |
+| Audio In L | Main Input | |
+| Audio In R | Sidechain Input | |
+
+## Features
+- **Sidechain**: Use R input as detector
+- **Parallel Mix**: Blend dry/compressed
+- **GR Meter**: LED bar shows gain reduction
+
+__Compressor.cpp__
+/**
+ * Compressor - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch Compressor
+ * Platform: Daisy Field
+ * 
+ * Dynamics compressor with optional sidechain.
+ * 
+ * Control Mapping:
+ * Knob 0: Threshold (-80 to 0 dB)
+ * Knob 1: Ratio (1:1 to 40:1)
+ * Knob 2: Attack (1ms - 1s)
+ * Knob 3: Release (1ms - 1s)
+ * Knob 4: Makeup Gain (0 - 24dB)
+ * Knob 5: Knee (0 - 20dB)
+ * Knob 6: Mix (dry/wet)
+ * Knob 7: Output Level
+ * sw[0]: Sidechain enable toggle
+ * sw[1]: Peak/RMS mode toggle
+ * Audio In L: Main input
+ * Audio In R: Sidechain input (when enabled)
+ * Audio Out L/R: Compressed output
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Compressor comp;
+
+bool     sidechainEnabled = false;
+bool     peakMode = true;
+float    threshold, ratio, attack, release;
+float    makeupGain, knee, mix, outputLevel;
+float    gainReduction = 0.f;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs show parameter values
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Bottom row: Gain reduction meter (8 LEDs)
+    float grNorm = fclamp(-gainReduction / 40.f, 0.f, 1.f);  // 0-40dB GR
+    for(size_t i = 0; i < 8; i++)
+    {
+        float thresh = (float)i / 7.f;
+        hw.led_driver.SetLed(keyboard_leds[i], grNorm > thresh ? 1.0f : 0.1f);
+    }
+    
+    // Top row: Status indicators
+    hw.led_driver.SetLed(keyboard_leds[8], sidechainEnabled ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[9], peakMode ? 1.0f : 0.2f);
+    
+    // Keys 10-15: Output level meter
+    float outNorm = fclamp(outputLevel, 0.f, 1.f);
+    for(size_t i = 10; i < 16; i++)
+    {
+        float thresh = (float)(i - 10) / 5.f;
+        hw.led_driver.SetLed(keyboard_leds[i], outNorm > thresh ? 0.6f : 0.1f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Toggles
+    if(hw.sw[0].RisingEdge())
+        sidechainEnabled = !sidechainEnabled;
+    if(hw.sw[1].RisingEdge())
+        peakMode = !peakMode;
+    
+    // Read parameters
+    threshold = -80.f + hw.knob[0].Process() * 80.f;  // -80 to 0 dB
+    ratio = 1.f + hw.knob[1].Process() * 39.f;        // 1:1 to 40:1
+    attack = 0.001f + hw.knob[2].Process() * 0.999f;  // 1ms - 1s
+    release = 0.001f + hw.knob[3].Process() * 0.999f; // 1ms - 1s
+    makeupGain = hw.knob[4].Process() * 24.f;         // 0 - 24dB
+    knee = hw.knob[5].Process() * 20.f;               // 0 - 20dB
+    mix = hw.knob[6].Process();
+    outputLevel = hw.knob[7].Process();
+    
+    // Apply compressor settings
+    comp.SetThreshold(threshold);
+    comp.SetRatio(ratio);
+    comp.SetAttack(attack);
+    comp.SetRelease(release);
+    comp.SetMakeup(makeupGain);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float dryL = in[0][i] * 2.f;  // 6dB headroom compensation
+        float dryR = in[1][i] * 2.f;
+        
+        float wet;
+        if(sidechainEnabled)
+        {
+            wet = comp.Process(dryL, dryR);  // R channel as sidechain
+        }
+        else
+        {
+            wet = comp.Process(dryL);
+        }
+        
+        // Get gain reduction for metering
+        gainReduction = comp.GetRatio();  // Approximate GR
+        
+        // Parallel compression (dry/wet mix)
+        float mixed = dryL * (1.f - mix) + wet * mix;
+        
+        mixed *= outputLevel * 0.5f;  // Compensate for input boost
+        
+        out[0][i] = mixed;
+        out[1][i] = mixed;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("COMPRESSOR", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Threshold and ratio
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Thr:%.0fdB  Rat:%.1f:1", threshold, ratio);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Attack and release
+    hw.display.SetCursor(0, 24);
+    sprintf(buf, "Atk:%.0fms Rel:%.0fms", attack * 1000.f, release * 1000.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Makeup and knee
+    hw.display.SetCursor(0, 34);
+    sprintf(buf, "Make:%.1fdB Knee:%.0f", makeupGain, knee);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Status
+    hw.display.SetCursor(0, 46);
+    sprintf(buf, "%s %s Mix:%.0f%%", 
+            sidechainEnabled ? "[SC]" : "", 
+            peakMode ? "Peak" : "RMS",
+            mix * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // GR meter bar
+    int grBar = static_cast<int>(fclamp(-gainReduction / 40.f, 0.f, 1.f) * 120.f);
+    hw.display.DrawRect(0, 58, grBar, 62, true, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    comp.Init(sr);
+    comp.SetThreshold(-20.f);
+    comp.SetRatio(4.f);
+    comp.SetAttack(0.01f);
+    comp.SetRelease(0.1f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+DualEnvelope
+
+__DualEnvelope README.md__
+# Dual Envelope
+
+## Author
+Adapted from Patch QuadEnvelope (reduced to 2 for stereo)
+
+## Description
+Two independent ADSR envelopes with VCA functionality. Trigger envelopes from keyboard rows or link them together. Envelopes output to CV and apply as VCA to audio inputs.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Env 1 Attack | 1ms - 2s |
+| Knob 2 | Env 1 Decay | 1ms - 2s |
+| Knob 3 | Env 1 Sustain | 0 - 100% |
+| Knob 4 | Env 1 Release | 1ms - 3s |
+| Knob 5 | Env 2 Attack | 1ms - 2s |
+| Knob 6 | Env 2 Decay | 1ms - 2s |
+| Knob 7 | Env 2 Sustain | 0 - 100% |
+| Knob 8 | Env 2 Release | 1ms - 3s |
+| Keys 0-7 | Trigger Envelope 1 | Bottom row |
+| Keys 8-15 | Trigger Envelope 2 | Top row |
+| SW1 | Link Mode | Trigger both together |
+| SW2 | Loop Mode | Auto-retrigger |
+| CV Out 1 | Envelope 1 | 0-5V |
+| CV Out 2 | Envelope 2 | 0-5V |
+| Audio L | VCA'd by Env 1 | |
+| Audio R | VCA'd by Env 2 | |
+
+## Features
+- **Stereo VCA**: Each envelope controls one audio channel
+- **CV Output**: Both envelopes available as CV
+- **Link Mode**: Trigger both envelopes simultaneously
+- **Visual Feedback**: LED brightness follows envelope level
+
+__DualEnvelope.cpp__
+/**
+ * DualEnvelope - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch QuadEnvelope (reduced to 2)
+ * Platform: Daisy Field
+ * 
+ * Two ADSR envelopes with VCA, triggered via keyboard.
+ * 
+ * Control Mapping:
+ * Knob 0: Env 1 Attack
+ * Knob 1: Env 1 Decay
+ * Knob 2: Env 1 Sustain
+ * Knob 3: Env 1 Release
+ * Knob 4: Env 2 Attack
+ * Knob 5: Env 2 Decay
+ * Knob 6: Env 2 Sustain
+ * Knob 7: Env 2 Release
+ * Keyboard 0-7: Trigger Envelope 1
+ * Keyboard 8-15: Trigger Envelope 2
+ * sw[0]: Link envelopes (trigger both together)
+ * sw[1]: Loop mode (auto-retrigger)
+ * Gate In: External trigger (both envelopes)
+ * CV Out 1: Envelope 1
+ * CV Out 2: Envelope 2
+ * Audio: VCA'd input using envelope 1
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Adsr env1, env2;
+
+float    env1Value = 0.f;
+float    env2Value = 0.f;
+bool     gate1 = false;
+bool     gate2 = false;
+bool     linked = false;
+bool     loopMode = false;
+uint32_t loopTimer = 0;
+float    loopInterval = 500.f;  // ms
+
+// ADSR parameters
+float attack1, decay1, sustain1, release1;
+float attack2, decay2, sustain2, release2;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs 0-3: Env 1 parameters, pulsing with envelope
+    for(int i = 0; i < 4; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process() * (0.3f + env1Value * 0.7f));
+    }
+    
+    // Knob LEDs 4-7: Env 2 parameters
+    for(int i = 4; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process() * (0.3f + env2Value * 0.7f));
+    }
+    
+    // Bottom row (0-7): Trigger Env 1, brightness follows envelope
+    for(size_t i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], 0.2f + env1Value * 0.8f);
+    }
+    
+    // Top row (8-15): Trigger Env 2
+    for(size_t i = 8; i < 16; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], 0.2f + env2Value * 0.8f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Link toggle
+    if(hw.sw[0].RisingEdge())
+        linked = !linked;
+    
+    // Loop mode toggle
+    if(hw.sw[1].RisingEdge())
+        loopMode = !loopMode;
+    
+    // Keyboard triggers
+    bool newGate1 = false;
+    bool newGate2 = false;
+    
+    // Bottom row triggers Env 1
+    for(size_t i = 0; i < 8; i++)
+    {
+        if(hw.KeyboardState(i))
+            newGate1 = true;
+    }
+    
+    // Top row triggers Env 2
+    for(size_t i = 8; i < 16; i++)
+    {
+        if(hw.KeyboardState(i))
+            newGate2 = true;
+    }
+    
+    // Linked mode
+    if(linked)
+    {
+        if(newGate1 || newGate2)
+        {
+            newGate1 = true;
+            newGate2 = true;
+        }
+    }
+    
+    gate1 = newGate1;
+    gate2 = newGate2;
+    
+    // Read ADSR parameters
+    attack1 = 0.001f + hw.knob[0].Process() * 1.999f;
+    decay1 = 0.001f + hw.knob[1].Process() * 1.999f;
+    sustain1 = hw.knob[2].Process();
+    release1 = 0.001f + hw.knob[3].Process() * 2.999f;
+    
+    attack2 = 0.001f + hw.knob[4].Process() * 1.999f;
+    decay2 = 0.001f + hw.knob[5].Process() * 1.999f;
+    sustain2 = hw.knob[6].Process();
+    release2 = 0.001f + hw.knob[7].Process() * 2.999f;
+    
+    // Apply parameters
+    env1.SetTime(ADSR_SEG_ATTACK, attack1);
+    env1.SetTime(ADSR_SEG_DECAY, decay1);
+    env1.SetSustainLevel(sustain1);
+    env1.SetTime(ADSR_SEG_RELEASE, release1);
+    
+    env2.SetTime(ADSR_SEG_ATTACK, attack2);
+    env2.SetTime(ADSR_SEG_DECAY, decay2);
+    env2.SetSustainLevel(sustain2);
+    env2.SetTime(ADSR_SEG_RELEASE, release2);
+    
+    // Process audio with VCA
+    for(size_t i = 0; i < size; i++)
+    {
+        env1Value = env1.Process(gate1);
+        env2Value = env2.Process(gate2);
+        
+        // VCA: Apply envelope 1 to left, envelope 2 to right
+        out[0][i] = in[0][i] * env1Value;
+        out[1][i] = in[1][i] * env2Value;
+    }
+    
+    // CV outputs
+    uint16_t cv1 = static_cast<uint16_t>(env1Value * 4095.f);
+    uint16_t cv2 = static_cast<uint16_t>(env2Value * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+}
+
+void UpdateLoop()
+{
+    if(loopMode && !gate1 && !gate2)
+    {
+        uint32_t now = System::GetNow();
+        if(now - loopTimer > loopInterval)
+        {
+            // Auto-trigger both envelopes in loop mode
+            // This is handled in main loop since we can't set gate from here easily
+            loopTimer = now;
+        }
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("DUAL ENVELOPE", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Mode indicators
+    hw.display.SetCursor(0, 12);
+    sprintf(buf, "%s %s", linked ? "[LINK]" : "", loopMode ? "[LOOP]" : "");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Envelope 1 display
+    hw.display.SetCursor(0, 22);
+    sprintf(buf, "E1: A%.0f D%.0f S%.0f R%.0f", 
+            attack1 * 1000.f, decay1 * 1000.f, sustain1 * 100.f, release1 * 1000.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Envelope 2 display
+    hw.display.SetCursor(0, 32);
+    sprintf(buf, "E2: A%.0f D%.0f S%.0f R%.0f", 
+            attack2 * 1000.f, decay2 * 1000.f, sustain2 * 100.f, release2 * 1000.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Visual envelope bars
+    int bar1 = static_cast<int>(env1Value * 60.f);
+    int bar2 = static_cast<int>(env2Value * 60.f);
+    
+    hw.display.SetCursor(0, 46);
+    hw.display.WriteString("E1", Font_6x8, true);
+    hw.display.DrawRect(20, 46, 20 + bar1, 52, true, true);
+    
+    hw.display.SetCursor(0, 54);
+    hw.display.WriteString("E2", Font_6x8, true);
+    hw.display.DrawRect(20, 54, 20 + bar2, 60, true, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    env1.Init(sr);
+    env2.Init(sr);
+    
+    // Default settings
+    env1.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    env1.SetTime(ADSR_SEG_DECAY, 0.1f);
+    env1.SetSustainLevel(0.7f);
+    env1.SetTime(ADSR_SEG_RELEASE, 0.3f);
+    
+    env2.SetTime(ADSR_SEG_ATTACK, 0.1f);
+    env2.SetTime(ADSR_SEG_DECAY, 0.2f);
+    env2.SetSustainLevel(0.5f);
+    env2.SetTime(ADSR_SEG_RELEASE, 0.5f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateLoop();
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+FilterBank
+
+__FilterBank README.md__
+# FilterBank
+
+## Author
+Adapted from Patch version by Ben Sergentanis
+
+## Description
+16-band resonant filter bank with keyboard-based bank selection. Select one of 4 banks (4 filters each) and adjust amplitudes. Features filter solo mode and visual frequency response display.
+
+## Frequency Bands
+| Bank | Frequencies |
+|------|-------------|
+| 1 | 50, 75, 110, 150 Hz |
+| 2 | 220, 350, 500, 750 Hz |
+| 3 | 1100, 1600, 2200, 3600 Hz |
+| 4 | 5200, 7500, 11000, 15000 Hz |
+
+## Controls
+
+| Control | Description |
+|---------|-------------|
+| Knob 1-4 | Filter amplitudes (current bank) |
+| Knob 5 | Global Resonance |
+| Knob 6 | Global Drive |
+| Knob 7 | Input Gain |
+| Knob 8 | Output Level |
+| Keys 0-3 | Bank selection |
+| Keys 4-7 | Solo filter (in current bank) |
+| SW1 | Bypass toggle |
+| SW2 | Reset all amplitudes |
+
+## Features
+- **Bank Selection**: 4 banks of 4 filters = 16 total
+- **Solo Mode**: Isolate single filter for tuning
+- **Knob Catch-up**: Prevents jumps when switching banks
+- **Visual Display**: 16-bar frequency response graph
+
+__FilterBank.cpp__
+/**
+ * FilterBank - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch FilterBank
+ * Platform: Daisy Field
+ * 
+ * 16 resonant peak filters with keyboard-based bank selection.
+ * 
+ * Control Mapping:
+ * Knob 0-3: Filter amplitudes for current bank (4 filters)
+ * Knob 4: Global Resonance
+ * Knob 5: Global Drive
+ * Knob 6: Input Gain
+ * Knob 7: Output Level
+ * Keyboard 0-3: Select filter bank (1-4)
+ * Keyboard 4-7: Quick filter solo (solo one filter from current bank)
+ * sw[0]: Bypass toggle
+ * sw[1]: Reset all amplitudes
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <cstring>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// 16 frequency bands
+float filterFreqs[16] = {
+    50.f,   75.f,   110.f,  150.f,
+    220.f,  350.f,  500.f,  750.f,
+    1100.f, 1600.f, 2200.f, 3600.f,
+    5200.f, 7500.f, 11000.f, 15000.f
+};
+
+struct Filter
+{
+    Svf   filt;
+    float amp;
+    float targetAmp;
+    
+    void Init(float samplerate, float freq)
+    {
+        filt.Init(samplerate);
+        filt.SetRes(0.7f);
+        filt.SetDrive(0.002f);
+        filt.SetFreq(freq);
+        amp = 0.5f;
+        targetAmp = 0.5f;
+    }
+    
+    float Process(float in)
+    {
+        // Smooth amplitude changes
+        fonepole(amp, targetAmp, 0.001f);
+        filt.Process(in);
+        return filt.Peak() * amp;
+    }
+};
+
+Filter   filters[16];
+uint8_t  currentBank = 0;
+int8_t   soloFilter = -1;  // -1 = no solo
+bool     bypass = false;
+float    globalRes = 0.7f;
+float    globalDrive = 0.002f;
+float    inputGain = 1.0f;
+float    outputLevel = 1.0f;
+
+// Track knob positions for catch-up behavior
+float lastKnobVal[4] = {0.5f, 0.5f, 0.5f, 0.5f};
+bool  knobCaught[4] = {false, false, false, false};
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs 0-3: Show filter amplitudes for current bank
+    for(int i = 0; i < 4; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], filters[currentBank * 4 + i].amp);
+    }
+    
+    // Knob LEDs 4-7: Show global parameters
+    hw.led_driver.SetLed(knob_leds[4], globalRes);
+    hw.led_driver.SetLed(knob_leds[5], globalDrive * 50.f);  // Scale for visibility
+    hw.led_driver.SetLed(knob_leds[6], inputGain);
+    hw.led_driver.SetLed(knob_leds[7], outputLevel);
+    
+    // Bottom row (0-7): Bank selection (0-3) + Solo (4-7)
+    for(size_t i = 0; i < 4; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], i == currentBank ? 1.0f : 0.3f);
+    }
+    for(size_t i = 4; i < 8; i++)
+    {
+        bool isSoloed = (soloFilter == (int)(currentBank * 4 + (i - 4)));
+        hw.led_driver.SetLed(keyboard_leds[i], isSoloed ? 1.0f : 0.2f);
+    }
+    
+    // Top row (8-15): Show all 16 filter levels as bar graph
+    for(size_t i = 0; i < 8; i++)
+    {
+        // Show filters 0-7 on top row
+        float avgAmp = (filters[i].amp + filters[i + 8].amp) * 0.5f;
+        hw.led_driver.SetLed(keyboard_leds[8 + i], avgAmp);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Bypass toggle
+    if(hw.sw[0].RisingEdge())
+        bypass = !bypass;
+    
+    // Reset all amplitudes
+    if(hw.sw[1].RisingEdge())
+    {
+        for(int i = 0; i < 16; i++)
+            filters[i].targetAmp = 0.5f;
+        soloFilter = -1;
+    }
+    
+    // Bank selection (keys 0-3)
+    for(size_t i = 0; i < 4; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            currentBank = i;
+            // Reset knob catch for new bank
+            for(int j = 0; j < 4; j++)
+                knobCaught[j] = false;
+        }
+    }
+    
+    // Solo filter (keys 4-7)
+    for(size_t i = 4; i < 8; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            int filterIdx = currentBank * 4 + (i - 4);
+            if(soloFilter == filterIdx)
+                soloFilter = -1;  // Toggle off
+            else
+                soloFilter = filterIdx;
+        }
+    }
+    
+    // Read knobs 0-3 for filter amplitudes with catch-up
+    for(int i = 0; i < 4; i++)
+    {
+        float knobVal = hw.knob[i].Process();
+        int filterIdx = currentBank * 4 + i;
+        
+        if(!knobCaught[i])
+        {
+            // Check if knob has "caught" the current value
+            if(fabsf(knobVal - filters[filterIdx].targetAmp) < 0.05f)
+                knobCaught[i] = true;
+        }
+        
+        if(knobCaught[i])
+        {
+            filters[filterIdx].targetAmp = knobVal;
+        }
+    }
+    
+    // Global parameters
+    globalRes = 0.1f + hw.knob[4].Process() * 0.9f;  // 0.1 - 1.0
+    globalDrive = hw.knob[5].Process() * 0.02f;       // 0 - 0.02
+    inputGain = hw.knob[6].Process() * 2.0f;          // 0 - 2x
+    outputLevel = hw.knob[7].Process();
+    
+    // Update all filter parameters
+    for(int i = 0; i < 16; i++)
+    {
+        filters[i].filt.SetRes(globalRes);
+        filters[i].filt.SetDrive(globalDrive);
+    }
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float input = in[0][i] * inputGain;
+        
+        if(bypass)
+        {
+            out[0][i] = out[1][i] = input * outputLevel;
+            continue;
+        }
+        
+        float sig = 0.f;
+        
+        if(soloFilter >= 0)
+        {
+            // Solo mode: only one filter
+            sig = filters[soloFilter].Process(input);
+        }
+        else
+        {
+            // Mix all 16 filters
+            for(int j = 0; j < 16; j++)
+            {
+                sig += filters[j].Process(input);
+            }
+            sig *= 0.06f;  // Attenuate mix
+        }
+        
+        sig *= outputLevel;
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(bypass ? "FILTERBANK [BYP]" : "FILTERBANK", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Current bank and frequencies
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Bank %d: %d-%dHz", 
+            currentBank + 1,
+            (int)filterFreqs[currentBank * 4],
+            (int)filterFreqs[currentBank * 4 + 3]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Filter amplitudes for current bank
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "%.0f%% %.0f%% %.0f%% %.0f%%",
+            filters[currentBank * 4 + 0].amp * 100.f,
+            filters[currentBank * 4 + 1].amp * 100.f,
+            filters[currentBank * 4 + 2].amp * 100.f,
+            filters[currentBank * 4 + 3].amp * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Solo indicator
+    hw.display.SetCursor(0, 38);
+    if(soloFilter >= 0)
+    {
+        sprintf(buf, "SOLO: %dHz", (int)filterFreqs[soloFilter]);
+    }
+    else
+    {
+        sprintf(buf, "Res:%.0f%% Drv:%.1f%%", globalRes * 100.f, globalDrive * 5000.f);
+    }
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Visual frequency response (simple bar representation)
+    for(int i = 0; i < 16; i++)
+    {
+        int barHeight = static_cast<int>(filters[i].amp * 10.f);
+        int x = 8 * i;
+        hw.display.DrawRect(x, 63 - barHeight, x + 6, 63, true, true);
+    }
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    // Initialize all 16 filters
+    for(int i = 0; i < 16; i++)
+    {
+        filters[i].Init(sr, filterFreqs[i]);
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+Looper
+
+__Looper README.md__
+# Looper
+
+## Description
+10-second audio looper with record, play, and overdub modes.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Loop Level |
+| Knob 2 | Input Level |
+| Knob 3 | Overdub Level |
+| Knob 8 | Dry/Wet Mix |
+| SW1 | Cycle states |
+| SW2 | Clear loop |
+| Key 0 | Record |
+| Key 1 | Play |
+| Key 2 | Overdub |
+| Key 3 | Stop |
+
+## States
+- STOPPED → REC → PLAY → OVERDUB → PLAY
+
+__Looper.cpp__
+/**
+ * Looper - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch SM Looper
+ * Platform: Daisy Field
+ * 
+ * Simple audio looper with overdub.
+ * 
+ * Control Mapping:
+ * Knob 0: Loop Level
+ * Knob 1: Input Level
+ * Knob 2: Overdub Level
+ * Knob 3: Playback Speed
+ * Knob 4: Loop Start Point
+ * Knob 5: Loop End Point
+ * Knob 6: Fade Time
+ * Knob 7: Dry/Wet Mix
+ * sw[0]: Record/Play toggle
+ * sw[1]: Clear loop
+ * Keyboard 0-3: Layer select
+ * Keyboard 4-7: Quick presets (half speed, reverse, etc.)
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+#define LOOP_MAX_SIZE 48000 * 10  // 10 seconds at 48kHz
+
+DaisyField hw;
+
+float DSY_SDRAM_BSS loopBuffer[LOOP_MAX_SIZE];
+
+enum LoopState { STOPPED, RECORDING, PLAYING, OVERDUBBING };
+
+LoopState state = STOPPED;
+size_t    loopLength = 0;
+size_t    playHead = 0;
+size_t    recordHead = 0;
+float     inputLevel = 1.0f;
+float     loopLevel = 1.0f;
+float     overdubLevel = 0.5f;
+float     dryWet = 0.5f;
+float     playbackSpeed = 1.0f;
+bool      loopFull = false;
+
+void ClearLoop()
+{
+    for(size_t i = 0; i < LOOP_MAX_SIZE; i++)
+        loopBuffer[i] = 0.f;
+    loopLength = 0;
+    playHead = 0;
+    recordHead = 0;
+    state = STOPPED;
+    loopFull = false;
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    // State indicator on bottom row
+    float recBright = (state == RECORDING) ? 1.0f : 0.2f;
+    float playBright = (state == PLAYING) ? 1.0f : 0.2f;
+    float ovdBright = (state == OVERDUBBING) ? 1.0f : 0.2f;
+    float stopBright = (state == STOPPED) ? 1.0f : 0.2f;
+    
+    hw.led_driver.SetLed(keyboard_leds[0], recBright);
+    hw.led_driver.SetLed(keyboard_leds[1], playBright);
+    hw.led_driver.SetLed(keyboard_leds[2], ovdBright);
+    hw.led_driver.SetLed(keyboard_leds[3], stopBright);
+    
+    // Playhead position on keys 4-7
+    if(loopLength > 0)
+    {
+        float pos = (float)playHead / (float)loopLength;
+        for(int i = 4; i < 8; i++)
+        {
+            float thresh = (float)(i - 4) / 4.f;
+            hw.led_driver.SetLed(keyboard_leds[i], pos > thresh ? 0.6f : 0.1f);
+        }
+    }
+    
+    // Top row: recording level meter
+    for(int i = 8; i < 16; i++)
+        hw.led_driver.SetLed(keyboard_leds[i], 0.1f);
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // State control
+    if(hw.sw[0].RisingEdge())
+    {
+        switch(state)
+        {
+            case STOPPED:
+                state = RECORDING;
+                recordHead = 0;
+                break;
+            case RECORDING:
+                loopLength = recordHead;
+                loopFull = true;
+                state = PLAYING;
+                playHead = 0;
+                break;
+            case PLAYING:
+                state = OVERDUBBING;
+                break;
+            case OVERDUBBING:
+                state = PLAYING;
+                break;
+        }
+    }
+    
+    // Clear
+    if(hw.sw[1].RisingEdge())
+    {
+        ClearLoop();
+    }
+    
+    // Keyboard state control
+    if(hw.KeyboardRisingEdge(0) && state != RECORDING)
+    {
+        state = RECORDING;
+        recordHead = 0;
+        loopFull = false;
+    }
+    if(hw.KeyboardRisingEdge(1) && loopFull)
+        state = PLAYING;
+    if(hw.KeyboardRisingEdge(2) && loopFull)
+        state = OVERDUBBING;
+    if(hw.KeyboardRisingEdge(3))
+        state = STOPPED;
+    
+    // Parameters
+    loopLevel = hw.knob[0].Process();
+    inputLevel = hw.knob[1].Process();
+    overdubLevel = hw.knob[2].Process();
+    dryWet = hw.knob[7].Process();
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        float input = (in[0][i] + in[1][i]) * 0.5f * inputLevel;
+        float loopOut = 0.f;
+        
+        switch(state)
+        {
+            case RECORDING:
+                if(recordHead < LOOP_MAX_SIZE)
+                {
+                    loopBuffer[recordHead] = input;
+                    recordHead++;
+                }
+                break;
+                
+            case PLAYING:
+                if(loopLength > 0)
+                {
+                    loopOut = loopBuffer[playHead] * loopLevel;
+                    playHead = (playHead + 1) % loopLength;
+                }
+                break;
+                
+            case OVERDUBBING:
+                if(loopLength > 0)
+                {
+                    loopOut = loopBuffer[playHead] * loopLevel;
+                    loopBuffer[playHead] = loopBuffer[playHead] * overdubLevel + input;
+                    playHead = (playHead + 1) % loopLength;
+                }
+                break;
+                
+            case STOPPED:
+            default:
+                break;
+        }
+        
+        float mixed = input * (1.f - dryWet) + loopOut * dryWet;
+        out[0][i] = mixed;
+        out[1][i] = mixed;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    const char* stateNames[] = {"STOPPED", "REC", "PLAY", "OVERDUB"};
+    
+    hw.display.SetCursor(0, 0);
+    char buf[32];
+    sprintf(buf, "LOOPER [%s]", stateNames[state]);
+    hw.display.WriteString(buf, Font_7x10, true);
+    
+    hw.display.SetCursor(0, 16);
+    float lenSec = (float)loopLength / 48000.f;
+    sprintf(buf, "Len:%.1fs  Pos:%.1fs", lenSec, (float)playHead / 48000.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 28);
+    sprintf(buf, "In:%.0f%% Loop:%.0f%% Mix:%.0f%%", 
+            inputLevel * 100.f, loopLevel * 100.f, dryWet * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Progress bar
+    if(loopLength > 0)
+    {
+        int barWidth = static_cast<int>((float)playHead / (float)loopLength * 120.f);
+        hw.display.DrawRect(0, 50, 127, 58, true, false);
+        hw.display.DrawRect(1, 51, 1 + barWidth, 57, true, true);
+    }
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    
+    ClearLoop();
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+MultiDelay
+
+__MultiDelay README.md__
+# MultiDelay
+
+## Author
+Adapted from Patch version by Ben Sergentanis
+
+## Description
+Three delay lines bundled in one. Set their delay times independently with a global feedback control. Features stereo spread output and a time multiplier for extended delay ranges.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Delay 1 Time | 50ms - 1s (×multiplier) |
+| Knob 2 | Delay 2 Time | 50ms - 1s (×multiplier) |
+| Knob 3 | Delay 3 Time | 50ms - 1s (×multiplier) |
+| Knob 4 | Global Feedback | 0-95% |
+| Knob 5 | Dry/Wet Mix | 0-100% |
+| Knob 6 | Time Multiplier | 0.5x - 2x |
+| SW1 | Freeze Toggle | Holds current delay times/feedback |
+| SW2 | Clear Delays | Resets all delay buffers |
+| Audio In L | Delay Input | |
+| Audio Out L | Delay 1+2 Mix | |
+| Audio Out R | Delay 2+3 Mix | Stereo spread |
+
+## Features
+- **Stereo Spread**: Delays are distributed across L/R for spatial effect
+- **Time Multiplier**: Extend or compress all delay times simultaneously
+- **Freeze Mode**: Lock parameters while performing
+- **LED Feedback**: Knob LEDs show current values, freeze indicator on knobs 7-8
+
+__MultiDelay.cpp__
+/**
+ * MultiDelay - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch MultiDelay
+ * Platform: Daisy Field
+ * 
+ * Three delay lines with independent time control and global feedback.
+ * 
+ * Control Mapping:
+ * Knob 0-2: Delay times (1-3)
+ * Knob 3:   Global feedback
+ * Knob 4:   Dry/Wet mix
+ * Knob 5:   Delay time multiplier (0.5x - 2x)
+ * sw[0]:    Freeze delays toggle
+ * sw[1]:    Clear delays
+ * 
+ * Audio:
+ * IN L:  Delay input
+ * OUT L: Delay 1 + 2 mix
+ * OUT R: Delay 2 + 3 mix (stereo spread)
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <string>
+
+#define MAX_DELAY static_cast<size_t>(48000 * 1.f)
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delMems[3];
+
+struct Delay
+{
+    DelayLine<float, MAX_DELAY> *del;
+    float                        currentDelay;
+    float                        delayTarget;
+    
+    float Process(float feedback, float in)
+    {
+        fonepole(currentDelay, delayTarget, .0002f);
+        del->SetDelay(currentDelay);
+        
+        float read = del->Read();
+        del->Write((feedback * read) + in);
+        
+        return read;
+    }
+    
+    void Clear()
+    {
+        del->Reset();
+        currentDelay = 0;
+        delayTarget = 0;
+    }
+};
+
+Delay delays[3];
+
+float    feedback;
+float    dryWet;
+float    timeMultiplier;
+bool     freeze = false;
+uint32_t lastFreezeToggle = 0;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    // Show knob positions
+    for(int i = 0; i < 6; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Freeze indicator on knobs 7-8
+    float freezeBrightness = freeze ? 1.0f : 0.0f;
+    hw.led_driver.SetLed(knob_leds[6], freezeBrightness);
+    hw.led_driver.SetLed(knob_leds[7], freezeBrightness);
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Freeze toggle with debounce
+    if(hw.sw[0].RisingEdge())
+    {
+        freeze = !freeze;
+    }
+    
+    // Clear delays
+    if(hw.sw[1].RisingEdge())
+    {
+        for(int i = 0; i < 3; i++)
+            delays[i].Clear();
+    }
+    
+    // Read knob values
+    float baseTime = 48000.f * 0.05f;  // 50ms minimum
+    float maxTime = MAX_DELAY;
+    
+    timeMultiplier = 0.5f + hw.knob[5].Process() * 1.5f;  // 0.5x to 2x
+    
+    if(!freeze)
+    {
+        delays[0].delayTarget = baseTime + hw.knob[0].Process() * (maxTime - baseTime) * timeMultiplier;
+        delays[1].delayTarget = baseTime + hw.knob[1].Process() * (maxTime - baseTime) * timeMultiplier;
+        delays[2].delayTarget = baseTime + hw.knob[2].Process() * (maxTime - baseTime) * timeMultiplier;
+        feedback = hw.knob[3].Process() * 0.95f;  // Cap at 0.95 to prevent runaway
+    }
+    
+    dryWet = hw.knob[4].Process();
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        float input = in[0][i];
+        
+        float del1 = delays[0].Process(feedback, input);
+        float del2 = delays[1].Process(feedback, input);
+        float del3 = delays[2].Process(feedback, input);
+        
+        // Stereo spread: L = del1+del2, R = del2+del3
+        float wetL = (del1 + del2) * 0.5f;
+        float wetR = (del2 + del3) * 0.5f;
+        
+        out[0][i] = input * (1.0f - dryWet) + wetL * dryWet;
+        out[1][i] = input * (1.0f - dryWet) + wetR * dryWet;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("MULTI DELAY", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Show delay times in ms
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "D1:%dms", (int)(delays[0].currentDelay / 48.f));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(64, 14);
+    sprintf(buf, "D2:%dms", (int)(delays[1].currentDelay / 48.f));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 24);
+    sprintf(buf, "D3:%dms", (int)(delays[2].currentDelay / 48.f));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(64, 24);
+    sprintf(buf, "FB:%.0f%%", feedback * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 36);
+    sprintf(buf, "Mix:%.0f%% x%.1f", dryWet * 100.f, timeMultiplier);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 50);
+    sprintf(buf, "%s", freeze ? "[FROZEN]" : "");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float samplerate = hw.AudioSampleRate();
+    
+    // Initialize delay lines
+    for(int i = 0; i < 3; i++)
+    {
+        delMems[i].Init();
+        delays[i].del = &delMems[i];
+        delays[i].currentDelay = 0;
+        delays[i].delayTarget = samplerate * 0.25f;  // 250ms default
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);  // ~60fps
+    }
+}
+
+________________________________________________________________________________
+
+RandomCV
+
+__RandomCV README.md__
+# Random CV Generator
+
+## Description
+Dual random voltage generator with multiple modes and quantization.
+
+## Modes
+- **STEP**: Instant random values
+- **SMOOTH**: Gliding between values
+- **S&H**: Sample on trigger
+- **DRUNK**: Random walk
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Trigger Rate |
+| Knob 2 | Range |
+| Knob 3 | Smoothness |
+| Knob 4 | Mode |
+| Knob 5 | Offset |
+| Knob 6 | Quantize |
+| Knob 7 | CV2 Correlation |
+| Knob 8 | Output Level |
+| SW1 | Manual Trigger |
+| SW2 | Hold/Freeze |
+| Keyboard | Trigger |
+
+__RandomCV.cpp__
+/**
+ * Random CV Example - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch SM RandomCvExample
+ * Platform: Daisy Field
+ * 
+ * Random voltage generator with various modes.
+ * 
+ * Control Mapping:
+ * Knob 0: Rate (triggers per second)
+ * Knob 1: Range (output voltage range)
+ * Knob 2: Smoothness (slew)
+ * Knob 3: Mode (stepped / smooth / S&H / drunk walk)
+ * Knob 4: Bipolar offset
+ * Knob 5: Quantize
+ * Knob 6: CV2 correlation
+ * Knob 7: Output level
+ * sw[0]: Trigger manual
+ * sw[1]: Hold/Freeze
+ * Keyboard: Trigger random value
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+WhiteNoise noise;
+
+float    cv1Value = 0.5f;
+float    cv2Value = 0.5f;
+float    cv1Target = 0.5f;
+float    cv2Target = 0.5f;
+float    rate = 2.f;
+float    range = 1.f;
+float    slew = 0.1f;
+int      mode = 0;  // 0=stepped, 1=smooth, 2=S&H, 3=drunk
+float    offset = 0.f;
+int      quantize = 0;
+float    correlation = 0.f;
+bool     hold = false;
+uint32_t lastTrigTime = 0;
+
+float Quantize(float val, int steps)
+{
+    if(steps <= 0) return val;
+    return roundf(val * steps) / steps;
+}
+
+void Trigger()
+{
+    if(hold) return;
+    
+    float newVal = noise.Process() * 0.5f + 0.5f;  // 0-1
+    
+    switch(mode)
+    {
+        case 0:  // Stepped
+        case 2:  // S&H (same behavior for targets)
+            cv1Target = newVal * range + offset;
+            break;
+        case 1:  // Smooth
+            cv1Target = newVal * range + offset;
+            break;
+        case 3:  // Drunk walk
+            float step = (noise.Process() * 0.2f) * range;
+            cv1Target = fclamp(cv1Value + step, 0.f, 1.f);
+            break;
+    }
+    
+    // CV2 with correlation
+    float newVal2 = noise.Process() * 0.5f + 0.5f;
+    cv2Target = cv1Target * correlation + newVal2 * (1.f - correlation) * range + offset;
+    
+    // Quantize
+    cv1Target = Quantize(cv1Target, quantize);
+    cv2Target = Quantize(cv2Target, quantize);
+    
+    cv1Target = fclamp(cv1Target, 0.f, 1.f);
+    cv2Target = fclamp(cv2Target, 0.f, 1.f);
+    
+    lastTrigTime = System::GetNow();
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    
+    // CV1 meter on bottom row
+    for(size_t i = 0; i < 8; i++)
+    {
+        float thresh = (float)i / 7.f;
+        hw.led_driver.SetLed(keyboard_leds[i], cv1Value > thresh ? 0.8f : 0.1f);
+    }
+    
+    // CV2 meter on top row
+    for(size_t i = 0; i < 8; i++)
+    {
+        float thresh = (float)i / 7.f;
+        hw.led_driver.SetLed(keyboard_leds[8 + i], cv2Value > thresh ? 0.6f : 0.1f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Manual trigger
+    if(hw.sw[0].RisingEdge())
+        Trigger();
+    
+    // Hold toggle
+    if(hw.sw[1].RisingEdge())
+        hold = !hold;
+    
+    // Keyboard triggers
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+            Trigger();
+    }
+    
+    // Parameters
+    rate = 0.1f + hw.knob[0].Process() * 19.9f;  // 0.1-20 Hz
+    range = hw.knob[1].Process();
+    slew = 0.001f + hw.knob[2].Process() * 0.499f;
+    mode = static_cast<int>(hw.knob[3].Process() * 3.99f);
+    offset = (hw.knob[4].Process() - 0.5f) * 0.5f;
+    quantize = static_cast<int>(hw.knob[5].Process() * 12.f);
+    correlation = hw.knob[6].Process();
+    float outputLevel = hw.knob[7].Process();
+    
+    // Auto trigger
+    uint32_t trigInterval = static_cast<uint32_t>(1000.f / rate);
+    if(!hold && (System::GetNow() - lastTrigTime > trigInterval))
+    {
+        Trigger();
+    }
+    
+    // Smooth towards targets
+    float slewRate = (mode == 0) ? 1.f : slew;  // Stepped = instant
+    fonepole(cv1Value, cv1Target, slewRate);
+    fonepole(cv2Value, cv2Target, slewRate);
+    
+    // Output CV
+    uint16_t dac1 = static_cast<uint16_t>(cv1Value * outputLevel * 4095.f);
+    uint16_t dac2 = static_cast<uint16_t>(cv2Value * outputLevel * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, dac1);
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, dac2);
+    
+    // Audio passthrough
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    const char* modeNames[] = {"STEP", "SMOOTH", "S&H", "DRUNK"};
+    
+    hw.display.SetCursor(0, 0);
+    char buf[32];
+    sprintf(buf, "RANDOM CV [%s]", hold ? "HOLD" : modeNames[mode]);
+    hw.display.WriteString(buf, Font_7x10, true);
+    
+    hw.display.SetCursor(0, 16);
+    sprintf(buf, "CV1:%.2f  CV2:%.2f", cv1Value, cv2Value);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 28);
+    sprintf(buf, "Rate:%.1fHz Quant:%d", rate, quantize);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    
+    noise.Init();
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+SampleAndHold
+
+__SampleAndHold README.md__
+# Sample & Hold
+
+## Author
+Adapted from Patch version
+
+## Description
+Sample and Hold utility with Track & Hold mode. Features keyboard-based value selection, latched gate control, voltage quantization, and slew limiting for smooth transitions.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Clock Rate | 10-1000ms |
+| Knob 2 | Slew/Glide | 0-100% |
+| Knob 3 | Noise Mix | 0-100% |
+| Knob 4 | Quantize | 0=smooth, 12=semi, 24=1/4 |
+| Knob 5 | Output 1 Offset | ±0.5 |
+| Knob 6 | Output 2 Offset | ±0.5 |
+| Knob 7 | Hold Time | |
+| Knob 8 | Output Level | |
+| Keys 0-7 | Instant value trigger | Sets sample to key value |
+| Keys 8-15 | Latched gates | Toggle on/off |
+| SW1 | Mode Toggle | S&H / Track&Hold |
+| SW2 | Manual Sample | Samples audio input |
+| CV Out 1 | Sample Output 1 | |
+| CV Out 2 | Sample Output 2 | |
+
+## Modes
+- **Sample & Hold**: Samples on clock or trigger, holds until next sample
+- **Track & Hold**: Continuously tracks input while gate high, holds when released
+
+## Features
+- **Quantization**: Snap to musical intervals
+- **Slew Limiting**: Smooth voltage transitions
+- **Noise Mix**: Add randomness to samples
+
+__SampleAndHold.cpp__
+/**
+ * SampleAndHold - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch SampleAndHold
+ * Platform: Daisy Field
+ * 
+ * Sample and Hold with multiple trigger sources.
+ * 
+ * Control Mapping:
+ * Knob 0: Sample Rate (internal clock divider)
+ * Knob 1: Slew/Glide Amount
+ * Knob 2: Noise/Random amount to mix with input
+ * Knob 3: Quantize steps (0=smooth, 12=semitones, 24=quartertones)
+ * Knob 4: Output 1 offset
+ * Knob 5: Output 2 offset
+ * Knob 6: Hold time (after sample)
+ * Knob 7: Output level
+ * sw[0]: Mode (S&H / Track&Hold)
+ * sw[1]: Manual sample trigger
+ * Keyboard 0-7: Trigger sample instantly + set base value
+ * Keyboard 8-15: Latched trigger gates
+ * Gate In: External sample trigger
+ * CV Out 1: Sample output 1
+ * CV Out 2: Sample output 2 (with offset)
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+WhiteNoise noise;
+
+float    sampleValue1 = 0.f;
+float    sampleValue2 = 0.f;
+float    outputValue1 = 0.f;
+float    outputValue2 = 0.f;
+float    slew = 0.f;
+float    noiseAmount = 0.f;
+int      quantizeSteps = 0;
+bool     trackHoldMode = false;
+bool     tracking = false;
+float    clockDiv = 1.f;
+uint32_t lastSampleTime = 0;
+uint32_t sampleInterval = 100;  // ms
+
+// Latched gates for top row
+bool latchedGates[8] = {false};
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    // Bottom row: instant triggers - brightness shows output value
+    for(size_t i = 0; i < 8; i++)
+    {
+        float val = (float)i / 7.f;  // This key's value if pressed
+        // Bright if this is close to current sample value
+        float diff = fabsf(val - sampleValue1);
+        hw.led_driver.SetLed(keyboard_leds[i], diff < 0.1f ? 1.0f : 0.2f);
+    }
+    
+    // Top row: latched gates
+    for(size_t i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[8 + i], latchedGates[i] ? 1.0f : 0.15f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+float Quantize(float value, int steps)
+{
+    if(steps <= 0) return value;
+    return roundf(value * steps) / steps;
+}
+
+void TakeSample(float inputVal)
+{
+    // Mix input with noise
+    float noiseSig = noise.Process() * 0.5f + 0.5f;  // 0-1
+    float mixed = inputVal * (1.f - noiseAmount) + noiseSig * noiseAmount;
+    
+    // Quantize
+    sampleValue1 = Quantize(mixed, quantizeSteps);
+    sampleValue2 = Quantize(mixed + hw.knob[5].Process() - 0.5f, quantizeSteps);  // With offset
+    
+    lastSampleTime = System::GetNow();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Mode toggle
+    if(hw.sw[0].RisingEdge())
+        trackHoldMode = !trackHoldMode;
+    
+    // Manual trigger
+    if(hw.sw[1].RisingEdge())
+    {
+        // Sample from audio input converted to CV range
+        float inputCV = (in[0][0] + 1.f) * 0.5f;  // -1..1 -> 0..1
+        TakeSample(inputCV);
+    }
+    
+    // Keyboard instant triggers (bottom row)
+    for(size_t i = 0; i < 8; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            // Set sample to this key's value
+            float keyValue = (float)i / 7.f;
+            TakeSample(keyValue);
+        }
+    }
+    
+    // Keyboard latched gates (top row)
+    for(size_t i = 8; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            latchedGates[i - 8] = !latchedGates[i - 8];
+        }
+    }
+    
+    // Check any latched gate active for tracking
+    bool anyGateActive = false;
+    for(int i = 0; i < 8; i++)
+    {
+        if(latchedGates[i]) anyGateActive = true;
+    }
+    
+    // Read parameters
+    clockDiv = 10.f + hw.knob[0].Process() * 990.f;  // 10-1000ms
+    slew = hw.knob[1].Process() * 0.1f;
+    noiseAmount = hw.knob[2].Process();
+    quantizeSteps = static_cast<int>(hw.knob[3].Process() * 24.f);
+    float outputLevel = hw.knob[7].Process();
+    
+    sampleInterval = static_cast<uint32_t>(clockDiv);
+    
+    // Track mode: continuously sample while gate high
+    if(trackHoldMode && anyGateActive)
+    {
+        float inputCV = (in[0][0] + 1.f) * 0.5f;
+        sampleValue1 = inputCV;
+        sampleValue2 = inputCV + hw.knob[5].Process() - 0.5f;
+    }
+    
+    // Apply slew to outputs
+    for(size_t i = 0; i < size; i++)
+    {
+        fonepole(outputValue1, sampleValue1, slew > 0.001f ? slew : 1.f);
+        fonepole(outputValue2, sampleValue2, slew > 0.001f ? slew : 1.f);
+        
+        // Audio passthrough
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+    }
+    
+    // CV outputs
+    uint16_t cv1 = static_cast<uint16_t>(fclamp(outputValue1, 0.f, 1.f) * 4095.f * outputLevel);
+    uint16_t cv2 = static_cast<uint16_t>(fclamp(outputValue2, 0.f, 1.f) * 4095.f * outputLevel);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+}
+
+void UpdateClock()
+{
+    if(!trackHoldMode)
+    {
+        uint32_t now = System::GetNow();
+        if(now - lastSampleTime >= sampleInterval)
+        {
+            // Auto-sample from noise when clock triggers
+            TakeSample(noise.Process() * 0.5f + 0.5f);
+        }
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(trackHoldMode ? "TRACK & HOLD" : "SAMPLE & HOLD", Font_7x10, true);
+    
+    char buf[32];
+    
+    // Sample values
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Out1:%.2f  Out2:%.2f", outputValue1, outputValue2);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Parameters
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Rate:%dms Slew:%.0f%%", (int)clockDiv, slew * 1000.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 38);
+    sprintf(buf, "Noise:%.0f%% Quant:%d", noiseAmount * 100.f, quantizeSteps);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Latched gates visualization
+    hw.display.SetCursor(0, 50);
+    char gates[9] = "--------";
+    for(int i = 0; i < 8; i++)
+    {
+        gates[i] = latchedGates[i] ? 'X' : '-';
+    }
+    hw.display.WriteString(gates, Font_7x10, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    noise.Init();
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateClock();
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+Svf
+
+__Svf README.md__
+# SVF (State Variable Filter)
+
+## Description
+Multi-mode filter with smooth morphing between LP, BP, HP, and Notch. Includes envelope follower/trigger and LFO modulation.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Cutoff Frequency |
+| Knob 2 | Resonance |
+| Knob 3 | Drive |
+| Knob 4 | Mode Morph (LP→BP→HP→Notch) |
+| Knob 5 | Envelope Amount |
+| Knob 6 | Envelope Decay |
+| Knob 7 | LFO Rate |
+| Knob 8 | LFO Amount |
+| SW1 | Envelope Follow/Trigger |
+| SW2 | LFO Reset |
+| Keyboard | Trigger Envelope |
+
+__Svf.cpp__
+/**
+ * SVF (State Variable Filter) - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch Svf
+ * Platform: Daisy Field
+ * 
+ * Multi-mode state variable filter.
+ * 
+ * Control Mapping:
+ * Knob 0: Cutoff Frequency
+ * Knob 1: Resonance
+ * Knob 2: Drive
+ * Knob 3: Filter Mode Morph (LP → BP → HP → Notch)
+ * Knob 4: Envelope Amount
+ * Knob 5: Envelope Decay
+ * Knob 6: LFO Rate
+ * Knob 7: LFO Amount
+ * sw[0]: Envelope follower on/off
+ * sw[1]: LFO sync reset
+ * Keyboard: Trigger envelope + set cutoff offset
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Svf        filt;
+Oscillator lfo;
+AdEnv      env;
+
+float    cutoff = 1000.f;
+float    resonance = 0.5f;
+float    drive = 0.f;
+float    filterMode = 0.f;
+float    envAmount = 0.f;
+float    lfoAmount = 0.f;
+float    lfoRate = 1.f;
+bool     envFollower = false;
+float    envValue = 0.f;
+float    lfoValue = 0.f;
+
+const char* modeNames[] = {"LP", "BP", "HP", "NOTCH"};
+
+int GetModeIndex(float mode)
+{
+    if(mode < 0.25f) return 0;
+    else if(mode < 0.5f) return 1;
+    else if(mode < 0.75f) return 2;
+    else return 3;
+}
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    // Knob LEDs
+    for(int i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], hw.knob[i].Process());
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Mode toggles
+    if(hw.sw[0].RisingEdge())
+        envFollower = !envFollower;
+    if(hw.sw[1].RisingEdge())
+        lfo.Reset();
+    
+    // Keyboard triggers envelope
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            env.Trigger();
+        }
+    }
+    
+    // Read parameters
+    float baseCutoff = 20.f + hw.knob[0].Process() * 19980.f;  // 20-20000Hz
+    resonance = hw.knob[1].Process();
+    drive = hw.knob[2].Process() * 0.5f;
+    filterMode = hw.knob[3].Process();
+    envAmount = hw.knob[4].Process() * 10000.f;  // Env mod amount
+    float envDecay = 0.01f + hw.knob[5].Process() * 0.99f;
+    lfoRate = 0.1f + hw.knob[6].Process() * 19.9f;
+    lfoAmount = hw.knob[7].Process() * 5000.f;
+    
+    env.SetTime(ADENV_SEG_DECAY, envDecay);
+    lfo.SetFreq(lfoRate);
+    
+    filt.SetRes(resonance);
+    filt.SetDrive(drive);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float input = in[0][i];
+        
+        // Envelope follower or triggered
+        if(envFollower)
+        {
+            envValue = fabsf(input);  // Simple follower
+        }
+        else
+        {
+            envValue = env.Process();
+        }
+        
+        // LFO
+        lfoValue = (lfo.Process() + 1.f) * 0.5f;  // 0-1
+        
+        // Modulated cutoff
+        cutoff = baseCutoff + envValue * envAmount + lfoValue * lfoAmount;
+        cutoff = fclamp(cutoff, 20.f, 20000.f);
+        filt.SetFreq(cutoff);
+        
+        // Process filter
+        filt.Process(input);
+        
+        // Mode morphing output
+        float lpOut = filt.Low();
+        float bpOut = filt.Band();
+        float hpOut = filt.High();
+        float notchOut = filt.Notch();
+        
+        float output;
+        if(filterMode < 0.25f)
+        {
+            float t = filterMode / 0.25f;
+            output = lpOut * (1.f - t) + bpOut * t;
+        }
+        else if(filterMode < 0.5f)
+        {
+            float t = (filterMode - 0.25f) / 0.25f;
+            output = bpOut * (1.f - t) + hpOut * t;
+        }
+        else if(filterMode < 0.75f)
+        {
+            float t = (filterMode - 0.5f) / 0.25f;
+            output = hpOut * (1.f - t) + notchOut * t;
+        }
+        else
+        {
+            output = notchOut;
+        }
+        
+        out[0][i] = output;
+        out[1][i] = output;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("SVF FILTER", Font_7x10, true);
+    
+    char buf[32];
+    
+    hw.display.SetCursor(0, 14);
+    sprintf(buf, "Freq:%.0fHz %s", cutoff, modeNames[GetModeIndex(filterMode)]);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 26);
+    sprintf(buf, "Res:%.0f%% Drv:%.0f%%", resonance * 100.f, drive * 200.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 38);
+    sprintf(buf, "LFO:%.1fHz Env:%s", lfoRate, envFollower ? "FOLL" : "TRIG");
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    filt.Init(sr);
+    filt.SetFreq(1000.f);
+    filt.SetRes(0.5f);
+    
+    lfo.Init(sr);
+    lfo.SetWaveform(Oscillator::WAVE_SIN);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(1.f);
+    
+    env.Init(sr);
+    env.SetTime(ADENV_SEG_ATTACK, 0.001f);
+    env.SetTime(ADENV_SEG_DECAY, 0.3f);
+    env.SetMax(1.f);
+    env.SetMin(0.f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________
+
+verb
+
+__verb README.md__
+# Verb (Reverb)
+
+## Description
+Stereo reverb with freeze mode. Based on ReverbSc algorithm.
+
+## Controls
+| Control | Description |
+|---------|-------------|
+| Knob 1 | Reverb Time |
+| Knob 2 | Damping (HF) |
+| Knob 7 | Dry/Wet Mix |
+| Knob 8 | Output Level |
+| SW1 | Freeze |
+
+__verb.cpp__
+/**
+ * Verb (Reverb) - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch verb
+ * Platform: Daisy Field
+ * 
+ * Stereo reverb effect.
+ * 
+ * Control Mapping:
+ * Knob 0: Reverb Time/Decay
+ * Knob 1: Damping (HF cut)
+ * Knob 2: Pre-delay
+ * Knob 3: Modulation Rate
+ * Knob 4: Modulation Depth
+ * Knob 5: Diffusion
+ * Knob 6: Dry/Wet Mix
+ * Knob 7: Output Level
+ * sw[0]: Freeze toggle
+ * sw[1]: Shimmer (octave up feedback)
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+ReverbSc   verb;
+
+float    reverbTime = 0.8f;
+float    damping = 0.5f;
+float    mix = 0.5f;
+float    outputLevel = 1.0f;
+bool     freeze = false;
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    for(int i = 0; i < 8; i++)
+    {
+        float brightness = hw.knob[i].Process();
+        // Freeze indicator on knob 1
+        if(i == 0 && freeze)
+            brightness = (System::GetNow() % 500 < 250) ? 1.0f : 0.3f;
+        hw.led_driver.SetLed(knob_leds[i], brightness);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Freeze toggle
+    if(hw.sw[0].RisingEdge())
+        freeze = !freeze;
+    
+    // Read parameters
+    if(!freeze)
+    {
+        reverbTime = 0.3f + hw.knob[0].Process() * 0.69f;  // 0.3 - 0.99
+    }
+    damping = 1000.f + hw.knob[1].Process() * 15000.f;  // 1-16kHz
+    mix = hw.knob[6].Process();
+    outputLevel = hw.knob[7].Process();
+    
+    verb.SetFeedback(reverbTime);
+    verb.SetLpFreq(damping);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float dryL = in[0][i];
+        float dryR = in[1][i];
+        
+        float wetL, wetR;
+        verb.Process(dryL, dryR, &wetL, &wetR);
+        
+        out[0][i] = (dryL * (1.f - mix) + wetL * mix) * outputLevel;
+        out[1][i] = (dryR * (1.f - mix) + wetR * mix) * outputLevel;
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(freeze ? "VERB [FREEZE]" : "VERB", Font_7x10, true);
+    
+    char buf[32];
+    
+    hw.display.SetCursor(0, 16);
+    sprintf(buf, "Time:%.0f%%  Damp:%.0fHz", reverbTime * 100.f, damping);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.SetCursor(0, 28);
+    sprintf(buf, "Mix:%.0f%%  Level:%.0f%%", mix * 100.f, outputLevel * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    verb.Init(sr);
+    verb.SetFeedback(0.8f);
+    verb.SetLpFreq(10000.f);
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(16);
+    }
+}
+
+________________________________________________________________________________

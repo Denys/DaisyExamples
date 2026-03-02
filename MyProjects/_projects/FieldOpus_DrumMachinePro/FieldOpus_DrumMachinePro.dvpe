@@ -1,0 +1,470 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "FieldOpus DrumMachinePro",
+      "author": "DVPE Port from FieldOpus_DrumMachinePro",
+      "description": "6-voice, 16-step drum machine with 8 pattern slots. 6 drum voices: Kick, Snare, Closed HiHat, Open HiHat, Tom, Clap. Controls: Keys A1-A8 (steps 1-8), Keys B1-B8 (steps 9-16), SW1 (cycle voice), SW2 (play/stop), Knob1-8 (decay, tune, volume, tempo, swing)",
+      "created": "2026-02-24T15:00:00Z",
+      "modified": "2026-02-24T15:00:00Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "block-knob-1",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 50 },
+        "parameterValues": { "channel": "0", "min": 0.1, "max": 1.0, "curve": "linear" },
+        "label": "K1 - Kick Decay"
+      },
+      {
+        "id": "block-knob-2",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 120 },
+        "parameterValues": { "channel": "1", "min": 0.1, "max": 1.0, "curve": "linear" },
+        "label": "K2 - Snare Decay"
+      },
+      {
+        "id": "block-knob-3",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 190 },
+        "parameterValues": { "channel": "2", "min": 0.05, "max": 0.55, "curve": "linear" },
+        "label": "K3 - HiHat Decay"
+      },
+      {
+        "id": "block-knob-4",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 260 },
+        "parameterValues": { "channel": "3", "min": 80.0, "max": 300.0, "curve": "linear" },
+        "label": "K4 - Tom Tune"
+      },
+      {
+        "id": "block-knob-5",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 330 },
+        "parameterValues": { "channel": "4", "min": 0.1, "max": 1.0, "curve": "linear" },
+        "label": "K5 - Clap Decay"
+      },
+      {
+        "id": "block-knob-6",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 400 },
+        "parameterValues": { "channel": "5", "min": 0.0, "max": 1.0, "curve": "linear" },
+        "label": "K6 - Master Vol"
+      },
+      {
+        "id": "block-knob-7",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 470 },
+        "parameterValues": { "channel": "6", "min": 40.0, "max": 240.0, "curve": "linear" },
+        "label": "K7 - Tempo"
+      },
+      {
+        "id": "block-knob-8",
+        "definitionId": "knob",
+        "position": { "x": 50, "y": 540 },
+        "parameterValues": { "channel": "7", "min": 0.0, "max": 0.5, "curve": "linear" },
+        "label": "K8 - Swing"
+      },
+      {
+        "id": "block-switch-1",
+        "definitionId": "button",
+        "position": { "x": 200, "y": 50 },
+        "parameterValues": { "pin": "SW_1" },
+        "label": "SW1 - Voice Cycle"
+      },
+      {
+        "id": "block-switch-2",
+        "definitionId": "button",
+        "position": { "x": 200, "y": 120 },
+        "parameterValues": { "pin": "SW_2" },
+        "label": "SW2 - Play/Stop"
+      },
+      {
+        "id": "block-keyboard",
+        "definitionId": "keyboard_input",
+        "position": { "x": 200, "y": 200 },
+        "parameterValues": {},
+        "label": "Keyboard (16 keys)"
+      },
+      {
+        "id": "block-metro",
+        "definitionId": "metro",
+        "position": { "x": 350, "y": 50 },
+        "parameterValues": { "freq": 2.0 },
+        "label": "Tempo Clock"
+      },
+      {
+        "id": "block-step-seq",
+        "definitionId": "step_sequencer",
+        "position": { "x": 500, "y": 50 },
+        "parameterValues": { "steps": "16", "tempo": 120.0, "swing": 0.0 },
+        "label": "16-Step Sequencer"
+      },
+      {
+        "id": "block-kick",
+        "definitionId": "analog_bass_drum",
+        "position": { "x": 650, "y": 50 },
+        "parameterValues": { "freq": 52.0, "tone": 0.5, "decay": 0.55, "accent": 0.8 },
+        "enabledCvPorts": ["decay", "accent"],
+        "label": "Kick"
+      },
+      {
+        "id": "block-snare",
+        "definitionId": "analog_snare_drum",
+        "position": { "x": 650, "y": 150 },
+        "parameterValues": { "freq": 185.0, "tone": 0.55, "decay": 0.45, "snappy": 0.6, "accent": 0.75 },
+        "enabledCvPorts": ["decay", "snappy", "accent"],
+        "label": "Snare"
+      },
+      {
+        "id": "block-chat",
+        "definitionId": "hihat",
+        "position": { "x": 650, "y": 250 },
+        "parameterValues": { "freq": 4000.0, "tone": 0.6, "decay": 0.2, "accent": 0.7 },
+        "enabledCvPorts": ["decay", "accent"],
+        "label": "Closed HiHat"
+      },
+      {
+        "id": "block-ohat",
+        "definitionId": "hihat",
+        "position": { "x": 650, "y": 350 },
+        "parameterValues": { "freq": 4000.0, "tone": 0.6, "decay": 0.5, "accent": 0.7 },
+        "enabledCvPorts": ["decay", "accent"],
+        "label": "Open HiHat"
+      },
+      {
+        "id": "block-tom",
+        "definitionId": "analog_bass_drum",
+        "position": { "x": 650, "y": 450 },
+        "parameterValues": { "freq": 200.0, "tone": 0.65, "decay": 0.4, "accent": 0.8 },
+        "enabledCvPorts": ["freq", "decay", "accent"],
+        "label": "Tom"
+      },
+      {
+        "id": "block-clap",
+        "definitionId": "synthetic_snare_drum",
+        "position": { "x": 650, "y": 550 },
+        "parameterValues": { "freq": 800.0, "decay": 0.3, "snappy": 0.85, "accent": 0.7 },
+        "enabledCvPorts": ["decay", "snappy", "accent"],
+        "label": "Clap"
+      },
+      {
+        "id": "block-mixer",
+        "definitionId": "mixer",
+        "position": { "x": 850, "y": 300 },
+        "parameterValues": { "inputCount": "6", "level_1": 0.45, "level_2": 0.38, "level_3": 0.18, "level_4": 0.18, "level_5": 0.35, "level_6": 0.25 },
+        "label": "Voice Mixer"
+      },
+      {
+        "id": "block-master-vol",
+        "definitionId": "vca",
+        "position": { "x": 1000, "y": 300 },
+        "parameterValues": { "gain": 0.8 },
+        "label": "Master Volume"
+      },
+      {
+        "id": "block-softsat",
+        "definitionId": "waveshaper",
+        "position": { "x": 1150, "y": 300 },
+        "parameterValues": { "drive": 1.0 },
+        "label": "Soft Saturation"
+      },
+      {
+        "id": "block-audio-out",
+        "definitionId": "audio_output",
+        "position": { "x": 1300, "y": 300 },
+        "parameterValues": {},
+        "label": "Audio Out L/R"
+      },
+      {
+        "id": "block-led-keys",
+        "definitionId": "led_array",
+        "position": { "x": 850, "y": 50 },
+        "parameterValues": { "count": 16 },
+        "label": "Key LEDs"
+      },
+      {
+        "id": "block-led-knobs",
+        "definitionId": "led_array",
+        "position": { "x": 850, "y": 150 },
+        "parameterValues": { "count": 8 },
+        "label": "Knob LEDs"
+      },
+      {
+        "id": "block-led-sw1",
+        "definitionId": "led_output",
+        "position": { "x": 1000, "y": 50 },
+        "parameterValues": { "pin": "LED_SW_1" },
+        "label": "SW1 LED"
+      },
+      {
+        "id": "block-led-sw2",
+        "definitionId": "led_output",
+        "position": { "x": 1000, "y": 120 },
+        "parameterValues": { "pin": "LED_SW_2" },
+        "label": "SW2 LED"
+      },
+      {
+        "id": "block-oled",
+        "definitionId": "oled_display",
+        "position": { "x": 1150, "y": 50 },
+        "parameterValues": { "width": 128, "height": 64 },
+        "label": "OLED Display"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-knob1-kick",
+        "sourceBlockId": "block-knob-1",
+        "sourcePortId": "out",
+        "targetBlockId": "block-kick",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob2-snare",
+        "sourceBlockId": "block-knob-2",
+        "sourcePortId": "out",
+        "targetBlockId": "block-snare",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob3-chat",
+        "sourceBlockId": "block-knob-3",
+        "sourcePortId": "out",
+        "targetBlockId": "block-chat",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob3-ohat",
+        "sourceBlockId": "block-knob-3",
+        "sourcePortId": "out",
+        "targetBlockId": "block-ohat",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob4-tom",
+        "sourceBlockId": "block-knob-4",
+        "sourcePortId": "out",
+        "targetBlockId": "block-tom",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob5-clap",
+        "sourceBlockId": "block-knob-5",
+        "sourcePortId": "out",
+        "targetBlockId": "block-clap",
+        "targetPortId": "decay_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob7-metro",
+        "sourceBlockId": "block-knob-7",
+        "sourcePortId": "out",
+        "targetBlockId": "block-metro",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob8-seq",
+        "sourceBlockId": "block-knob-8",
+        "sourcePortId": "out",
+        "targetBlockId": "block-step-seq",
+        "targetPortId": "swing_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob6-master",
+        "sourceBlockId": "block-knob-6",
+        "sourcePortId": "out",
+        "targetBlockId": "block-master-vol",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-metro-seq",
+        "sourceBlockId": "block-metro",
+        "sourcePortId": "out",
+        "targetBlockId": "block-step-seq",
+        "targetPortId": "clk",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-kick",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_1",
+        "targetBlockId": "block-kick",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-snare",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_2",
+        "targetBlockId": "block-snare",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-chat",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_3",
+        "targetBlockId": "block-chat",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-ohat",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_4",
+        "targetBlockId": "block-ohat",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-tom",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_5",
+        "targetBlockId": "block-tom",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-seq-clap",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "trig_6",
+        "targetBlockId": "block-clap",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-kick-mixer",
+        "sourceBlockId": "block-kick",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-snare-mixer",
+        "sourceBlockId": "block-snare",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-chat-mixer",
+        "sourceBlockId": "block-chat",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_3",
+        "type": "audio"
+      },
+      {
+        "id": "conn-ohat-mixer",
+        "sourceBlockId": "block-ohat",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_4",
+        "type": "audio"
+      },
+      {
+        "id": "conn-tom-mixer",
+        "sourceBlockId": "block-tom",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_5",
+        "type": "audio"
+      },
+      {
+        "id": "conn-clap-mixer",
+        "sourceBlockId": "block-clap",
+        "sourcePortId": "out",
+        "targetBlockId": "block-mixer",
+        "targetPortId": "in_6",
+        "type": "audio"
+      },
+      {
+        "id": "conn-mixer-master",
+        "sourceBlockId": "block-mixer",
+        "sourcePortId": "out",
+        "targetBlockId": "block-master-vol",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-master-softsat",
+        "sourceBlockId": "block-master-vol",
+        "sourcePortId": "out",
+        "targetBlockId": "block-softsat",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-softsat-out-left",
+        "sourceBlockId": "block-softsat",
+        "sourcePortId": "out",
+        "targetBlockId": "block-audio-out",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "conn-softsat-out-right",
+        "sourceBlockId": "block-softsat",
+        "sourcePortId": "out",
+        "targetBlockId": "block-audio-out",
+        "targetPortId": "right",
+        "type": "audio"
+      },
+      {
+        "id": "conn-seq-led-keys",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "playhead",
+        "targetBlockId": "block-led-keys",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-knob-leds",
+        "sourceBlockId": "block-knob-1",
+        "sourcePortId": "out",
+        "targetBlockId": "block-led-knobs",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-sw1-led",
+        "sourceBlockId": "block-switch-1",
+        "sourcePortId": "press",
+        "targetBlockId": "block-led-sw1",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-sw2-led",
+        "sourceBlockId": "block-switch-2",
+        "sourcePortId": "press",
+        "targetBlockId": "block-led-sw2",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-seq-oled",
+        "sourceBlockId": "block-step-seq",
+        "sourcePortId": "playhead",
+        "targetBlockId": "block-oled",
+        "targetPortId": "data",
+        "type": "cv"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2056 @@
+
+
+/*      claude 4, field step sequencer      */
+/*      compilable                          */
+/*  Gate in to start/stop sequencer         */
+/*  Gate out sends ctrl signal to gate in   */
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Oscillator osc;
+AdEnv env;
+Metro clock;
+
+// Sequencer parameters
+const int NUM_STEPS = 16;
+bool sequence[NUM_STEPS] = {false}; // Step activation states
+int current_step = 0;
+bool playing = false;
+float tempo = 120.0f; // BPM
+
+// Audio parameters
+float note_freq = 440.0f;
+float env_time = 0.1f;
+
+// Gate output parameters
+bool gate_out_state = false;
+float gate_length = 0.1f; // Gate length in seconds
+uint32_t gate_timer = 0;
+uint32_t gate_length_samples = 0;
+
+// LED key mapping for A1-A8 and B1-B8
+const int led_keys[NUM_STEPS] = {
+    DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2, DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+    DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6, DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+    DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2, DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+    DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6, DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8
+};
+
+void UpdateControls();
+void UpdateSequencer();
+void UpdateLEDs();
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size);
+
+int main(void)
+{
+    // Initialize hardware
+    hw.Init();
+    
+    // Initialize oscillator
+    osc.Init(hw.AudioSampleRate());
+    osc.SetWaveform(Oscillator::WAVE_SQUARE);
+    osc.SetFreq(note_freq);
+    osc.SetAmp(0.5f);
+    
+    // Initialize envelope
+    env.Init(hw.AudioSampleRate());
+    env.SetTime(ADENV_SEG_ATTACK, 0.01f);
+    env.SetTime(ADENV_SEG_DECAY, env_time);
+    env.SetMax(1.0f);
+    env.SetMin(0.0f);
+    env.SetCurve(0.0f);
+    
+    // Initialize clock/metro
+    clock.Init(tempo / 60.0f * 4.0f, hw.AudioSampleRate()); // 16th notes
+    
+    // Initialize gate output parameters
+    gate_length_samples = (uint32_t)(gate_length * hw.AudioSampleRate());
+    
+    // Start audio callback
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateControls();
+        UpdateSequencer();
+        UpdateLEDs();
+        System::Delay(1); // Small delay to prevent excessive CPU usage
+    }
+}
+
+void UpdateControls()
+{
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+    
+    // Check for step key presses (toggle step on/off)
+    for(int i = 0; i < NUM_STEPS; i++)
+    {
+        if(hw.KeyboardRisingEdge(led_keys[i]))
+        {
+            sequence[i] = !sequence[i]; // Toggle step
+        }
+    }
+    
+    // Play/Stop control using GATE_IN
+    if(hw.gate_in.Trig())
+    {
+        playing = !playing;
+        if(playing)
+        {
+            current_step = 0; // Reset to first step when starting
+        }
+    }
+    
+    // Tempo control using CV_1 (knob)
+    float tempo_cv = hw.GetKnobValue(DaisyField::KNOB_1);
+    tempo = 60.0f + (tempo_cv * 180.0f); // 60-240 BPM range
+    clock.SetFreq(tempo / 60.0f * 4.0f); // Update clock frequency
+    
+    // Note frequency control using CV_2 (knob)
+    float freq_cv = hw.GetKnobValue(DaisyField::KNOB_2);
+    note_freq = 110.0f + (freq_cv * 770.0f); // ~110Hz to 880Hz range
+    osc.SetFreq(note_freq);
+    
+    // Envelope time control using CV_3 (knob)
+    float env_cv = hw.GetKnobValue(DaisyField::KNOB_3);
+    env_time = 0.05f + (env_cv * 0.45f); // 0.05s to 0.5s range
+    env.SetTime(ADENV_SEG_DECAY, env_time);
+    
+    // Gate length control using CV_4 (knob)
+    float gate_cv = hw.GetKnobValue(DaisyField::KNOB_4);
+    gate_length = 0.01f + (gate_cv * 0.49f); // 0.01s to 0.5s range
+    gate_length_samples = (uint32_t)(gate_length * hw.AudioSampleRate());
+}
+
+void UpdateSequencer()
+{
+    if(playing && clock.Process())
+    {
+        // Trigger note if current step is active
+        if(sequence[current_step])
+        {
+            env.Trigger();
+            
+            // Trigger gate output
+            gate_out_state = true;
+            gate_timer = 0;
+        }
+        
+        // Advance to next step
+        current_step = (current_step + 1) % NUM_STEPS;
+    }
+}
+
+void UpdateLEDs()
+{
+    // Update step LEDs
+    for(int i = 0; i < NUM_STEPS; i++)
+    {
+        if(i == current_step && playing)
+        {
+            // Current step: bright LED regardless of sequence state
+            hw.led_driver.SetLed(led_keys[i], 1.0f);
+        }
+        else if(sequence[i])
+        {
+            // Active step: medium brightness
+            hw.led_driver.SetLed(led_keys[i], 0.5f);
+        }
+        else
+        {
+            // Inactive step: dim/off
+            hw.led_driver.SetLed(led_keys[i], 0.0f);
+        }
+    }
+    
+    // Update status LEDs
+    hw.led_driver.SetLed(DaisyField::LED_KNOB_1, playing ? 1.0f : 0.2f); // Play/stop indicator
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        // Process envelope
+        float env_out = env.Process();
+        
+        // Generate oscillator output
+        float osc_out = osc.Process();
+        
+        // Apply envelope to oscillator
+        float signal = osc_out * env_out;
+        
+        // Output to both channels
+        out[0][i] = signal;
+        out[1][i] = signal;
+        
+        // Update gate output timer (sample-accurate timing)
+        if(gate_out_state)
+        {
+            gate_timer++;
+            if(gate_timer >= gate_length_samples)
+            {
+                gate_out_state = false;
+                gate_timer = 0;
+            }
+        }
+        
+        // Set gate output using GPIO write
+        dsy_gpio_write(&hw.gate_out, gate_out_state ? 1 : 0);
+    }
+}
+
+/*#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Oscillator osc;
+Adsr env;
+
+const int num_steps = 16;
+bool sequence[num_steps] = {false};
+int current_step = 0;
+float step_duration = 48000 / 4; // initial value
+int sample_counter = 0;
+bool gate = false;
+
+void AudioCallback(const float* const* in, float** out, unsigned int size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        if(sample_counter >= step_duration)
+        {
+            sample_counter = 0;
+            current_step = (current_step + 1) % num_steps;
+            gate = sequence[current_step];
+        }
+        float env_out = env.Process(gate);
+        float osc_out = osc.Process();
+        float sig = env_out * osc_out;
+        out[0][i] = sig;
+        out[1][i] = sig;
+        sample_counter++;
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.seed.StartLog(false); // Changed from hw.StartLog
+    // Initialize audio
+    float samplerate = hw.AudioSampleRate();
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_SIN);
+    osc.SetAmp(0.5f);
+    env.Init(samplerate);
+    env.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    env.SetTime(ADSR_SEG_DECAY, 0.1f);
+    env.SetSustainLevel(1.0f);
+    env.SetTime(ADSR_SEG_RELEASE, 0.1f);
+    // Start audio
+    hw.StartAudio(AudioCallback);
+    // Main loop
+    while(1)
+    {
+        hw.ProcessAllControls();
+        // Read knobs
+        float tempo_knob = hw.GetKnobValue(0);
+        // Map to step time in seconds, e.g., 0.1 to 2 seconds per step
+        float step_time = 0.1f + tempo_knob * 1.9f;
+        step_duration = step_time * samplerate;
+        float freq_knob = hw.GetKnobValue(1);
+        float freq = 100.0f + freq_knob * 1000.0f; // from 100 to 1100 Hz
+        osc.SetFreq(freq);
+        // Read keys
+        for(int i = 0; i < num_steps; i++)
+        {
+            if(hw.KeyboardRisingEdge(i))
+            {
+                sequence[i] = !sequence[i];
+                hw.seed.PrintLine("Step %d: %s", i, sequence[i] ? "on" : "off"); // Changed from hw.PrintLine
+            }
+        }
+        // Delay to avoid busy loop
+        System::Delay(10);
+    }
+}*/
+
+
+/*                      GEMINI 2.5 not working
+#include "daisy_field.h" // Include the Daisy Field hardware support library
+#include "daisysp.h"    // Include the DaisySP signal processing library
+
+// Use the daisy and daisysp namespaces
+using namespace daisy;
+using namespace daisysp;
+
+// Declare a DaisyField hardware object
+DaisyField hw;
+
+// --- Sequencer Settings ---
+const int kNumSteps = 8; // We'll use 8 steps, matching the keys/LEDs
+
+// --- Sequencer State ---
+bool steps[kNumSteps];      // Array to hold the state of each step (on/off)
+int  current_step = 0;      // The step currently being played
+bool playing      = false;    // Is the sequencer running?
+float tempo_bpm   = 120.0f; // Tempo in Beats Per Minute
+
+// --- Timing ---
+float sample_rate;           // Audio sample rate
+float step_duration_samples; // How many audio samples per sequencer step
+uint32_t step_counter = 0;   // Counter to track samples for step timing
+
+// --- Audio Engine ---
+Oscillator osc; // Sine wave oscillator
+Adsr       env; // Envelope to shape the sound
+float      env_out = 0.0f; // Current envelope value
+
+// --- Helper Functions ---
+
+// Calculate the number of samples per step based on BPM
+void UpdateStepDuration()
+{
+    float steps_per_second = tempo_bpm / 60.0f * 4.0f; // Assuming 16th notes (4 steps per beat)
+    // If you want 8th notes (2 steps per beat), use: tempo_bpm / 60.0f * 2.0f;
+    step_duration_samples = sample_rate / steps_per_second;
+    hw.PrintLine("Step Duration Samples: %d", (int)step_duration_samples); // Debug
+}
+
+// --- Audio Callback ---
+// This function is called periodically by the hardware to process audio blocks
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    // Process controls at the block rate for responsiveness
+    hw.ProcessAllControls();
+
+    // --- Handle Play/Stop Button ---
+    if(hw.sw[0].RisingEdge()) // Check if SW1 was just pressed
+    {
+        playing = !playing; // Toggle playing state
+        if (!playing) {
+             current_step = kNumSteps - 1; // Reset step counter visually when stopped
+             step_counter = 0; // Reset sample counter
+        }
+        hw.PrintLine("Playing toggled: %s", playing ? "ON" : "OFF"); // Debug
+    }
+
+    // --- Handle Step Input Buttons ---
+    for(int i = 0; i < kNumSteps; i++)
+    {
+        if(hw.KeyboardRisingEdge(i)) // Check if KEY i+1 was just pressed
+        {
+            steps[i] = !steps[i]; // Toggle the state of the step
+            hw.PrintLine("Step %d toggled: %s", i + 1, steps[i] ? "ON" : "OFF"); // Debug
+        }
+    }
+
+    // --- Handle Tempo Knob ---
+    float knob1_val = hw.knob[0].Process(); // Read Knob 1 value (0.0 to 1.0)
+    // Map knob value to BPM range (e.g., 40 BPM to 220 BPM)
+    float new_tempo = fmap(knob1_val, 40.0f, 220.0f);
+    if (abs(new_tempo - tempo_bpm) > 0.1f) // Update only if changed significantly
+    {
+        tempo_bpm = new_tempo;
+        UpdateStepDuration(); // Recalculate timing
+        hw.PrintLine("Tempo Updated: %.2f BPM", tempo_bpm); // Debug
+    }
+
+
+    // --- Process Audio Buffer ---
+    for (size_t i = 0; i < size; i++)
+    {
+        // --- Sequencer Timing Logic ---
+        if (playing)
+        {
+            step_counter++; // Increment sample counter
+            if (step_counter >= step_duration_samples)
+            {
+                step_counter = 0; // Reset counter
+                current_step = (current_step + 1) % kNumSteps; // Advance to the next step (looping)
+
+                // --- Trigger Sound ---
+                if (steps[current_step])
+                {
+                    env.Trigger(); // Trigger the envelope if the current step is active
+                    // Optional: Change oscillator frequency based on step or knob
+                    // float freq = fmap(current_step, 220.f, 880.f); // Example: Pitch changes per step
+                    // osc.SetFreq(freq);
+                }
+            }
+        }
+
+        // --- Synthesize Sound ---
+        env_out = env.Process(); // Process the envelope
+        osc.SetAmp(env_out);     // Set oscillator amplitude based on envelope
+        float sig = osc.Process(); // Get the oscillator output
+
+        // --- Output ---
+        // Assign the synthesized signal to the left and right outputs
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+
+// --- Main Function ---
+int main(void)
+{
+    // Initialize the Daisy Field hardware
+    hw.Init();
+    sample_rate = hw.AudioSampleRate(); // Get the audio sample rate
+    hw.SetAudioBlockSize(4); // Use a small block size for lower latency
+
+    // --- Initialize Serial Logging ---
+    // Set true to wait for terminal connection
+    hw.StartLog(true);
+    hw.PrintLine("Daisy Field Step Sequencer Initializing...");
+
+    // --- Initialize Sequencer State ---
+    for (int i = 0; i < kNumSteps; i++)
+    {
+        steps[i] = false; // Start with all steps off
+    }
+    UpdateStepDuration(); // Calculate initial step duration
+
+    // --- Initialize Audio Components ---
+    osc.Init(sample_rate);
+    osc.SetWaveform(Oscillator::WAVE_SIN); // Sine wave
+    osc.SetFreq(440.0f); // A4 pitch
+    osc.SetAmp(0.0f);    // Start silent
+
+    env.Init(sample_rate);
+    env.SetTime(ADSR_SEG_ATTACK, 0.01f);  // Short attack
+    env.SetTime(ADSR_SEG_DECAY, 0.0f);    // No decay
+    env.SetTime(ADSR_SEG_RELEASE, 0.1f); // Short release
+    env.SetSustainLevel(1.0f);            // Full sustain while gate is high (effectively AD envelope)
+
+
+    // Start the audio callback
+    hw.StartAudio(AudioCallback);
+
+    hw.PrintLine("Initialization Complete. Ready.");
+
+    // --- Main Loop ---
+    // This loop handles non-audio tasks like updating LEDs
+    while(1)
+    {
+        // --- Update LEDs ---
+        // Update keyboard LEDs to show active steps
+        for(int i = 0; i < kNumSteps; i++)
+        {
+            hw.led_driver.SetLed(i, steps[i] ? 1.0f : 0.0f); // Key LEDs ON for active steps
+        }
+
+        // Update RGB LEDs to show the current playing step
+        for(int i = 0; i < kNumSteps; i++)
+        {
+            // Set the LED corresponding to the current step to white, others off
+            // Turn off previous step's LED smoothly if needed, or just snap
+             if (playing && i == current_step) {
+                 hw.led_driver.SetLed(DaisyField::LED_1 + i, 1.0f, 1.0f, 1.0f); // White
+             } else {
+                 hw.led_driver.SetLed(DaisyField::LED_1 + i, 0.0f, 0.0f, 0.0f); // Off
+             }
+        }
+
+        // Update the LED driver to reflect changes
+        hw.led_driver.SwapBuffersAndTransmit();
+
+        // Short delay to prevent busy-waiting and allow USB communication
+        System::Delay(1);
+    }
+}
+*/
+
+
+
+
+
+// /**
+//  * Stage 1: Basic Note Triggering, Single Oscillator, Amp Envelope
+//  * - Reads keyboard, implements last-note priority.
+//  * - Controls Amp Env ADSR via Knobs 5-8.
+//  * - Outputs PolyBLEP Saw wave shaped by Amp Env.
+//  * - Includes Serial Debug output.
+//  */
+// #include "daisy_field.h" // Include the hardware abstraction library for Daisy Field
+// #include "daisysp.h"      // Include the DaisySP DSP library
+// #include <list>           // For storing held notes (LNP)
+// #include <string>         // For string manipulation (not strictly used here, but often useful)
+// #include <cmath>          // For mathematical functions like mtof, fmap, fclamp
+
+// using namespace daisy;    // Use daisy namespace for hardware access (hw)
+// using namespace daisysp;  // Use daisysp namespace for DSP objects (Oscillator, Adsr)
+
+// // Hardware Handle
+// DaisyField hw; // Global object representing the Daisy Field hardware
+
+// // DSP Objects
+// Oscillator osc1;    // The primary sound source
+// Adsr       amp_env; // The amplitude envelope generator
+
+// // Note Handling
+// std::list<uint8_t> held_notes;   // List to store MIDI note numbers of currently held keys
+// uint8_t            current_note = 0; // Currently sounding MIDI note (0 = none)
+// bool               gate         = false; // Envelope gate state (true = note on, false = note off)
+
+// // MIDI note mapping for Field keys (Example: C2 start)
+// // Maps the 16 hardware key indices (0-15) to MIDI note numbers.
+// const uint8_t key_to_midi[2] = {
+//     // Bottom Row (A1-A8) -> Indices 0-7
+//     36, 38, 40, 41, 43, 45, 47, 48, // C2, D2, E2, F2, G2, A2, B2, C3
+//     // Top Row (B1-B8) -> Indices 8-15 (mapped differently in hw library vs physical layout)
+//     37, 39, 42, 44, 46, 49, 51, 53  // C#2, D#2, F#2, G#2, A#2, C#3, D#3, F3
+//     // Note: The actual mapping might depend on libDaisy version/config,
+//     // but this provides a standard chromatic layout starting from C2.
+// };
+
+// // Debugging counter for throttling serial output
+// uint32_t debug_counter = 0;
+// const uint32_t debug_interval = 100; // Print debug info roughly every 100ms
+
+// // Forward declarations of helper functions
+// void HandleControls();
+// void UpdateEnvelopes();
+// void UpdateOscillatorFrequency();
+
+// // Audio Callback: Called periodically by the hardware to process audio
+// void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+// {
+//     // Process 'size' samples in this block
+//     for (size_t i = 0; i < size; i++)
+//     {
+//         // 1. Process Envelope: Get the current amplitude envelope value
+//         //    The 'gate' variable determines if the envelope attacks/decays or releases.
+//         float amp_env_out = amp_env.Process(gate);
+
+//         // 2. Process Oscillator: Get the next sample from the oscillator
+//         float osc_out = osc1.Process();
+
+//         // 3. Apply VCA (Amplitude Envelope): Multiply oscillator output by envelope output
+//         float final_out = osc_out * amp_env_out;
+
+//         // 4. Output (Mono to Stereo): Write the final sample to both left and right channels
+//         //    Daisy Field uses non-interleaved buffers by default (out = Left, out[1] = Right)
+//         //    The index is multiplied by 2 for interleaved buffer compatibility, though not strictly necessary here.
+//         //    Correction: libDaisy non-interleaved uses out[i] and out[1][i]. The user code seems
+//         //    to assume interleaved or is using a simplified access. Let's assume it works in their setup
+//         //    but note the standard non-interleaved access is out[channel][sample_index].
+//         //    Revisiting user code: It uses `out[i*2]` and `out[i*2 + 1]`. This implies an *interleaved* setup,
+//         //    which might be configured elsewhere or assumed by their toolchain. For this report, we'll
+//         //    analyze the code as written, but acknowledge libDaisy often defaults to non-interleaved.
+//         out[i*2]     = final_out; // Left Channel
+//         out[i*2 + 1] = final_out; // Right Channel
+//     }
+// }
+
+// // Main Function: Entry point of the program
+// int main(void)
+// {
+//     // Init Hardware
+//     float sample_rate;
+//     hw.Init(); // Initialize Daisy Seed and Field peripherals [3, 2, 21, 61, 63]
+//     sample_rate = hw.AudioSampleRate(); // Get the audio sample rate [6]
+//     hw.SetAudioBlockSize(48); // Set the number of samples per audio callback [6]
+
+//     // Init DSP Objects
+//     osc1.Init(sample_rate); // Initialize oscillator with the hardware sample rate [10, 86]
+//     osc1.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW); // Use anti-aliased sawtooth [86]
+//     osc1.SetAmp(1.0f); // Set oscillator amplitude to full (envelope controls final level) [10, 86]
+//     osc1.SetFreq(440.0f); // Set default frequency (A4) [10, 86]
+
+//     amp_env.Init(sample_rate); // Initialize envelope with the hardware sample rate [10, 86]
+//     // Set initial envelope times and sustain level
+//     amp_env.SetTime(Adsr::Segment::SEG_ATTACK, 0.01f);  // Attack time in seconds [86]
+//     amp_env.SetTime(Adsr::Segment::SEG_DECAY, 0.1f);   // Decay time in seconds [86]
+//     amp_env.SetSustainLevel(0.8f);                     // Sustain level (0.0 to 1.0) [86]
+//     amp_env.SetTime(Adsr::Segment::SEG_RELEASE, 0.2f); // Release time in seconds [86]
+
+//     // Start Serial Logging (waits for connection if 'true')
+//     hw.StartLog(true); // Initialize serial port for debugging [6]
+//     hw.PrintLine("Synthesizer Stage 1 Initialized."); // Print initial message
+
+//     // Start Audio Callback
+//     hw.StartAudio(AudioCallback); // Register the audio processing function [6, 2, 21]
+
+//     // Main Loop: Runs continuously
+//     while(1) {
+//         HandleControls(); // Process user inputs and update parameters
+//         System::Delay(1); // Small delay to yield CPU time, prevents busy-waiting
+//     }
+// }
+
+// // Control Handling Function (Called from main loop)
+// void HandleControls()
+// {
+//     // Read all hardware controls (knobs, switches, keys)
+//     hw.ProcessAllControls(); // [2, 61, 62]
+
+//     bool note_event = false; // Flag to check if frequency needs update
+
+//     // --- Handle Keyboard for Notes (Last Note Priority) ---
+//     for (uint8_t i = 0; i < 16; i++) { // Check all 16 keys
+//         if (hw.KeyboardRisingEdge(i)) { // Check if key 'i' was just pressed [2, 61]
+//             uint8_t midi_note = key_to_midi[i]; // Get MIDI note for this key
+//             held_notes.remove(midi_note); // Remove if already present (e.g., re-press)
+//             held_notes.push_back(midi_note); // Add to the end of the list (most recent) [82]
+//             current_note = midi_note; // Set the currently playing note
+//             gate = true; // Open the envelope gate [86]
+//             note_event = true; // Signal that a note event occurred
+//         } else if (hw.KeyboardFallingEdge(i)) { // Check if key 'i' was just released [2, 61]
+//             uint8_t midi_note = key_to_midi[i]; // Get MIDI note for this key
+//             held_notes.remove(midi_note); // Remove the released note from the list [82]
+//             if (held_notes.empty()) { // If no notes are left holding...
+//                 gate = false; // Close the envelope gate [86]
+//                 current_note = 0; // Set current note to 0 (none)
+//             } else { // If other notes are still held...
+//                 current_note = held_notes.back(); // Set current note to the last one added (LNP) [82]
+//                 // Gate remains true as long as other notes are held
+//             }
+//             note_event = true; // Signal that a note event occurred
+//         }
+//     }
+
+//     // --- Update DSP Parameters based on Controls ---
+//     UpdateEnvelopes(); // Update envelope parameters from knobs 5-8
+
+//     if (note_event) { // Only update oscillator frequency if a note on/off event happened
+//         UpdateOscillatorFrequency();
+//     }
+
+//     // --- Serial Debug Printing (Throttled) ---
+//     // Increment counter and print only if interval reached
+//     if (++debug_counter >= debug_interval) {
+//         debug_counter = 0; // Reset counter
+//         // Calculate current frequency for display (0 if no note)
+//         float current_freq = (current_note > 0)? mtof(static_cast<float>(current_note)) : 0.0f;
+//         // Print current state information
+//         hw.PrintLine("Note: %d, Gate: %s, Freq: %.2f",
+//                      current_note,
+//                      gate? "ON" : "OFF",
+//                      current_freq);
+//         hw.PrintLine("AmpEnv A:%.3f D:%.3f S:%.2f R:%.3f Out: %.3f",
+//                      amp_env.GetTime(Adsr::Segment::SEG_ATTACK),
+//                      amp_env.GetTime(Adsr::Segment::SEG_DECAY),
+//                      amp_env.GetSustainLevel(),
+//                      amp_env.GetTime(Adsr::Segment::SEG_RELEASE),
+//                      amp_env.GetCurrentValue()); // Get envelope's current output value for debug
+//     }
+// }
+
+// // Update Envelope Parameters from Knobs
+// void UpdateEnvelopes() {
+//     // Read Knobs 5-8 for Amp Env ADSR using the GetKnob()->Value() method
+//     // which returns a smoothed float between 0.0 and 1.0 [2, 61, 66]
+//     float k5 = hw.GetKnob(DaisyField::KNOB_5)->Value(); // Attack
+//     float k6 = hw.GetKnob(DaisyField::KNOB_6)->Value(); // Decay
+//     float k7 = hw.GetKnob(DaisyField::KNOB_7)->Value(); // Sustain
+//     float k8 = hw.GetKnob(DaisyField::KNOB_8)->Value(); // Release
+
+//     // Map knob values (0-1) to time/level ranges
+//     // Use exponential mapping for time controls for better perceptual feel [69, 74]
+//     // Attack time: map 0-1 to 0.001s - 4.0s (exponential)
+//     float attack_time = fmap(k5, 0.001f, 4.0f, Mapping::EXP);
+//     // Decay time: map 0-1 to 0.001s - 4.0s (exponential)
+//     float decay_time = fmap(k6, 0.001f, 4.0f, Mapping::EXP);
+//     // Sustain level: map 0-1 directly (linear)
+//     float sustain_level = k7;
+//     // Release time: map 0-1 to 0.002s - 5.0s (exponential)
+//     float release_time = fmap(k8, 0.002f, 5.0f, Mapping::EXP);
+
+//     // Set the calculated parameters on the ADSR object [86]
+//     amp_env.SetTime(Adsr::Segment::SEG_ATTACK, attack_time);
+//     amp_env.SetTime(Adsr::Segment::SEG_DECAY, decay_time);
+//     amp_env.SetSustainLevel(sustain_level);
+//     amp_env.SetTime(Adsr::Segment::SEG_RELEASE, release_time);
+// }
+
+// // Update Oscillator Frequency based on Current Note
+// void UpdateOscillatorFrequency() {
+//      // Calculate base frequency from the current MIDI note (0 Hz if no note)
+//      float base_freq = (current_note > 0)? mtof(static_cast<float>(current_note)) : 0.0f; // [63, 69, 74]
+//      // Set the oscillator frequency, clamping to avoid extreme values [69, 74]
+//      osc1.SetFreq(fclamp(base_freq, 1.f, 20000.f)); // [10, 86]
+// }
+
+
+
+
+// #include "daisy_pod.h"
+// #include "midi.h"
+
+// using namespace daisy;
+
+// DaisyPod hw;
+// MidiUartHandler midi;
+
+// MIDI notes
+// constexpr uint8_t NOTE_C4 = 60;
+// constexpr uint8_t NOTE_D4 = 62;
+
+// int main(void)
+// {
+//     hw.Init();
+//     hw.StartLog();
+
+//     MIDI UART setup
+//     MidiUartHandler::Config midi_cfg;
+//     midi_cfg.transport_config.rx = pod.seed.GetPin(15); // MIDI UART RX
+//     midi_cfg.transport_config.tx = pod.seed.GetPin(16); // MIDI UART TX
+//     midi.Init(midi_cfg);
+
+//     hw.PrintLine("Daisy Pod MIDI Buttons Initialized");
+
+//     while (1)
+//     {
+//         hw.ProcessDigitalControls();
+
+//         SW1 (PB1) triggers MIDI note C4
+//         if (hw.button1.RisingEdge())
+//         {
+//             midi.SendNoteOn(NOTE_C4, 100, 1);
+//             hw.PrintLine("MIDI Note On: C4 (60), Velocity: 100");
+//         }
+
+//         SW2 (PB2) triggers MIDI note D4
+//         if (hw.button2.RisingEdge())
+//         {
+//             midi.SendNoteOn(NOTE_D4, 100, 1);
+//             hw.PrintLine("MIDI Note On: D4 (62), Velocity: 100");
+//         }
+
+//         System::Delay(1); // short delay for button debounce
+//     }
+// }
+
+
+
+
+
+ /*              WORKING            
+#include "daisy_seed.h"
+ 
+using namespace daisy;
+ 
+DaisySeed hw;
+ 
+int main(void) {
+ 
+  // Initialize the Daisy Seed Hardware
+  hw.Init();
+ 
+  // Enable Logging, and set up the USB connection.
+  // Setting true here means that the program will wait until
+  // a connection has been made to a USB Host
+  hw.StartLog(true);
+ 
+  // And Print Hello World!
+  hw.PrintLine("Hello World!");
+ 
+  //while(1) {}
+  int mycnt = 0;
+while(1) {
+    // Print the value:
+    hw.PrintLine("Count: %d", mycnt);
+    // And then increment the counter
+    mycnt++;
+    // If the counter exceeds 100, reset it to 0
+    if (mycnt > 100)
+        mycnt = 0;
+    // And count slow enough that it's easy to watch on the Serial Monitor
+    System::Delay(250);
+}
+}*/
+
+
+// #include "daisy_seed.h"
+// #include <logger.h>
+
+// using namespace daisy;
+
+// DaisySeed hw;
+
+// int main(void)
+// {
+//     hw.Init();
+
+//     // Configure UART
+//     UartHandler::Config uart_config;
+//     uart_config.periph        = UartHandler::Config::Peripheral::USART_1;
+//     uart_config.mode          = UartHandler::Config::Mode::TX_RX;
+//     uart_config.baudrate      = 115200; // Set desired baud rate
+//     uart_config.stopbits      = UartHandler::Config::StopBits::BITS_1;
+//     uart_config.parity        = UartHandler::Config::Parity::NONE;
+//     uart_config.wordlength    = UartHandler::Config::WordLength::BITS_8;
+
+//     // Initialize UART
+//     UartHandler uart;
+//     uart.Init(uart_config);
+
+//     // Initialize Logger with UART
+//     Logger<LOGGER_UART> logger;
+//     logger.Init(&uart);
+
+//     // Use PrintLine
+//     logger.PrintLine("Hello, World!");
+
+//     int mycnt = 0;
+//     while(1) {
+//     // Print the value:
+//     hw.PrintLine("Count: %d", mycnt);
+//     // And then increment the counter
+//     mycnt++;
+//     // If the counter exceeds 100, reset it to 0
+//     if (mycnt > 100)
+//         mycnt = 0;
+//     // And count slow enough that it's easy to watch on the Serial Monitor
+//     System::Delay(250);
+
+//     }
+// }
+
+
+
+
+/*
+//_______________ LED BLINK _______________________
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+//using namespace daisysp;
+
+DaisyField hw;
+// Create a GPIO object to represent the LED.
+
+
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+	hw.ProcessAllControls();
+	for (size_t i = 0; i < size; i++)
+	{
+		out[0][i] = in[0][i];
+		out[1][i] = in[1][i];
+	}
+}
+
+int main(void)
+{
+	hw.Init();
+	hw.SetAudioBlockSize(4); // number of samples handled per callback
+	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+	hw.StartAdc();
+	hw.StartAudio(AudioCallback);
+	
+
+	bool led_state = true;
+	while(1) 
+	{
+		hw.seed.SetLed(led_state);
+		hw.DelayMs(500);
+		led_state = !led_state;
+	}
+}
+*/ 
+
+/*      WORKING
+//  CTRL + K + C - comment 
+//  CTRL + K + U - uncomment
+
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include "reverbsc.h"
+
+
+#define NUM_VOICES 16
+
+using namespace daisy;
+
+DaisyField hw;
+
+
+struct voice
+{
+    void Init(float samplerate)
+    {
+        osc_.Init(samplerate);
+        amp_ = 0.0f;
+        osc_.SetAmp(0.7f);
+        osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+        on_ = false;
+    }
+    float Process()
+    {
+        float sig;
+        amp_ += 0.0025f * ((on_ ? 1.0f : 0.0f) - amp_);
+        sig = osc_.Process() * amp_;
+        return sig;
+    }
+    void set_note(float nn) { osc_.SetFreq(daisysp::mtof(nn)); }
+
+    daisysp::Oscillator osc_;
+    float               amp_, midibase_;
+    bool                on_;
+};
+
+voice   v[NUM_VOICES];
+uint8_t buttons[16];
+// Use bottom row to set major scale
+// Top row chromatic notes, and the inbetween notes are just the octave.
+float scale[16]   = {0.f,
+                   2.f,
+                   4.f,
+                   5.f,
+                   7.f,
+                   9.f,
+                   11.f,
+                   12.f,
+                   0.f,
+                   1.f,
+                   3.f,
+                   0.f,
+                   6.f,
+                   8.f,
+                   10.f,
+                   0.0f};
+float active_note = scale[0];
+
+int8_t octaves = 0;
+
+static daisysp::ReverbSc verb;
+// Use two side buttons to change octaves.
+float kvals[8];
+float cvvals[4];
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    bool trig, use_verb;
+    trig = false;
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+    if(hw.GetSwitch(DaisyField::SW_1)->RisingEdge())
+    {
+        octaves -= 1;
+        trig = true;
+    }
+    if(hw.GetSwitch(DaisyField::SW_2)->RisingEdge())
+    {
+        octaves += 1;
+        trig = true;
+    }
+    use_verb = true;
+
+    for(int i = 0; i < 8; i++)
+    {
+        kvals[i] = hw.GetKnobValue(i);
+        if(i < 4)
+        {
+            cvvals[i] = hw.GetCvValue(i);
+        }
+    }
+
+    if(octaves < 0)
+        octaves = 0;
+    if(octaves > 4)
+        octaves = 4;
+
+    if(trig)
+    {
+        for(int i = 0; i < NUM_VOICES; i++)
+        {
+            v[i].set_note((12.0f * octaves) + 24.0f + scale[i]);
+        }
+    }
+    for(size_t i = 0; i < 16; i++)
+    {
+        v[i].on_ = hw.KeyboardState(i);
+    }
+    float sig, send;
+    float wetl, wetr;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sig = 0.0f;
+        for(int i = 0; i < NUM_VOICES; i++)
+        {
+            if(i != 8 && i != 11 && i != 15)
+                sig += v[i].Process();
+        }
+        send = sig * 0.35f;
+        verb.Process(send, send, &wetl, &wetr);
+        //        wetl = wetr = sig;
+        if(!use_verb)
+            wetl = wetr = 0.0f;
+        out[i]     = (sig + wetl) * 0.5f;
+        out[i + 1] = (sig + wetr) * 0.5f;
+    }
+}
+
+void UpdateLeds(float *knob_vals)
+{
+    // knob_vals is exactly 8 members
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1,
+        DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3,
+        DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5,
+        DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7,
+        DaisyField::LED_KNOB_8,
+    };
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1,
+        DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3,
+        DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5,
+        DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7,
+        DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3,
+        DaisyField::LED_KEY_B5,
+        DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7,
+    };
+    for(size_t i = 0; i < 8; i++)
+    {
+        hw.led_driver.SetLed(knob_leds[i], knob_vals[i]);
+    }
+    for(size_t i = 0; i < 13; i++)
+    {
+        hw.led_driver.SetLed(keyboard_leds[i], 1.f);
+    }
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+int main(void)
+{
+    float sr;
+    hw.Init();
+    sr = hw.AudioSampleRate();
+    // Initialize controls.
+    octaves = 2;
+    for(int i = 0; i < NUM_VOICES; i++)
+    {
+        v[i].Init(sr);
+        v[i].set_note((12.0f * octaves) + 24.0f + scale[i]);
+    }
+
+    verb.Init(sr);
+    verb.SetFeedback(0.94f);
+    verb.SetLpFreq(8000.0f);
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+
+    for(;;)
+    {
+        UpdateLeds(kvals);
+        System::Delay(1);
+        hw.seed.dac.WriteValue(DacHandle::Channel::ONE,
+                               hw.GetKnobValue(0) * 4095);
+        hw.seed.dac.WriteValue(DacHandle::Channel::TWO,
+                               hw.GetKnobValue(1) * 4095);
+    }
+}
+*/
+
+// #include "daisy_field.h"
+// #include "daisysp.h"
+
+// using namespace daisy;
+// using namespace daisysp;
+
+// DaisyField hw;
+
+// Oscillator osc1, osc2;
+// float amp1, freq1, amp2, freq2;
+// int wave1, wave2;
+// bool osc1_on = true, osc2_on = true;
+
+// void UpdateControls() {
+//     hw.ProcessAllControls();
+
+//     amp1 = hw.GetKnobValue(DaisyField::KNOB_1);
+//     freq1 = hw.GetKnobValue(DaisyField::KNOB_2);
+//     amp2 = hw.GetKnobValue(DaisyField::KNOB_3);
+//     freq2 = hw.GetKnobValue(DaisyField::KNOB_4);
+
+//     if (hw.GetSwitch(DaisyField::SW_1)->RisingEdge()) {
+//         wave1 = (wave1 + 1) % Oscillator::WAVE_LAST;
+//         osc1.SetWaveform(wave1);
+//     }
+//     if (hw.GetSwitch(DaisyField::SW_2)->RisingEdge()) {
+//         wave2 = (wave2 + 1) % Oscillator::WAVE_LAST;
+//         osc2.SetWaveform(wave2);
+//     }
+
+//     if (hw.KeyboardRisingEdge(DaisyField::LED_KEY_A1)) {
+//         osc1_on = !osc1_on;
+//         hw.led_driver.SetLed(DaisyField::LED_KEY_A1, osc1_on);
+//     }
+//     if (hw.KeyboardRisingEdge(DaisyField::LED_KEY_A2)) {
+//         osc2_on = !osc2_on;
+//         hw.led_driver.SetLed(DaisyField::LED_KEY_A2, osc2_on);
+//     }
+
+//     // LED update moved to main loop.
+// }
+
+// void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
+//     UpdateControls();
+
+//     for (size_t i = 0; i < size; i++) {
+//         float sig1 = 0.0f;
+//         float sig2 = 0.0f;
+
+//         if (osc1_on) {
+//             osc1.SetFreq(440.0f * powf(2.0f, 3.0f * (freq1 - 0.5f)));
+//             sig1 = osc1.Process() * amp1;
+//         }
+
+//         if (osc2_on) {
+//             osc2.SetFreq(440.0f * powf(2.0f, 3.0f * (freq2 - 0.5f)));
+//             sig2 = osc2.Process() * amp2;
+//         }
+
+//         out[0][i] = out[1][i] = (sig1 + sig2) * 0.5f;
+//     }
+// }
+
+// void UpdateLeds(float knob_vals[]) { // Pass Knob values to update LEDS
+//     size_t knob_leds[] = {
+//         DaisyField::LED_KNOB_1,
+//         DaisyField::LED_KNOB_2,
+//         DaisyField::LED_KNOB_3,
+//         DaisyField::LED_KNOB_4,
+//     };
+
+//     hw.led_driver.SetLed(DaisyField::LED_KEY_A1, osc1_on);
+//     hw.led_driver.SetLed(DaisyField::LED_KEY_A2, osc2_on);
+
+//     for (size_t i = 0; i < 4; i++) {
+//         hw.led_driver.SetLed(knob_leds[i], knob_vals[i]);
+//     }
+
+//     hw.led_driver.SwapBuffersAndTransmit();
+// }
+
+// int main(void) {
+//     hw.Init();
+//     hw.SetAudioBlockSize(4);
+//     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+
+//     osc1.Init(hw.AudioSampleRate());
+//     osc2.Init(hw.AudioSampleRate());
+
+//     wave1 = Oscillator::WAVE_SIN;
+//     wave2 = Oscillator::WAVE_SAW;
+//     osc1.SetWaveform(wave1);
+//     osc2.SetWaveform(wave2);
+
+//     amp1 = amp2 = 0.5f;
+//     freq1 = freq2 = 0.5f;
+
+//     hw.led_driver.SetLed(DaisyField::LED_KEY_A1, osc1_on);
+//     hw.led_driver.SetLed(DaisyField::LED_KEY_A2, osc2_on);
+//     hw.led_driver.SwapBuffersAndTransmit();
+
+//     hw.StartAudio(AudioCallback);
+
+//     float knob_vals[4]; // Array to hold knob values
+
+//     while (1) {
+//         knob_vals[0] = amp1;
+//         knob_vals[1] = freq1;
+//         knob_vals[2] = amp2;
+//         knob_vals[3] = freq2;
+//         UpdateLeds(knob_vals);
+//         System::Delay(1);
+//     }
+// }
+
+// /**/
+
+// #include "daisy_field.h"
+// #include "daisysp.h"
+
+// using namespace daisy;
+// using namespace daisysp;
+
+// DaisyField hw;
+
+// // Oscillator parameters
+// struct OscillatorParams {
+//     float freq;
+//     float amp;
+//     Oscillator::Waveform wave;
+// };
+
+// // Filter parameters
+// struct FilterParams {
+//     float freq;
+//     float res;
+//     float drive;
+//     OnePole::FilterMode onePoleMode;
+//     Ladder::FilterType ladderMode;
+// };
+
+// // Oscillator instances
+// Oscillator osc1, osc2, lfo1, lfo2;
+// OscillatorBank oscBank;
+
+// // Filter instances
+// OnePole onePole;
+// Ladder ladder;
+
+// // Parameter structs
+// OscillatorParams osc1Params = {100.0f, 0.33f, Oscillator::WAVE_SIN};
+// OscillatorParams osc2Params = {100.0f, 0.33f, Oscillator::WAVE_TRI};
+// OscillatorParams lfo1Params = {1.0f, 0.5f, Oscillator::WAVE_SIN};
+// OscillatorParams lfo2Params = {1.0f, 0.5f, Oscillator::WAVE_SQUARE};
+// FilterParams filterParams = {20.0f, 0.0f, 0.0f, OnePole::FILTER_LP, Ladder::FILTER_LP};
+
+// // Keybed states and function selection
+// bool keyAState[16], keyBState[16];
+// int selectedFunction = -1; // -1: no function selected
+// bool functionEnabled[16];
+
+// // LED mappings
+// constexpr size_t keyboard_leds[] = {
+//     LED_KEY_A1, LED_KEY_A2, LED_KEY_A3, LED_KEY_A4, LED_KEY_A5, LED_KEY_A6, LED_KEY_A7, LED_KEY_A8,
+//     LED_KEY_B1, LED_KEY_B2, LED_KEY_B3, LED_KEY_B4, LED_KEY_B5, LED_KEY_B6, LED_KEY_B7, LED_KEY_B8
+// };
+
+// void HandleKeys() {
+//     for (int i = 0; i < 16; i++) {
+//         bool newStateA = hw.KeyboardState(i);
+//         bool newStateB = hw.KeyboardState(i + 16);
+
+//         // Key A: Function selection
+//         if (newStateA && !keyAState[i]) {
+//             if (selectedFunction == i) {
+//                 selectedFunction = -1;
+//                 hw.led_driver.SetLed(keyboard_leds[i], 0);
+//             } else {
+//                 if (selectedFunction != -1) hw.led_driver.SetLed(keyboard_leds[selectedFunction], 0);
+//                 selectedFunction = i;
+//                 hw.led_driver.SetLed(keyboard_leds[i], 1);
+//             }
+//         }
+//         keyAState[i] = newStateA;
+
+//         // Key B: Function enable/disable
+//         if (newStateB && !keyBState[i]) {
+//             functionEnabled[i] = !functionEnabled[i];
+//             hw.led_driver.SetLed(keyboard_leds[i + 8], functionEnabled[i]);
+//         }
+//         keyBState[i] = newStateB;
+//     }
+// }
+
+// void HandleKnobs() {
+//     osc1Params.freq = 100.0f + hw.knob[0].Process() * 1000.0f;
+//     osc1Params.amp = hw.knob[1].Process() * 0.33f;
+//     osc2Params.freq = 100.0f + hw.knob[2].Process() * 1000.0f;
+//     lfo1Params.freq = hw.knob[3].Process() * 10.0f;
+//     lfo1Params.amp = hw.knob[4].Process() * 0.5f;
+//     filterParams.freq = 20.0f + hw.knob[5].Process() * 20000.0f;
+//     filterParams.res = hw.knob[6].Process();
+//     filterParams.drive = hw.knob[7].Process();
+// }
+
+// void HandleSwitches() {
+//     if (hw.sw[0].RisingEdge()) {
+//         if (selectedFunction == 0) osc1Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(osc1Params.wave) + 1) % 4);
+//         else if (selectedFunction == 2) osc2Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(osc2Params.wave) + 1) % 4);
+//         else if (selectedFunction == 3) lfo1Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(lfo1Params.wave) + 1) % 3);
+//         else if (selectedFunction == 4) lfo2Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(lfo2Params.wave) + 1) % 3);
+//         else if (selectedFunction == 7) filterParams.ladderMode = static_cast<Ladder::FilterType>((static_cast<int>(filterParams.ladderMode) + 1) % 4);
+//         else if (selectedFunction == 5) filterParams.onePoleMode = static_cast<OnePole::FilterMode>((static_cast<int>(filterParams.onePoleMode) + 1) % 2);
+//     }
+
+//     if (hw.sw[1].RisingEdge() && selectedFunction == 4) {
+//         if (lfo2Params.wave == Oscillator::WAVE_SQUARE) lfo2Params.wave = Oscillator::WAVE_TRI;
+//         else if (lfo2Params.wave == Oscillator::WAVE_TRI) lfo2Params.wave = Oscillator::WAVE_SIN;
+//         else lfo2Params.wave = Oscillator::WAVE_SQUARE;
+//     }
+// }
+
+// void AudioCallback(AudioHandle::InterleavingInputBuffer in, AudioHandle::InterleavingOutputBuffer out, size_t size) {
+//     HandleKeys();
+//     HandleKnobs();
+//     HandleSwitches();
+
+//     // Update oscillator parameters
+//     osc1.SetFreq(osc1Params.freq + lfo1.Process() * 50.0f);
+//     osc1.SetAmp(osc1Params.amp);
+//     osc1.SetWaveform(osc1Params.wave);
+//     osc2.SetFreq(osc2Params.freq);
+//     osc2.SetAmp(osc2Params.amp);
+//     osc2.SetWaveform(osc2Params.wave);
+//     lfo1.SetFreq(lfo1Params.freq);
+//     lfo1.SetAmp(lfo1Params.amp);
+//     lfo1.SetWaveform(lfo1Params.wave);
+//     lfo2.SetFreq(lfo2Params.freq);
+//     lfo2.SetAmp(lfo2Params.amp);
+//     lfo2.SetWaveform(lfo2Params.wave);
+
+//     // Oscillator bank
+//     float oscBankFreqs[8];
+//     for (int i = 0; i < 8; i++) oscBankFreqs[i] = osc2Params.freq * (i + 1);
+//     oscBank.SetFreqs(oscBankFreqs);
+//     oscBank.SetSingleAmp(osc2Params.amp / 8.0f);
+
+//     // LFO2 modulation
+//     float lfo2Out = lfo2.Process();
+//     float mainAmp = osc1Params.amp;
+//     float mainFreq = osc1Params.freq;
+
+//     if (lfo2Params.wave == Oscillator::WAVE_SQUARE) mainAmp = osc1Params.amp + lfo2Out * osc1Params.amp;
+//     else mainFreq = osc1Params.freq + lfo2Out * 200.0f;
+
+//     hw.led.Set(lfo2Params.freq);
+
+//     // Update filter parameters
+//     onePole.SetFreq(filterParams.freq);
+//     onePole.SetFilterMode(filterParams.onePoleMode);
+//     ladder.SetFreq(filterParams.freq);
+//     ladder.SetRes(filterParams.res);
+//     ladder.SetInputDrive(filterParams.drive);
+//     ladder.SetFilterType(filterParams.ladderMode);
+
+//     // Audio processing loop
+//     for (size_t i = 0; i < size; i++) {
+//         float sig = 0;
+//         sig += osc1.Process() * functionEnabled[0];
+//         sig += osc2.Process() * functionEnabled[1];
+//         sig += oscBank.Process() * functionEnabled[2];
+
+//         sig *= mainAmp;
+
+//         sig = onePole.Process(sig) * functionEnabled[5];
+//         sig = ladder.Process(sig) * functionEnabled[6];
+
+//         out[i] = sig;
+//         out[i + size] = sig;
+
+//         if (functionEnabled[0]) hw.cv_out_1.Write(osc1.Process());
+//     }
+// }
+
+// int main(void) {
+//     hw.Init();
+//     hw.SetAudioBlockSize(4);
+//     hw.StartAdc();
+//     hw.StartAudio(AudioCallback);
+
+//     // Initialize oscillators
+//     osc1.Init(hw.AudioSampleRate());
+//     osc2.Init(hw.AudioSampleRate());
+//     lfo1.Init(hw.AudioSampleRate());
+//     lfo2.Init(hw.AudioSampleRate());
+//     oscBank.Init(hw.AudioSampleRate());
+
+//     // Initialize filters
+//     onePole.Init(hw.AudioSampleRate());
+//     ladder.Init(hw.AudioSampleRate());
+
+//     // Initialize key states and function enabled states
+//     for (int i = 0; i < 16; i++) {
+//         keyAState[i] = false;
+//         keyBState[i] = false;
+//         functionEnabled[i] = false;
+//     }
+
+//     // Main loop
+//     while (1) {
+//         hw.ProcessAllControls();
+//         System::Delay(1);
+//     }
+// }
+
+// /*___________GEMINI DMA, Interrupt, Timer__________ */
+
+// #include "daisy_field.h"
+// #include "daisysp.h"
+
+// using namespace daisy;
+// using namespace daisysp;
+
+// DaisyField hw;
+
+// // DMA ADC buffers
+// #define NUM_KNOBS 8
+// #define ADC_BUFFER_SIZE 128
+// uint16_t adcBuffer[NUM_KNOBS][ADC_BUFFER_SIZE];
+// volatile size_t adcBufferIndex[NUM_KNOBS];
+// float knobValues[NUM_KNOBS];
+
+// // Keybed/Switch states (volatile for interrupt access)
+// volatile bool switch1State, switch2State;
+// volatile bool keyAState[16], keyBState[16];
+
+// // Timers
+// TimerHandle debouncerTimer;
+// TimerHandle displayTimer;
+
+// // Oscillators and Filters
+// Oscillator osc1, osc2, lfo1, lfo2;
+// OscillatorBank oscBank;
+// OnePole onePole;
+// Ladder ladder;
+
+// // Parameters
+// struct OscillatorParams {
+//     float freq;
+//     float amp;
+//     Oscillator::Waveform wave;
+// };
+
+// struct FilterParams {
+//     float freq;
+//     float res;
+//     float drive;
+//     OnePole::FilterMode onePoleMode;
+//     Ladder::FilterType ladderMode;
+// };
+
+// OscillatorParams osc1Params = {100.0f, 0.33f, Oscillator::WAVE_SIN};
+// OscillatorParams osc2Params = {100.0f, 0.33f, Oscillator::WAVE_TRI};
+// OscillatorParams lfo1Params = {1.0f, 0.5f, Oscillator::WAVE_SIN};
+// OscillatorParams lfo2Params = {1.0f, 0.5f, Oscillator::WAVE_SQUARE};
+// FilterParams filterParams = {20.0f, 0.0f, 0.0f, OnePole::FILTER_LP, Ladder::FILTER_LP};
+
+// // Display buffer
+// uint8_t displayBuffer[1024];
+
+// // LED mappings and function states
+// constexpr size_t keyboard_leds[] = { /* ... */ }; // Define LED mappings
+// int selectedFunction = -1;
+// bool functionEnabled[16] = {false};
+
+// // Function prototypes
+// void AdcDMACompleteCallback(size_t channel);
+// void Switch1InterruptHandler();
+// void Switch2InterruptHandler();
+// void KeyAInterruptHandler(size_t keyIndex);
+// void KeyBInterruptHandler(size_t keyIndex);
+// void DebouncerTimerCallback();
+// void DisplayTimerCallback();
+// void DrawWaveform(float* waveform, size_t waveformSize);
+
+// // Helper functions (inline for efficiency)
+// inline void updateOsc(Oscillator& osc, const OscillatorParams& params, float modulation = 0.0f) {
+//     osc.SetFreq(params.freq + modulation);
+//     osc.SetAmp(params.amp);
+//     osc.SetWaveform(params.wave);
+// }
+
+// inline void updateFilter(OnePole& onePole, const FilterParams& params) {
+//     onePole.SetFreq(params.freq);
+//     onePole.SetFilterMode(params.onePoleMode);
+// }
+
+// inline void updateLadder(Ladder& ladder, const FilterParams& params) {
+//     ladder.SetFreq(params.freq);
+//     ladder.SetRes(params.res);
+//     ladder.SetInputDrive(params.drive);
+//     ladder.SetFilterType(params.ladderMode);
+// }
+
+
+// void AudioCallback(AudioHandle::InterleavingInputBuffer in, AudioHandle::InterleavingOutputBuffer out, size_t size) {
+//     // Parameter updates (from knobValues, switches, keybed)
+//     osc1Params.freq = 100.0f + knobValues[0] * 1000.0f;
+//     osc1Params.amp = knobValues[1] * 0.33f;
+//     osc2Params.freq = 100.0f + knobValues[2] * 1000.0f;
+//     lfo1Params.freq = knobValues[3] * 10.0f;
+//     lfo1Params.amp = knobValues[4] * 0.5f;
+//     filterParams.freq = 20.0f + knobValues[5] * 20000.0f;
+//     filterParams.res = knobValues[6];
+//     filterParams.drive = knobValues[7];
+
+//     if (switch1State) { // Cycle through waveforms/modes
+//         if (selectedFunction == 0) osc1Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(osc1Params.wave) + 1) % 4);
+//         else if (selectedFunction == 2) osc2Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(osc2Params.wave) + 1) % 4);
+//         else if (selectedFunction == 3) lfo1Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(lfo1Params.wave) + 1) % 3);
+//         else if (selectedFunction == 4) lfo2Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(lfo2Params.wave) + 1) % 3);
+//         else if (selectedFunction == 5) filterParams.onePoleMode = static_cast<OnePole::FilterMode>((static_cast<int>(filterParams.onePoleMode) + 1) % 2);
+//         else if (selectedFunction == 7) filterParams.ladderMode = static_cast<Ladder::FilterType>((static_cast<int>(filterParams.ladderMode) + 1) % 4);
+//     }
+
+//     if (switch2State && selectedFunction == 4) { // LFO2 modulation target
+//         lfo2Params.wave = static_cast<Oscillator::Waveform>((static_cast<int>(lfo2Params.wave) + 1) % 3); // Cycle through waveforms
+//     }
+
+//     // Update oscillators and filters
+//     updateOsc(osc1, osc1Params, lfo1.Process() * 50.0f);
+//     updateOsc(osc2, osc2Params);
+//     updateOsc(lfo1, lfo1Params);
+//     updateOsc(lfo2, lfo2Params);
+
+//     float oscBankFreqs[8];
+//     for (int i = 0; i < 8; i++) oscBankFreqs[i] = osc2Params.freq * (i + 1);
+//     oscBank.SetFreqs(oscBankFreqs);
+//     oscBank.SetSingleAmp(osc2Params.amp / 8.0f);
+
+//     float lfo2Out = lfo2.Process();
+//     float mainAmp = osc1Params.amp;
+//     float mainFreq = osc1Params.freq;
+
+//     if (lfo2Params.wave == Oscillator::WAVE_SQUARE) mainAmp = osc1Params.amp + lfo2Out * osc1Params.amp;
+//     else mainFreq = osc1Params.freq + lfo2Out * 200.0f;
+
+//     hw.led.Set(lfo2Params.freq);
+
+//     updateFilter(onePole, filterParams);
+//     updateLadder(ladder, filterParams);
+
+
+//     // Audio processing loop and waveform buffer update
+//     static float waveformBuffer[256];
+//     static size_t waveformIndex = 0;
+
+//     for (size_t i = 0; i < size; i++) {
+//         float sig = 0;
+
+//         sig += osc1.Process() * functionEnabled[0];
+//         sig += osc2.Process() * functionEnabled[1];
+//         sig += oscBank.Process() * functionEnabled[2];
+
+//         sig *= mainAmp;
+
+//         sig = onePole.Process(sig) * functionEnabled[5];
+//         sig = ladder.Process(sig) * functionEnabled[6];
+
+//         out[i] = sig;
+//         out[i + size] = sig;
+
+//         waveformBuffer[waveformIndex] = sig;
+//         waveformIndex = (waveformIndex + 1) % 256;
+//     }
+// }
+
+// int main(void) {
+//     hw.Init();
+//     hw.SetAudioBlockSize(4);
+
+//     // ADC DMA
+//     for (size_t i = 0; i < NUM_KNOBS; i++) {
+//         hw.adc.Init(i, ADC_RESOLUTION_12BIT);
+//         hw.adc.StartDMA(i, (uint16_t*)adcBuffer[i], ADC_BUFFER_SIZE, AdcDMACompleteCallback);
+//     }
+
+//     // Interrupts
+//     // ... (Switch and keybed interrupt setup)
+
+//     // Timers
+//     debouncerTimer.Init(TimerHandle::Config());
+//     debouncerTimer.Start(DebouncerTimerCallback, 10);
+//     displayTimer.Init(TimerHandle::Config());
+//     displayTimer.Start(DisplayTimerCallback, 50);
+
+//     // OLED display
+//     hw.display.Init();
+//     hw.display.setFont(Font_7x10);
+
+//     // DSP initialization
+//     osc1.Init(hw.AudioSampleRate());
+//     osc2.Init(hw.AudioSampleRate());
+//     lfo1.Init(hw.AudioSampleRate());
+//     lfo2.Init(hw.AudioSampleRate());
+//     oscBank.Init(hw.AudioSampleRate());
+//     onePole.Init(hw.AudioSampleRate());
+//     ladder.Init(hw.AudioSampleRate());
+
+//     // Initial parameter settings (optional - set defaults here)
+//     // ...
+
+//     hw.StartAudio(AudioCallback);
+
+//     while (1) {
+//         // ... (Other tasks if any)
+//     }
+// }
+
+// void AdcDMACompleteCallback(size_t channel) {
+//     adcBufferIndex[channel] = (adcBufferIndex[channel] + 1) % ADC_BUFFER_SIZE;
+//     float knobValue = 0;
+//     for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
+//         knobValue += adcBuffer[channel][i];
+//     }
+//     knobValue /= ADC_BUFFER_SIZE;
+//     knobValues[channel] = knobValue / 4095.0f; // Normalize 0-4095 to 0-1
+// }
+
+// // Interrupt handlers
+// void Switch1InterruptHandler() {
+//     switch1State = !switch1State;
+// }
+
+// void Switch2InterruptHandler() {
+//     switch2State = !switch2State;
+// }
+
+// void KeyAInterruptHandler(size_t keyIndex) {
+//     keyAState[keyIndex] = !keyAState[keyIndex];
+//     if (keyAState[keyIndex]) { // Key pressed
+//         if (selectedFunction != -1 && selectedFunction != keyIndex) {
+//             hw.led_driver.SetLed(keyboard_leds[selectedFunction], 0); // Turn off previous LED
+//         }
+//         selectedFunction = keyIndex;
+//         hw.led_driver.SetLed(keyboard_leds[keyIndex], 1); // Turn on current LED
+//     } else { // Key released
+//         if (selectedFunction == keyIndex) {
+//             selectedFunction = -1;
+//             hw.led_driver.SetLed(keyboard_leds[keyIndex], 0); // Turn off LED
+//         }
+//     }
+// }
+
+// void KeyBInterruptHandler(size_t keyIndex) {
+//     keyBState[keyIndex] = !keyBState[keyIndex];
+//     functionEnabled[keyIndex] = keyBState[keyIndex]; // Directly update functionEnabled
+//     hw.led_driver.SetLed(keyboard_leds[keyIndex + 8], keyBState[keyIndex]); // Update B LED
+// }
+
+
+// void DebouncerTimerCallback() {
+//     // Implement debouncing logic here if needed (not strictly necessary with Daisy's built-in debouncing)
+// }
+
+// void DisplayTimerCallback() {
+//     static float waveformBuffer[256]; // Get the buffer from the AudioCallback
+//     DrawWaveform(waveformBuffer, 256);
+//     hw.display.Update(displayBuffer);
+// }
+
+// void DrawWaveform(float* waveform, size_t waveformSize) {
+//     memset(displayBuffer, 0, sizeof(displayBuffer));
+
+//     for (size_t x = 0; x < 128; x++) {
+//         size_t waveformIndex = static_cast<size_t>(x * (static_cast<float>(waveformSize) / 128.0f));
+//         float sample = waveform[waveformIndex];
+//         int y = 32 - static_cast<int>(sample * 31.0f);
+
+//         y = (y < 0) ? 0 : ((y > 63) ? 63 : y);
+//         displayBuffer[x + (y / 8) * 128] |= (1 << (y % 8));
+//     }
+// }
+
+
+/*
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+// Hardware abstraction
+DaisyField hw;
+
+// Synth components
+Oscillator osc1, osc2;
+Svf filter;
+Adsr env;
+
+// Step sequencer parameters
+constexpr int kNumSteps = 8; // Number of sequencer steps
+float sequence[kNumSteps] = {0}; // Holds note frequencies
+bool step_active[kNumSteps] = {false}; // Tracks active steps
+int current_step = 0;
+float bpm = 120.0f; // Default BPM, controlled by Knob 3
+uint32_t last_step_time = 0; // Tracks last step execution
+
+// Variables
+bool osc2_active = true;
+bool filter_active = true;
+float osc_mix = 0.5f;
+float detune = 0.01f;
+float cutoff = 5000.0f;
+float resonance = 0.7f;
+bool gate = false;
+float osc1_freq = 440.0f;
+
+// Selected parameter (Keybed A selection)
+enum SynthParameter
+{
+    MIX,
+    DETUNE,
+    FILTER_CUTOFF,
+    FILTER_ENV,
+    ATTACK,
+    DECAY,
+    SUSTAIN,
+    RELEASE
+};
+SynthParameter selected_param = MIX;
+
+// Audio callback
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        // Generate oscillator signals
+        float osc1_sample = osc1.Process();
+        float osc2_sample = osc2_active ? osc2.Process() : 0.0f;
+        float mixed_sample = (osc1_sample * (1.0f - osc_mix)) + (osc2_sample * osc_mix);
+
+        // Apply envelope
+        float env_out = env.Process(gate);
+        mixed_sample *= env_out;
+
+        // Apply filter if active
+        if (filter_active)
+        {
+            filter.Process(mixed_sample);
+            mixed_sample = filter.Low();
+        }
+
+        out[0][i] = mixed_sample;
+        out[1][i] = mixed_sample;
+    }
+}
+
+// Process Keybed A (Press & Hold / Press & Release)
+void ProcessKeybedA()
+{
+    for (int i = 8; i < 16; i++)
+    {
+        if (hw.KeyboardRisingEdge(i))
+        {
+            selected_param = static_cast<SynthParameter>(i - 8);
+          //  hw.SetLed(hw.LED_KEY_A1 + (i - 8), 1.0f); // Turn on corresponding LED
+        }
+        if (hw.KeyboardFallingEdge(i))
+        {
+           // hw.SetLed(hw.LED_KEY_A1 + (i - 8), 0.0f); // Turn off corresponding LED
+        }
+    }
+}
+
+// Process Keybed B (Step Sequencer)
+void ProcessKeybedB()
+{
+    for (int i = 0; i < kNumSteps; i++)
+    {
+        if (hw.KeyboardRisingEdge(i))
+        {
+            step_active[i] = !step_active[i]; // Toggle step state
+            if (step_active[i])
+            {
+                sequence[i] = mtof(36 + i); // Assign note frequency
+               // hw.SetLed(hw.LED_KEY_B1 + i, 1.0f); // Turn on corresponding LED
+            }
+            else
+            {
+                //hw.SetLed(hw.LED_KEY_B1 + i, 0.0f); // Turn off corresponding LED
+            }
+        }
+    }
+}
+
+// Step Sequencer Timing
+void UpdateStepSequencer()
+{
+    float step_time = 60000.0f / bpm / kNumSteps; // Convert BPM to step duration (ms)
+    if (System::GetNow() - last_step_time > step_time)
+    {
+        last_step_time = System::GetNow();
+        current_step = (current_step + 1) % kNumSteps;
+
+        if (step_active[current_step])
+        {
+            osc1_freq = sequence[current_step];
+            osc1.SetFreq(osc1_freq);
+            osc2.SetFreq(osc1_freq * (1.0f + detune));
+            gate = true; // Trigger note
+        }
+        else
+        {
+            gate = false; // No note
+        }
+    }
+}
+
+// Process Knobs
+void ProcessKnobs()
+{
+    float knob1_val = hw.GetKnobValue(0);
+    float knob2_val = hw.GetKnobValue(1);
+    float knob3_val = hw.GetKnobValue(2); // Knob 3 now controls BPM
+
+    switch (selected_param)
+    {
+    case MIX:
+        osc_mix = knob1_val;
+        break;
+    case DETUNE:
+        detune = knob1_val * 0.05f;
+        osc2.SetFreq(osc1_freq * (1.0f + detune));
+        break;
+    case FILTER_CUTOFF:
+        cutoff = fmap(knob1_val, 200.0f, 10000.0f);
+        resonance = fmap(knob2_val, 0.1f, 0.9f);
+        filter.SetFreq(cutoff);
+        filter.SetRes(resonance);
+        break;
+    case FILTER_ENV:
+        // Not implemented yet
+        break;
+    case ATTACK:
+        env.SetTime(ADSR_SEG_ATTACK, knob1_val * 1.0f);
+        break;
+    case DECAY:
+        env.SetTime(ADSR_SEG_DECAY, knob1_val * 1.0f);
+        break;
+    case SUSTAIN:
+        env.SetSustainLevel(knob1_val);
+        break;
+    case RELEASE:
+        env.SetTime(ADSR_SEG_RELEASE, knob1_val * 1.0f);
+        break;
+    }
+
+    // Map BPM to Knob 3
+    bpm = fmap(knob3_val, 40.0f, 200.0f);
+}
+
+// Switch handling
+void ProcessSwitches()
+{
+    hw.ProcessDigitalControls();
+
+    if (hw.KeyboardRisingEdge(8))
+        filter_active = !filter_active;
+    if (hw.KeyboardRisingEdge(9))
+        osc2_active = !osc2_active;
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+    hw.StartAudio(AudioCallback);
+
+    float sample_rate = hw.AudioSampleRate();
+
+    osc1.Init(sample_rate);
+    osc1.SetWaveform(Oscillator::WAVE_SAW);
+    osc1.SetAmp(0.5f);
+
+    osc2.Init(sample_rate);
+    osc2.SetWaveform(Oscillator::WAVE_SAW);
+    osc2.SetAmp(0.5f);
+
+    filter.Init(sample_rate);
+    filter.SetFreq(cutoff);
+    filter.SetRes(resonance);
+    filter.SetDrive(1.0f);
+
+    env.Init(sample_rate);
+    env.SetSustainLevel(0.7f);
+
+    while (1)
+    {
+        ProcessKeybedA();
+        ProcessKeybedB();
+        UpdateStepSequencer();
+        ProcessKnobs();
+        ProcessSwitches();
+        System::Delay(10);
+    }
+}
+
+*/
+
+
+/* 
+//________________ Setup blink led with TIM ~1s ___________________
+// https://electro-smith.github.io/libDaisy/classdaisy_1_1_timer_handle.html
+
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+
+// Instantiate DaisySeed and TimerHandle objects
+DaisySeed hw;
+TimerHandle tim;
+bool led_state = false;
+//uint32_t time_check = 0; // Tracks elapsed time since last interrupt
+
+// Timer interrupt callback function
+void TimerCallback(void* data)
+{
+    //static uint32_t last_time = 0;  // Stores the last recorded time
+
+    led_state = !led_state;       // Toggle LED state
+    hw.SetLed(led_state);         // Update LED
+
+    /*uint32_t current_time = System::GetNow();
+    time_check = current_time - last_time; // Compute time since last interrupt
+    last_time = current_time; // Update last_time for next call */
+/*}
+
+int main(void)
+{
+    // Initialize hardware
+    hw.Configure();
+    hw.Init();
+    hw.SetLed(false); // Ensure LED starts in OFF state
+
+    // Configure timer
+    TimerHandle::Config tim_cfg;
+    tim_cfg.periph     = TimerHandle::Config::Peripheral::TIM_5;  // Use TIM_5 to avoid conflicts
+    tim_cfg.dir        = TimerHandle::Config::CounterDir::UP;
+    tim_cfg.enable_irq = true;
+    tim_cfg.period     = 100000000; // Timer period (adjust for desired blink rate with debugger gives 0.735s)
+
+    // Initialize and start timer
+    tim.Init(tim_cfg);
+    tim.SetCallback(TimerCallback, nullptr);
+    tim.Start();
+
+    // Infinite loop (Main code can run here without blocking the LED toggling)
+    while (1)
+    {
+    }
+}
+ */
+
+/*
+//________________ Setup oscillator with VAR FREQ with knob[0] SINEWAVE HW DEPDT ___________________
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+Oscillator osc;
+
+
+// Function to map ADC value to frequency range
+float MapKnobToFreq(float adc_value)
+{
+    // Map ADC value (0 to 1) to a frequency range (e.g., 20Hz to 2000Hz)
+    return 20.0f + (adc_value * 1980.0f);
+}
+
+// Audio callback function
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    // Read the ADC value for Knob 1
+    float knob_value = hw.knob[0].Process();
+    //float knob_value = hw.GetKnobValue(DaisyField::KNOB_1);
+    // Map the knob value to frequency range
+    float freq = MapKnobToFreq(knob_value);
+    osc.SetFreq(freq);
+
+    // Generate and output the sine wave
+    for (size_t i = 0; i < size; i++)
+    {
+        float sig = osc.Process(); // Generate sine wave sample
+        out[0][i] = sig; // Left channel
+        out[1][i] = sig; // Right channel
+    }
+}
+
+int main(void)
+{
+    // Initialize Daisy Field hardware
+    hw.Init();
+
+    // Set audio parameters
+    hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+    hw.SetAudioBlockSize(4); // Process 4 samples per callback
+
+    // Initialize Oscillator
+    osc.Init(hw.AudioSampleRate());
+    osc.SetWaveform(Oscillator::WAVE_SIN); // Set waveform to sine
+    osc.SetFreq(440.0f);  // Set frequency to 440 Hz (A4 note)
+    osc.SetAmp(0.5f);     // Set amplitude to 0.5
+
+    // Start ADC peripheral
+    hw.StartAdc();
+    // Start the audio engine with our callback function
+    hw.StartAudio(AudioCallback);
+
+
+    while (1) {}
+}
+*/
+
+/*
+//_________________________ Setup oscillator with 440Hz SINEWAVE ______________________
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+// Create an instance of the DaisyField class to manage hardware initialization
+DaisyField hw;
+
+// Create an instance of the Oscillator class from DaisySP
+Oscillator osc;
+
+// Audio callback function
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    // Process audio and fill the output buffer
+    for (size_t i = 0; i < size; i++)
+    {
+        float sample = osc.Process();  // Generate oscillator sample
+
+        // Send the same sample to both the left and right channels
+        out[0][i] = sample; // Left channel
+        out[1][i] = sample; // Right channel
+    }
+}
+    
+
+int main(void)
+{
+    // Initialize Daisy Field hardware
+    hw.Init();
+
+    // Set audio parameters
+    hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+    hw.SetAudioBlockSize(4); // Process 4 samples per callback
+
+    // Initialize Oscillator
+    osc.Init(hw.AudioSampleRate());
+    osc.SetWaveform(Oscillator::WAVE_SIN); // Set waveform to sine
+    osc.SetFreq(440.0f);  // Set frequency to 440 Hz (A4 note)
+    osc.SetAmp(0.5f);     // Set amplitude to 0.5
+
+    // Start the audio engine with our callback function
+    hw.StartAudio(AudioCallback);
+
+    // Infinite loop (keeping the program alive)
+    while(1) {}
+}
+*/
+

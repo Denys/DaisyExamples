@@ -1,0 +1,1308 @@
+CONTENTS
+1. EnvelopeExample
+2. GettingStarted
+  2.1 Audio_Settings
+  2.2 CV_Input
+  2.3 CV_Output
+  2.4 Gate_Input
+  2.5 Gate_Output
+  2.6 Momentary_Switch
+  2.7 Pot_Input
+  2.8 Toggle_Switch
+3. HardwareTest
+4. Looper
+5. PassthruExample
+6. RandomCvExample
+7. ReverbExample
+8. SimpleOscillator
+9. TripleSaw
+
+________________________________________________________________________________
+
+Makefile template
+________________________________________________________________________________
+
+# Project Name
+TARGET = __ProjectName__
+
+# Sources
+CPP_SOURCES = __ProjectName__.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy/
+DAISYSP_DIR = ../../DaisySP/
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+1. EnvelopeExample
+
+__EnvelopeExample README.md__
+# EnvelopeExample
+
+This example demonstrates using the daisy for an ADSR envelope
+
+This example shows off the ability to output audio rate control voltage signals from the CV output pins of the dac.
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV 1 | C5 | Attack Time | Range is from instant to 1 second |
+| CV 2 | C4 | Decay Time | Range is from instant to 1 second |
+| CV 3 | C3 | Sustain Level | Range is from 0v to 5V for sustain stage |
+| CV 4 | C2 | Release Time | Range is from instant to 1 second |
+| Gate In 1 | B10 | ADSR Gate | Input for engaging the envelope |
+| Button | B7 | ADSR Button | Engages the envelope while pressed |
+
+__EnvelopeExample.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+/** These are namespaces for the daisy libraries.
+ *  These lines allow us to omit the "daisy::" and "daisysp::" before
+ * referencing modules, and functions within the daisy libraries.
+ */
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Our hardware board class handles the interface to the actual DaisyPatchSM
+ * hardware. */
+DaisyPatchSM patch;
+
+/** Create ADSR envelope module */
+Adsr envelope;
+
+/** Create a button to control the ADSR activation */
+Switch button;
+
+/** Similar to the audio callback, you can generate audio rate CV signals out of the CV outputs. 
+ *  These signals are 12-bit DC signals that range from 0-5V out of the Patch SM
+*/
+void EnvelopeCallback(uint16_t **output, size_t size)
+{
+    /** Process the controls */
+    patch.ProcessAnalogControls();
+    button.Debounce();
+
+    /** Set the input value of the ADSR */
+    bool env_state;
+    if(button.Pressed() || patch.gate_in_1.State())
+        env_state = true;
+    else
+        env_state = false;
+
+    /** Assign four controls to the times and level of the envelope segments 
+     *  Attack, Decay, and Release will be set between instantaneous to 1 second
+     *  Sustain will be set between 0 and 1 
+     */
+    float knob_attack = patch.GetAdcValue(CV_1);
+    envelope.SetAttackTime(knob_attack);
+
+    float knob_decay = patch.GetAdcValue(CV_2);
+    envelope.SetDecayTime(knob_decay);
+
+    float knob_sustain = patch.GetAdcValue(CV_3);
+    envelope.SetSustainLevel(knob_sustain);
+
+    float knob_release = patch.GetAdcValue(CV_4);
+    envelope.SetReleaseTime(knob_release);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        // convert to 12-bit integer (0-4095)
+        uint16_t value = (envelope.Process(env_state) * 4095.0);
+        output[0][i]   = value; /**< To CV OUT 1 - Jack */
+        output[1][i]   = value; /**< To CV OUT 2 - LED */
+    }
+}
+
+int main(void)
+{
+    /** Initialize the hardware */
+    patch.Init();
+
+    /** Initialize the button input to pin B7 (Button on the MicroPatch Eval board) */
+    button.Init(patch.B7, 1000);
+
+    /** Initialize the ADSR */
+    envelope.Init(48000);
+
+    /** Configure the DAC to generate audio-rate signals in a callback */
+    patch.StartDac(EnvelopeCallback);
+
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+2. GettingStarted
+
+2.1 Audio_Settings
+
+__Audio_Settings README.md__
+# Audio_Settings
+
+## Author
+
+beserge
+
+## Description
+
+Audio passthrough with audio setting adjustment.  
+Samplerate = 16kHz. Blocksize = 4 samples.  
+For help connecting the jacks, refer to figures 1.1 and 1.8 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Comment |
+| --- | --- | --- |
+| Audio Out Right | B1 | Connect this to an audio jack's signal leg. |
+| Audio Out Left | B2 | Connect this to an audio jack's signal leg. |
+| Audio In Right | B3 | Connect this to an audio jack's signal leg. |
+| Audio In Left | B4 | Connect this to an audio jack's signal leg. |
+| GND | A7 | Connect this all of your audio jacks' ground legs. |
+
+__Audio_Settings.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+/** These are namespaces for the daisy libraries.
+ *  These lines allow us to omit the "daisy::" and "daisysp::" before
+ * referencing modules, and functions within the daisy libraries.
+ */
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Daisy patch sm object */
+DaisyPatchSM patch;
+
+/** Callback for processing and synthesizing audio
+ *
+ *  The default size is very small (just 4 samples per channel). This means the
+ * callback is being called at 16kHz.
+ *
+ *  This size is acceptable for many applications, and provides an extremely low
+ * latency from input to output. However, you can change this size by calling
+ * patch.SetAudioBlockSize(desired_size). When running complex DSP it can be more
+ * efficient to do the processing on larger chunks at a time.
+ *
+ */
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        /** set the left output to the current left input */
+        OUT_L[i] = IN_L[i];
+
+        /** set the right output to the current right input */
+        OUT_R[i] = IN_R[i];
+    }
+}
+
+int main(void)
+{
+    /** Initialize the patch_sm object 
+    * This sets the blocksize to its default of 4 samples.
+    * This sets the samplerate to its default of 48kHz.
+    */
+    patch.Init();
+
+    /** Set the samplerate to 96kHz */
+    patch.SetAudioSampleRate(96000);
+
+    /** Set the blocksize to 4 samples */
+    patch.SetAudioBlockSize(4);
+
+    /** Start the audio callback */
+    patch.StartAudio(AudioCallback);
+
+    /** Loop forever */
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+2.2 CV_Input
+
+__CV_Input README.md__
+# CV_Input
+
+## Author
+
+beserge
+
+## Description
+
+Turns the onboard led on or off based on CV. If the CV input is positive, the led is on.  
+If the CV input is negative, the LED is off. Uses CV_1.
+For help connecting the CV input jack, refer to figure 1.3 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Function |
+| --- | --- | --- |
+| CV 1 | C5 | CV In |
+
+__CV_Input.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Update the control ins */
+        patch.ProcessAllControls();
+
+        /** Read from CV_1 (-1, 1) */
+        float value = patch.GetAdcValue(CV_5);
+
+        /** If the Adc value is greater than 0V... */
+        if(value > 0)
+        {
+            /** Turn the led on */
+            patch.SetLed(true);
+        }
+        else
+        {
+            /** Otherwise, turn the led off */
+            patch.SetLed(false);
+        }
+    }
+}
+
+________________________________________________________________________________
+
+2.3 CV_Output
+
+__CV_Output README.md__
+# CV_Output
+
+## Author
+
+beserge
+
+## Description
+
+Simple ramp wave LFO to demonstrate CV Out.
+For help connecting the CV output jack, refer to figure 1.9 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+## Controls
+
+| Pin Name | Pin Location | Function |
+| --- | --- | --- |
+| CV Out 1 | C10 | LFO Out |
+
+__CV_Output.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Write 0V to CV_OUT_2 */
+        patch.WriteCvOut(CV_OUT_2, 0);
+
+        /** Wait for 1000 ms (1 second) */
+        patch.Delay(1000);
+
+        /** Write 2.5V to CV_OUT_2 */
+        patch.WriteCvOut(CV_OUT_2, 2.5);
+
+        /** Wait for 1000 ms (1 second) */
+        patch.Delay(1000);
+
+        /** Write 5V to CV_OUT_2 */
+        patch.WriteCvOut(CV_OUT_2, 5);
+
+        /** Wait for 1000 ms (1 second) */
+        patch.Delay(1000);
+    }
+}
+
+________________________________________________________________________________
+
+2.4 Gate_Input
+
+__Gate_Input README.md__
+# Gate_In
+
+## Author
+
+beserge
+
+## Description
+
+Set the onboard led based on the gate input.
+For help connecting the Gate Input jack, refer to figure 1.4 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Function |
+| --- | --- | --- |
+| Gate In 1 | B10 | Gate In |
+
+__Gate_Input.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Get the current gate in state */
+        bool state = patch.gate_in_1.State();
+
+        /** Set the led to the gate state */
+        patch.SetLed(state);
+    }
+}
+
+________________________________________________________________________________
+
+2.5 Gate_Output
+
+__Gate_Output README.md__
+# Gate_Output
+
+## Author
+
+beserge
+
+## Description
+
+Toggle Gate Out 1 four times a second.
+For help connecting the gate output jack, refer to figure 1.10 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Function |
+| --- | --- | --- |
+| Gate Out 1 | B5 | Gate Out |
+
+__Gate_Output.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Set the gate high */
+        dsy_gpio_write(&patch.gate_out_1, true);
+
+        /** Wait 250 ms */
+        patch.Delay(250);
+
+        /** Set the gate low */
+        dsy_gpio_write(&patch.gate_out_1, false);
+
+        /** Wait 250 ms */
+        patch.Delay(250);
+    }
+}
+
+________________________________________________________________________________
+
+2.6 Momentary_Switch
+
+__Momentary_Switch README.md__
+# Momentary_Switch
+
+## Author
+
+beserge
+
+## Description
+
+Set the onboard led to the state off a momentary switch.
+For help connecting the momentary switch, refer to figure 1.5 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| B7 | B7 | Switch In | Connect this to any leg of the switch |
+| GND | A4 | Switch Ground | Connect this to the leg diagonally across from Switch In |
+
+__Momentary_Switch.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+/** Switch object */
+Switch button;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /* Initialize the switch
+	 - We'll read the switch on pin B7
+	*/
+    button.Init(patch.B7);
+
+    /** loop forever */
+    while(1)
+    {
+        /** Debounce the switch */
+        button.Debounce();
+
+        /** Get the current button state */
+        bool state = button.Pressed();
+
+        /** Set the onboard led to the current state */
+        patch.SetLed(state);
+    }
+}
+
+________________________________________________________________________________
+
+2.7 Pot_Input
+
+__Pot_Input README.md__
+# Pot_Input
+
+## Author
+
+beserge
+
+## Description
+
+Set the onboard led's brightness with a potentiometer.
+For help connecting the potentiometer, refer to figure 1.2 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV 1 | C5 | Pot In | Connect this to the pot's middle leg |
+| 5V | A6 | Pot Supply Voltage | Connect this to the pot's right leg |
+| GND | A4 | Pot Ground | Connect this to the pot's left leg |
+
+__Pot_Input.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Update all cv inputs */
+        patch.ProcessAllControls();
+
+        /** Get CV_1 Input (0, 1) */
+        float value = patch.GetAdcValue(CV_1);
+
+        /** Here the pot is wired to GND and 5V
+          * So 2.5V is the pot's halfway point.
+          * 
+          * If the Adc value is greater than .5 (2.5V)... 
+        */
+        if(value > .5)
+        {
+            /** Turn the led on */
+            patch.SetLed(true);
+        }
+        else
+        {
+            /** Otherwise, turn the led off */
+            patch.SetLed(false);
+        }
+    }
+}
+
+________________________________________________________________________________
+
+2.8 Toggle_Switch
+
+__Toggle_Switch README.md__
+# Toggle_Switch
+
+## Author
+
+beserge
+
+## Description
+
+Set the onboard led based on a toggle switch.
+For help connecting the toggle switch, refer to figure 1.6 in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| B8 | B8 | Toggle In | Connect this the switch's middle leg. |
+| GND | A7 | Toggle Ground | Connect this to one of the switch's outer legs |
+
+__Toggle_Switch.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Hardware object for the patch_sm */
+DaisyPatchSM patch;
+
+/** Switch object */
+Switch toggle;
+
+int main(void)
+{
+    /** Initialize the patch_sm hardware object */
+    patch.Init();
+
+    /* Initialize the switch
+	 - We'll read the switch on pin B8
+	*/
+    toggle.Init(patch.B8);
+
+    /** Loop forever */
+    while(1)
+    {
+        /** Debounce the switch */
+        toggle.Debounce();
+
+        /** Get the current toggle state */
+        bool state = toggle.Pressed();
+
+        /** Set the onboard led to the current state */
+        patch.SetLed(state);
+    }
+}
+
+________________________________________________________________________________
+
+3. HardwareTest
+
+__HardwareTest README.md__
+# HardwareTest
+
+Hardware verification test.
+
+This is set up to use the patch.Init() hardware to verify the Patch SM is functioning as expected.
+
+To verify the various functionality:
+
+* USB Serial port is used to print data
+  * ADC Values for all 12 ADCs are printed (four of these are on the expander bank)
+  * Gate input values
+  * B7 and B8 (check actual pin names) values based on toggle/button position
+  * SDRAM Pass/Fail
+  * QSPI Pass/Fail
+  * SDMMC Pass/Fail
+* If an SD Card is connected at bootup the it will write, and readback a text file to verify it functions.
+* Audio will be passing through.
+   IN_L is connected to IN_R when on the hardware when no jack is plugged into the IN_R jack.
+* The LED and CV out will be generating 1Hz ramp waves.
+* The Gate Outputs will be outputting Squarewaves at 500mHz (one pulse per two seconds)
+
+## Checking the values via USB
+
+THIS SERIAL MONITOR SCRIPT HAS **NOT** BEEN ADDED YET.
+
+Included is a script that will open a serial monitor.
+
+Running `test.sh` (or `test.bat` on windows) with python installed a terminal will open and start printing.
+
+By double-clicking, or running with no arguments, the test will find the first available COM port connected and connect to it.
+This may not always be the Daisy.
+
+You can pass in an argument with the name of the COM Port (usually checked in your PCs Device Manager)
+
+This will look something like:
+
+```
+% Windows
+test.bat COM17
+```
+
+```
+# Mac/Linux
+./test.sh usbmodem12345678
+```
+
+__HardwareTest.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+DaisyPatchSM   hw;
+Switch         button, toggle;
+FIL            file; /**< Can't be made on the stack (DTCMRAM) */
+FatFSInterface fsi;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    button.Debounce();
+    toggle.Debounce();
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = in[0][i];
+        out[1][i] = in[1][i];
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.StartLog(true);
+    hw.PrintLine("Daisy Patch SM started. Test Beginning");
+
+    /** Memory tests first to keep test short if everything else fails */
+    bool sdram_pass = hw.ValidateSDRAM();
+    hw.PrintLine("SDRAM Test\t-\t%s", sdram_pass ? "PASS" : "FAIL");
+    bool qspi_pass = hw.ValidateQSPI();
+    hw.PrintLine("QSPI Test\t-\t%s", qspi_pass ? "PASS" : "FAIL");
+
+    /** SD card next */
+    SdmmcHandler::Config sd_config;
+    SdmmcHandler         sdcard;
+    sd_config.Defaults();
+    sdcard.Init(sd_config);
+
+    fsi.Init(FatFSInterface::Config::MEDIA_SD);
+
+
+    /** Write/Read text file */
+    const char *test_string = "Testing Daisy Patch SM";
+    const char *test_fname  = "DaisyPatchSM-Test.txt";
+    FRESULT     fres = FR_DENIED; /**< Unlikely to actually experience this */
+    if(f_mount(&fsi.GetSDFileSystem(), "/", 0) == FR_OK)
+    {
+        /** Write Test */
+        if(f_open(&file, test_fname, (FA_CREATE_ALWAYS | FA_WRITE)) == FR_OK)
+        {
+            UINT   bw  = 0;
+            size_t len = strlen(test_string);
+            fres       = f_write(&file, test_string, len, &bw);
+        }
+        f_close(&file);
+        if(fres == FR_OK)
+        {
+            /** Read Test only if Write passed */
+            if(f_open(&file, test_fname, (FA_OPEN_EXISTING | FA_READ)) == FR_OK)
+            {
+                UINT   br = 0;
+                char   readbuff[32];
+                size_t len = strlen(test_string);
+                fres       = f_read(&file, readbuff, len, &br);
+            }
+            f_close(&file);
+        }
+    }
+    bool sdmmc_pass = fres == FR_OK;
+    hw.PrintLine("SDMMC Test\t-\t%s", sdmmc_pass ? "PASS" : "FAIL");
+
+    /** 5 second delay before starting streaming test. */
+    System::Delay(5000);
+
+
+    /** Initialize Button/Toggle for rest of test. */
+    button.Init(DaisyPatchSM::B7, hw.AudioCallbackRate());
+    toggle.Init(DaisyPatchSM::B8, hw.AudioCallbackRate());
+
+    daisysp::Phasor dacphs;
+    dacphs.Init(500);
+    dacphs.SetFreq(1.f);
+
+    hw.StartAudio(AudioCallback);
+
+    uint32_t now, dact, usbt, gatet;
+    now = dact = usbt = System::GetNow();
+    gatet             = now;
+
+    while(1)
+    {
+        now = System::GetNow();
+        // 500Hz samplerate for DAC output test
+        if(now - dact > 2)
+        {
+            hw.WriteCvOut(CV_OUT_BOTH, dacphs.Process() * 5.f);
+            dact = now;
+        }
+
+        if(now - usbt > 100)
+        {
+            hw.PrintLine("Streaming Test Results");
+            hw.PrintLine("######################");
+            hw.PrintLine("Analog Inputs:");
+            for(int i = 0; i < ADC_LAST; i++)
+            {
+                hw.Print("%s_%d: " FLT_FMT3,
+                         i < ADC_9 ? "CV" : "ADC",
+                         i + 1,
+                         FLT_VAR3(hw.GetAdcValue(i)));
+                if(i != 0 && (i + 1) % 4 == 0)
+                    hw.Print("\n");
+                else
+                    hw.Print("\t");
+            }
+            hw.PrintLine("######################");
+            hw.PrintLine("Digital Inputs:");
+            hw.Print("Button: %s\t", button.Pressed() ? "ON" : "OFF");
+            hw.Print("Toggle: %s\t", toggle.Pressed() ? "UP" : "DOWN");
+            hw.Print("\nGATE_IN_1: %s\t",
+                     hw.gate_in_1.State() ? "HIGH" : "LOW");
+            hw.PrintLine("GATE_IN_2: %s",
+                         hw.gate_in_2.State() ? "HIGH" : "LOW");
+            hw.PrintLine("######################");
+            usbt = now;
+        }
+        if(now - gatet > 1000)
+        {
+            dsy_gpio_toggle(&hw.gate_out_1);
+            dsy_gpio_toggle(&hw.gate_out_2);
+            gatet = now;
+        }
+
+        /** short 60ms blip off on builtin LED */
+        hw.SetLed((now & 2047) > 60);
+    }
+}
+
+________________________________________________________________________________
+
+4. Looper
+
+__Looper README.md__
+# Looper
+
+## Author
+
+beserge
+
+## Description
+
+Simple Looper for Patch SM.  
+Includes controls for record on / off / clear, Input Volume, and Loop Volume.  
+The output is a 50/50 mix of the post gain input and loop signals.  
+
+If you are using the patch.Init(), the controls are already connected as they should be.  
+
+If you are using a bare Patch SM, refer to the 1.x figures in the [Patch SM Datasheet](https://github.com/electro-smith/DaisyPatchSM/blob/main/doc/datasheet/ES_Patch_SM_datasheet_v1.0.pdf).  
+
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV_1 | C5 | Input Level | Connect a potentiometer here. |
+| CV_2 | C4 | Loop Level | Connect a potentiometer here. |
+| B7 | B7 | Record Toggle |  Connect a tactile switch here. Press to toggle recording, hold to clear. |
+| OUT_R | B1 | Audio Out R | Connect a jack here. |
+| OUT_L | B2 | Audio Out L | Connect a jack here. |
+| IN_R | B3 | Audio In R | Connect a jack here. |
+| IN_L | B4 | Audio In L | Connect a jack here. |
+
+__Looper.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+DaisyPatchSM patch;
+Switch       button;
+
+#define kBuffSize 48000 * 60 // 60 seconds at 48kHz
+
+// Loopers and the buffers they'll use
+Looper              looper_l;
+Looper              looper_r;
+float DSY_SDRAM_BSS buffer_l[kBuffSize];
+float DSY_SDRAM_BSS buffer_r[kBuffSize];
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    // Process the controls
+    patch.ProcessAllControls();
+    button.Debounce();
+
+    // Set in and loop gain from CV_1 and CV_2 respectively
+    float in_level   = patch.GetAdcValue(CV_1);
+    float loop_level = patch.GetAdcValue(CV_2);
+
+    //if you press the button, toggle the record state
+    if(button.RisingEdge())
+    {
+        looper_l.TrigRecord();
+        looper_r.TrigRecord();
+    }
+
+    // if you hold the button longer than 1000 ms (1 sec), clear the loop
+    if(button.TimeHeldMs() >= 1000.f)
+    {
+        looper_l.Clear();
+        looper_r.Clear();
+    }
+
+    // Set the led to 5V if the looper is recording
+    patch.WriteCvOut(2, 5.f * looper_l.Recording());
+
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        // store the inputs * the input gain factor
+        float in_l = IN_L[i] * in_level;
+        float in_r = IN_R[i] * in_level;
+
+        // store signal = loop signal * loop gain + in * in_gain
+        float sig_l = looper_l.Process(in_l) * loop_level + in_l;
+        float sig_r = looper_r.Process(in_r) * loop_level + in_r;
+
+        // send that signal to the outputs
+        OUT_L[i] = sig_l;
+        OUT_R[i] = sig_r;
+    }
+}
+
+int main(void)
+{
+    // Initialize the hardware
+    patch.Init();
+
+    // Init the loopers
+    looper_l.Init(buffer_l, kBuffSize);
+    looper_r.Init(buffer_r, kBuffSize);
+
+    // Init the button
+    button.Init(patch.B7);
+
+    // Start the audio callback
+    patch.StartAudio(AudioCallback);
+
+    // loop forever
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+5. PassthruExample
+
+__PassthruExample README.md__
+# PassthruExample
+
+This is a simple example of passing audio input through the Daisy Patch SM.
+
+This is a great starting point for new projects using this board.
+
+To use this project as a template for your own project you can use the following helper.py command:
+
+```bash
+./helper.py copy MyProjects/MyAwesomeNewProject --source patch_sm/PassthruExample
+```
+
+## Controls
+
+None
+
+__PassthruExample.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+/** These are namespaces for the daisy libraries.
+ *  These lines allow us to omit the "daisy::" and "daisysp::" before
+ * referencing modules, and functions within the daisy libraries.
+ */
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** Our hardware board class handles the interface to the actual DaisyPatchSM
+ * hardware. */
+DaisyPatchSM patch;
+
+/** Callback for processing and synthesizing audio
+ *
+ *  The audio buffers are arranged as arrays of samples for each channel.
+ *  For example, to access the left input you would use:
+ *    in[0][n]
+ *  where n is the specific sample.
+ *  There are "size" samples in each array.
+ *
+ *  The default size is very small (just 4 samples per channel). This means the
+ * callback is being called at 16kHz.
+ *
+ *  This size is acceptable for many applications, and provides an extremely low
+ * latency from input to output. However, you can change this size by calling
+ * patch.SetAudioBlockSize(desired_size). When running complex DSP it can be more
+ * efficient to do the processing on larger chunks at a time.
+ *
+ */
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    /** The easiest way to do pass thru is to simply copy the input to the output
+   * In C++ the standard way of doing this is with std::copy. However, those
+   * familliar with C can use memcpy. A simple loop is also a good way to do
+   * this.
+   *
+   * Since you'll most likely want to be doing something between the input,
+   *  and the output, and not just passing it through we'll demonstrate doing
+   *  so with a for loop.
+   */
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = in[0][i]; /**< Copy the left input to the left output */
+        out[1][i] = in[1][i]; /**< Copy the right input to the right output */
+    }
+}
+
+int main(void)
+{
+    /** Initialize the hardware */
+    patch.Init();
+
+    /** Start Processing the audio */
+    patch.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+6. RandomCvExample
+
+__RandomCvExample README.md__
+# RandomCvExample
+
+This example demonstrates basic usage of the CV Outputs on the Daisy Patch SM.
+
+Both CV outputs will output the same random voltage.
+
+## Controls
+
+None
+
+__RandomCvExample.cpp__
+#include "daisy_patch_sm.h"
+
+using namespace daisy;
+using namespace patch_sm;
+
+DaisyPatchSM patch;
+
+int main(void)
+{
+    /** Initialize the hardware */
+    patch.Init();
+    while(1)
+    {
+        /** Delay half a second */
+        patch.Delay(500);
+        /** Get a truly random float from the hardware */
+        float voltage = patch.GetRandomFloat(0.0, 5.0);
+        /** Write it to both CV Outputs */
+        patch.WriteCvOut(CV_OUT_BOTH, voltage);
+    }
+}
+
+________________________________________________________________________________
+
+7. ReverbExample
+
+__ReverbExample README.md__
+# ReverbExample
+
+This example shows how to set up a simple reverb effect.
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV_1 | C5 | Reverb Time | Controls the size of the reverb |
+| CV_2 | C4 | Reverb Dampening Frequency | Range is from 1kHz to 19kHz |
+| CV_3 | C3 | Input Level | Controls the amount of dry signal passing through to the output |
+| CV_4 | C2 | Send amount | Controls the amount of dry signal sent to the reverb |
+
+The _comments.cpp file is identical to the main file, but has detailed comments explaining each piece of the source code.
+
+__ReverbExample.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+using namespace patch_sm;
+
+DaisyPatchSM patch;
+ReverbSc     reverb;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    patch.ProcessAnalogControls();
+
+    /** Update Params with the four knobs */
+    float time_knob = patch.GetAdcValue(CV_1);
+    float time      = fmap(time_knob, 0.3f, 0.99f);
+
+    float damp_knob = patch.GetAdcValue(CV_2);
+    float damp      = fmap(damp_knob, 1000.f, 19000.f, Mapping::LOG);
+
+    float in_level = patch.GetAdcValue(CV_3);
+
+    float send_level = patch.GetAdcValue(CV_4);
+
+    reverb.SetFeedback(time);
+    reverb.SetLpFreq(damp);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float dryl  = IN_L[i] * in_level;
+        float dryr  = IN_R[i] * in_level;
+        float sendl = IN_L[i] * send_level;
+        float sendr = IN_R[i] * send_level;
+        float wetl, wetr;
+        reverb.Process(sendl, sendr, &wetl, &wetr);
+        OUT_L[i] = dryl + wetl;
+        OUT_R[i] = dryr + wetr;
+    }
+}
+
+int main(void)
+{
+    patch.Init();
+    reverb.Init(patch.AudioSampleRate());
+    patch.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+8. SimpleOscillator
+
+__SimpleOscillator README.md__
+# SimpleOscillator
+
+Basic sine wave oscillator.
+
+This example demonstrates the both the basics of setting up an oscillator as well as using calibrated pitch tracking for accuracy with 1V/Octave signals.
+
+To keep this example on the simpler side, the calibration itself is handled in another program.
+
+See the `patch_sm/VoctCalibration` example, which will go through the process of calibrating the CV_5 input.
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV_1 | C5 | Coarse Tuning | Sets the pitch of the oscillator |
+| CV_5 | C6 | 1V/Octave Input | Musical pitch tracking input |
+
+__SimpleOscillator.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+/** TODO: ADD CALIBRATION */
+
+DaisyPatchSM patch;
+Oscillator   osc;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    patch.ProcessAllControls();
+
+    float coarse_knob = patch.GetAdcValue(CV_1);
+    float coarse      = fmap(coarse_knob, 36.f, 96.f);
+
+    float voct_cv = patch.GetAdcValue(CV_5);
+    float voct    = fmap(voct_cv, 0.f, 60.f);
+
+    float midi_nn = fclamp(coarse + voct, 0.f, 127.f);
+    float freq    = mtof(midi_nn);
+
+    osc.SetFreq(freq);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = osc.Process();
+        OUT_L[i]  = sig;
+        OUT_R[i]  = sig;
+    }
+}
+
+int main(void)
+{
+    patch.Init();
+    osc.Init(patch.AudioSampleRate());
+    patch.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+9. TripleSaw
+
+__TripleSaw README.md__
+# TripleSaw
+
+This example shows how to make a complex oscillator voice using three bandlimited sine waves.
+
+## Controls
+
+| Pin Name | Pin Location | Function | Comment |
+| --- | --- | --- | --- |
+| CV_1 | C5 | Coarse Tuning | Tunes the base frequency of all three oscillators |
+| CV_2 | C4 | Fine Tuning | Fine tune adjustment of base freq. for all three oscillators |
+| CV_3 | C3 | Detune Amount | Adjusts the amount of detuning between all three voices |
+| CV_5 | C6 | 1V/Octave Input | Musical pitch tracking input |
+
+The _comments.cpp file is identical to the main file with detailed comments of each piece of the source code.
+
+__TripleSaw.cpp__
+#include "daisy_patch_sm.h"
+#include "daisysp.h"
+
+/** TODO: ADD CALIBRATION */
+
+using namespace daisy;
+using namespace patch_sm;
+using namespace daisysp;
+
+DaisyPatchSM patch;
+Oscillator   osc_a, osc_b, osc_c;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    patch.ProcessAllControls();
+
+    /** Get Coarse, Fine, and V/OCT inputs from hardware 
+     *  MIDI Note number are easy to use for defining ranges */
+    float knob_coarse = patch.GetAdcValue(CV_1);
+    float coarse_tune = fmap(knob_coarse, 12, 84);
+
+    float knob_fine = patch.GetAdcValue(CV_2);
+    float fine_tune = fmap(knob_fine, 0, 10);
+
+    float cv_voct = patch.GetAdcValue(CV_5);
+    float voct    = fmap(cv_voct, 0, 60);
+
+    /** Convert from MIDI note number to frequency */
+    float midi_nn = fclamp(coarse_tune + fine_tune + voct, 0.f, 127.f);
+    float freq_a  = mtof(midi_nn);
+
+    /** Calculate a detune amount */
+    float detune_amt = patch.GetAdcValue(CV_3);
+    float freq_b     = freq_a + (0.05 * freq_a * detune_amt);
+    float freq_c     = freq_a - (0.05 * freq_a * detune_amt);
+
+    /** Set all three oscillators' frequencies */
+    osc_a.SetFreq(freq_a);
+    osc_b.SetFreq(freq_b);
+    osc_c.SetFreq(freq_c);
+
+    /** Process each sample of the oscillator and send to the hardware outputs */
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = osc_a.Process() + osc_b.Process() + osc_c.Process();
+        OUT_L[i]  = sig;
+        OUT_R[i]  = sig;
+    }
+}
+
+int main(void)
+{
+    patch.Init();
+
+    osc_a.Init(patch.AudioSampleRate());
+    osc_b.Init(patch.AudioSampleRate());
+    osc_c.Init(patch.AudioSampleRate());
+
+    osc_a.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    osc_b.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    osc_c.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+
+    patch.StartAudio(AudioCallback);
+    while(1) {}
+}
+

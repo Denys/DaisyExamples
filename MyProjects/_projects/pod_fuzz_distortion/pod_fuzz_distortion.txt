@@ -1,0 +1,175 @@
+
+#include "daisy_pod.h"
+#include "daisysp.h"
+#include "effects/fdn_reverb.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod hw;
+
+// DSP Modules
+Svf            tone_filter;
+FDNReverb<8192> reverb;
+
+// Encoder mode (0-2)
+int mode = 0;
+
+// Fuzz parameters (Mode 0)
+float drive_amount   = 1.0f;
+float tone_cutoff    = 2000.0f;
+bool  hard_clip_mode = true;
+
+// Reverb parameters (Modes 1 & 2)
+float rev_decay   = 0.97f;
+float rev_damping = 0.3f;
+float rev_size    = 1.0f;
+float rev_mix     = 0.5f;
+
+// Clipping constants
+static const float HARD_CLIP_THRESH = 0.8f;
+static const float SOFT_CLIP_DRIVE  = 3.0f;
+static const float SOFT_CLIP_NORM   = 1.0f / tanhf(3.0f);
+
+// Number of encoder modes
+static const int NUM_MODES = 3;
+
+void UpdateEncoder()
+{
+    mode += hw.encoder.Increment();
+    mode = (mode % NUM_MODES + NUM_MODES) % NUM_MODES;
+}
+
+void UpdateKnobs()
+{
+    float k1 = hw.knob1.Process();
+    float k2 = hw.knob2.Process();
+
+    switch(mode)
+    {
+        case 0: // Fuzz: Drive + Tone
+            drive_amount = 1.0f + k1 * 19.0f;
+            tone_cutoff  = 200.0f * powf(60.0f, k2);
+            tone_filter.SetFreq(tone_cutoff);
+            break;
+
+        case 1: // Reverb A: Decay + Damping
+            rev_decay   = 0.9f + k1 * 0.099f;
+            rev_damping = k2 * 0.99f;
+            reverb.SetDecay(rev_decay);
+            reverb.SetDamping(rev_damping);
+            break;
+
+        case 2: // Reverb B: Size + Mix
+            rev_size = 0.1f + k1 * 3.9f;
+            rev_mix  = k2;
+            reverb.SetDelayScale(rev_size);
+            reverb.SetMix(rev_mix);
+            break;
+    }
+}
+
+void UpdateButtons()
+{
+    if(hw.button1.RisingEdge())
+    {
+        hard_clip_mode = !hard_clip_mode;
+    }
+}
+
+void UpdateLeds()
+{
+    switch(mode)
+    {
+        case 0: // Fuzz mode
+            // LED1: red brightness = drive level
+            hw.led1.Set((drive_amount - 1.0f) / 19.0f, 0.0f, 0.0f);
+            // LED2: red = hard clip, green = soft clip
+            if(hard_clip_mode)
+                hw.led2.Set(1.0f, 0.0f, 0.0f);
+            else
+                hw.led2.Set(0.0f, 1.0f, 0.0f);
+            break;
+
+        case 1: // Reverb A
+            hw.led1.Set(1.0f, 0.6f, 0.0f); // Yellow
+            hw.led2.Set(0.0f, 0.0f, 0.0f);
+            break;
+
+        case 2: // Reverb B
+            hw.led1.Set(0.0f, 0.0f, 0.0f);
+            hw.led2.Set(0.0f, 1.0f, 1.0f); // Cyan
+            break;
+    }
+}
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                           AudioHandle::InterleavingOutputBuffer out,
+                           size_t                                size)
+{
+    hw.ProcessAllControls();
+
+    UpdateEncoder();
+    UpdateKnobs();
+    UpdateButtons();
+    UpdateLeds();
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        // 1. Mono sum of stereo input
+        float sig = (in[i] + in[i + 1]) * 0.5f;
+
+        // 2. Drive stage
+        sig *= drive_amount;
+
+        // 3. Clipping stage
+        if(hard_clip_mode)
+        {
+            sig = fminf(fmaxf(sig, -HARD_CLIP_THRESH), HARD_CLIP_THRESH);
+        }
+        else
+        {
+            sig = tanhf(sig * SOFT_CLIP_DRIVE) * SOFT_CLIP_NORM;
+        }
+
+        // 4. Tone filter (SVF lowpass)
+        tone_filter.Process(sig);
+        sig = tone_filter.Low();
+
+        // 5. FDN Reverb
+        sig = reverb.Process(sig);
+
+        // 6. Output (mono to both channels)
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sr = hw.AudioSampleRate();
+
+    // Initialize tone filter
+    tone_filter.Init(sr);
+    tone_filter.SetFreq(2000.0f);
+    tone_filter.SetRes(0.1f);
+    tone_filter.SetDrive(0.0f);
+
+    // Initialize FDN reverb
+    reverb.Init(sr);
+    reverb.SetDecay(0.97f);
+    reverb.SetDamping(0.3f);
+    reverb.SetDelayScale(1.0f);
+    reverb.SetMix(0.5f);
+
+    // Start audio processing
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        hw.UpdateLeds();
+    }
+}

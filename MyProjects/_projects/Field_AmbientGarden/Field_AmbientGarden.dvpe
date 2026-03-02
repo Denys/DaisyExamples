@@ -1,0 +1,154 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Generative Ambient Garden",
+      "author": "DVPE/QAE Pipeline",
+      "description": "Self-playing generative ambient using Dust triggers, 4x ModalVoice, SVF filtering, and ReverbSc. Custom TuringMachine + ScaleQuantizer logic added manually post-export.",
+      "created": "2026-02-08T00:00:00.000Z",
+      "modified": "2026-02-08T00:00:00.000Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "dust_clock",
+        "definitionId": "dust",
+        "position": { "x": 100, "y": 300 },
+        "parameterValues": { "density": 5.0, "amp": 1.0 },
+        "label": "Random Clock (Dust)"
+      },
+      {
+        "id": "mv_1",
+        "definitionId": "modal_voice",
+        "position": { "x": 400, "y": 100 },
+        "parameterValues": { "freq": 261.63, "structure": 0.5, "brightness": 0.5, "damping": 0.4, "accent": 0.7 },
+        "label": "Voice 1 (Melody)"
+      },
+      {
+        "id": "mv_2",
+        "definitionId": "modal_voice",
+        "position": { "x": 400, "y": 250 },
+        "parameterValues": { "freq": 196.0, "structure": 0.5, "brightness": 0.4, "damping": 0.5, "accent": 0.6 },
+        "label": "Voice 2 (Harmony Low)"
+      },
+      {
+        "id": "mv_3",
+        "definitionId": "modal_voice",
+        "position": { "x": 400, "y": 400 },
+        "parameterValues": { "freq": 329.63, "structure": 0.5, "brightness": 0.6, "damping": 0.4, "accent": 0.5 },
+        "label": "Voice 3 (Harmony High)"
+      },
+      {
+        "id": "mv_4",
+        "definitionId": "modal_voice",
+        "position": { "x": 400, "y": 550 },
+        "parameterValues": { "freq": 523.25, "structure": 0.3, "brightness": 0.8, "damping": 0.3, "accent": 0.9 },
+        "label": "Voice 4 (Accent)"
+      },
+      {
+        "id": "mixer_voices",
+        "definitionId": "mixer",
+        "position": { "x": 650, "y": 300 },
+        "parameterValues": { "inputCount": "4", "level_1": 0.4, "level_2": 0.3, "level_3": 0.25, "level_4": 0.15, "master": 0.8 },
+        "label": "Voice Mixer"
+      },
+      {
+        "id": "filter_pre",
+        "definitionId": "svf",
+        "position": { "x": 850, "y": 300 },
+        "parameterValues": { "freq": 4000.0, "res": 0.2, "drive": 0.0 },
+        "label": "Pre-Reverb LPF"
+      },
+      {
+        "id": "reverb_main",
+        "definitionId": "reverb_sc",
+        "position": { "x": 1050, "y": 300 },
+        "parameterValues": { "feedback": 0.85, "lpfreq": 8000.0, "wet_dry": 0.6 },
+        "label": "Main Reverb"
+      },
+      {
+        "id": "output_stereo",
+        "definitionId": "audio_output",
+        "position": { "x": 1300, "y": 300 },
+        "parameterValues": {},
+        "label": "Stereo Output"
+      },
+      {
+        "id": "k1_density",
+        "definitionId": "knob",
+        "position": { "x": 100, "y": 100 },
+        "parameterValues": { "channel": "0", "min": 0.1, "max": 100.0, "curve": "exponential" },
+        "label": "K1: Density"
+      },
+      {
+        "id": "k3_reverb",
+        "definitionId": "knob",
+        "position": { "x": 100, "y": 500 },
+        "parameterValues": { "channel": "2", "min": 0.5, "max": 0.99, "curve": "linear" },
+        "label": "K3: Reverb Size"
+      },
+      {
+        "id": "k5_bright",
+        "definitionId": "knob",
+        "position": { "x": 100, "y": 650 },
+        "parameterValues": { "channel": "4", "min": 0.0, "max": 1.0, "curve": "linear" },
+        "label": "K5: Brightness"
+      },
+      {
+        "id": "k6_damp",
+        "definitionId": "knob",
+        "position": { "x": 250, "y": 650 },
+        "parameterValues": { "channel": "5", "min": 0.0, "max": 1.0, "curve": "linear" },
+        "label": "K6: Damping"
+      },
+      {
+        "id": "k7_struct",
+        "definitionId": "knob",
+        "position": { "x": 400, "y": 650 },
+        "parameterValues": { "channel": "6", "min": 0.0, "max": 1.0, "curve": "linear" },
+        "label": "K7: Structure"
+      },
+      {
+        "id": "k8_wetdry",
+        "definitionId": "knob",
+        "position": { "x": 550, "y": 650 },
+        "parameterValues": { "channel": "7", "min": 0.0, "max": 1.0, "curve": "linear" },
+        "label": "K8: Wet/Dry"
+      }
+    ],
+    "connections": [
+      { "id": "c_dust_mv1", "sourceBlockId": "dust_clock", "sourcePortId": "trig_out", "targetBlockId": "mv_1", "targetPortId": "trig", "type": "trigger" },
+      { "id": "c_dust_mv2", "sourceBlockId": "dust_clock", "sourcePortId": "trig_out", "targetBlockId": "mv_2", "targetPortId": "trig", "type": "trigger" },
+      { "id": "c_dust_mv3", "sourceBlockId": "dust_clock", "sourcePortId": "trig_out", "targetBlockId": "mv_3", "targetPortId": "trig", "type": "trigger" },
+      { "id": "c_dust_mv4", "sourceBlockId": "dust_clock", "sourcePortId": "trig_out", "targetBlockId": "mv_4", "targetPortId": "trig", "type": "trigger" },
+      { "id": "c_mv1_mix", "sourceBlockId": "mv_1", "sourcePortId": "out", "targetBlockId": "mixer_voices", "targetPortId": "in_1", "type": "audio" },
+      { "id": "c_mv2_mix", "sourceBlockId": "mv_2", "sourcePortId": "out", "targetBlockId": "mixer_voices", "targetPortId": "in_2", "type": "audio" },
+      { "id": "c_mv3_mix", "sourceBlockId": "mv_3", "sourcePortId": "out", "targetBlockId": "mixer_voices", "targetPortId": "in_3", "type": "audio" },
+      { "id": "c_mv4_mix", "sourceBlockId": "mv_4", "sourcePortId": "out", "targetBlockId": "mixer_voices", "targetPortId": "in_4", "type": "audio" },
+      { "id": "c_mix_filt", "sourceBlockId": "mixer_voices", "sourcePortId": "out", "targetBlockId": "filter_pre", "targetPortId": "in", "type": "audio" },
+      { "id": "c_filt_revL", "sourceBlockId": "filter_pre", "sourcePortId": "low", "targetBlockId": "reverb_main", "targetPortId": "in_l", "type": "audio" },
+      { "id": "c_filt_revR", "sourceBlockId": "filter_pre", "sourcePortId": "low", "targetBlockId": "reverb_main", "targetPortId": "in_r", "type": "audio" },
+      { "id": "c_rev_outL", "sourceBlockId": "reverb_main", "sourcePortId": "out_l", "targetBlockId": "output_stereo", "targetPortId": "left", "type": "audio" },
+      { "id": "c_rev_outR", "sourceBlockId": "reverb_main", "sourcePortId": "out_r", "targetBlockId": "output_stereo", "targetPortId": "right", "type": "audio" },
+      { "id": "c_k1_dust", "sourceBlockId": "k1_density", "sourcePortId": "out", "targetBlockId": "dust_clock", "targetPortId": "density_cv", "type": "cv" },
+      { "id": "c_k3_rev", "sourceBlockId": "k3_reverb", "sourcePortId": "out", "targetBlockId": "reverb_main", "targetPortId": "feedback_cv", "type": "cv" },
+      { "id": "c_k5_mv1", "sourceBlockId": "k5_bright", "sourcePortId": "out", "targetBlockId": "mv_1", "targetPortId": "brightness_cv", "type": "cv" },
+      { "id": "c_k5_mv2", "sourceBlockId": "k5_bright", "sourcePortId": "out", "targetBlockId": "mv_2", "targetPortId": "brightness_cv", "type": "cv" },
+      { "id": "c_k5_mv3", "sourceBlockId": "k5_bright", "sourcePortId": "out", "targetBlockId": "mv_3", "targetPortId": "brightness_cv", "type": "cv" },
+      { "id": "c_k5_mv4", "sourceBlockId": "k5_bright", "sourcePortId": "out", "targetBlockId": "mv_4", "targetPortId": "brightness_cv", "type": "cv" },
+      { "id": "c_k6_mv1", "sourceBlockId": "k6_damp", "sourcePortId": "out", "targetBlockId": "mv_1", "targetPortId": "damping_cv", "type": "cv" },
+      { "id": "c_k6_mv2", "sourceBlockId": "k6_damp", "sourcePortId": "out", "targetBlockId": "mv_2", "targetPortId": "damping_cv", "type": "cv" },
+      { "id": "c_k6_mv3", "sourceBlockId": "k6_damp", "sourcePortId": "out", "targetBlockId": "mv_3", "targetPortId": "damping_cv", "type": "cv" },
+      { "id": "c_k6_mv4", "sourceBlockId": "k6_damp", "sourcePortId": "out", "targetBlockId": "mv_4", "targetPortId": "damping_cv", "type": "cv" },
+      { "id": "c_k7_mv1", "sourceBlockId": "k7_struct", "sourcePortId": "out", "targetBlockId": "mv_1", "targetPortId": "structure_cv", "type": "cv" },
+      { "id": "c_k7_mv2", "sourceBlockId": "k7_struct", "sourcePortId": "out", "targetBlockId": "mv_2", "targetPortId": "structure_cv", "type": "cv" },
+      { "id": "c_k7_mv3", "sourceBlockId": "k7_struct", "sourcePortId": "out", "targetBlockId": "mv_3", "targetPortId": "structure_cv", "type": "cv" },
+      { "id": "c_k7_mv4", "sourceBlockId": "k7_struct", "sourcePortId": "out", "targetBlockId": "mv_4", "targetPortId": "structure_cv", "type": "cv" },
+      { "id": "c_k8_rev", "sourceBlockId": "k8_wetdry", "sourcePortId": "out", "targetBlockId": "reverb_main", "targetPortId": "wet_dry_cv", "type": "cv" },
+      { "id": "c_k5_filt", "sourceBlockId": "k5_bright", "sourcePortId": "out", "targetBlockId": "filter_pre", "targetPortId": "freq_cv", "type": "cv" }
+    ]
+  }
+}

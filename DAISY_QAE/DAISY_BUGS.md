@@ -16,6 +16,7 @@
 |-----|----------|--------|---------|---------------|-------------|
 | [BUG-002](#bug-002-field_modalbells-b-row-key-crash) | Critical | 🟡 INVESTIGATING | Field_ModalBells | 2026-02-08 | Add serial debug checkpoints around Trig() loop |
 | [BUG-003](#bug-003-field_modalbells-midi-not-working) | Medium | 🔴 OPEN | Field_ModalBells | 2026-02-08 | Verify MIDI init sequence and handler registration |
+| [BUG-004](#bug-004-x0x-display-white-noise-controls-unresponsive) | High | 🟡 INVESTIGATING | x0x_drum_machine | 2026-02-27 | HiHat crash confirmed as root cause — replaced with WhiteNoise+ATone+AdEnv, awaiting flash |
 
 > **Triage rule**: Critical/High bugs should have activity within 48 hours.
 > Update "Last Activity" and "Next Action" every time you touch a bug.
@@ -251,13 +252,110 @@ This document is part of an interconnected quality assurance system:
 
 ---
 
-**Document Version**: 1.2
-**Last Updated**: 2026-02-08
+---
+
+## BUG-004: x0x Display White Noise + Controls Unresponsive
+
+**Date**: 2026-02-27
+**Project**: x0x_drum_machine
+**Severity**: High
+**Status**: 🟡 INVESTIGATING
+**Last Activity**: 2026-02-27
+
+### Problem (Original)
+
+On hardware, display showed "mostly white noise." Turning knobs had no visible effect. Pressing keyboard keys produced no LED response.
+
+### New Symptoms (After Fix Attempt 1)
+
+After flashing fix attempt 1 (display pre-clear + 1ms delay + Delay(15)):
+
+- Display shows "x0x INIT..." — boot noise is FIXED ✅
+- Display shows NO further updates — `UpdateDisplay()` not running in main loop ❌
+- Turning knobs: no change to params or knob LED intensity ❌
+- Key LEDs A1, A6, B1, B6 lit from boot (expected A1, A5, B1, B5) ❌
+- Pressing keys: no response ❌
+
+### Expected
+
+Display shows drum name + BPM + step pattern, updating in real time. Knobs change sound and display. A/B keys toggle steps. Key LEDs show kick pattern (A1, A5, B1, B5 for 4-on-floor).
+
+### Analysis
+
+#### Hardware Topology (Verified from libDaisy source)
+
+**CRITICAL CORRECTION**: Previous analysis claimed OLED uses I2C — this is WRONG.
+
+- **LED driver (PCA9685 ×2)**: I2C_1, PB8/PB9, 1 MHz, DMA async
+- **OLED (SSD1306)**: 4-wire **SPI** (pins PB4/PB15 + separate SPI bus) — `SSD130x4WireSpi128x64Driver`
+- These are on **completely separate hardware buses** — no I2C contention possible
+
+The 1ms gap between `UpdateLeds()` and `UpdateDisplay()` added in Fix Attempt 1 was based on the wrong I2C contention theory and is therefore **irrelevant**.
+
+#### Root Cause 1: Double Knob Processing (Confirmed)
+
+```cpp
+// Main loop:
+hw.ProcessAllControls(); // ← internally calls hw.knob[i].Process() for all 8 knobs
+ProcessControls();       // ← calls hw.knob[i].Process() AGAIN
+```
+
+`AnalogControl::Process()` applies a one-pole LP filter. Called twice per loop iteration, the effective time constant doubles. With the 16ms loop, LP filter sluggishness from double-processing may make knob response nearly imperceptible, explaining "knobs dead" symptom.
+
+**Fix**: Change `ProcessControls()` to use `.Value()` instead of `.Process()`.
+
+#### Root Cause 2: Display Never Reached (Working Hypothesis)
+
+`UpdateLeds()` calls `hw.led_driver.SwapBuffersAndTransmit()` which starts an async I2C DMA transfer. If the DMA completion flag isn't set when `SwapBuffersAndTransmit()` is called again on the NEXT loop iteration, the function **blocks until DMA completes**. `UpdateDisplay()` coming after `UpdateLeds()` means a DMA stall would block the display update indefinitely.
+
+The more likely explanation: **main loop MAY not be running at all** if the audio callback causes a hard fault (infinite loop in `HardFault_Handler`). Display would then be frozen on "x0x INIT..." indefinitely.
+
+**Diagnostic Fix**: Move `UpdateDisplay()` BEFORE `UpdateLeds()`. If display still shows "x0x INIT...", the main loop is definitely not running → audio callback crash.
+
+#### Root Cause 3: A5/A6 LED Offset (Suspected Non-Issue)
+
+User observes kick-pattern LEDs at A1, **A6**, B1, **B6** instead of A1, A5, B1, B5.
+
+- KICK pattern: steps 0, 4, 8, 12 → i=0 (A1) and i=4 (A5) for A-row
+- The playhead at step 5 lights A6 at full brightness while A5 is dimmed — if user observes during playback this looks like A6 is "the active step"
+- No code bug found for LED addressing; kLedKeysA mapping verified correct
+
+### Solutions Tested
+
+| # | Changes Applied                                                                                              | Outcome                                                          |
+|---|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
+| 1 | Pre-boot display clear + 1ms LED/display gap + Delay(15)                                                     | Boot noise FIXED; runtime display and knobs still dead           |
+| 2 | `.Value()` in ProcessControls + display before LEDs + Delay(16)                                              | Zero effect — identical symptoms; confirmed main loop never runs |
+| 3 | Replace `HiHat<>` with `WhiteNoise+OnePole+AdEnv`; revert `.Value()`→`.Process()`; `Delay(16)`→`Delay(2)`    | Build error: `ATone` and `AdEnv::Process(bool)` wrong → fixed    |
+| 4 | Fix `ATone`→`OnePole` + `FILTER_MODE_HIGH_PASS`; `AdEnv::Trigger()`+`Process()` no-arg; `SetFrequency(f/sr)` | Build clean (114 KB flash). Awaiting hardware flash              |
+
+### Resolution
+
+*Pending hardware test of Fix Attempt 4 (clean build confirmed).*
+
+### Lessons Learned (Interim)
+
+- **`HiHat<>::Process()` in audio callback causes hard fault** — `HiHat<>` is NOT in the verified API list in DAISY_HALLUCINATION_REFERENCE.md. Its `Process()` call from the ISR-context audio callback triggers a hard fault on the first invocation, preventing the main loop from ever running. Replace with `WhiteNoise + OnePole + AdEnv` (all verified APIs).
+- **`ATone` does not exist in DaisySP** — there is no `ATone` class. The 1-pole HP filter is `OnePole` with `SetFilterMode(OnePole::FILTER_MODE_HIGH_PASS)`. Freq is normalized (0–0.497): `SetFrequency(hz / sample_rate)`. No sample_rate arg in `Init()`.
+- **`AdEnv::Process()` takes no arguments** — to trigger: call `hh_env.Trigger()` when the step fires; then call `hh_env.Process()` (no args) every sample. Do NOT pass the trig bool to `Process()`.
+- **"Main loop changes have zero effect" = audio callback crash** — if display is frozen on the boot string and NO main-loop change has any visible effect, the audio callback crashes before the main loop starts. Diagnose the callback first.
+- **Daisy Field OLED uses SPI, not I2C** — `SSD130x4WireSpi128x64Driver` is a 4-wire SPI driver. The PCA9685 LED chips use I2C. These buses are completely independent.
+- **Never assume bus topology from chip type** — always verify from `daisy_field.cpp` `Init()` implementation.
+- **Double `.Process()` is fine** — official examples (Chorus.cpp, Field_AnalogDrumCore.cpp, HALLUCINATION_REFERENCE template) all call `.Process()` in a helper after `hw.ProcessAllControls()`. The `.Value()` pattern is NOT required and should not be assumed.
+- **Update OLED before LED driver** as standard ordering for Field projects (SPI is synchronous; I2C LED DMA runs async during the final Delay).
+- **Reference `Field_AnalogDrumCore.cpp`** — confirmed working drum sequencer with identical architecture. Use `Delay(2)` not `Delay(16)`.
+
+---
+
+**Document Version**: 1.4
+**Last Updated**: 2026-02-27
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-02-27 | BUG-004: Fix Attempt 3 (HiHat<> root cause confirmed; replaced with WhiteNoise+ATone+AdEnv) |
+| 1.3 | 2026-02-27 | Added BUG-004 (x0x display + controls) with I2C contention and boot-noise findings |
 | 1.2 | 2026-02-08 | Added Priority Queue table, Owner/Last Activity fields to template, Lessons Learned section |
 | 1.1 | 2026-02-08 | Added BUG-002, BUG-003; expanded investigation methodology |
 | 1.0 | 2026-02-08 | Initial version: BUG-001 (LED mirroring) with full resolution |

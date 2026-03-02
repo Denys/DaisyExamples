@@ -1,0 +1,1576 @@
+CONTENTS
+1. Blink
+2. Button
+3. Drum
+4. HWTest
+5. Knob
+6. LCD_HD44780
+7. Logger
+8. OLED
+9. Osc
+10. QSPI
+11. Ram
+12. ReceiveTest
+13. SDMMC
+14. USB_CDC
+15. USB_MIDI
+16. WavPlayer
+17. bypass
+
+________________________________________________________________________________
+
+Makefile template
+________________________________________________________________________________
+
+# Project Name
+TARGET = __ProjectName__
+
+# Sources
+CPP_SOURCES = __ProjectName__.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy/
+DAISYSP_DIR = ../../DaisySP/
+
+# Uncomment for LGPL modules (StringVoice, ModalVoice, ReverbSc)
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+1. Blink
+
+__Blink README.md__
+# Blink
+
+## Author
+
+Shensley
+
+## Description
+
+Blinks the Seed's onboard LED at a constant rate.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Blink)
+
+__Blink.cpp__
+#include "daisy_seed.h"
+
+// Use the daisy namespace to prevent having to type
+// daisy:: before all libdaisy functions
+using namespace daisy;
+
+// Declare a DaisySeed object called hardware
+DaisySeed hardware;
+
+int main(void)
+{
+    // Declare a variable to store the state we want to set for the LED.
+    bool led_state;
+    led_state = true;
+
+    // Configure and Initialize the Daisy Seed
+    // These are separate to allow reconfiguration of any of the internal
+    // components before initialization.
+    hardware.Configure();
+    hardware.Init();
+
+    // Loop forever
+    for(;;)
+    {
+        // Set the onboard LED
+        hardware.SetLed(led_state);
+
+        // Toggle the LED state for the next time around.
+        led_state = !led_state;
+
+        // Wait 500ms
+        System::Delay(500);
+    }
+}
+
+________________________________________________________________________________
+
+2. Button
+
+__Button README.md__
+# Button
+
+
+## Author
+
+Shensley
+
+## Description
+
+Turns on the seed's onboard LED as long as a button is held.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Button)
+
+## Breadboard
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Button/resources/Button_bb.png" alt="Button_bb.png" style="width: 100%;"/>
+
+## Schematic  
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Button/resources/Button_schem.png" alt="Button_schem.png" style="width: 100%;"/>
+
+__Button.cpp__
+#include "daisy_seed.h"
+
+// Use the daisy namespace to prevent having to type
+// daisy:: before all libdaisy functions
+using namespace daisy;
+
+// Declare a DaisySeed object called hardware
+DaisySeed hw;
+
+int main(void)
+{
+    // Configure and Initialize the Daisy Seed
+    // These are separate to allow reconfiguration of any of the internal
+    // components before initialization.
+    hw.Configure();
+    hw.Init();
+
+    //Configure and initialize button
+    Switch button1;
+    //Set button to pin 28, to be updated at a 1kHz  samplerate
+    button1.Init(hw.GetPin(28), 1000);
+
+    // Loop forever
+    for(;;)
+    {
+        //Debounce the button
+        button1.Debounce();
+        //If the button is pressed, turn the LED on
+        hw.SetLed(button1.Pressed());
+        //wait 1 ms
+        System::Delay(1);
+    }
+}
+
+________________________________________________________________________________
+
+3. Drum
+
+__Drum README.md__
+# Drum
+
+## Author
+
+Ben Sergentanis
+
+
+## Description
+
+Simple drumset with whitenoise snare and oscillator kick.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Drum)
+
+## Controls
+Press one button to trigger the kick, and the other to trigger the snare.
+
+## Breadboard
+
+[Drum_bb.png](https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Drum/resources/Drum_bb.png)
+
+
+## Schematic  
+  
+[Drum_schem.png](https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Drum/resources/Drum_schem.png)
+
+__Drum.cpp__
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+// Use the daisy namespace to prevent having to type
+// daisy:: before all libdaisy functions
+using namespace daisy;
+using namespace daisysp;
+
+// Declare a DaisySeed object called hardware
+DaisySeed hardware;
+
+Oscillator osc;
+WhiteNoise noise;
+
+AdEnv kickVolEnv, kickPitchEnv, snareEnv;
+
+Switch kick, snare;
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float osc_out, noise_out, snr_env_out, kck_env_out, sig;
+    //Get rid of any bouncing
+    snare.Debounce();
+    kick.Debounce();
+
+    //If you press the kick button...
+    if(kick.RisingEdge())
+    {
+        //Trigger both envelopes!
+        kickVolEnv.Trigger();
+        kickPitchEnv.Trigger();
+    }
+
+    //If press the snare button trigger its envelope
+    if(snare.RisingEdge())
+    {
+        snareEnv.Trigger();
+    }
+
+    //Prepare the audio block
+    for(size_t i = 0; i < size; i += 2)
+    {
+        //Get the next volume samples
+        snr_env_out = snareEnv.Process();
+        kck_env_out = kickVolEnv.Process();
+
+        //Apply the pitch envelope to the kick
+        osc.SetFreq(kickPitchEnv.Process());
+        //Set the kick volume to the envelope's output
+        osc.SetAmp(kck_env_out);
+        //Process the next oscillator sample
+        osc_out = osc.Process();
+
+        //Get the next snare sample
+        noise_out = noise.Process();
+        //Set the sample to the correct volume
+        noise_out *= snr_env_out;
+
+        //Mix the two signals at half volume
+        sig = .5 * noise_out + .5 * osc_out;
+
+        //Set the left and right outputs to the mixed signals
+        out[i]     = sig;
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    // Configure and Initialize the Daisy Seed
+    // These are separate to allow reconfiguration of any of the internal
+    // components before initialization.
+    hardware.Configure();
+    hardware.Init();
+    hardware.SetAudioBlockSize(4);
+    float samplerate = hardware.AudioSampleRate();
+
+    //Initialize oscillator for kickdrum
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_TRI);
+    osc.SetAmp(1);
+
+    //Initialize noise
+    noise.Init();
+
+    //Initialize envelopes, this one's for the snare amplitude
+    snareEnv.Init(samplerate);
+    snareEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    snareEnv.SetTime(ADENV_SEG_DECAY, .2);
+    snareEnv.SetMax(1);
+    snareEnv.SetMin(0);
+
+    //This envelope will control the kick oscillator's pitch
+    //Note that this envelope is much faster than the volume
+    kickPitchEnv.Init(samplerate);
+    kickPitchEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    kickPitchEnv.SetTime(ADENV_SEG_DECAY, .05);
+    kickPitchEnv.SetMax(400);
+    kickPitchEnv.SetMin(50);
+
+    //This one will control the kick's volume
+    kickVolEnv.Init(samplerate);
+    kickVolEnv.SetTime(ADENV_SEG_ATTACK, .01);
+    kickVolEnv.SetTime(ADENV_SEG_DECAY, 1);
+    kickVolEnv.SetMax(1);
+    kickVolEnv.SetMin(0);
+
+    //Initialize the kick and snare buttons on pins 27 and 28
+    //The callback rate is samplerate / blocksize (48)
+    snare.Init(hardware.GetPin(27), samplerate / 48.f);
+    kick.Init(hardware.GetPin(28), samplerate / 48.f);
+
+    //Start calling the callback function
+    hardware.StartAudio(AudioCallback);
+
+    // Loop forever
+    for(;;) {}
+}
+
+________________________________________________________________________________
+
+4. HWTest
+
+__HWTest.cpp__
+#include <string.h>
+#include "daisy_seed.h"
+#include "daisysp.h"
+#include <math.h>
+
+// 32MB test
+#define TEST_BUFF_SIZE ((1024 * 1024 * 32) / sizeof(uint32_t))
+
+using namespace daisy;
+using namespace daisysp;
+
+static uint32_t DSY_SDRAM_BSS test_buff[TEST_BUFF_SIZE];
+
+static DaisySeed hw;
+static uint32_t  start, end, dur;
+
+void bad_callback(AudioHandle::InterleavingInputBuffer  in,
+                  AudioHandle::InterleavingOutputBuffer out,
+                  size_t                                size)
+{
+    start = System::GetTick();
+    //	int32_t* ram = (int32_t*)0x20000000; // DTCM
+    //	int32_t* ram = (int32_t*)0x38000000; // D3 RAM
+    int32_t *ram = (int32_t *)0xC0000000; // SDRAM
+    memcpy(ram, in, sizeof(int32_t) * size);
+    for(int i = 0; i < 300; i++)
+    {
+        memcpy((i + 1) * size + ram, ram, sizeof(int32_t) * size);
+    }
+    end = System::GetTick();
+    dur = (end - start) / 200; // us
+    memcpy(out, in, sizeof(float) * size);
+}
+
+void passthru(AudioHandle::InterleavingInputBuffer  in,
+              AudioHandle::InterleavingOutputBuffer out,
+              size_t                                size)
+{
+    memcpy(out, in, sizeof(float) * size);
+}
+
+int main(void)
+{
+    // Initialize Hardware
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    for(uint32_t i = 0; i < TEST_BUFF_SIZE; i++)
+    {
+        test_buff[i] = i;
+    }
+    for(uint32_t i = 0; i < TEST_BUFF_SIZE; i++)
+    {
+        if(test_buff[i] != i)
+        {
+            asm("bkpt 255");
+        }
+    }
+    hw.StartAudio(bad_callback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+5. Knob
+
+__Knob README.md__
+# Knob
+
+## Author
+
+Shensley
+
+
+## Description
+
+Using a knob to control the brightness of an led.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Knob)
+
+## Breadboard
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Knob/resources/Knob_bb.png" alt="SeedKnob_bb.png" style="width: 100%;"/>
+
+## Schematic  
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Knob/resources/Knob_schem.png" alt="SeedKnob_schem.png" style="width: 100%;"/>
+
+__Knob.cpp__
+#include "daisy_seed.h"
+
+// Use the daisy namespace to prevent having to type
+// daisy:: before all libdaisy functions
+using namespace daisy;
+
+// Declare a DaisySeed object called hardware
+DaisySeed hardware;
+
+int main(void)
+{
+    // Configure and Initialize the Daisy Seed
+    // These are separate to allow reconfiguration of any of the internal
+    // components before initialization.
+    hardware.Configure();
+    hardware.Init();
+
+    Led led1;
+    //Initialize led1. We'll plug it into pin 28.
+    //false here indicates the value is uninverted
+    led1.Init(hardware.GetPin(28), false);
+
+    //This is our ADC configuration
+    AdcChannelConfig adcConfig;
+    //Configure pin 21 as an ADC input. This is where we'll read the knob.
+    adcConfig.InitSingle(hardware.GetPin(21));
+
+    //Initialize the adc with the config we just made
+    hardware.adc.Init(&adcConfig, 1);
+    //Start reading values
+    hardware.adc.Start();
+
+    // Loop forever
+    for(;;)
+    {
+        // Set the onboard LED to the value we read from the knob
+        led1.Set(hardware.adc.GetFloat(0));
+
+        //Update the led to reflect the set value
+        led1.Update();
+
+        //wait 1 ms
+        System::Delay(1);
+    }
+}
+
+________________________________________________________________________________
+
+6. LCD_HD44780
+
+__lcd_hd44780.cpp__
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+
+#define PIN_LCD_RS 15 // LCD: pin 8
+#define PIN_LCD_EN 16 // LCD: pin 9
+#define PIN_LCD_D4 20 // LCD: D4
+#define PIN_LCD_D5 19 // LCD: D5
+#define PIN_LCD_D6 18 // LCD: D6
+#define PIN_LCD_D7 17 // LCD: D7
+
+
+DaisySeed hardware;
+
+
+int main(void)
+{
+    int i = 0;
+
+    hardware.Configure();
+    hardware.Init();
+
+    LcdHD44780 lcd;
+
+    LcdHD44780::Config lcd_config;
+
+    lcd_config.cursor_on    = true;
+    lcd_config.cursor_blink = false;
+    lcd_config.rs           = hardware.GetPin(PIN_LCD_RS);
+    lcd_config.en           = hardware.GetPin(PIN_LCD_EN);
+    lcd_config.d4           = hardware.GetPin(PIN_LCD_D4);
+    lcd_config.d5           = hardware.GetPin(PIN_LCD_D5);
+    lcd_config.d6           = hardware.GetPin(PIN_LCD_D6);
+    lcd_config.d7           = hardware.GetPin(PIN_LCD_D7);
+
+    lcd.Init(lcd_config);
+
+    while(1)
+    {
+        hardware.DelayMs(2000);
+
+        lcd.Clear();
+
+        switch(i % 2)
+        {
+            case 0:
+                lcd.SetCursor(0, 0);
+                lcd.Print("Test 1");
+                break;
+            case 1:
+                lcd.SetCursor(0, 10);
+                lcd.Print("Test 2");
+                break;
+            default: break;
+        }
+
+        lcd.SetCursor(1, 0);
+        lcd.PrintInt(i);
+
+        i++;
+    }
+}
+
+________________________________________________________________________________
+
+7. Logger
+
+__Logger.cpp__
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+static DaisySeed hw;
+
+/** grab the internal logger configuration value LOGGER_BUFFER for verification
+ * note that the last character is the null terminator
+ * so [1 + LOGGER_BUFFER] buffer would contain LOGGER_BUFFER meaningful characters
+ */
+char test_msg1[1 + LOGGER_BUFFER + 1] = "This should really overflow";
+char test_msg2[1 + LOGGER_BUFFER]     = "This should be treated as overflow";
+char test_msg3[1 + LOGGER_BUFFER - 1] = "This should be safe for Print()";
+char test_msg4[1 + LOGGER_BUFFER - 2] = "This should be safe for Print()";
+char test_msg5[1 + LOGGER_BUFFER - 3]
+    = "This should be safe for Print() and PrintLine()";
+
+/** append dots (.) till the end of the buffer as a visual cue
+ */
+template <size_t N>
+void fillup_msg(char (&buf)[N])
+{
+    for(size_t i = strlen(buf); i < N - 1; i++)
+    {
+        buf[i] = '.';
+    }
+    buf[N - 1] = '\0';
+}
+
+/** fill up message for buffer overflow testing
+ */
+void prepare_messages()
+{
+    fillup_msg(test_msg1);
+    fillup_msg(test_msg2);
+    fillup_msg(test_msg3);
+    fillup_msg(test_msg4);
+    fillup_msg(test_msg5);
+}
+
+typedef void(PrintFunc)(const char*, ...);
+
+/** profile a single printout function
+ */
+template <PrintFunc function, typename... Va>
+float ProfileFunction(const char* format, Va... va)
+{
+    constexpr int32_t count = 100000;
+    uint32_t          t0    = System::GetTick();
+    for(int i = 0; i < count; i++)
+    {
+        function(format, va...);
+    }
+    uint32_t    dt = System::GetTick() - t0;
+    const float perf
+        = (float)dt
+          / (200 * count); // using secret knowledge about timer frequency...
+    return perf;
+}
+
+/** Run all profiling tests for a function 
+ */
+template <PrintFunc function>
+void ProfilePrint(const char* class_caption, const char* func_caption)
+{
+    const float print_0 = ProfileFunction<function>("");
+    const float print_1 = ProfileFunction<function>("a");
+    const float print_36
+        = ProfileFunction<function>("abcdefghijklmnopqrstuvwxyz0123456789");
+    const float print_d = ProfileFunction<function>("%d", 123);
+    const float print_u = ProfileFunction<function>("%u", 123);
+    const float print_f = ProfileFunction<function>("%.3f", 123.0f);
+    const float print_F1
+        = ProfileFunction<function>(FLT_FMT(1), FLT_VAR(1, 123.0f));
+    const float print_F2
+        = ProfileFunction<function>(FLT_FMT(2), FLT_VAR(2, 123.0f));
+    const float print_F3
+        = ProfileFunction<function>(FLT_FMT3, FLT_VAR3(123.0f));
+    const float print_F4
+        = ProfileFunction<function>(FLT_FMT(4), FLT_VAR(4, 123.0f));
+
+    /* linear fit */
+    const float slope     = (print_36 - print_1) / (36 - 1);
+    const float intercept = print_1 - slope;
+
+    hw.PrintLine("%s - %s (  empty string):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_0));
+    hw.PrintLine("%s - %s (   text string):" FLT_FMT3 " us/call +" FLT_FMT3
+                 " us/char",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(intercept),
+                 FLT_VAR3(slope));
+    hw.PrintLine("%s - %s ( integer value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_d));
+    hw.PrintLine("%s - %s (unsigned value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_u));
+    hw.PrintLine("%s - %s ( float.3 value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_f));
+    hw.PrintLine("%s - %s (FLT_VAR1 value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_F1));
+    hw.PrintLine("%s - %s (FLT_VAR2 value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_F2));
+    hw.PrintLine("%s - %s (FLT_VAR3 value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_F3));
+    hw.PrintLine("%s - %s (FLT_VAR4 value):" FLT_FMT3 " us/call",
+                 class_caption,
+                 func_caption,
+                 FLT_VAR3(print_F4));
+}
+
+/** Profile the whole destination
+ */
+template <LoggerDestination dest>
+void ProfileDest(const char* class_caption)
+{
+    Logger<dest>::StartLog(false);
+    ProfilePrint<Logger<dest>::Print>(class_caption, "Print     ");
+    ProfilePrint<Logger<dest>::PrintLine>(class_caption, "PrintLine ");
+}
+/** Verify FLT_FMT/FLT_VAR accuracy
+ */
+void VerifyFloats()
+{
+    char ref[32];
+    char tst[32];
+    bool result = true;
+    for(float f = -100.0; f < 100.0; f += 0.001)
+    {
+        sprintf(tst, FLT_FMT(3), FLT_VAR(3, f));
+
+        const double f_tst = strtod(tst, nullptr);
+
+        /* verify down to the least significant digit, which is off because of truncation */
+        if(abs((double)f - f_tst) > 1.0e-3)
+        {
+            sprintf(ref, "%.3f", f);
+            hw.PrintLine(
+                "mismatch: ref = %s, dsy = %s, float = %.6f", ref, tst, f);
+            result = false;
+        }
+    }
+    hw.PrintLine("FLT_FMT(3)/FLT_VAR(3) verification: %s",
+                 result ? "PASS" : "FAIL");
+}
+
+int main(void)
+{
+    /* prepare test messages for corner cases */
+    prepare_messages();
+
+    /* try printing out something before the hardware init */
+    hw.PrintLine("This should too appear in the log");
+
+    hw.Configure();
+    hw.Init();
+    hw.StartLog(
+        true); /* true == wait for PC: will block until a terminal is connected */
+
+    /** check that floating point printf is supported 
+     * linker flags modified in the Makefile to enable this
+     */
+    hw.PrintLine("Verify CRT floating point format: %.3f", 123.0f);
+
+    VerifyFloats();
+
+    /** Profile different destinations 
+     * Don't use LOGGER_INTERNAL, since it will flood the connected terminal
+     */
+    ProfileDest<LOGGER_EXTERNAL>("LOGGER_EXTERNAL");
+    ProfileDest<LOGGER_SEMIHOST>("LOGGER_SEMIHOST");
+    ProfileDest<LOGGER_NONE>("LOGGER_NONE    ");
+
+    /* use static method directly */
+    Logger<LOGGER_INTERNAL>::PrintLine("This may be used anywhere too");
+
+    /** use a different output destination.
+     * Note that this would require the linker to include the whole object with own buffers!
+     */
+    Logger<LOGGER_EXTERNAL>::Print(
+        "This would not be visible, but would not stop the program");
+
+    hw.PrintLine("Verifying newline character handling:");
+    hw.PrintLine("1. This should be a single line\r");
+    hw.PrintLine("2. This should be a single line\n");
+    hw.PrintLine("3. This should be a single line\r\n");
+    hw.PrintLine("4. This should be a single line\n\r");
+    hw.PrintLine("5. This should be a single line\r\r\r\n\n\n\r\n\r");
+    hw.PrintLine(""); /* this should be an empty line */
+
+    hw.PrintLine("Printing 5 test messages using the Print() service");
+    hw.PrintLine("Verify overflow indicators ($$) below");
+    hw.Print("1. ");
+    hw.Print(test_msg1);
+    hw.PrintLine("");
+    hw.Print("2. ");
+    hw.Print(test_msg2);
+    hw.PrintLine("");
+    hw.Print("3. ");
+    hw.Print(test_msg3);
+    hw.PrintLine("");
+    hw.Print("4. ");
+    hw.Print(test_msg4);
+    hw.PrintLine("");
+    hw.Print("5. ");
+    hw.Print(test_msg5);
+    hw.PrintLine("");
+
+    hw.PrintLine("Printing 5 test messages using the PrintLine() service");
+    hw.PrintLine("Verify overflow indicators ($$) below");
+    hw.Print("1. ");
+    hw.PrintLine(test_msg1);
+    hw.PrintLine("");
+    hw.Print("2. ");
+    hw.PrintLine(test_msg2);
+    hw.PrintLine("");
+    hw.Print("3. ");
+    hw.PrintLine(test_msg3);
+    hw.PrintLine("");
+    hw.Print("4. ");
+    hw.PrintLine(test_msg4);
+    hw.PrintLine("");
+    hw.Print("5. ");
+    hw.PrintLine(test_msg5);
+    hw.PrintLine("");
+
+    hw.PrintLine("Starting timer printout. Verify fractional values");
+
+    uint32_t counter = 0;
+    while(1)
+    {
+        System::Delay(500);
+
+        const float time_s = System::GetNow() * 1.0e-3f;
+
+        /** showcase floating point output 
+         * note that FLT_FMT is part of the format string
+         */
+        hw.PrintLine("%6u: Elapsed time: " FLT_FMT3 " seconds",
+                     counter,
+                     FLT_VAR3(time_s));
+
+        /* LSB triggers the LED */
+        hw.SetLed(counter & 0x01);
+        counter++;
+    }
+
+    return 0;
+}
+
+________________________________________________________________________________
+
+8. OLED
+
+__OLED README.md__
+# OLED
+
+Writes a series of messages to an SSD1306 128x64 Pixel OLED Display.
+
+The OLED is connected via SPI1 with four wires (SCK, MISO, MOSI, and CS)
+
+In additon, the DC (data / command) pin is connected to GPIO9, and the RESET pin is connected to GPIO30.
+
+This configuration matches that of the DaisyPatch.
+
+__OLED.cpp__
+#include <stdio.h>
+#include <string.h>
+#include "daisy_seed.h"
+#include "dev/oled_ssd130x.h"
+
+using namespace daisy;
+
+/** Typedef the OledDisplay to make syntax cleaner below 
+ *  This is a 4Wire SPI Transport controlling an 128x64 sized SSDD1306
+ * 
+ *  There are several other premade test 
+*/
+using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
+
+DaisySeed     hw;
+MyOledDisplay display;
+
+int main(void)
+{
+    uint8_t message_idx;
+    hw.Configure();
+    hw.Init();
+
+    /** Configure the Display */
+    MyOledDisplay::Config disp_cfg;
+    disp_cfg.driver_config.transport_config.pin_config.dc    = hw.GetPin(9);
+    disp_cfg.driver_config.transport_config.pin_config.reset = hw.GetPin(30);
+    /** And Initialize */
+    display.Init(disp_cfg);
+
+    message_idx = 0;
+    char strbuff[128];
+    while(1)
+    {
+        System::Delay(500);
+        switch(message_idx)
+        {
+            case 0: sprintf(strbuff, "Testing. . ."); break;
+            case 1: sprintf(strbuff, "Daisy. . ."); break;
+            case 2: sprintf(strbuff, "1. . ."); break;
+            case 3: sprintf(strbuff, "2. . ."); break;
+            case 4: sprintf(strbuff, "3. . ."); break;
+            default: break;
+        }
+        message_idx = (message_idx + 1) % 5;
+        display.Fill(true);
+        display.SetCursor(0, 0);
+        display.WriteString(strbuff, Font_11x18, false);
+        display.Update();
+    }
+}
+
+________________________________________________________________________________
+
+9. Osc
+
+__Osc README.md__
+# Osc
+
+## Author
+
+Shensley
+
+## Description
+
+Simple oscillator for daisy seed. Has button triggered envelope and knob controlled pitch.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Osc)
+
+## Breadboard
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Osc/resources/Osc_bb.png" alt="Osc_bb.png" style="width: 100%;"/>
+
+## Schematic  
+
+<img src="https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/seed/Osc/resources/Osc_schem.png" alt="Osc_schem.png" style="width: 100%;"/>
+
+__Osc.cpp__
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+// Use the daisy namespace to prevent having to type
+// daisy:: before all libdaisy functions
+using namespace daisy;
+using namespace daisysp;
+
+// Declare a DaisySeed object called hardware
+DaisySeed  hardware;
+Oscillator osc;
+AdEnv      env;
+
+Switch button1;
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float osc_out, env_out;
+
+    //Nobody likes a bouncy button
+    button1.Debounce();
+
+    //If you push the button,...
+    if(button1.RisingEdge())
+    {
+        env.Trigger(); //Trigger the envelope!
+    }
+
+    //Convert floating point knob to midi (0-127)
+    //Then convert midi to freq. in Hz
+    osc.SetFreq(mtof(hardware.adc.GetFloat(0) * 127));
+
+    //Fill the block with samples
+    for(size_t i = 0; i < size; i += 2)
+    {
+        //Get the next envelope value
+        env_out = env.Process();
+        //Set the oscillator volume to the latest env value
+        osc.SetAmp(env_out);
+        //get the next oscillator sample
+        osc_out = osc.Process();
+
+        //Set the left and right outputs
+        out[i]     = osc_out;
+        out[i + 1] = osc_out;
+    }
+}
+
+
+int main(void)
+{
+    // Configure and Initialize the Daisy Seed
+    // These are separate to allow reconfiguration of any of the internal
+    // components before initialization.
+    hardware.Configure();
+    hardware.Init();
+    hardware.SetAudioBlockSize(4);
+
+    //How many samples we'll output per second
+    float samplerate = hardware.AudioSampleRate();
+
+    //Create an ADC configuration
+    AdcChannelConfig adcConfig;
+    //Add pin 21 as an analog input in this config. We'll use this to read the knob
+    adcConfig.InitSingle(hardware.GetPin(21));
+
+    //Initialize the button on pin 28
+    button1.Init(hardware.GetPin(28), samplerate / 48.f);
+
+    //Set the ADC to use our configuration
+    hardware.adc.Init(&adcConfig, 1);
+
+    //Set up oscillator
+    osc.Init(samplerate);
+    osc.SetWaveform(osc.WAVE_SIN);
+    osc.SetAmp(1.f);
+    osc.SetFreq(1000);
+
+    //Set up volume envelope
+    env.Init(samplerate);
+    //Envelope attack and decay times
+    env.SetTime(ADENV_SEG_ATTACK, .01);
+    env.SetTime(ADENV_SEG_DECAY, .4);
+    //minimum and maximum envelope values
+    env.SetMin(0.0);
+    env.SetMax(1.f);
+    env.SetCurve(0); // linear
+
+    //Start the adc
+    hardware.adc.Start();
+
+    //Start calling the audio callback
+    hardware.StartAudio(AudioCallback);
+
+    // Loop forever
+    for(;;) {}
+}
+
+________________________________________________________________________________
+
+10. QSPI
+
+__QSPI README.md__
+# QSPI
+
+This project provides a simple example of writing and reading from QSPI. If the writes and reads are successful, then you should see a slowly blinking LED and hear a saw wave. If there's an issue, the LED will blink a bit faster.
+
+__QSPI.cpp__
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+
+DaisySeed       hw;
+daisysp::Phasor phs;
+
+#define WAVE_LENGTH 16384
+float wavform_ram[WAVE_LENGTH];
+/** The DSY_QSPI_BSS attribute places your array in QSPI memory */
+float DSY_QSPI_BSS qspi_buffer[WAVE_LENGTH];
+
+void Callback(AudioHandle::InputBuffer  in,
+              AudioHandle::OutputBuffer out,
+              size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float    idx  = phs.Process() * 16383.f;
+        uint32_t tdx  = (uint32_t)idx;
+        float    frac = idx - tdx;
+        float    a, b;
+        a          = qspi_buffer[tdx];
+        b          = qspi_buffer[(tdx + 1) % WAVE_LENGTH];
+        float samp = a + (b - a) * frac;
+
+        out[0][i] = out[1][i] = samp;
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+
+    phs.Init(hw.AudioSampleRate());
+    phs.SetFreq(440.f);
+
+    /** Fill 64kB wave */
+    for(uint32_t i = 0; i < WAVE_LENGTH; i++)
+    {
+        float frac = (float)i / (float)WAVE_LENGTH;
+
+        /** Simple saw wave gen */
+        float accum = 0;
+        for(int j = 1; j < 64; j++)
+        {
+            accum += sin(TWOPI_F * frac * j) / j;
+        }
+        wavform_ram[i] = accum;
+    }
+
+    size_t size = sizeof(wavform_ram[0]) * WAVE_LENGTH;
+    /** Grab physical address from pointer */
+    size_t address = (size_t)qspi_buffer;
+    /** Erase qspi and then write that wave */
+    hw.qspi.Erase(address, address + size);
+    hw.qspi.Write(address, size, (uint8_t*)wavform_ram);
+
+    /** Now compare to RAM version */
+    uint32_t failcnt = 0;
+    for(uint32_t i = 0; i < WAVE_LENGTH; i++)
+    {
+        if(qspi_buffer[i] != wavform_ram[i])
+            failcnt++;
+    }
+
+    unsigned int rate = (failcnt > 0) ? 128 : 512;
+
+    hw.StartAudio(Callback);
+
+    while(1)
+    {
+        hw.SetLed(System::GetNow() & rate);
+    }
+}
+
+________________________________________________________________________________
+
+11. Ram
+
+__Ram.cpp__
+#include <string.h>
+#include "daisy_seed.h"
+#include "daisysp.h"
+#include <math.h>
+
+// 1MB test
+#define TEST_BUFF_SIZE (1024 * 1024)
+
+using namespace daisy;
+using namespace daisysp;
+
+static uint32_t DSY_SDRAM_BSS test_buff[TEST_BUFF_SIZE];
+
+static DaisySeed hw;
+static uint32_t  start, end, dur;
+
+void bad_callback(AudioHandle::InterleavingInputBuffer  in,
+                  AudioHandle::InterleavingOutputBuffer out,
+                  size_t                                size)
+{
+    start = System::GetTick();
+    //	int32_t* ram = (int32_t*)0x20000000; // DTCM
+    //	int32_t* ram = (int32_t*)0x38000000; // D3 RAM
+    int32_t *ram = (int32_t *)0xC0000000; // SDRAM
+    memcpy(ram, in, sizeof(int32_t) * size);
+    for(int i = 0; i < 300; i++)
+    {
+        memcpy((i + 1) * size + ram, ram, sizeof(int32_t) * size);
+    }
+    end = System::GetTick();
+    dur = (end - start) / 200; // us
+    memcpy(out, in, sizeof(float) * size);
+}
+
+void passthru(AudioHandle::InterleavingInputBuffer  in,
+              AudioHandle::InterleavingOutputBuffer out,
+              size_t                                size)
+{
+    memcpy(out, in, sizeof(float) * size);
+}
+
+int main(void)
+{
+    // Initialize Hardware
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    for(uint32_t i = 0; i < TEST_BUFF_SIZE; i++)
+    {
+        test_buff[i] = i;
+    }
+    for(uint32_t i = 0; i < TEST_BUFF_SIZE; i++)
+    {
+        if(test_buff[i] != i)
+        {
+            asm("bkpt 255");
+        }
+    }
+    hw.StartAudio(bad_callback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+12. ReceiveTest
+
+__ReceiveTest.cpp__
+#include "daisy_seed.h"
+#include <string.h>
+
+using namespace daisy;
+
+static DaisySeed hw;
+static uint8_t   sumbuff[1024];
+static uint32_t  rx_size;
+static bool      update;
+
+void UsbCallback(uint8_t* buf, uint32_t* len)
+{
+    memcpy(sumbuff, buf, *len);
+    rx_size = *len;
+    update  = true;
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    update  = false;
+    rx_size = 0;
+    hw.usb_handle.Init(UsbHandle::FS_INTERNAL);
+    // Todo: replace delay with while(!usb_handle.IsInitialized()) {} or similar
+    System::Delay(500);
+    hw.usb_handle.SetReceiveCallback(UsbCallback, UsbHandle::FS_INTERNAL);
+    for(;;)
+    {
+        if(update && rx_size > 0)
+        {
+            hw.usb_handle.TransmitInternal(sumbuff, rx_size);
+            update = false;
+        }
+        System::Delay(2);
+    }
+}
+
+________________________________________________________________________________
+
+13. SDMMC
+
+__SDMMC.cpp__
+// This example uses fatfs to access files via SD Card.
+//
+// A File test.txt is created with the contentt of outbuff.
+// The file is then read back in to inbuff.
+// If there is any failure, or what was read does not match
+// what was written, execution will halt at the breakpoint.
+// Otherwise, the Seed's onboard LED will begin to blink.
+//
+// FATFS is not bundled into the libdaisy, and therefore needs
+// to be included in the project to work
+//
+// The SD implementation of libdaisy is subject to change,
+// however wrapping fatfs into libdaisy would be a substantial
+// chunk of work, and FatFs itself is a pretty familiar interface.
+//
+// This particular project will work as long as the following Middleware
+// files are included in the project (alongside libdaisy).
+// Sources/headers within: libdaisy/Middlewares/Third_Party/FatFs/src/
+// options: ccsbcs.c (in src/options within the above path)
+//
+// The SD card is currently configured to run with 4-bits and a 12MHz clock frequency.
+//
+#include <stdio.h>
+#include <string.h>
+#include "daisy_seed.h"
+#include "fatfs.h"
+
+#define TEST_FILE_NAME "test.txt"
+
+using namespace daisy;
+
+static DaisySeed hw;
+
+SdmmcHandler   sd;
+FatFSInterface fsi;
+FIL            SDFile;
+
+int main(void)
+{
+    // Vars and buffs.
+    char   outbuff[512];
+    char   inbuff[512];
+    size_t len, failcnt, byteswritten;
+    sprintf(outbuff, "Daisy...Testing...\n1...\n2...\n3...\n");
+    memset(inbuff, 0, 512);
+    len     = strlen(outbuff);
+    failcnt = 0;
+
+    // Init hardware
+    hw.Init();
+
+    // Init SD Card
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd.Init(sd_cfg);
+
+    // Links libdaisy i/o to fatfs driver.
+    fsi.Init(FatFSInterface::Config::MEDIA_SD);
+
+    // Mount SD Card
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    // Open and write the test file to the SD Card.
+    if(f_open(&SDFile, TEST_FILE_NAME, (FA_CREATE_ALWAYS) | (FA_WRITE))
+       == FR_OK)
+    {
+        f_write(&SDFile, outbuff, len, &byteswritten);
+        f_close(&SDFile);
+    }
+
+    // Read back the test file from the SD Card.
+    if(f_open(&SDFile, TEST_FILE_NAME, FA_READ) == FR_OK)
+    {
+        f_read(&SDFile, inbuff, len, &byteswritten);
+        f_close(&SDFile);
+    }
+
+    // Check for sameness.
+    for(size_t i = 0; i < len; i++)
+    {
+        if(inbuff[i] != outbuff[i])
+        {
+            failcnt++;
+        }
+    }
+    // If what was read does not match
+    // what was written execution will stop.
+    if(failcnt)
+    {
+        asm("bkpt 255");
+    }
+    bool ledstate;
+    ledstate = true;
+    // Otherwise the onboard LED will begin to blink.
+    for(;;)
+    {
+        System::Delay(250);
+        hw.SetLed(ledstate);
+        ledstate = !ledstate;
+    }
+}
+
+________________________________________________________________________________
+
+14. USB_CDC
+
+__USB_CDC.cpp__
+#include <stdio.h>
+#include <string.h>
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+static DaisySeed hw;
+
+uint8_t sumbuff[1024];
+
+void UsbCallback(uint8_t* buf, uint32_t* len)
+{
+    for(size_t i = 0; i < *len; i++)
+    {
+        sumbuff[i] = buf[i];
+    }
+}
+
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.usb_handle.Init(UsbHandle::FS_INTERNAL);
+    int  tick_cnt = 0;
+    bool ledstate = false;
+    char buff[512];
+    sprintf(buff, "Tick:\t%d\r\n", tick_cnt);
+    hw.usb_handle.TransmitInternal((uint8_t*)buff, strlen(buff));
+    System::Delay(500);
+    hw.usb_handle.SetReceiveCallback(UsbCallback, UsbHandle::FS_INTERNAL);
+    while(1)
+    {
+        System::Delay(500);
+        sprintf(buff, "Tick:\t%d\r\n", tick_cnt);
+        hw.usb_handle.TransmitInternal((uint8_t*)buff, strlen(buff));
+        tick_cnt = (tick_cnt + 1) % 100;
+        hw.SetLed(ledstate);
+        ledstate = !ledstate;
+    }
+}
+
+________________________________________________________________________________
+
+15. USB_MIDI
+
+__USB_MIDI README.md__
+# USB_MIDI
+
+**Author**: shensley
+
+## Description
+
+When the project boots up, a 100Hz sine wave will emit from both outputs,
+and the Daisy should appear as an Audio/MIDI device on a connected host.
+
+The oscillator is an always-on, sine wave that will update based on note on messages.
+
+## Troubleshooting
+
+When using Windows, there can be an issue with the device showing up if a non-standard driver has been used for an STM32H7 (like the one used to load boards with the ST dFuse software).
+
+If this is the case follow the following steps to fix it:
+
+* Go to Device Manager
+* The Daisy will likely be showing up as a STM32 Virtual COM Port with a yellow warning sign.
+* Right click that entry in the COM Ports list, and select "Update Driver"
+* Select, "Browse My Computer for Drivers. . ."
+* Then Select, "Let me pick from a list of available. . ."
+* Then choose "USB Audio Device" from the list
+* Unplug, and replug the device, and it should now show up correctly
+
+__USB_MIDI.cpp__
+/** Simple example of using USB MIDI 
+ * 
+ *  When the project boots up, a 100Hz sine wave will emit from both outputs,
+ *  and the Daisy should appear as an Audio/MIDI device on a connected host.
+ * 
+ *  To keep the example short, only note on messages are handled, and there
+ *  is only a single oscillator voice that tracks the most recent note message.
+ */
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed      hw;
+MidiUsbHandler midi;
+Oscillator     osc;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+        out[0][i] = out[1][i] = osc.Process();
+}
+
+int main(void)
+{
+    /** Basic initialization of Daisy hardware */
+    hw.Configure();
+    hw.Init();
+
+    /** Initialize USB Midi 
+		 *  by default this is set to use the built in (USB FS) peripheral.
+		 * 
+		 *  by setting midi_cfg.transport_config.periph = MidiUsbTransport::Config::EXTERNAL
+		 *  the USB HS pins can be used (as FS) for MIDI 
+		 */
+    MidiUsbHandler::Config midi_cfg;
+    midi_cfg.transport_config.periph = MidiUsbTransport::Config::INTERNAL;
+    midi.Init(midi_cfg);
+
+    /** Initialize our test tone */
+    osc.Init(hw.AudioSampleRate());
+
+    /** And start the audio callback */
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        /** Listen to MIDI for new changes */
+        midi.Listen();
+
+        /** When there are messages waiting in the queue... */
+        while(midi.HasEvents())
+        {
+            /** Pull the oldest one from the list... */
+            auto msg = midi.PopEvent();
+            switch(msg.type)
+            {
+                case NoteOn:
+                {
+                    /** and change the frequency of the oscillator */
+                    auto note_msg = msg.AsNoteOn();
+                    if(note_msg.velocity != 0)
+                        osc.SetFreq(mtof(note_msg.note));
+                }
+                break;
+                    // Since we only care about note-on messages in this example
+                    // we'll ignore all other message types
+                default: break;
+            }
+        }
+    }
+}
+
+________________________________________________________________________________
+
+16. WavPlayer
+
+__WavPlayer.cpp__
+// # WavPlayer
+// ## Description
+// Fairly simply sample player.
+// Loads 16
+//
+// Play .wav file from the SD Card.
+//
+#include <stdio.h>
+#include <string.h>
+// #include "daisy_pod.h"
+#include "daisy_seed.h"
+// #include "daisy_patch.h"
+
+using namespace daisy;
+
+//DaisyPatch   hw;
+// DaisyPod       hw;
+DaisySeed hw;
+SdmmcHandler   sdcard;
+FatFSInterface fsi;
+WavPlayer      sampler;
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    int32_t inc;
+
+    // Debounce digital controls
+    // hw.ProcessDigitalControls();
+
+    // Change file with encoder.
+    // inc = hw.encoder.Increment();
+    // if(inc > 0)
+    // {
+    //     size_t curfile;
+    //     curfile = sampler.GetCurrentFile();
+    //     if(curfile < sampler.GetNumberFiles() - 1)
+    //     {
+    //         sampler.Open(curfile + 1);
+    //     }
+    // }
+    // else if(inc < 0)
+    // {
+    //     size_t curfile;
+    //     curfile = sampler.GetCurrentFile();
+    //     if(curfile > 0)
+    //     {
+    //         sampler.Open(curfile - 1);
+    //     }
+    // }
+
+    //    if(hw.button1.RisingEdge())
+    //    {
+    //        sampler.Restart();
+    //    }
+    //
+    //    if(hw.button2.RisingEdge())
+    //    {
+    //        sampler.SetLooping(!sampler.GetLooping());
+    //        //hw.SetLed(DaisyPatch::LED_2_B, sampler.GetLooping());
+    //        //dsy_gpio_write(&hw.leds[DaisyPatch::LED_2_B],
+    //        //               static_cast<uint8_t>(!sampler.GetLooping()));
+    //    }
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        out[i] = out[i + 1] = s162f(sampler.Stream()) * 0.5f;
+    }
+}
+
+
+int main(void)
+{
+    // Init hardware
+    size_t blocksize = 4;
+    hw.Init();
+    //    hw.ClearLeds();
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sdcard.Init(sd_cfg);
+    fsi.Init(FatFSInterface::Config::MEDIA_SD);
+    f_mount(&fsi.GetSDFileSystem(), "/", 1);
+
+    sampler.Init(fsi.GetSDPath());
+    sampler.SetLooping(true);
+
+    // SET LED to indicate Looping status.
+    //hw.SetLed(DaisyPatch::LED_2_B, sampler.GetLooping());
+
+    // Init Audio
+    hw.SetAudioBlockSize(blocksize);
+    hw.StartAudio(AudioCallback);
+    // Loop forever...
+    for(;;)
+    {
+        // Prepare buffers for sampler as needed
+        sampler.Prepare();
+    }
+}
+
+________________________________________________________________________________
+
+17. bypass
+
+__bypass README.md__
+Input is sent directly to output
+
+__bypass.cpp__
+#include <string.h>
+#include "daisy_seed.h"
+
+using namespace daisy;
+
+DaisySeed hw;
+
+static void Callback(AudioHandle::InterleavingInputBuffer  in,
+                     AudioHandle::InterleavingOutputBuffer out,
+                     size_t                                size)
+{
+    memcpy(out, in, size * sizeof(float));
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    hw.StartAudio(Callback);
+    while(1) {}
+}
+
+________________________________________________________________________________

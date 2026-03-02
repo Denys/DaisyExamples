@@ -464,6 +464,7 @@ include $(SYSTEM_FILES_DIR)/Makefile
 
 ## References
 
+- [field/Midi/Midi.cpp](../field/Midi/Midi.cpp) - Base project for external MIDI-oriented Field projects
 - [field_wavetable_morph_synth](file:///c:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/MyProjects/_projects/field_wavetable_morph_synth/) - Reference implementation
 - [field_defaults.h](file:///c:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/MyProjects/foundation_examples/field_defaults.h) - Hardware helper library
 - [DAFX_2_Daisy_library](file:///c:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/MyProjects/DAFX_2_Daisy_lib/) - Extended DSP effects

@@ -151,22 +151,26 @@ class VoiceManager
 
 static VoiceManager<24> voice_handler;
 
+// MIDI note display state (updated in main loop, not audio callback)
+static int last_midi_note_ = -1;
+static int last_midi_velocity_ = -1;
+static bool new_midi_note_ = false;
+
+// Volatile parameters for thread-safe communication between main loop and audio callback
+volatile float knob1_value = 0.0f;
+volatile bool sw1_pressed = false;
+
 void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
                    AudioHandle::InterleavingOutputBuffer out,
                    size_t                                size)
 {
-    float sum = 0.f;
-    hw.ProcessDigitalControls();
-    hw.ProcessAnalogControls();
-    if(hw.GetSwitch(hw.SW_1)->FallingEdge())
-    {
-        voice_handler.FreeAllVoices();
-    }
-    voice_handler.SetCutoff(250.f + hw.GetKnobValue(hw.KNOB_1) * 8000.f);
+    // ONLY audio processing - read pre-updated parameters from main loop
+    float cutoff = 250.f + knob1_value * 8000.f;
+    voice_handler.SetCutoff(cutoff);
 
     for(size_t i = 0; i < size; i += 2)
     {
-        sum        = 0.f;
+        float sum        = 0.f;
         sum        = voice_handler.Process() * 0.5f;
         out[i]     = sum;
         out[i + 1] = sum;
@@ -181,12 +185,10 @@ void HandleMidiMessage(MidiEvent m)
         case NoteOn:
         {
             NoteOnEvent p = m.AsNoteOn();
-            // Debug output
-            hw.display.Fill(false);
-            char debugStr[32];
-            sprintf(debugStr, "Note: %d Vel: %d", (int)p.note, (int)p.velocity);
-            hw.display.WriteString(debugStr, Font_7x10, true);
-            hw.display.Update();
+            // Store for display in main loop (non-blocking)
+            last_midi_note_ = p.note;
+            last_midi_velocity_ = p.velocity;
+            new_midi_note_ = true;
             
             // Note Off can come in as Note On w/ 0 Velocity
             if(p.velocity == 0.f)
@@ -230,11 +232,36 @@ int main(void)
     hw.StartAudio(AudioCallback);
     for(;;)
     {
+        // Control processing in main loop (NOT in audio callback)
+        hw.ProcessDigitalControls();
+        hw.ProcessAnalogControls();
+        
+        // Read knob values - update volatile variable for audio callback
+        knob1_value = hw.GetKnobValue(hw.KNOB_1);
+        
+        // Handle switches
+        if(hw.GetSwitch(hw.SW_1)->FallingEdge())
+        {
+            voice_handler.FreeAllVoices();
+        }
+        
+        // Handle MIDI
         hw.midi.Listen();
         // Handle MIDI Events
         while(hw.midi.HasEvents())
         {
             HandleMidiMessage(hw.midi.PopEvent());
+        }
+        // Update display in main loop (non-blocking)
+        if(new_midi_note_)
+        {
+            hw.display.Fill(false);
+            hw.display.SetCursor(0, 0);
+            char debugStr[32];
+            sprintf(debugStr, "Note: %d Vel: %d", last_midi_note_, last_midi_velocity_);
+            hw.display.WriteString(debugStr, Font_7x10, true);
+            hw.display.Update();
+            new_midi_note_ = false;
         }
     }
 }

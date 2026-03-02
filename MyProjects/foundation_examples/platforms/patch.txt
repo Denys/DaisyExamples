@@ -1,0 +1,3808 @@
+CONTENTS
+1. Compressor
+2. EnvelopeOscillator
+3. FilterBank
+4. Midi
+5. MultiDelay
+6. Nimbus
+7. Noise
+8. PluckEcho
+9. PolyOsc
+10. QuadEnvelope
+11. QuadMixer
+12. QuadraphonicMixer
+13. SampleAndHold
+14. Sequencer
+15. SequentialSwitch
+16. Svf
+17. Torus
+18. lfo
+19. logic
+20. vco
+21. verb
+
+________________________________________________________________________________
+
+Makefile template
+________________________________________________________________________________
+
+# Project Name
+TARGET = __ProjectName__
+
+# Sources
+CPP_SOURCES = __ProjectName__.cpp
+
+# Library Locations
+LIBDAISY_DIR = ../../libDaisy/
+DAISYSP_DIR = ../../DaisySP/
+
+# Core location, and generic Makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+________________________________________________________________________________
+
+1. Compressor
+
+__Compressor README.md__
+# Compressor
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Compressor with optional sidechain input.
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/Compressor)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| CTRL 1 | Threshold | -80 to 0 |
+| CTRL 2 | Ratio | 1 to 40 |
+| CTRL 3 | Attack Time | .001 to 1 |
+| CTRL 4 | Release Time | .001 to 1 |
+| In 1 | Audio In | |
+| In 2 | Sidechain In | Only works if sidechain is on |
+| Encoder Press | Sidechain On/Off | |
+| Outs 1-4 | Compressor Out | |
+
+__Compressor.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+Compressor comp;
+
+bool isSideChained;
+
+void UpdateControls();
+
+Parameter threshParam, ratioParam, attackParam, releaseParam;
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    float sig;
+    float dry_in, dry_sidechain;
+    UpdateControls();
+
+    // Scales input by 2 and then the output by 0.5
+    // This is because there are 6dB of headroom on the daisy
+    // and currently no way to tell where '0dB' is supposed to be
+    for(size_t i = 0; i < size; i++)
+    {
+        dry_in        = in[0][i] * 2.0f;
+        dry_sidechain = in[1][i] * 2.0f;
+
+        sig = isSideChained ? comp.Process(dry_in, dry_sidechain)
+                            : comp.Process(dry_in);
+
+        // Writes output to all four outputs.
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            out[chn][i] = sig * 0.5f;
+        }
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware
+    samplerate = patch.AudioSampleRate();
+
+    comp.Init(samplerate);
+
+    isSideChained = false;
+
+    //parameter parameters
+    threshParam.Init(patch.controls[0], -80.0f, 0.f, Parameter::LINEAR);
+    ratioParam.Init(patch.controls[1], 1.2f, 40.f, Parameter::LINEAR);
+    attackParam.Init(patch.controls[2], 0.01f, 1.f, Parameter::EXPONENTIAL);
+    releaseParam.Init(patch.controls[3], 0.01f, 1.f, Parameter::EXPONENTIAL);
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        //update the oled
+        patch.display.Fill(false);
+
+        patch.display.SetCursor(0, 0);
+        std::string str  = "Compressor";
+        char*       cstr = &str[0];
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        patch.display.SetCursor(0, 25);
+        str = "Sidechain: ";
+        str += isSideChained ? "On" : "Off";
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        patch.display.Update();
+    }
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //encoder click
+    isSideChained = patch.encoder.RisingEdge() ? !isSideChained : isSideChained;
+
+    //controls
+    comp.SetThreshold(threshParam.Process());
+    comp.SetRatio(ratioParam.Process());
+    comp.SetAttack(attackParam.Process());
+    comp.SetRelease(releaseParam.Process());
+}
+
+________________________________________________________________________________
+
+2. EnvelopeOscillator
+
+__EnvelopeOscillator README.md__
+# Envelope Oscillator
+## Author
+
+C.M.Barth (allotrope ijk)
+
+## Description
+
+Basic oscillator with built in envelope generator.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/EnvelopeOscillator)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 | V/Oct | Oscillator frequency |
+| Ctrl 2 | Morph | Linear interpolation between sine and square waveforms |
+| Ctrl 3 | Rise | Envelope rise length |
+| Ctrl 4 | Fall | Envelope fall length |
+| Gate In 1 | Trigger | Trigger envelope |
+| Encoder Press | Trigger | Trigger envelope |
+| CV Outs 1 & 2 | Envelope CV Out | CV output of current envelope value |
+| Audio Out 1 | Audio Out | Mono oscillator output |
+
+__EnvelopeOscillator.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include "envelope.h"
+#include "oscillator.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+float      sampleRate;
+
+constexpr uint8_t NUM_CV_IN   = 4;
+constexpr uint8_t NUM_GATE_IN = 2;
+
+constexpr float C1_FREQ = 32.70f;
+
+float ctrl[NUM_CV_IN];
+bool  gate[NUM_GATE_IN];
+
+EnvelopeOscillator::Envelope   env;
+EnvelopeOscillator::Oscillator osc;
+
+inline float static CalcFreq(const float value)
+{
+    return powf(2.f, value * 5.f) * C1_FREQ; //Hz
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    for(uint8_t n = 0; n < NUM_CV_IN; n++)
+    {
+        ctrl[n] = patch.GetKnobValue(static_cast<DaisyPatch::Ctrl>(n));
+    }
+
+    for(uint8_t n = 0; n < NUM_GATE_IN; n++)
+    {
+        gate[n] = patch.gate_input[n].Trig();
+    }
+
+    osc.SetFreq(CalcFreq(ctrl[0]));
+    osc.SetMorph(ctrl[1]);
+    env.SetRise(ctrl[2]);
+    env.SetFall(ctrl[3]);
+
+    if(gate[0] || patch.encoder.FallingEdge())
+    {
+        env.Trigger();
+    }
+}
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    UpdateControls();
+
+    for(size_t n = 0; n < size; n++)
+    {
+        out[0][n] = env.Process() * osc.Process();
+        out[1][n] = 0.f;
+        out[2][n] = 0.f;
+        out[3][n] = 0.f;
+    }
+
+    patch.seed.dac.WriteValue(DacHandle::Channel::BOTH,
+                              static_cast<uint16_t>(4095 * env.GetCurrValue()));
+}
+
+void UpdateDisplay()
+{
+    uint32_t minX       = 0;
+    uint32_t minY       = 0;
+    uint32_t lineOffset = 8;
+
+    patch.display.Fill(false);
+
+    std::string str  = "ENVELOPE OSCILLATOR";
+    char*       cstr = &str[0];
+    patch.display.SetCursor(minX, minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "FREQ:" + std::to_string(static_cast<uint32_t>(osc.GetFreq()));
+    patch.display.SetCursor(minX, lineOffset + minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "MRPH:" + std::to_string(static_cast<uint8_t>(100 * osc.GetMorph()));
+    patch.display.SetCursor(minX, 2 * lineOffset + minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "RISE:" + std::to_string(static_cast<uint32_t>(1000 * env.GetRise()));
+    patch.display.SetCursor(minX, 3 * lineOffset + minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "FALL:" + std::to_string(static_cast<uint32_t>(1000 * env.GetFall()));
+    patch.display.SetCursor(minX, 4 * lineOffset + minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "ENV:"
+          + std::to_string(static_cast<uint8_t>(100 * env.GetCurrValue()));
+    patch.display.SetCursor(minX, 5 * lineOffset + minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    patch.display.Update();
+}
+
+int main(void)
+{
+    patch.Init();
+    sampleRate = patch.AudioSampleRate();
+
+    env.Init(sampleRate);
+    osc.Init(sampleRate);
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        UpdateDisplay();
+    }
+}
+
+________________________________________________________________________________
+
+3. FilterBank
+
+__FilterBank README.md__
+# Filter Bank
+
+## Author
+
+Ben Sergentanis	
+
+## Description
+Fixed resonant peak filterbank with amplitude control per filter. Try running it with whitenoise, oscillators, or any sound source you please!
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/FilterBank)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Encoder Turn | Control Mode | Selects which filters ctrls map to |
+| Ctrl 1-4 | Filter Amplitude | Volume per filter |
+| Audio In 1 | Filter bank Input | |
+| Audio Out 1-4 | Filter Bank Output | |
+
+__FilterBank.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+int        freqs[16];
+
+int bank;
+
+struct ConditionalUpdate
+{
+    float oldVal = 0;
+
+    bool Process(float newVal)
+    {
+        if(abs(newVal - oldVal) > .04)
+        {
+            oldVal = newVal;
+            return true;
+        }
+
+        return false;
+    }
+};
+
+ConditionalUpdate condUpdates[4];
+
+struct Filter
+{
+    Svf   filt;
+    float amp;
+
+    void Init(float samplerate, float freq)
+    {
+        filt.Init(samplerate);
+        filt.SetRes(1);
+        filt.SetDrive(.002);
+        filt.SetFreq(freq);
+        amp = .5f;
+    }
+
+    float Process(float in)
+    {
+        filt.Process(in);
+        return filt.Peak() * amp;
+    }
+};
+
+Filter filters[16];
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = 0.f;
+        for(int j = 0; j < 16; j++)
+        {
+            sig += filters[j].Process(in[0][i]);
+        }
+        sig *= .06;
+
+        out[0][i] = out[1][i] = out[2][i] = out[3][i] = sig;
+    }
+}
+
+void InitFreqs()
+{
+    freqs[0]  = 50;
+    freqs[1]  = 75;
+    freqs[2]  = 110;
+    freqs[3]  = 150;
+    freqs[4]  = 220;
+    freqs[5]  = 350;
+    freqs[6]  = 500;
+    freqs[7]  = 750;
+    freqs[8]  = 1100;
+    freqs[9]  = 1600;
+    freqs[10] = 2200;
+    freqs[11] = 3600;
+    freqs[12] = 5200;
+    freqs[13] = 7500;
+    freqs[14] = 11000;
+    freqs[15] = 15000;
+}
+
+void InitFilters(float samplerate)
+{
+    for(int i = 0; i < 16; i++)
+    {
+        filters[i].Init(samplerate, freqs[i]);
+    }
+}
+
+void UpdateOled();
+void UpdateControls();
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    InitFreqs();
+    InitFilters(samplerate);
+    bank = 0;
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        UpdateOled();
+        UpdateControls();
+    }
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    std::string str  = "Filter Bank";
+    char*       cstr = &str[0];
+    patch.display.SetCursor(0, 0);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    str = "";
+    for(int i = 0; i < 2; i++)
+    {
+        str += std::to_string(freqs[i + 4 * bank]);
+        str += "  ";
+    }
+
+    patch.display.SetCursor(0, 25);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    str = "";
+    for(int i = 2; i < 4; i++)
+    {
+        str += std::to_string(freqs[i + 4 * bank]);
+        str += "  ";
+    }
+
+    patch.display.SetCursor(0, 35);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+
+    patch.display.Update();
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //encoder
+    bank += patch.encoder.Increment();
+    bank = (bank % 4 + 4) % 4;
+
+    bank = patch.encoder.RisingEdge() ? 0 : bank;
+
+    //controls
+    for(int i = 0; i < 4; i++)
+    {
+        float val = patch.controls[i].Process();
+        if(condUpdates[i].Process(val))
+        {
+            filters[i + bank * 4].amp = val;
+        }
+    }
+}
+
+________________________________________________________________________________
+
+4. Midi
+
+__Midi README.md__
+# Midi
+
+## Description
+Control a synth voice over Midi.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/Midi)
+
+## Author
+
+Shensley
+
+## Controls  
+| Control | Description |  
+| --- | --- |  
+| Midi CC 1 | Filter Cutoff |  
+| Midi CC 2 | Filter Resonance |  
+| Audio Outs | Oscillator Output|  
+
+__Midi.cpp__
+#include "daisy_patch.h"
+#include "daisysp.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch hw;
+Oscillator osc;
+Svf        filt;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    float sig;
+    for(size_t i = 0; i < size; i++)
+    {
+        sig = osc.Process();
+        filt.Process(sig);
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            out[chn][i] = filt.Low();
+        }
+    }
+}
+
+// Typical Switch case for Message Type.
+void HandleMidiMessage(MidiEvent m)
+{
+    switch(m.type)
+    {
+        case NoteOn:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            // This is to avoid Max/MSP Note outs for now..
+            if(m.data[1] != 0)
+            {
+                p = m.AsNoteOn();
+                osc.SetFreq(mtof(p.note));
+                osc.SetAmp((p.velocity / 127.0f));
+            }
+        }
+        break;
+        case ControlChange:
+        {
+            ControlChangeEvent p = m.AsControlChange();
+            switch(p.control_number)
+            {
+                case 1:
+                    // CC 1 for cutoff.
+                    filt.SetFreq(mtof((float)p.value));
+                    break;
+                case 2:
+                    // CC 2 for res.
+                    filt.SetRes(((float)p.value / 127.0f));
+                    break;
+                default: break;
+            }
+            break;
+        }
+        default: break;
+    }
+}
+
+
+// Main -- Init, and Midi Handling
+int main(void)
+{
+    // Init
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+
+    // Synthesis
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    filt.Init(samplerate);
+
+    //display
+    std::string str  = "Midi";
+    char*       cstr = &str[0];
+    hw.display.WriteString(cstr, Font_7x10, true);
+    hw.display.Update();
+
+    // Start stuff.
+    hw.midi.StartReceive();
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    for(;;)
+    {
+        hw.midi.Listen();
+        // Handle MIDI Events
+        while(hw.midi.HasEvents())
+        {
+            HandleMidiMessage(hw.midi.PopEvent());
+        }
+    }
+}
+
+________________________________________________________________________________
+
+5. MultiDelay
+
+__MultiDelay README.md__
+# MultiDelay
+
+## Author
+
+Ben Sergentanis
+
+## Description
+Three delay bundled in one. Set their delay times independently. Feedback is controlled globally.
+The three delays mixed with the dry signal is available at all outputs.
+Set the dry/wet amount of this final mix with the encoder.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/MultiDelay)
+
+## Control
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrls 1 - 3 | Delay Time | Time for delays 1 through 3 |
+| Ctrl 4 | Feedback | Feedback on all three delays |
+| Encoder | Dry/Wet | Set the dry/wet amount for the outputs |
+| Audio In1 | Audio input | |
+| Audio Out 1 - 3 | Individual Delay Outs | Outputs for delays 1 - 3. Dry/wet works here. |  
+| Audio Out 4 | Mix Out | A mix of all three delays. Dry/wet works here as well. |
+
+__MultiDelay.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+#define MAX_DELAY static_cast<size_t>(48000 * 1.f)
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delMems[3];
+
+struct delay
+{
+    DelayLine<float, MAX_DELAY> *del;
+    float                        currentDelay;
+    float                        delayTarget;
+
+    float Process(float feedback, float in)
+    {
+        //set delay times
+        fonepole(currentDelay, delayTarget, .0002f);
+        del->SetDelay(currentDelay);
+
+        float read = del->Read();
+        del->Write((feedback * read) + in);
+
+        return read;
+    }
+};
+
+delay     delays[3];
+Parameter params[4];
+
+float feedback;
+int   drywet;
+
+void ProcessControls();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    ProcessControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float mix     = 0;
+        float fdrywet = (float)drywet / 100.f;
+
+        //update delayline with feedback
+        for(int d = 0; d < 3; d++)
+        {
+            float sig = delays[d].Process(feedback, in[0][i]);
+            mix += sig;
+            //out[d][i] = sig * fdrywet + (1.f - fdrywet) * in[0][i];
+            out[d][i] = sig;
+        }
+
+        //apply drywet and attenuate
+        mix       = fdrywet * mix * .3f + (1.0f - fdrywet) * in[0][i];
+        out[3][i] = mix;
+    }
+}
+
+void InitDelays(float samplerate)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        //Init delays
+        delMems[i].Init();
+        delays[i].del = &delMems[i];
+        //3 delay times
+        params[i].Init(patch.controls[i],
+                       samplerate * .05,
+                       MAX_DELAY,
+                       Parameter::LOGARITHMIC);
+    }
+
+    //feedback
+    params[3].Init(patch.controls[3], 0, 1, Parameter::LINEAR);
+}
+
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    InitDelays(samplerate);
+
+    drywet = 50;
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        UpdateOled();
+    }
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    patch.display.SetCursor(0, 0);
+    std::string str  = "Multi Delay";
+    char *      cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.SetCursor(0, 30);
+    str = "Dry/Wet:  ";
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.SetCursor(60, 30);
+    str = std::to_string(drywet);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.Update();
+}
+
+void ProcessControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //knobs
+    for(int i = 0; i < 3; i++)
+    {
+        delays[i].delayTarget = params[i].Process();
+    }
+    feedback = params[3].Process();
+
+    //encoder
+    drywet += 5 * patch.encoder.Increment();
+    drywet > 100 ? drywet = 100 : drywet = drywet;
+    drywet < 0 ? drywet = 0 : drywet = drywet;
+}
+
+________________________________________________________________________________
+
+6. Nimbus
+
+__Nimbus README.md__
+# Nimbus
+
+## Author
+
+Ported by Ben Sergentanis
+Originally by Emilie Gillet
+
+## Description
+
+Nimbus is a port of Mutable Instrument's Clouds. Clouds is a granular  
+audio processor, specializing in making huge clouds of sound from even the tiniest source.  
+Nimbus includes a menu to allow the user to map any of the Daisy Patch's four controls to any of Clouds' parameters.  
+
+Ported from [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Encoder Turn | Navigate through menu | |
+| Encoder Click | Select a menu item to edit | |
+| Encoder Long Press | Switch between pages one and two | |
+| Gate In 1 | Freeze Gate In | Activates Freeze if not already done via menu |
+| Audio In 1 | Left In 1 | All Audio Ins are a mix of In 1 and In 2 |
+| Audio In 2 | Right In 1 | |
+| Audio In 3 | Left In 2 | |
+| Audio In 4 | Right In 2 | |
+| Audio Out 1 | Left Out 1 | |
+| Audio Out 2 | Right Out 1 | |
+| Audio Out 3 | Left Out 2 | Copy of Out 1 |
+| Audio Out 4 | Right Out 2 | Copy of Out 1 |
+
+## Menu
+You can toggle between pages one and two by long pressing on the encoder.
+
+### Page One
+This page allows you to assign one Nimbus parameter to each control on the Patch.  
+These options are:
+- position
+- size
+- pitch
+- density
+- texture
+- dry/wet
+- stereo spread
+- feedback
+- reverb
+
+Refer to the [Clouds Manual](https://mutable-instruments.net/modules/clouds/manual/) for more information on these controls.
+
+### Page Two
+#### Freeze
+Freeze can be forced on using the menu control. To do so, click freeze, and turn the encoder once. A box will be drawn around freeze. To turn freeze off, select freeze and turn the encoder again.  
+
+Freeze can also be turned on using Gate In 1. This will turn Freeze on (if it isn't already) for the duration the gate is high. The box will also be drawn when Freeze is turned on via the gate.
+
+#### Mode
+You can select from Nimbus' four alternate modes here. These are:
+- Granular
+- Pitch Shift / Time Stretch
+- Looping Delay
+- Spectral Processor
+Refer to the [Clouds Manual](https://mutable-instruments.net/modules/clouds/manual/) section on "The Infamous Alternate Modes".  
+
+#### Quality
+You can also select from four quality / mono stereo modes. These are:
+- 16 bit Stereo
+- 16 bit Mono
+- 8bit u-law Stereo
+- 8bit u-law Mono
+Refer to the [Clouds Manual](https://mutable-instruments.net/modules/clouds/manual/) section on "Audio Quality".  
+
+__Nimbus.cpp__
+#include "daisy_patch.h"
+#include "daisysp.h"
+#include "granular_processor.h"
+
+#define NUM_PARAMS 9
+#define NUM_PAGES 2
+using namespace daisysp;
+using namespace daisy;
+
+GranularProcessorClouds processor;
+DaisyPatch              hw;
+
+// Pre-allocate big blocks in main memory and CCM. No malloc here.
+uint8_t block_mem[118784];
+uint8_t block_ccm[65536 - 128];
+
+char paramNames[NUM_PARAMS][17];
+char pbModeNames[4][17];
+char qualityNames[4][17];
+
+int mymod(int a, int b)
+{
+    return (b + (a % b)) % b;
+}
+
+class ParamControl
+{
+  public:
+    ParamControl() {}
+    ~ParamControl() {}
+
+    void Init(AnalogControl* control, Parameters* params)
+    {
+        params_    = params;
+        control_   = control;
+        param_num_ = 0;
+        oldval_    = 0.f;
+    }
+
+    void incParamNum(int inc)
+    {
+        param_num_ += inc;
+        param_num_ = mymod(param_num_, NUM_PARAMS);
+    }
+
+    char* getName(int inc = 0)
+    {
+        return paramNames[mymod(param_num_ + inc, NUM_PARAMS)];
+    }
+
+    bool knobTouched(float newval)
+    {
+        bool ret = fabsf(newval - oldval_) > .001f;
+        oldval_  = newval;
+        return ret;
+    }
+
+    void Process()
+    {
+        float val = control_->Process();
+        if(!knobTouched(val))
+        {
+            return;
+        }
+
+        switch(param_num_)
+        {
+            case 0: params_->position = val; break;
+            case 1: params_->size = val; break;
+            case 2:
+                params_->pitch = powf(9.798f * (val - .5f), 2.f);
+                params_->pitch *= val < .5f ? -1.f : 1.f;
+                break;
+            case 3: params_->density = val; break;
+            case 4: params_->texture = val; break;
+            case 5: params_->dry_wet = val; break;
+            case 6: params_->stereo_spread = val; break;
+            case 7: params_->feedback = val; break;
+            case 8: params_->reverb = val; break;
+        }
+    }
+
+  private:
+    AnalogControl* control_;
+    Parameters*    params_;
+    int            param_num_;
+    float          oldval_;
+};
+
+ParamControl paramControls[4];
+
+int  cursorpos;
+int  menupage;
+bool selected;
+bool held;
+bool freeze_btn;
+int  pbMode;
+int  quality;
+int  increment;
+
+Parameters* parameters;
+
+void Controls();
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    Controls();
+
+    FloatFrame input[size];
+    FloatFrame output[size];
+
+    for(size_t i = 0; i < size; i++)
+    {
+        input[i].l  = in[0][i] * .5f + in[2][i] * .5f;
+        input[i].r  = in[1][i] * .5f + in[3][i] * .5f;
+        output[i].l = output[i].r = 0.f;
+    }
+
+    processor.Process(input, output, size);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = out[2][i] = output[i].l;
+        out[1][i] = out[3][i] = output[i].r;
+    }
+}
+
+//set up the param names for the oled code
+void InitStrings()
+{
+    sprintf(paramNames[0], "position");
+    sprintf(paramNames[1], "size");
+    sprintf(paramNames[2], "pitch");
+    sprintf(paramNames[3], "density");
+    sprintf(paramNames[4], "texture");
+    sprintf(paramNames[5], "dry wet");
+    sprintf(paramNames[6], "stereo spread");
+    sprintf(paramNames[7], "feedback");
+    sprintf(paramNames[8], "reverb");
+
+    sprintf(pbModeNames[0], "Granular");
+    sprintf(pbModeNames[1], "Stretch");
+    sprintf(pbModeNames[2], "Looping Delay");
+    sprintf(pbModeNames[3], "Spectral");
+
+    sprintf(qualityNames[0], "16 bit stereo");
+    sprintf(qualityNames[1], "16 bit mono");
+    sprintf(qualityNames[2], "8 bit ulaw streo");
+    sprintf(qualityNames[3], "8 bit ulaw mono");
+}
+
+int main(void)
+{
+    hw.Init();
+    hw.SetAudioBlockSize(32); // clouds won't work with blocks bigger than 32
+    float sample_rate = hw.AudioSampleRate();
+
+    //init the luts
+    InitResources(sample_rate);
+
+    processor.Init(sample_rate,
+                   block_mem,
+                   sizeof(block_mem),
+                   block_ccm,
+                   sizeof(block_ccm));
+
+    parameters = processor.mutable_parameters();
+
+    InitStrings();
+
+    for(int i = 0; i < 4; i++)
+    {
+        paramControls[i].Init(&hw.controls[i], parameters);
+    }
+
+    paramControls[1].incParamNum(1);
+    paramControls[2].incParamNum(3);
+    paramControls[3].incParamNum(5);
+
+    cursorpos  = 0;
+    selected   = false;
+    held       = false;
+    freeze_btn = false;
+    menupage   = 0;
+    increment  = 0;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        processor.Prepare();
+
+        hw.display.Fill(false);
+        hw.display.DrawLine(0, 10, 128, 10, true);
+
+        hw.display.SetCursor(0, cursorpos * 13 + 13);
+        hw.display.WriteString(selected ? "x" : "o", Font_7x10, true);
+
+        switch(menupage)
+        {
+            case 0:
+                hw.display.SetCursor(0, 0);
+                hw.display.WriteString("Controls", Font_7x10, true);
+
+                //param names
+                for(int i = 0; i < 4; i++)
+                {
+                    hw.display.SetCursor(10, i * 13 + 13);
+                    hw.display.WriteString(
+                        paramControls[i].getName((i == cursorpos) ? increment
+                                                                  : 0),
+                        Font_7x10,
+                        !(selected && (i == cursorpos)));
+                };
+                break;
+            case 1:
+                hw.display.SetCursor(0, 0);
+                hw.display.WriteString("Buttons", Font_7x10, true);
+
+                hw.display.SetCursor(10, 13);
+                hw.display.WriteString(
+                    "freeze", Font_7x10, !parameters->freeze);
+
+                hw.display.SetCursor(10, 1 * 13 + 13);
+                hw.display.WriteString(pbModeNames[pbMode], Font_7x10, true);
+
+                hw.display.SetCursor(10, 2 * 13 + 13);
+                hw.display.WriteString(qualityNames[quality], Font_7x10, true);
+                break;
+        }
+
+        hw.display.Update();
+    }
+}
+
+void Controls()
+{
+    hw.ProcessAllControls();
+
+    //process knobs
+    for(int i = 0; i < 4; i++)
+    {
+        paramControls[i].Process();
+    }
+
+    //long press switch page
+    menupage += hw.encoder.TimeHeldMs() > 1000.f && !held;
+    menupage %= NUM_PAGES;
+    held = hw.encoder.TimeHeldMs() > 1000.f; //only change pages once
+    held &= hw.encoder.Pressed();            //reset on release
+    selected &= !held;                       //deselect on page change
+
+    selected ^= hw.encoder.RisingEdge();
+
+    //encoder turn
+    if(selected)
+    {
+        if(menupage == 0)
+        {
+            increment += hw.encoder.Increment();
+        }
+        else
+        {
+            switch(cursorpos)
+            {
+                case 0: freeze_btn ^= abs(hw.encoder.Increment()); break;
+                case 1:
+                    pbMode += hw.encoder.Increment();
+                    pbMode = mymod(pbMode, 4);
+                    processor.set_playback_mode((PlaybackMode)pbMode);
+                    break;
+                case 2:
+                    quality += hw.encoder.Increment();
+                    quality = mymod(quality, 4);
+                    processor.set_quality(quality);
+                    break;
+            }
+        }
+    }
+    else
+    {
+        if(increment != 0)
+        {
+            paramControls[cursorpos].incParamNum(increment);
+            increment = 0;
+        }
+        cursorpos += hw.encoder.Increment();
+        cursorpos = mymod(cursorpos, menupage ? 3 : 4);
+    }
+
+    // gate ins
+    parameters->freeze  = hw.gate_input[0].State() || freeze_btn;
+    parameters->trigger = hw.gate_input[1].Trig();
+    parameters->gate    = hw.gate_input[1].State();
+}
+
+________________________________________________________________________________
+
+7. Noise
+
+__Noise README.md__
+# Noise
+
+## Author
+
+Ben Sergentanis
+
+
+## Description
+White noise with two resonant filters.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/MultiDelay)
+
+## Controls
+
+| Control | Description |
+| --- | --- |
+| Ctrl 1 | Lowpass Cutoff |
+| Ctrl 2 | Lowpass Resonance |
+| Ctrl 3 | Highpass Cutoff |
+| Ctrl 4 | Highpass Resonance|
+| Audio Outs | Filtered Noise Out |
+
+__Noise.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+WhiteNoise noise;
+
+struct filter
+{
+    Svf filt;
+
+    enum mode
+    {
+        LOW,
+        HIGH,
+        BAND,
+        NOTCH,
+        PEAK,
+        LAST,
+    };
+    mode filterMode;
+
+    Parameter resParam, cutoffParam;
+
+    void Init(float         samplerate,
+              mode          setMode,
+              AnalogControl cutKnob,
+              AnalogControl resKnob)
+    {
+        filt.Init(samplerate);
+        filterMode = setMode;
+
+        cutoffParam.Init(cutKnob, 20, 10000, Parameter::LOGARITHMIC);
+        resParam.Init(resKnob, 0, 1, Parameter::LINEAR);
+    }
+
+    void UpdateControls()
+    {
+        filt.SetFreq(cutoffParam.Process());
+        filt.SetRes(resParam.Process());
+    }
+
+    float Process(float in)
+    {
+        filt.Process(in);
+        switch(filterMode)
+        {
+            case mode::LOW: return filt.Low();
+            case mode::HIGH: return filt.High();
+            case mode::BAND: return filt.Band();
+            case mode::NOTCH: return filt.Notch();
+            case mode::PEAK: return filt.Peak();
+            default: break;
+        }
+        return 0.f;
+    }
+};
+
+filter lowpass, highpass;
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    patch.ProcessAnalogControls();
+
+    lowpass.UpdateControls();
+    highpass.UpdateControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = noise.Process();
+        sig       = lowpass.Process(sig);
+        sig       = highpass.Process(sig);
+
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            out[chn][i] = sig;
+        }
+    }
+}
+
+void UpdateControls();
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    noise.Init();
+    lowpass.Init(
+        samplerate, filter::mode::LOW, patch.controls[0], patch.controls[1]);
+    highpass.Init(
+        samplerate, filter::mode::HIGH, patch.controls[2], patch.controls[3]);
+
+    std::string str  = "Noise";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+    patch.display.Update();
+    patch.DelayMs(1000);
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        patch.DisplayControls(false);
+    }
+}
+
+________________________________________________________________________________
+
+8. PluckEcho
+
+__PluckEcho README.md__
+# Pluck Echo
+
+## Author
+
+Shensley
+
+## Description
+Plucked string synthesizer into lush delay and reverb algorithms.
+Really easy to create unique sonic spaces!
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/PluckEcho)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 | String Pitch | |
+| Ctrl 2 | String decay time | |
+| Ctrl 3 | Delay Time | |
+| Ctrl 4 | Delay Feedback | |
+| Gate In 1 | Trigger In | Plucks the string |
+| Outs 1-2 | Stereo Outputs | Out 1:L, Out 2: R |
+
+__PluckEcho.cpp__
+#include "daisy_patch.h"
+#include "daisysp.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+#define NUM_VOICES 32
+#define MAX_DELAY ((size_t)(10.0f * 48000.0f))
+
+
+// Hardware
+DaisyPatch hw;
+
+// Synthesis
+PolyPluck<NUM_VOICES> synth;
+// 10 second delay line on the external SDRAM
+DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delay;
+ReverbSc                                  verb;
+
+// Persistent filtered Value for smooth delay time changes.
+float smooth_time;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    float sig, delsig;           // Mono Audio Vars
+    float trig, nn, decay;       // Pluck Vars
+    float deltime, delfb, kval;  // Delay Vars
+    float dry, send, wetl, wetr; // Effects Vars
+    float samplerate;
+
+    // Assign Output Buffers
+    float *out_left, *out_right;
+    out_left  = out[0];
+    out_right = out[1];
+
+    samplerate = hw.AudioSampleRate();
+    hw.ProcessDigitalControls();
+    hw.ProcessAnalogControls();
+
+    // Handle Triggering the Plucks
+    trig = 0.0f;
+    if(hw.encoder.RisingEdge() || hw.gate_input[DaisyPatch::GATE_IN_1].Trig())
+        trig = 1.0f;
+
+    // Set MIDI Note for new Pluck notes.
+    nn = 24.0f + hw.GetKnobValue(DaisyPatch::CTRL_1) * 60.0f;
+    nn = static_cast<int32_t>(nn); // Quantize to semitones
+
+    // Read knobs for decay;
+    decay = 0.5f + (hw.GetKnobValue(DaisyPatch::CTRL_2) * 0.5f);
+    synth.SetDecay(decay);
+
+    // Get Delay Parameters from knobs.
+    kval    = hw.GetKnobValue(DaisyPatch::CTRL_3);
+    deltime = (0.001f + (kval * kval) * 5.0f) * samplerate;
+    delfb   = hw.GetKnobValue(DaisyPatch::CTRL_4);
+
+    // Synthesis.
+    for(size_t i = 0; i < size; i++)
+    {
+        // Smooth delaytime, and set.
+        fonepole(smooth_time, deltime, 0.0005f);
+        delay.SetDelay(smooth_time);
+
+        // Synthesize Plucks
+        sig = synth.Process(trig, nn);
+
+        //		// Handle Delay
+        delsig = delay.Read();
+        delay.Write(sig + (delsig * delfb));
+
+        // Create Reverb Send
+        dry  = sig + delsig;
+        send = dry * 0.6f;
+        verb.Process(send, send, &wetl, &wetr);
+
+        // Output
+        out_left[i]  = dry + wetl;
+        out_right[i] = dry + wetr;
+    }
+}
+
+int main(void)
+{
+    // Init everything.
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+
+    //briefly display the module name
+    std::string str  = "Pluck Echo";
+    char *      cstr = &str[0];
+    hw.display.WriteString(cstr, Font_7x10, true);
+    hw.display.Update();
+    hw.DelayMs(1000);
+
+    synth.Init(samplerate);
+
+    delay.Init();
+    delay.SetDelay(samplerate * 0.8f); // half second delay
+
+    verb.Init(samplerate);
+    verb.SetFeedback(0.85f);
+    verb.SetLpFreq(2000.0f);
+
+    // Start the ADC and Audio Peripherals on the Hardware
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    for(;;)
+    {
+        hw.DisplayControls(false);
+    }
+}
+
+________________________________________________________________________________
+
+9. PolyOsc
+
+__PolyOsc README.md__
+# PolyOsc
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Three oscillators in one package! Make evolving chords, and shift them around!
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/PolyOsc)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 - 3 | Oscillator Frequency | Controls the individual oscillators |
+| Ctrl 4 | Global Frequency | Recommended to set this at 50% at first. |
+| Encoder | Waveform | Global control. Cycle through Sine, Triangle, Saw, Ramp, and Square |
+| Audio Out 1 - 3 | Oscillator Input | Outputs for individual oscillators |
+| Audio Out 4 | Mix output | Listen to all 3 oscillators | 
+
+__PolyOsc.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+Oscillator osc[3];
+
+std::string waveNames[5];
+
+int waveform;
+int final_wave;
+
+float testval;
+
+void UpdateControls();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    UpdateControls();
+    for(size_t i = 0; i < size; i++)
+    {
+        float mix = 0;
+        //Process and output the three oscillators
+        for(size_t chn = 0; chn < 3; chn++)
+        {
+            float sig = osc[chn].Process();
+            mix += sig * .25f;
+            out[chn][i] = sig;
+        }
+
+        //output the mixed oscillators
+        out[3][i] = mix;
+    }
+}
+
+void SetupOsc(float samplerate)
+{
+    for(int i = 0; i < 3; i++)
+    {
+        osc[i].Init(samplerate);
+        osc[i].SetAmp(.7);
+    }
+}
+
+void SetupWaveNames()
+{
+    waveNames[0] = "sine";
+    waveNames[1] = "triangle";
+    waveNames[2] = "saw";
+    waveNames[3] = "ramp";
+    waveNames[4] = "square";
+}
+
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    waveform   = 0;
+    final_wave = Oscillator::WAVE_POLYBLEP_TRI;
+
+    SetupOsc(samplerate);
+    SetupWaveNames();
+
+    testval = 0.f;
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        UpdateOled();
+    }
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    patch.display.SetCursor(0, 0);
+    std::string str  = "PolyOsc";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    str = "waveform:";
+    patch.display.SetCursor(0, 30);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.SetCursor(70, 30);
+    cstr = &waveNames[waveform][0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.Update();
+}
+
+void UpdateControls()
+{
+    patch.ProcessDigitalControls();
+    patch.ProcessAnalogControls();
+
+    //knobs
+    float ctrl[4];
+    for(int i = 0; i < 4; i++)
+    {
+        ctrl[i] = patch.GetKnobValue((DaisyPatch::Ctrl)i);
+    }
+
+    for(int i = 0; i < 3; i++)
+    {
+        ctrl[i] += ctrl[3];
+        ctrl[i] = ctrl[i] * 5.f;           //voltage
+        ctrl[i] = powf(2.f, ctrl[i]) * 55; //Hz
+    }
+
+    testval = patch.GetKnobValue((DaisyPatch::Ctrl)2) * 5.f;
+
+    //encoder
+    waveform += patch.encoder.Increment();
+    waveform = (waveform % final_wave + final_wave) % final_wave;
+
+    //Adjust oscillators based on inputs
+    for(int i = 0; i < 3; i++)
+    {
+        osc[i].SetFreq(ctrl[i]);
+        osc[i].SetWaveform((uint8_t)waveform);
+    }
+}
+
+________________________________________________________________________________
+
+10. QuadEnvelope
+
+__QuadEnvelope README.md__
+# Quad Envelope
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+VCA with internal triggerable envelopes. Ins 1 and 2 are tied to env1, and Ins 3 and 4 are tied to env 2.
+Each input has its own output. The raw envelope signals are also available on the CV outs.
+The envelope curves and attack/decay times ae controllable as well.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/QuadEnvelope)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Gate Ins | Trigger the internal envelopes | Gate In 1 goes with env1, and Gate In 2 with env2 |
+| Encoder Press | Switch between control modes | Controls attack/decay or curve |
+| Ctrl1 | Env one attack / curve | Controls envelope one's attack time, or curve, depending on the mode |
+| Ctrl2 | Env one decay / nothing | Controls envelope one's decay time, or nothing, depending on the mode |
+| Ctrl1 | Env two attack / curve | Controls envelope two's attack time, or curve, depending on the mode |
+| Ctrl2 | Env two decay / nothing | Controls envelope two's decay time, or nothing, depending on the mode |
+| Audio Ins | Audio to be VCA'd by the envelopes | Ins 1 and 2 go with env1, ins 2 and 4 with env2 |
+| Audio Outs | Audio post VCA | Each output goes with its respective input |
+| CV Outs | Envelope CV | Goes with envelopes one and two respectively |
+
+__QuadEnvelope.cpp__
+#include "daisy_patch.h"
+#include "daisysp.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch hw;
+
+int curveTimeMode;
+
+struct envStruct
+{
+    AdEnv     env;
+    Parameter attackParam;
+    Parameter decayParam;
+    Parameter curveParam;
+    float     envSig;
+};
+
+envStruct envelopes[2];
+void      ProcessControls();
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    //Process control inputs
+    ProcessControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        //Get the next envelope samples
+        envelopes[0].envSig = envelopes[0].env.Process();
+        envelopes[1].envSig = envelopes[1].env.Process();
+
+        for(size_t chn = 0; chn < 2; chn++)
+        {
+            //The envelopes effect the outputs in pairs
+            out[chn * 2][i]     = in[chn * 2][i] * envelopes[chn].envSig;
+            out[chn * 2 + 1][i] = in[chn * 2 + 1][i] * envelopes[chn].envSig;
+        }
+    }
+}
+
+void InitEnvelopes(float samplerate)
+{
+    for(int i = 0; i < 2; i++)
+    {
+        //envelope values and Init
+        envelopes[i].env.Init(samplerate);
+        envelopes[i].env.SetMax(1);
+        envelopes[i].env.SetMin(0);
+        envelopes[i].env.SetCurve(0);
+    }
+
+    //envelope parameters (control inputs)
+    envelopes[0].attackParam.Init(
+        hw.controls[0], .01, 2, Parameter::EXPONENTIAL);
+    envelopes[0].decayParam.Init(
+        hw.controls[1], .01, 2, Parameter::EXPONENTIAL);
+    envelopes[0].curveParam.Init(hw.controls[0], -10, 10, Parameter::LINEAR);
+
+    envelopes[1].attackParam.Init(
+        hw.controls[2], .01, 2, Parameter::EXPONENTIAL);
+    envelopes[1].decayParam.Init(
+        hw.controls[3], .01, 2, Parameter::EXPONENTIAL);
+    envelopes[1].curveParam.Init(hw.controls[2], -10, 10, Parameter::LINEAR);
+}
+
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+
+    InitEnvelopes(samplerate);
+
+    curveTimeMode = 0;
+
+    UpdateOled();
+
+    // Start the ADC and Audio Peripherals on the Hardware
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    for(;;)
+    {
+        //Send the latest envelope values to the CV outs
+        hw.seed.dac.WriteValue(DacHandle::Channel::ONE,
+                               envelopes[0].envSig * 4095);
+        hw.seed.dac.WriteValue(DacHandle::Channel::TWO,
+                               envelopes[1].envSig * 4095);
+        hw.DelayMs(1);
+    }
+}
+
+void UpdateOled()
+{
+    hw.display.Fill(false);
+
+    hw.display.SetCursor(0, 0);
+    std::string str  = "env1";
+    char*       cstr = &str[0];
+    hw.display.WriteString(cstr, Font_7x10, true);
+
+    hw.display.SetCursor(70, 0);
+    str = "env2";
+    hw.display.WriteString(cstr, Font_7x10, true);
+
+    hw.display.SetCursor(0, 50);
+    //curve or attack/decay mode
+    if(curveTimeMode)
+    {
+        str = "curve";
+    }
+    else
+    {
+        str = "attack/decay";
+    }
+    hw.display.WriteString(cstr, Font_7x10, true);
+
+    hw.display.Update();
+}
+
+void ProcessEncoder()
+{
+    int edge = hw.encoder.RisingEdge();
+    curveTimeMode += edge;
+    curveTimeMode = curveTimeMode % 2;
+
+    if(edge != 0)
+    {
+        UpdateOled();
+    }
+}
+
+void ProcessKnobs()
+{
+    for(int i = 0; i < 2; i++)
+    {
+        if(curveTimeMode == 0)
+        {
+            envelopes[i].env.SetTime(ADENV_SEG_ATTACK,
+                                     envelopes[i].attackParam.Process());
+            envelopes[i].env.SetTime(ADENV_SEG_DECAY,
+                                     envelopes[i].decayParam.Process());
+        }
+        else
+        {
+            envelopes[i].env.SetCurve(envelopes[i].curveParam.Process());
+        }
+    }
+}
+
+void ProcessGates()
+{
+    for(int i = 0; i < 2; i++)
+    {
+        if(hw.gate_input[i].Trig())
+        {
+            envelopes[i].env.Trigger();
+        }
+    }
+}
+
+void ProcessControls()
+{
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+
+    ProcessEncoder();
+    ProcessKnobs();
+    ProcessGates();
+}
+
+________________________________________________________________________________
+
+11. QuadMixer
+
+__QuadMixer README.md__
+# Quad Mixer
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Simple Four Channel Audio Mixer.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/QuadMixer)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrls | Sets input level | Each Ctrl goes to the Input of the same number. I.e. Ctrl1 goes with In1, etc. |
+| Ins | Audio Inputs | Audio inputs are normalled In1 > In2 > In3 > In4 |
+| Outs | Audio Outputs | The mixed signal is available on all 4 outputs |
+
+__QuadMixer.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    float ctrlVal[4];
+    for(int i = 0; i < 4; i++)
+    {
+        //Get the four control values
+        ctrlVal[i] = patch.controls[i].Process();
+    }
+
+    for(size_t i = 0; i < size; i++)
+    {
+        float output = 0.f;
+        //sum all four inputs, attenuated by the control levels
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            output += ctrlVal[chn] * in[chn][i];
+        }
+
+        //attenuate by 1/4
+        output *= .25f;
+
+        //send the same thing to all 4 outputs
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            out[chn][i] = output;
+        }
+    }
+}
+
+int main(void)
+{
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+
+    //start audio
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+
+
+    while(1)
+    {
+        //display the four control levels
+        patch.DisplayControls(false);
+    }
+}
+
+________________________________________________________________________________
+
+12. QuadraphonicMixer
+
+__QuadraphonicMixer README.md__
+# Quadraphonic Mixer
+
+## Author
+
+C.M.Barth (allotrope ijk)
+
+## Description 
+Mixer module for stereo and quadraphonic performances that applies final reverb pass to all audio outputs.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/QuadraphonicMixer)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| CTRL 1-4 | Input Audio Pan/Angle | When in stereo mode, CTRL values correspond to stereo panning. When in quad mode, CTRL values correspond to angles around a unit circle. Note: CTRL values map 1:1 to Audio Inputs |
+| Audio Inputs 1-4 | Input Audio | 4 input audio signals. Note: for some patch modules there is cross talk across different audio input channels. Plug patch cables into all unused audio inputs to avoid signal duplication across multiple audio inputs in order to obtain cleaner panning. |
+| Audio Outputs 1-4 | Output Audio | In stereo mode, the first two audio outputs are populated. In quad mode, all four audio outputs are populated. For quad mode, audio outputs correpsond to 0, 0.25f * 2PI, 0.5f * 2PI, and 0.75f * 2PI radians on a unit circle. Applying saw LFOs to CTRL values should result in circling effects when in quad mode. |
+| Encoder Press | Switch between control modes | Used to toggle between stereo and quad mode. Used to update the global reverb wetness and feedback applied to all output audio channels. Used to update input audio level gains. |
+
+__QuadraphonicMixer.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+#include <limits>
+#include <vector>
+#include "quadMixer.h"
+#include "stereoMixer.h"
+
+using namespace daisy;
+using namespace daisysp;
+using namespace QuadraphonicMixer;
+
+DaisyPatch        patch;
+float             sampleRate;
+constexpr uint8_t NUM_CTRL = 4;
+float             ctrl[4];
+constexpr uint8_t NUM_GATE = 2;
+bool              gate[NUM_GATE];
+constexpr uint8_t NUM_CHANNEL      = 4;
+constexpr float   ONE_ONEHUNDREDTH = 0.01f;
+
+enum State : uint8_t
+{
+    ParamSelect    = 0,
+    Stereo         = 1,
+    ReverbWet      = 2,
+    ReverbFeedback = 3,
+    CH1Gain        = 4,
+    CH2Gain        = 5,
+    CH3Gain        = 6,
+    CH4Gain        = 7
+};
+constexpr uint8_t NUM_STATES = 8;
+constexpr uint8_t NUM_PARAM  = NUM_STATES - 1;
+State             currState  = State::ParamSelect;
+uint8_t           currParam  = 0;
+
+bool        stereo = true;
+StereoMixer stereoMixer;
+QuadMixer   quadMixer;
+
+constexpr uint8_t      NUM_VERB = 2;
+ReverbSc DSY_SDRAM_BSS verb[NUM_VERB];
+float                  wet             = 0.3f;
+float                  feedback        = 0.3f;
+constexpr float        REVERB_LP_FREQ  = 18000.0f;
+constexpr float        DRY_MINIMUM_AMP = 0.3f;
+
+constexpr float    MIN_GAIN = 0.f;
+constexpr float    MAX_GAIN = 2.f;
+std::vector<float> gain{1.0f, 1.f, 1.f, 1.f};
+
+inline float Clamp(const float value, const float min, const float max)
+{
+    if(value < min)
+    {
+        return min;
+    }
+
+    if(value > max)
+    {
+        return max;
+    }
+
+    return value;
+}
+
+void UpdateParamState()
+{
+    if(patch.encoder.FallingEdge())
+    {
+        switch(currState)
+        {
+            case State::ParamSelect:
+                currState = static_cast<State>(currParam + 1);
+                break;
+            default: currState = State::ParamSelect; break;
+        }
+    }
+
+    const int32_t currInc = patch.encoder.Increment();
+    if(abs(currInc) > 0)
+    {
+        switch(currState)
+        {
+            case State::ParamSelect:
+            {
+                int32_t newValue = currParam + currInc;
+                newValue += newValue < 0 ? NUM_PARAM : 0;
+                currParam = newValue % NUM_PARAM;
+            }
+            break;
+            case State::Stereo:
+            {
+                if(abs(currInc) > 0)
+                {
+                    stereo = !stereo;
+                }
+            }
+            break;
+            case State::ReverbWet:
+            {
+                wet += ONE_ONEHUNDREDTH * currInc;
+                wet = Clamp(wet, 0.f, 1.f);
+            }
+            break;
+            case State::ReverbFeedback:
+            {
+                feedback += ONE_ONEHUNDREDTH * currInc;
+                feedback = Clamp(feedback, 0.f, 1.3f);
+            }
+            break;
+            case State::CH1Gain:
+            {
+                const uint8_t gainIndex = 0;
+                gain[gainIndex] += ONE_ONEHUNDREDTH * currInc;
+                gain[gainIndex] = Clamp(gain[gainIndex], MIN_GAIN, MAX_GAIN);
+            }
+            break;
+            case State::CH2Gain:
+            {
+                const uint8_t gainIndex = 1;
+                gain[gainIndex] += ONE_ONEHUNDREDTH * currInc;
+                gain[gainIndex] = Clamp(gain[gainIndex], MIN_GAIN, MAX_GAIN);
+            }
+            break;
+            case State::CH3Gain:
+            {
+                const uint8_t gainIndex = 2;
+                gain[gainIndex] += ONE_ONEHUNDREDTH * currInc;
+                gain[gainIndex] = Clamp(gain[gainIndex], MIN_GAIN, MAX_GAIN);
+            }
+            break;
+            case State::CH4Gain:
+            {
+                const uint8_t gainIndex = 3;
+                gain[gainIndex] += ONE_ONEHUNDREDTH * currInc;
+                gain[gainIndex] = Clamp(gain[gainIndex], MIN_GAIN, MAX_GAIN);
+            }
+            break;
+        }
+    }
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    UpdateParamState();
+
+    for(uint8_t n = 0; n < NUM_CTRL; n++)
+    {
+        ctrl[n] = patch.GetKnobValue(static_cast<DaisyPatch::Ctrl>(n));
+        stereoMixer.SetPan(n, ctrl[n]);
+        quadMixer.SetAngle(n, ctrl[n]);
+    }
+
+    for(uint8_t n = 0; n < NUM_GATE; n++)
+    {
+        gate[n] = patch.gate_input[n].Trig();
+    }
+
+    for(uint8_t n = 0; n < NUM_VERB; n++)
+    {
+        verb[n].SetFeedback(feedback);
+    }
+}
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    UpdateControls();
+
+    float mixedValues[4];
+    float verbValues[4];
+    for(size_t n = 0; n < size; n++)
+    {
+        if(stereo)
+        {
+            const StereoMixer::Input inStereo{gain[0] * in[0][n],
+                                              gain[1] * in[1][n],
+                                              gain[2] * in[2][n],
+                                              gain[3] * in[3][n]};
+
+            StereoMixer::Output outStereo{0, 0};
+            stereoMixer.Process(inStereo, outStereo);
+
+            mixedValues[0] = outStereo.Values[0];
+            mixedValues[1] = outStereo.Values[1];
+            mixedValues[2] = 0.f;
+            mixedValues[3] = 0.f;
+        }
+        else
+        {
+            const QuadMixer::Data inQuad{gain[0] * in[0][n],
+                                         gain[1] * in[1][n],
+                                         gain[2] * in[2][n],
+                                         gain[3] * in[3][n]};
+
+            QuadMixer::Data outQuad{0, 0, 0, 0};
+            quadMixer.Process(inQuad, outQuad);
+
+            mixedValues[0] = outQuad.Values[0];
+            mixedValues[1] = outQuad.Values[1];
+            mixedValues[2] = outQuad.Values[2];
+            mixedValues[3] = outQuad.Values[3];
+        }
+
+        verb[0].Process(
+            mixedValues[0], mixedValues[1], &verbValues[0], &verbValues[1]);
+        verb[1].Process(
+            mixedValues[2], mixedValues[3], &verbValues[2], &verbValues[3]);
+
+        for(uint8_t m = 0; m < NUM_CHANNEL; m++)
+        {
+            out[m][n] = wet * verbValues[m]
+                        + (DRY_MINIMUM_AMP + 1.f - wet) * mixedValues[m];
+        }
+    }
+}
+
+void UpdateDisplay()
+{
+    uint32_t minX       = 0;
+    uint32_t minY       = 0;
+    uint32_t xOffset    = 9 * 7;
+    uint32_t lineOffset = 8;
+
+    patch.display.Fill(false);
+
+    bool highlightState[NUM_STATES]{false};
+    highlightState[static_cast<uint8_t>(currState)] = true;
+    if(highlightState[static_cast<uint8_t>(State::ParamSelect)])
+    {
+        highlightState[1 + currParam] = true;
+    }
+
+    std::string str  = "QUADRAPHONIC MIXER";
+    char*       cstr = &str[0];
+    patch.display.SetCursor(minX, minY);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = stereo ? "STEREO" : "QUAD";
+    patch.display.SetCursor(minX, minY + lineOffset);
+    patch.display.WriteString(
+        cstr, Font_6x8, !highlightState[static_cast<uint8_t>(State::Stereo)]);
+
+    str = "VERB:" + std::to_string(static_cast<uint32_t>(100 * wet));
+    patch.display.SetCursor(minX, minY + 2 * lineOffset);
+    patch.display.WriteString(
+        cstr,
+        Font_6x8,
+        !highlightState[static_cast<uint8_t>(State::ReverbWet)]);
+
+    str = "FDBK:" + std::to_string(static_cast<uint32_t>(100 * feedback));
+    patch.display.SetCursor(minX, minY + 3 * lineOffset);
+    patch.display.WriteString(
+        cstr,
+        Font_6x8,
+        !highlightState[static_cast<uint8_t>(State::ReverbFeedback)]);
+
+    str = "CH1:" + std::to_string(static_cast<uint32_t>(100 * ctrl[0]));
+    patch.display.SetCursor(minX, minY + 4 * lineOffset);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "GAIN:" + std::to_string(static_cast<uint32_t>(100 * gain[0]));
+    patch.display.SetCursor(minX + xOffset, minY + 4 * lineOffset);
+    patch.display.WriteString(
+        cstr, Font_6x8, !highlightState[static_cast<uint8_t>(State::CH1Gain)]);
+
+    str = "CH2:" + std::to_string(static_cast<uint32_t>(100 * ctrl[1]));
+    patch.display.SetCursor(minX, minY + 5 * lineOffset);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "GAIN:" + std::to_string(static_cast<uint32_t>(100 * gain[1]));
+    patch.display.SetCursor(minX + xOffset, minY + 5 * lineOffset);
+    patch.display.WriteString(
+        cstr, Font_6x8, !highlightState[static_cast<uint8_t>(State::CH2Gain)]);
+
+    str = "CH3:" + std::to_string(static_cast<uint32_t>(100 * ctrl[2]));
+    patch.display.SetCursor(minX, minY + 6 * lineOffset);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "GAIN:" + std::to_string(static_cast<uint32_t>(100 * gain[2]));
+    patch.display.SetCursor(minX + xOffset, minY + 6 * lineOffset);
+    patch.display.WriteString(
+        cstr, Font_6x8, !highlightState[static_cast<uint8_t>(State::CH3Gain)]);
+
+    str = "CH4:" + std::to_string(static_cast<uint32_t>(100 * ctrl[3]));
+    patch.display.SetCursor(minX, minY + 7 * lineOffset);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    str = "GAIN:" + std::to_string(static_cast<uint32_t>(100 * gain[3]));
+    patch.display.SetCursor(minX + xOffset, minY + 7 * lineOffset);
+    patch.display.WriteString(
+        cstr, Font_6x8, !highlightState[static_cast<uint8_t>(State::CH4Gain)]);
+
+    patch.display.Update();
+}
+
+int main(void)
+{
+    patch.Init();
+    sampleRate = patch.AudioSampleRate();
+
+    for(uint8_t n = 0; n < 2; n++)
+    {
+        verb[n].Init(sampleRate);
+        verb[n].SetFeedback(feedback);
+        verb[n].SetLpFreq(REVERB_LP_FREQ);
+    }
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        UpdateDisplay();
+    }
+}
+
+________________________________________________________________________________
+
+13. SampleAndHold
+
+__SampleAndHold README.md__
+# Sample and Hold
+
+## Author
+
+Ben Sergentanis
+
+## Description 
+Dual Sample and hold or Track and hold module. Each individual circuit can be set to one of these two modes.  
+Sample and hold samples, or stores the incoming signal on the rising edge of a gate or trigger.  
+In other words, it only updates once per trigger.  
+Track and Hold will continue tracking, or updating, as long as the gate is held high.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/SampleAndhold)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Gate Ins | Trigger / Gate In | Coorespond to circuits one and two |
+| Ctrls 1-2 | S&H / T&H In | Also coorespond to circuits one and two |
+| Encoder | Menu Control | Turn to cycle through menu, click to change modes. |
+| CV Outs | S&H / T&H Out | Also also coorespond to circuits one and two |
+
+__SampleAndHold.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+struct sampHoldStruct
+{
+    SampleHold       sampHold;
+    SampleHold::Mode mode;
+    float            output;
+
+    void Process(bool trigger, float input)
+    {
+        output = sampHold.Process(trigger, input, mode);
+    }
+};
+
+sampHoldStruct sampHolds[2];
+
+int menuPos;
+
+void UpdateControls();
+void UpdateOutputs();
+void UpdateOled();
+
+int main(void)
+{
+    patch.Init();
+
+    patch.StartAdc();
+    while(1)
+    {
+        UpdateControls();
+        UpdateOutputs();
+        UpdateOled();
+    }
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //read ctrls and gates, then update sampleholds
+    sampHolds[0].Process(patch.gate_input[0].State(),
+                         patch.controls[0].Process());
+    sampHolds[1].Process(patch.gate_input[1].State(),
+                         patch.controls[1].Process());
+
+    //encoder
+    menuPos += patch.encoder.Increment();
+    menuPos = (menuPos % 2 + 2) % 2;
+
+    //switch modes
+    if(patch.encoder.RisingEdge())
+    {
+        sampHolds[menuPos].mode
+            = (SampleHold::Mode)((sampHolds[menuPos].mode + 1) % 2);
+    }
+}
+
+void UpdateOutputs()
+{
+    patch.seed.dac.WriteValue(DacHandle::Channel::ONE,
+                              sampHolds[0].output * 4095);
+    patch.seed.dac.WriteValue(DacHandle::Channel::TWO,
+                              sampHolds[1].output * 4095);
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    std::string str  = "Sample/Track and Hold";
+    char*       cstr = &str[0];
+    patch.display.SetCursor(0, 0);
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    //Cursor
+    patch.display.SetCursor(menuPos * 60, 25);
+    str = "o";
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    //two circuits
+    patch.display.SetCursor(0, 35);
+    str = sampHolds[0].mode == 0 ? "S&H" : "T&H";
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.SetCursor(60, 35);
+    str = sampHolds[1].mode == 0 ? "S&H" : "T&H";
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.Update();
+}
+
+________________________________________________________________________________
+
+14. Sequencer
+
+__Sequencer README.md__
+# Sequencer
+
+## Author
+
+Ben Sergentanis
+
+## Description
+5 Step Sequencer with gate and step outputs.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/Sequencer)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Gate Ins | Advance Sequence | Try using both ins at the same time! |
+| Gate Out | Trigger Out | Triggers when entering an active step. X indicates active |
+| CV Outs | Step Out | OLED value is in terms of percent. So 35 indicates .35 * 5 = 1.75 Volts |
+| Encoder | Navigate Menu | Turn to move through steps. Press to enter/leave submenu (values), or activate/deactive step |
+
+__Sequencer.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+int  values[5];
+bool trigs[5];
+int  stepNumber;
+bool trigOut;
+
+int  menuPos;
+bool inSubMenu;
+
+void UpdateControls();
+void UpdateOled();
+void UpdateOutputs();
+
+int main(void)
+{
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+
+    //init global vars
+    stepNumber = 0;
+    trigOut    = false;
+    menuPos    = 0;
+    inSubMenu  = false;
+
+    for(int i = 0; i < 5; i++)
+    {
+        values[i] = 0.f;
+        trigs[i]  = false;
+    }
+
+    patch.StartAdc();
+    while(1)
+    {
+        UpdateControls();
+        UpdateOled();
+        UpdateOutputs();
+    }
+}
+
+void UpdateControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //encoder
+    //can we simplify the menu logic?
+    if(!inSubMenu)
+    {
+        menuPos += patch.encoder.Increment();
+        menuPos = (menuPos % 10 + 10) % 10;
+
+        if(menuPos < 5)
+        {
+            inSubMenu = patch.encoder.RisingEdge() ? true : false;
+        }
+        else
+        {
+            trigs[menuPos % 5] = patch.encoder.RisingEdge()
+                                     ? !trigs[menuPos % 5]
+                                     : trigs[menuPos % 5];
+        }
+    }
+
+    else
+    {
+        values[menuPos] += patch.encoder.Increment();
+        values[menuPos] = values[menuPos] < 0.f ? 0.f : values[menuPos];
+        values[menuPos] = values[menuPos] > 60.f ? 60.f : values[menuPos];
+        inSubMenu       = patch.encoder.RisingEdge() ? false : true;
+    }
+
+    //gate in
+    if(patch.gate_input[0].Trig() || patch.gate_input[1].Trig())
+    {
+        stepNumber++;
+        stepNumber %= 5;
+        trigOut = trigs[stepNumber];
+    }
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    std::string str  = "!";
+    char*       cstr = &str[0];
+    patch.display.SetCursor(25 * stepNumber, 45);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    //values and trigs
+    for(int i = 0; i < 5; i++)
+    {
+        sprintf(cstr, "%d", values[i]);
+        patch.display.SetCursor(i * 25, 10);
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        str = trigs[i % 5] ? "X" : "O";
+        patch.display.SetCursor(i * 25, 30);
+        patch.display.WriteString(cstr, Font_7x10, true);
+    }
+
+    //cursor
+    str = inSubMenu ? "@" : "o";
+    patch.display.SetCursor((menuPos % 5) * 25, (menuPos > 4) * 20);
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.Update();
+}
+
+void UpdateOutputs()
+{
+    patch.seed.dac.WriteValue(DacHandle::Channel::ONE,
+                              round((values[stepNumber] / 12.f) * 819.2f));
+    patch.seed.dac.WriteValue(DacHandle::Channel::TWO,
+                              round((values[stepNumber] / 12.f) * 819.2f));
+
+    dsy_gpio_write(&patch.gate_output, trigOut);
+    trigOut = false;
+}
+
+________________________________________________________________________________
+
+15. SequentialSwitch
+
+__SequentialSwitch README.md__
+# Sequential Switch
+
+## Author
+
+Ben Sergentanis
+
+
+## Description
+Switches mutliple inputs to one output, or one output to multiple inputs.
+Clock input to trigger switch and reset in.
+Selectable one to many, or many to one modes.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/SequentialSwitch)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Gate In 1 | Increment Step | Loops back to beginning after last step |
+| Gate In 2 | Reset | Resets back to first step |
+| Encoder Press | Mode Select | |
+| Single In -> Multi Out | | Audio In 1 is sent to one of the four audio outs |
+| Multi In -> Single Out | | One of the four audio ins is sent to Audio Out 1 |
+| Audio Ins | Multi / Single In | |
+| Audio Outs | Multi / Single Out | |
+
+__SequentialSwitch.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+bool    isMultiIn;
+uint8_t step;
+
+void UpdateControls();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    UpdateControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = out[1][i] = out[2][i] = out[3][i]
+            = 0.f; //reset non active outs
+        if(isMultiIn)
+            out[0][i] = in[step][i];
+        else
+            out[step][i] = in[0][i];
+    }
+}
+
+int main(void)
+{
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        //OLED
+        patch.display.Fill(false);
+
+        patch.display.SetCursor(0, 0);
+        std::string str  = "Sequential Switch";
+        char*       cstr = &str[0];
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        patch.display.SetCursor(0, 25);
+        str = isMultiIn ? "Multi " : "Single ";
+        str += "In -> ";
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        patch.display.SetCursor(0, 35);
+        str = isMultiIn ? "Single " : "Multi ";
+        str += "Out";
+        patch.display.WriteString(cstr, Font_7x10, true);
+
+        patch.display.Update();
+    }
+}
+
+void UpdateControls()
+{
+    patch.ProcessDigitalControls();
+    if(patch.gate_input[0].Trig())
+    {
+        step++;
+        step %= 4;
+    }
+
+    if(patch.gate_input[1].Trig())
+    {
+        step = 0;
+    }
+
+    if(patch.encoder.RisingEdge())
+    {
+        isMultiIn = !isMultiIn;
+    }
+}
+
+________________________________________________________________________________
+
+16. Svf
+
+__Svf README.md__
+# State Variable Filter
+
+## Author
+
+Ben Sergentanis
+
+## Description
+State variable filter with simultaneous low pass, high pass, band pass, and notch outputs.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/Svf)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 | Cutoff Frequency | 20Hz to 20,000kHz |
+| Ctrl 2 | Resonance | Controls the amount of filter resonance |
+| Ctrl 3 | Drive | Gets really gritty! |
+| Audio In 1 | Audio Input | Inputs 2 - 4 are inactive |
+| Audio Out 1 | Low Pass Out | Passes frequencies below cutoff |
+| Audio Out 2 | High Pass Out | Passes frequencies above cutoff |
+| Audio Out 3 | Band Pass Out | Passes frequencies in a band, centered around cutoff |
+| Audio Out 4 | Notch Out | Rejects a band of frequencies, centered around cutoff |
+
+__Svf.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+Parameter  cutoff_ctrl, res_ctrl, drive_ctrl;
+Svf        svf;
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    //get new control values
+    float cutoff = cutoff_ctrl.Process();
+    float res    = res_ctrl.Process();
+    float drive  = drive_ctrl.Process();
+
+    //Set filter to the values we got
+    svf.SetFreq(cutoff);
+    svf.SetRes(res);
+    svf.SetDrive(drive);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        //send the next sample to the filter
+        svf.Process(in[0][i]);
+
+        //send the different filter types to the different outputs
+        out[0][i] = svf.Low();
+        out[1][i] = svf.High();
+        out[2][i] = svf.Band();
+        out[3][i] = svf.Notch();
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    //Initialize filter
+    svf.Init(samplerate);
+
+    //setup controls
+    cutoff_ctrl.Init(patch.controls[0], 20, 20000, Parameter::LOGARITHMIC);
+    res_ctrl.Init(patch.controls[1], .3, 1, Parameter::LINEAR);
+    drive_ctrl.Init(patch.controls[2], .3, 1, Parameter::LINEAR);
+
+    //Put controls onscreen
+    std::string str  = "Cut  Res  Drive  ";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    patch.display.SetCursor(0, 50);
+    str = "LP  HP  BP  Notch";
+    patch.display.WriteString(cstr, Font_7x10, true);
+    patch.display.Update();
+
+    //start audio
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+________________________________________________________________________________
+
+17. Torus
+
+__Torus README.md__
+# DaisyMutations Torus
+
+Mutable Instruments Rings for the Daisy Patch.  
+
+Ported by: Ben Sergentanis  
+Originally by: Émilie Gillet
+
+Please refer to the [Rings manual](https://mutable-instruments.net/modules/rings/manual/) for more detail on everything Rings. 
+
+## Controls and I/O
+- Ctrl 1-4: Map these to the usual Rings controls. More info in the Control Menu section.  
+- Gate In 1: Trigger In
+- Audio In 1: External Exciter In
+- Audio Out 1: Left Out
+- Audio Out 2: Right Out
+- Encoder: Menu Navigation
+
+## Menus
+
+### Controls
+Use this menu to map Rings' five controls to the Daisy Patch's four.
+Your options are:
+- Frequency
+- Structure
+- Brightness
+- Damping
+- Position
+
+### Poly/Model
+- Polyphony: How many voices can play at once. Polyphony modes 2 and 4 cause every other note to hardpan left and right.
+  - One
+  - Two
+  - Four
+- Model: The resonator model to be used.
+  - Modal
+  - Sympathetic Strings
+  - Inharmonic Strings
+  - FM Voice
+  - Western Chords
+  - String and Reverb
+- Easter Egg FX: Change the effect used in easter egg mode
+  - Formant
+  - Chorus
+  - Reverb
+  - Formant 2
+  - Ensemble
+  - Reverb 2
+
+### Normalize
+This menu simulates the normalization detection used on Rings.  
+For proper behavior you **must** turn on normalization for each of the controls you have patched.  
+These are:
+- Exciter
+- Note
+- Strum
+
+### Easter Egg
+Used to toggle easter egg mode.  
+More information can be found in the Rings manual.
+
+__Torus.cpp__
+// Copyright 2015 Emilie Gillet.
+//
+// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// See http://creativecommons.org/licenses/MIT/ for more information.
+
+#include "dsp/part.h"
+#include "dsp/strummer.h"
+#include "dsp/string_synth_part.h"
+#include "cv_scaler.h"
+#include "daisy_patch.h"
+#include "UiHardware.h"
+
+using namespace daisy;
+using namespace torus;
+
+daisy::UI ui;
+
+FullScreenItemMenu mainMenu;
+FullScreenItemMenu controlEditMenu;
+FullScreenItemMenu polyEditMenu;
+FullScreenItemMenu boolEditMenu;
+FullScreenItemMenu normEditMenu;
+UiEventQueue       eventQueue;
+DaisyPatch         hw;
+
+uint16_t reverb_buffer[32768];
+
+CvScaler        cv_scaler;
+Part            part;
+StringSynthPart string_synth;
+Strummer        strummer;
+
+const int                kNumMainMenuItems = 4;
+AbstractMenu::ItemConfig mainMenuItems[kNumMainMenuItems];
+const int                kNumControlEditMenuItems = 5;
+AbstractMenu::ItemConfig controlEditMenuItems[kNumControlEditMenuItems];
+const int                kNumPolyEditMenuItems = 4;
+AbstractMenu::ItemConfig polyEditMenuItems[kNumPolyEditMenuItems];
+const int                kNumNormEditMenuItems = 4;
+AbstractMenu::ItemConfig normEditMenuItems[kNumNormEditMenuItems];
+
+// control menu items
+const char* controlListValues[]
+    = {"Frequency", "Structure", "Brightness", "Damping", "Position"};
+MappedStringListValue controlListValueOne(controlListValues, 5, 0);
+MappedStringListValue controlListValueTwo(controlListValues, 5, 1);
+MappedStringListValue controlListValueThree(controlListValues, 5, 2);
+MappedStringListValue controlListValueFour(controlListValues, 5, 3);
+
+// poly/model menu items
+const char*           polyListValues[] = {"One", "Two", "Four"};
+MappedStringListValue polyListValue(polyListValues, 3, 0);
+const char*           modelListValues[] = {"Modal",
+                                 "Symp Str",
+                                 "Inhrm Str",
+                                 "Fm Voice",
+                                 "Westn Chrd",
+                                 "Str & Verb"};
+MappedStringListValue modelListValue(modelListValues, 6, 0);
+const char*           eggListValues[]
+    = {"Formant", "Chorus", "Reverb", "Formant2", "Ensemble", "Reverb2"};
+MappedStringListValue eggListValue(eggListValues, 6, 0);
+
+// norm edit menu items
+bool exciterIn;
+bool strumIn;
+bool noteIn;
+
+//easter egg toggle
+bool easterEggOn;
+
+int oldModel = 0;
+
+void InitUi()
+{
+    UI::SpecialControlIds specialControlIds;
+    specialControlIds.okBttnId
+        = bttnEncoder; // Encoder button is our okay button
+    specialControlIds.menuEncoderId
+        = encoderMain; // Encoder is used as the main menu navigation encoder
+
+    // This is the canvas for the OLED display.
+    UiCanvasDescriptor oledDisplayDescriptor;
+    oledDisplayDescriptor.id_     = canvasOledDisplay; // the unique ID
+    oledDisplayDescriptor.handle_ = &hw.display;   // a pointer to the display
+    oledDisplayDescriptor.updateRateMs_      = 50; // 50ms == 20Hz
+    oledDisplayDescriptor.screenSaverTimeOut = 0;  // display always on
+    oledDisplayDescriptor.clearFunction_     = &ClearCanvas;
+    oledDisplayDescriptor.flushFunction_     = &FlushCanvas;
+
+    ui.Init(eventQueue,
+            specialControlIds,
+            {oledDisplayDescriptor},
+            canvasOledDisplay);
+}
+
+void InitUiPages()
+{
+    // ====================================================================
+    // The main menu
+    // ====================================================================
+
+    mainMenuItems[0].type = daisy::AbstractMenu::ItemType::openUiPageItem;
+    mainMenuItems[0].text = "Controls";
+    mainMenuItems[0].asOpenUiPageItem.pageToOpen = &controlEditMenu;
+
+    mainMenuItems[1].type = daisy::AbstractMenu::ItemType::openUiPageItem;
+    mainMenuItems[1].text = "Poly/Model";
+    mainMenuItems[1].asOpenUiPageItem.pageToOpen = &polyEditMenu;
+
+    mainMenuItems[2].type = daisy::AbstractMenu::ItemType::openUiPageItem;
+    mainMenuItems[2].text = "Normalize";
+    mainMenuItems[2].asOpenUiPageItem.pageToOpen = &normEditMenu;
+
+    mainMenuItems[3].type = daisy::AbstractMenu::ItemType::checkboxItem;
+    mainMenuItems[3].text = "Easter Egg";
+    mainMenuItems[3].asCheckboxItem.valueToModify = &easterEggOn;
+
+    mainMenu.Init(mainMenuItems, kNumMainMenuItems);
+
+    // ====================================================================
+    // The "control edit" menu
+    // ====================================================================
+
+    controlEditMenuItems[0].type = daisy::AbstractMenu::ItemType::valueItem;
+    controlEditMenuItems[0].text = "Ctrl One";
+    controlEditMenuItems[0].asMappedValueItem.valueToModify
+        = &controlListValueOne;
+
+    controlEditMenuItems[1].type = daisy::AbstractMenu::ItemType::valueItem;
+    controlEditMenuItems[1].text = "Ctrl Two";
+    controlEditMenuItems[1].asMappedValueItem.valueToModify
+        = &controlListValueTwo;
+
+    controlEditMenuItems[2].type = daisy::AbstractMenu::ItemType::valueItem;
+    controlEditMenuItems[2].text = "Ctrl Three";
+    controlEditMenuItems[2].asMappedValueItem.valueToModify
+        = &controlListValueThree;
+
+    controlEditMenuItems[3].type = daisy::AbstractMenu::ItemType::valueItem;
+    controlEditMenuItems[3].text = "Ctrl Four";
+    controlEditMenuItems[3].asMappedValueItem.valueToModify
+        = &controlListValueFour;
+
+    controlEditMenuItems[4].type = daisy::AbstractMenu::ItemType::closeMenuItem;
+    controlEditMenuItems[4].text = "Back";
+
+    controlEditMenu.Init(controlEditMenuItems, kNumControlEditMenuItems);
+
+    // ====================================================================
+    // The "poly edit" menu
+    // ====================================================================
+    polyEditMenuItems[0].type = daisy::AbstractMenu::ItemType::valueItem;
+    polyEditMenuItems[0].text = "Polyphony";
+    polyEditMenuItems[0].asMappedValueItem.valueToModify = &polyListValue;
+
+    polyEditMenuItems[1].type = daisy::AbstractMenu::ItemType::valueItem;
+    polyEditMenuItems[1].text = "Model";
+    polyEditMenuItems[1].asMappedValueItem.valueToModify = &modelListValue;
+
+    polyEditMenuItems[2].type = daisy::AbstractMenu::ItemType::valueItem;
+    polyEditMenuItems[2].text = "Easter FX";
+    polyEditMenuItems[2].asMappedValueItem.valueToModify = &eggListValue;
+
+    polyEditMenuItems[3].type = daisy::AbstractMenu::ItemType::closeMenuItem;
+    polyEditMenuItems[3].text = "Back";
+
+    polyEditMenu.Init(polyEditMenuItems, kNumPolyEditMenuItems);
+
+    // ====================================================================
+    // The "normalization edit" menu
+    // ====================================================================
+    normEditMenuItems[0].type = daisy::AbstractMenu::ItemType::checkboxItem;
+    normEditMenuItems[0].text = "Exciter";
+    normEditMenuItems[0].asCheckboxItem.valueToModify = &exciterIn;
+
+    normEditMenuItems[1].type = daisy::AbstractMenu::ItemType::checkboxItem;
+    normEditMenuItems[1].text = "Strum";
+    normEditMenuItems[1].asCheckboxItem.valueToModify = &strumIn;
+
+    normEditMenuItems[2].type = daisy::AbstractMenu::ItemType::checkboxItem;
+    normEditMenuItems[2].text = "Note";
+    normEditMenuItems[2].asCheckboxItem.valueToModify = &noteIn;
+
+    normEditMenuItems[3].type = daisy::AbstractMenu::ItemType::closeMenuItem;
+    normEditMenuItems[3].text = "Back";
+
+    normEditMenu.Init(normEditMenuItems, kNumNormEditMenuItems);
+}
+
+void GenerateUiEvents()
+{
+    if(hw.encoder.RisingEdge())
+        eventQueue.AddButtonPressed(bttnEncoder, 1);
+
+    if(hw.encoder.FallingEdge())
+        eventQueue.AddButtonReleased(bttnEncoder);
+
+    const auto increments = hw.encoder.Increment();
+    if(increments != 0)
+        eventQueue.AddEncoderTurned(encoderMain, increments, 12);
+}
+
+int old_poly = 0;
+
+void ProcessControls(Patch* patch, PerformanceState* state)
+{
+    // control settings
+    cv_scaler.channel_map_[0] = controlListValueOne.GetIndex();
+    cv_scaler.channel_map_[1] = controlListValueTwo.GetIndex();
+    cv_scaler.channel_map_[2] = controlListValueThree.GetIndex();
+    cv_scaler.channel_map_[3] = controlListValueFour.GetIndex();
+
+    //polyphony setting
+    int poly = polyListValue.GetIndex();
+    if(old_poly != poly)
+    {
+        part.set_polyphony(0x01 << poly);
+        string_synth.set_polyphony(0x01 << poly);
+    }
+    old_poly = poly;
+
+    //model settings
+    part.set_model((torus::ResonatorModel)modelListValue.GetIndex());
+    string_synth.set_fx((torus::FxType)eggListValue.GetIndex());
+
+    // normalization settings
+    state->internal_note    = !noteIn;
+    state->internal_exciter = !exciterIn;
+    state->internal_strum   = !strumIn;
+
+    //strum
+    state->strum = hw.gate_input[0].Trig();
+}
+
+float input[kMaxBlockSize];
+float output[kMaxBlockSize];
+float aux[kMaxBlockSize];
+
+const float kNoiseGateThreshold = 0.00003f;
+float       in_level            = 0.0f;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    GenerateUiEvents();
+
+    PerformanceState performance_state;
+    Patch            patch;
+
+    ProcessControls(&patch, &performance_state);
+    cv_scaler.Read(&patch, &performance_state);
+
+    if(easterEggOn)
+    {
+        for(size_t i = 0; i < size; ++i)
+        {
+            input[i] = in[0][i];
+        }
+        strummer.Process(NULL, size, &performance_state);
+        string_synth.Process(
+            performance_state, patch, input, output, aux, size);
+    }
+    else
+    {
+        // Apply noise gate.
+        for(size_t i = 0; i < size; i++)
+        {
+            float in_sample = in[0][i];
+            float error, gain;
+            error = in_sample * in_sample - in_level;
+            in_level += error * (error > 0.0f ? 0.1f : 0.0001f);
+            gain = in_level <= kNoiseGateThreshold
+                       ? (1.0f / kNoiseGateThreshold) * in_level
+                       : 1.0f;
+            input[i] = gain * in_sample;
+        }
+
+        strummer.Process(input, size, &performance_state);
+        part.Process(performance_state, patch, input, output, aux, size);
+    }
+
+    for(size_t i = 0; i < size; i++)
+    {
+        out[0][i] = output[i];
+        out[1][i] = aux[i];
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float samplerate = hw.AudioSampleRate();
+    float blocksize  = hw.AudioBlockSize();
+
+    InitUi();
+    InitUiPages();
+    InitResources();
+    ui.OpenPage(mainMenu);
+
+    strummer.Init(0.01f, samplerate / blocksize);
+    part.Init(reverb_buffer);
+    string_synth.Init(reverb_buffer);
+
+    cv_scaler.Init();
+
+    UI::SpecialControlIds ids;
+
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    while(1)
+    {
+        ui.Process();
+    }
+}
+
+________________________________________________________________________________
+
+18. lfo
+
+__lfo README.md__
+# LFO
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Simple dual LFO module. Amplitude, frequency, and waveform per lfo.  
+Turn the encoder to select which LFO to edit. Click the encoder to edit that waveform.  
+@ Denotes the selection has been made, and o indicates it has not.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/lfo)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 and Ctrl 3 | LFO Frequency |  |
+| Ctrl 2 and Ctrl 4 | LFO Amplitude | From from off to 5V unipolar |
+| Encoder | Waveform | Turn to select wave or lfo, click to change selection. |
+| CV Outputs | LFO outs. | | 
+
+__lfo.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+#define MAX_WAVE Oscillator::WAVE_POLYBLEP_TRI
+
+DaisyPatch patch;
+
+struct lfoStruct
+{
+    Oscillator osc;
+    Parameter  freqCtrl;
+    Parameter  ampCtrl;
+    float      amp;
+    float      freq;
+    int        waveform;
+    float      value;
+
+    void Init(float samplerate, AnalogControl freqKnob, AnalogControl ampKnob)
+    {
+        osc.Init(samplerate);
+        osc.SetAmp(1);
+        waveform = 0;
+        freqCtrl.Init(freqKnob, .1, 35, Parameter::LOGARITHMIC);
+        ampCtrl.Init(ampKnob, 0, 1, Parameter::LINEAR);
+    }
+
+    void Process(DacHandle::Channel chn)
+    {
+        //read the knobs and set params
+        osc.SetFreq(freqCtrl.Process());
+        osc.SetWaveform(waveform);
+
+        //write to the DAC
+        patch.seed.dac.WriteValue(
+            chn,
+            uint16_t((osc.Process() + 1.f) * .5f * ampCtrl.Process() * 4095.f));
+    }
+};
+
+bool        menuSelect;
+int         lfoSelect;
+std::string waveNames[5];
+
+lfoStruct lfos[2];
+
+void UpdateOled();
+void UpdateEncoder();
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        lfos[0].Process(DacHandle::Channel::ONE);
+        lfos[1].Process(DacHandle::Channel::TWO);
+    }
+}
+
+void SetupWaveNames()
+{
+    waveNames[0] = "sine";
+    waveNames[1] = "triangle";
+    waveNames[2] = "saw";
+    waveNames[3] = "ramp";
+    waveNames[4] = "square";
+}
+
+int main(void)
+{
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    float samplerate = patch.AudioSampleRate();
+
+    //init the lfos
+    lfos[0].Init(samplerate, patch.controls[0], patch.controls[1]);
+    lfos[1].Init(samplerate, patch.controls[2], patch.controls[3]);
+
+    lfoSelect = menuSelect = 0;
+
+    SetupWaveNames();
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+
+    while(1)
+    {
+        patch.DelayMs(1);
+        UpdateOled();
+        UpdateEncoder();
+    }
+}
+
+void UpdateOled()
+{
+    patch.display.Fill(false);
+
+    patch.display.SetCursor(0, 0);
+    std::string str  = "Dual LFO";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    //cursor
+    patch.display.SetCursor(lfoSelect * 70, 25);
+    char select = menuSelect ? '@' : 'o';
+    patch.display.WriteChar(select, Font_7x10, true);
+
+    //waveforms
+    for(int i = 0; i < 2; i++)
+    {
+        cstr = &waveNames[lfos[i].waveform][0];
+        patch.display.SetCursor(i * 70, 35);
+        patch.display.WriteString(cstr, Font_7x10, true);
+    }
+
+    patch.display.Update();
+}
+
+void UpdateEncoder()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //annoying menu stuff
+    if(patch.encoder.RisingEdge())
+    {
+        menuSelect = !menuSelect;
+    }
+
+    if(menuSelect)
+    {
+        lfos[lfoSelect].waveform += patch.encoder.Increment();
+        lfos[lfoSelect].waveform
+            = (lfos[lfoSelect].waveform % MAX_WAVE + MAX_WAVE) % MAX_WAVE;
+    }
+    else
+    {
+        lfoSelect += patch.encoder.Increment();
+        lfoSelect = (lfoSelect % 2 + 2) % 2;
+    }
+}
+
+________________________________________________________________________________
+
+19. logic
+
+__logic README.md__
+# Logic
+
+## Author
+
+Ben Sergentanis
+
+## Description
+
+Dual logic gates. Select between AND, OR, XOR, NAND, NOR, and XNOR gates.  
+Each input can be inverted as well.  
+Press the encoder on a number to invert that input. This is denoted with a -.  
+Press the encoder on a gate to enter the submenu and change the gate.  
+Note that the ctrl knobs have an effect, if you want to control the inputs purely with CV, turn the knobs all the way down!  
+Of course, you can also use the knobs to set the inputs high or low without CV.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/logic)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 - 4 | Gate Inputs | 1 and 2 to gate 1. 3 and 4 to gate 2. |
+| Encoder | Menu Navigation | Turn to navigate, press to invert or enter submenus. |
+| CV Out 1 - 2 | Logic Outs | Output of logic gates 1 and 2 respectively |
+
+__logic.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+
+struct gate
+{
+    int  gateType;
+    bool Process(bool a, bool b)
+    {
+        switch(gateType)
+        {
+            case 0: return a && b;                 //AND
+            case 1: return a || b;                 //OR
+            case 2: return (a && !b) || (!a && b); //XOR
+            case 3: return !(a && b);              //NAND
+            case 4: return !(a || b);              //NOR
+            case 5: return (a && b) || (!a && !b); //XNOR
+        }
+        return false;
+    }
+};
+
+bool        inputs[4];
+gate        gates[2];
+std::string gateNames[6];
+bool        isInverted[4];
+
+//menu logic
+int  menuPos;      //6 positions
+bool inSubMenu;    //only on gate types
+int  cursorPos[6]; //x positions for the OLED cursor
+
+bool CvToBool(float in)
+{
+    return in > .8f;
+}
+int mod(int x, int m)
+{
+    return (x % m + m) % m;
+}
+
+void ProcessControls();
+void ProcessOled();
+void ProcessOutputs();
+
+void InitGateNames()
+{
+    gateNames[0] = " AND ";
+    gateNames[1] = " OR  ";
+    gateNames[2] = " XOR ";
+    gateNames[3] = " NAND";
+    gateNames[4] = " NOR ";
+    gateNames[5] = " XNOR";
+}
+
+void InitCursorPos()
+{
+    cursorPos[0] = 5;
+    cursorPos[1] = 23;
+    cursorPos[2] = 48;
+    cursorPos[3] = 75;
+    cursorPos[4] = 92;
+    cursorPos[5] = 117;
+}
+
+int main(void)
+{
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+
+    InitGateNames();
+    InitCursorPos();
+
+    //both init to AND
+    gates[0].gateType = gates[1].gateType = 0;
+
+    //no inputs are inverted
+    isInverted[0] = isInverted[1] = false;
+    isInverted[2] = isInverted[3] = false;
+
+    patch.StartAdc();
+    while(1)
+    {
+        ProcessControls();
+        ProcessOled();
+        ProcessOutputs();
+    }
+}
+
+void ProcessIncrement(int increment)
+{
+    //change gate type
+    if(inSubMenu)
+    {
+        if(menuPos == 1)
+        {
+            gates[0].gateType += increment;
+            gates[0].gateType = mod(gates[0].gateType, 6);
+        }
+
+        else
+        {
+            gates[1].gateType += increment;
+            gates[1].gateType = mod(gates[1].gateType, 6);
+        }
+    }
+
+    //move through the menu
+    else
+    {
+        menuPos += increment;
+        menuPos = mod(menuPos, 6);
+    }
+}
+
+void ProcessRisingEdge()
+{
+    switch(menuPos)
+    {
+        //flip inversions
+        case 0: isInverted[0] = !isInverted[0]; break;
+        case 2: isInverted[1] = !isInverted[1]; break;
+        case 3: isInverted[2] = !isInverted[2]; break;
+        case 5: isInverted[3] = !isInverted[3]; break;
+
+        //enter/exit submenu
+        case 1:
+        case 4: inSubMenu = !inSubMenu;
+    }
+}
+
+void ProcessEncoder()
+{
+    ProcessIncrement(patch.encoder.Increment());
+
+    if(patch.encoder.RisingEdge())
+    {
+        ProcessRisingEdge();
+    }
+}
+
+void ProcessControls()
+{
+    patch.ProcessAnalogControls();
+    patch.ProcessDigitalControls();
+
+    //inputs
+    for(int i = 0; i < 4; i++)
+    {
+        inputs[i] = CvToBool(patch.controls[i].Process());
+
+        //invert the input if isInverted says so
+        inputs[i] = isInverted[i] ? !inputs[i] : inputs[i];
+    }
+
+    ProcessEncoder();
+}
+
+void ProcessOutputs()
+{
+    patch.seed.dac.WriteValue(DacHandle::Channel::ONE,
+                              gates[0].Process(inputs[0], inputs[1]) * 4095);
+    patch.seed.dac.WriteValue(DacHandle::Channel::TWO,
+                              gates[1].Process(inputs[2], inputs[3]) * 4095);
+}
+
+void ProcessOled()
+{
+    patch.display.Fill(false);
+
+    std::string str;
+    char*       cstr = &str[0];
+
+    patch.display.SetCursor(0, 0);
+    str = "Logic";
+    patch.display.WriteString(cstr, Font_7x10, true);
+
+    //dashes or spaces, depending on negation
+    std::string negStr[4];
+    for(int i = 0; i < 4; i++)
+    {
+        negStr[i] = isInverted[i] ? "-" : " ";
+    }
+
+    //gates and inputs, with negations
+    patch.display.SetCursor(0, 35);
+    str = negStr[0] + "1" + gateNames[gates[0].gateType] + negStr[1] + "2";
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    patch.display.SetCursor(70, 35);
+    str = negStr[2] + "3" + gateNames[gates[1].gateType] + negStr[3] + "4";
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    //Cursor
+    patch.display.SetCursor(cursorPos[menuPos], 25);
+    str = inSubMenu ? "@" : "o";
+    patch.display.WriteString(cstr, Font_6x8, true);
+
+    patch.display.Update();
+}
+
+________________________________________________________________________________
+
+20. vco
+
+__vco README.md__
+# VCO
+
+## Author
+
+Shensley
+
+
+## Description
+
+VCO with sine, triangle, sawtooth, and square waveforms. 
+Both standard and bandlimited waveforms are accessible. 
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/vco)
+
+## Controls
+
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl1 | Coarse tune | |
+| Ctrl2 | Fine tune | 0 - 7 semitones |
+| Ctrl3 | Waveform | Sine, tri, ramp, square, bandlimited same |
+| Ctrl4 | Amplitude |  |
+| Audio Outs | Oscillator Out | Available on all outputs |
+
+__ex_vco.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPatch patch;
+Oscillator osc;
+Parameter  freqctrl, wavectrl, ampctrl, finectrl;
+
+static void AudioCallback(AudioHandle::InputBuffer  in,
+                          AudioHandle::OutputBuffer out,
+                          size_t                    size)
+{
+    float  sig, freq, amp;
+    size_t wave;
+
+    patch.ProcessAnalogControls();
+
+    for(size_t i = 0; i < size; i++)
+    {
+        // Read Knobs
+        freq = mtof(freqctrl.Process() + finectrl.Process());
+        wave = wavectrl.Process();
+        amp  = ampctrl.Process();
+        // Set osc params
+        osc.SetFreq(freq);
+        osc.SetWaveform(wave);
+        osc.SetAmp(amp);
+        //.Process
+        sig = osc.Process();
+        // Assign Synthesized Waveform to all four outputs.
+        for(size_t chn = 0; chn < 4; chn++)
+        {
+            out[chn][i] = sig;
+        }
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    int   num_waves = Oscillator::WAVE_LAST - 1;
+    patch.Init(); // Initialize hardware (daisy seed, and patch)
+    samplerate = patch.AudioSampleRate();
+
+    osc.Init(samplerate); // Init oscillator
+
+    freqctrl.Init(
+        patch.controls[patch.CTRL_1], 10.0, 110.0f, Parameter::LINEAR);
+    finectrl.Init(patch.controls[patch.CTRL_2], 0.f, 7.f, Parameter::LINEAR);
+    wavectrl.Init(
+        patch.controls[patch.CTRL_3], 0.0, num_waves, Parameter::LINEAR);
+    ampctrl.Init(patch.controls[patch.CTRL_4], 0.0, 0.5f, Parameter::LINEAR);
+
+    //briefly display module name
+    std::string str  = "VCO";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+    patch.display.Update();
+    patch.DelayMs(1000);
+
+    patch.StartAdc();
+    patch.StartAudio(AudioCallback);
+    while(1)
+    {
+        patch.DisplayControls(false);
+    }
+}
+
+________________________________________________________________________________
+
+21. verb
+
+__verb README.md__
+# Verb
+
+## Author
+
+Shensley
+
+## Description
+Stereo Reverb algorithm.
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/patch/verb)
+
+## Controls
+| Control | Description | Comment |
+| --- | --- | --- |
+| Ctrl 1 | Dry/Wet | Dry / Wet Control for the Mix outputs |
+| Ctrl 2 | Input Level | How much of the signal to send to the reverb |
+| Ctrl 3 | Feedback / Rev Time | Controls the length of the reverb tail |
+| Ctrl 4 | Lowpass / Color | The higher the brighter |
+| Audio In 1-2 | Reverb In | Stereo: In 1 L, In 2 R |
+| Audio Out 1-2 | Mix Outputs | Stereo: Out 1 L, Out 2 R |
+| Audio Out 3-4 | Wet Outputs | Stereo: Out 3 L, Out 4 R |
+
+__ex_verb.cpp__
+#include "daisysp.h"
+#include "daisy_patch.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+static DaisyPatch patch;
+static ReverbSc   verb;
+static DcBlock    blk[2];
+Parameter         lpParam;
+static float      drylevel, send;
+
+static void VerbCallback(AudioHandle::InputBuffer  in,
+                         AudioHandle::OutputBuffer out,
+                         size_t                    size)
+{
+    float dryL, dryR, wetL, wetR, sendL, sendR;
+    patch.ProcessAnalogControls();
+    for(size_t i = 0; i < size; i++)
+    {
+        // read some controls
+        drylevel = patch.GetKnobValue(patch.CTRL_1);
+        send     = patch.GetKnobValue(patch.CTRL_2);
+        verb.SetFeedback(patch.GetKnobValue(patch.CTRL_3) * .94f);
+        verb.SetLpFreq(lpParam.Process());
+
+        // Read Inputs (only stereo in are used)
+        dryL = in[0][i];
+        dryR = in[1][i];
+
+        // Send Signal to Reverb
+        sendL = dryL * send;
+        sendR = dryR * send;
+        verb.Process(sendL, sendR, &wetL, &wetR);
+
+        // Dc Block
+        wetL = blk[0].Process(wetL);
+        wetR = blk[1].Process(wetR);
+
+        // Out 1 and 2 are Mixed
+        out[0][i] = (dryL * drylevel) + wetL;
+        out[1][i] = (dryR * drylevel) + wetR;
+
+        // Out 3 and 4 are just wet
+        out[2][i] = wetL;
+        out[3][i] = wetR;
+    }
+}
+
+void UpdateOled();
+
+int main(void)
+{
+    float samplerate;
+    patch.Init();
+    samplerate = patch.AudioSampleRate();
+
+    verb.Init(samplerate);
+    verb.SetFeedback(0.85f);
+    verb.SetLpFreq(18000.0f);
+
+    blk[0].Init(samplerate);
+    blk[1].Init(samplerate);
+
+    lpParam.Init(patch.controls[3], 20, 20000, Parameter::LOGARITHMIC);
+
+    //briefly display the module name
+    std::string str  = "Stereo Reverb";
+    char*       cstr = &str[0];
+    patch.display.WriteString(cstr, Font_7x10, true);
+    patch.display.Update();
+    patch.DelayMs(1000);
+
+    patch.StartAdc();
+    patch.StartAudio(VerbCallback);
+
+    while(1)
+    {
+        UpdateOled();
+    }
+}
+
+void UpdateOled()
+{
+    patch.DisplayControls(false);
+}
+
+__END_OF_FILE__
+
+
+

@@ -1,0 +1,3805 @@
+
+
+8 step sequencer field
+midi_pod
+midi_field
+fm_synth_field_simple.cpp
+ex_tube_deed
+ex_tube_field
+DrumMachine v2.2 - Daisy Field
+dual_osc_subtractive
+
+
+
+_____________________________________________________________________________________________________
+
+# 8-Step Sequencer
+
+## Author
+Adapted from Patch version (5-step), expanded to 8 steps
+
+## Description
+Step sequencer with keyboard-based step selection. Uses the bottom keyboard row (8 keys) for step selection/toggling, with visual LED feedback showing sequence state. Features swing timing, variable length, and record mode.
+
+## Controls
+
+| Control | Description | Range |
+|---------|-------------|-------|
+| Knob 1 | Selected Step Pitch | 0-127 MIDI |
+| Knob 2 | Selected Step Gate Length | 0-100% |
+| Knob 3 | Tempo | 30-300 BPM |
+| Knob 4 | Swing | 0-50% |
+| Knob 5 | Pitch Offset | -12 to +12 semitones |
+| Knob 6 | Gate Output Multiplier | |
+| Knob 7 | Sequence Length | 1-8 steps |
+| Knob 8 | Output Level | |
+| SW1 | Play/Stop | Toggle |
+| SW2 | Record Mode | Toggle step on/off |
+| Keyboard 0-7 | Step Select/Toggle | Bottom row |
+| CV Out 1 | Pitch | 1V/oct |
+| CV Out 2 | Gate | 0V/5V |
+
+## LED Feedback
+- **Bottom Row (0-7)**: Sequence steps
+  - Dim: Inactive step
+  - Medium: Active step  
+  - Bright: Selected step
+  - Full: Current playing step
+- **Top Row**:
+  - Key 8: Play status
+  - Key 9: Record status
+  - Keys 10-15: Pitch level meter
+
+## Modes
+- **Edit Mode** (default): Touch keys to select step for editing
+- **Record Mode** (SW2): Touch keys to toggle step active/inactive
+
+_____________________________________________________________________________________________________
+
+/**
+ * 8-Step Sequencer - Daisy Field Adaptation
+ * 
+ * Ported from: Daisy Patch Sequencer (5-step)
+ * Platform: Daisy Field
+ * 
+ * Enhanced 8-step sequencer using keyboard for step selection.
+ * OLED shows all parameters with focus on active control.
+ * 
+ * Control Mapping:
+ * Knob 0: Selected Step Pitch (0-127 MIDI)
+ * Knob 1: Selected Step Gate Length (0-100%)
+ * Knob 2: Tempo/BPM (30-300)
+ * Knob 3: Swing Amount (0-50%)
+ * Knob 4: Global Pitch Offset
+ * Knob 5: Gate Output Length
+ * Knob 6: Sequence Length (1-8 steps)
+ * Knob 7: Output Level
+ * sw[0]: Play/Stop toggle
+ * sw[1]: Record mode toggle
+ * Keyboard 0-7: Select step for editing / Toggle step active
+ * Gate In: External clock
+ * Gate Out: Trigger on each step
+ * CV Out 1: Pitch (1V/oct)
+ * CV Out 2: Gate
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <cstring>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+Oscillator osc;
+
+struct Step
+{
+    float pitch;      // MIDI note
+    float gateLen;    // 0-1
+    bool  active;     // Step on/off
+};
+
+Step sequence[8];
+
+uint8_t  currentStep = 0;
+uint8_t  selectedStep = 0;
+uint8_t  seqLength = 8;
+float    tempo = 120.f;
+float    swing = 0.f;
+bool     playing = false;
+bool     recording = false;
+uint32_t lastStepTime = 0;
+uint32_t stepInterval = 500;  // ms
+bool     gateHigh = false;
+uint32_t gateStartTime = 0;
+float    pitchOffset = 0.f;
+float    outputLevel = 0.8f;
+float    gateLenMult = 0.5f;
+
+// Parameter tracking for focused display
+float    prevKnobVals[8] = {0};
+int8_t   activeParam = -1;          // -1 = none, 0-7 = knob index
+uint32_t activeParamTime = 0;
+const uint32_t FOCUS_TIMEOUT = 1500; // ms before returning to overview
+const float CHANGE_THRESHOLD = 0.02f;
+
+// Parameter names for display
+const char* paramNames[8] = {
+    "PITCH",
+    "GATE LEN",
+    "TEMPO",
+    "SWING",
+    "OFFSET",
+    "GATE OUT",
+    "SEQ LEN",
+    "LEVEL"
+};
+
+void UpdateLeds()
+{
+    size_t knob_leds[] = {
+        DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+        DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+        DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+        DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+    };
+    
+    size_t keyboard_leds[] = {
+        DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+        DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+        DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+        DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+        DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+        DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+        DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+        DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+    };
+    
+    // Knob LEDs - brighten active param
+    for(int i = 0; i < 8; i++)
+    {
+        float brightness = hw.knob[i].Process();
+        if(activeParam == i)
+            brightness = 1.0f;  // Full brightness for active
+        hw.led_driver.SetLed(knob_leds[i], brightness);
+    }
+    
+    // Bottom row (0-7): Sequence steps
+    for(size_t i = 0; i < 8; i++)
+    {
+        float brightness = 0.1f;  // Inactive step
+        
+        if(sequence[i].active)
+            brightness = 0.4f;    // Active step
+        
+        if(i == selectedStep)
+            brightness = 0.7f;    // Selected step
+        
+        if(playing && i == currentStep)
+            brightness = 1.0f;    // Current playing step
+        
+        if(i >= seqLength)
+            brightness = 0.0f;    // Beyond sequence length
+        
+        hw.led_driver.SetLed(keyboard_leds[i], brightness);
+    }
+    
+    // Top row (8-15): Status indicators
+    hw.led_driver.SetLed(keyboard_leds[8], playing ? 1.0f : 0.2f);
+    hw.led_driver.SetLed(keyboard_leds[9], recording ? 1.0f : 0.2f);
+    
+    // Keys 10-15: Pitch indicator for selected step
+    float pitchNorm = sequence[selectedStep].pitch / 127.f;
+    for(int i = 10; i < 16; i++)
+    {
+        float thresh = (float)(i - 10) / 6.f;
+        hw.led_driver.SetLed(keyboard_leds[i], pitchNorm > thresh ? 0.5f : 0.1f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AdvanceStep()
+{
+    currentStep = (currentStep + 1) % seqLength;
+    lastStepTime = System::GetNow();
+    
+    // Trigger gate if step is active
+    if(sequence[currentStep].active)
+    {
+        gateHigh = true;
+        gateStartTime = System::GetNow();
+        
+        // Set oscillator frequency
+        float note = sequence[currentStep].pitch + pitchOffset;
+        osc.SetFreq(mtof(note));
+    }
+}
+
+void DetectActiveParam()
+{
+    uint32_t now = System::GetNow();
+    
+    // Check each knob for movement
+    for(int i = 0; i < 8; i++)
+    {
+        float currentVal = hw.knob[i].Process();
+        float delta = fabsf(currentVal - prevKnobVals[i]);
+        
+        if(delta > CHANGE_THRESHOLD)
+        {
+            activeParam = i;
+            activeParamTime = now;
+        }
+        prevKnobVals[i] = currentVal;
+    }
+    
+    // Timeout check - return to overview
+    if(activeParam >= 0 && (now - activeParamTime > FOCUS_TIMEOUT))
+    {
+        activeParam = -1;
+    }
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Detect which parameter is being modified
+    DetectActiveParam();
+    
+    // Play/Stop toggle
+    if(hw.sw[0].RisingEdge())
+    {
+        playing = !playing;
+        if(playing)
+        {
+            currentStep = 0;
+            lastStepTime = System::GetNow();
+        }
+    }
+    
+    // Record mode toggle
+    if(hw.sw[1].RisingEdge())
+    {
+        recording = !recording;
+    }
+    
+    // Keyboard step selection (bottom row 0-7)
+    for(size_t i = 0; i < 8; i++)
+    {
+        if(hw.KeyboardRisingEdge(i))
+        {
+            if(recording)
+            {
+                sequence[i].active = !sequence[i].active;
+            }
+            else
+            {
+                selectedStep = i;
+            }
+        }
+    }
+    
+    // Read parameters
+    if(!playing || currentStep != selectedStep)
+    {
+        sequence[selectedStep].pitch = hw.knob[0].Process() * 127.f;
+        sequence[selectedStep].gateLen = hw.knob[1].Process();
+    }
+    
+    tempo = 30.f + hw.knob[2].Process() * 270.f;
+    swing = hw.knob[3].Process() * 0.5f;
+    pitchOffset = (hw.knob[4].Process() - 0.5f) * 24.f;
+    gateLenMult = hw.knob[5].Process();
+    seqLength = 1 + static_cast<uint8_t>(hw.knob[6].Process() * 7.f);
+    outputLevel = hw.knob[7].Process();
+    
+    // Calculate step interval with swing
+    float baseInterval = 60000.f / tempo / 4.f;
+    bool swingStep = (currentStep % 2 == 1);
+    stepInterval = static_cast<uint32_t>(baseInterval * (swingStep ? (1.f + swing) : (1.f - swing * 0.5f)));
+    
+    // CV outputs
+    float pitchCV = (sequence[currentStep].pitch + pitchOffset) / 127.f;
+    uint16_t cv1 = static_cast<uint16_t>(fclamp(pitchCV, 0.f, 1.f) * 4095.f);
+    hw.seed.dac.WriteValue(DacHandle::Channel::ONE, cv1);
+    
+    uint16_t cv2 = gateHigh ? 4095 : 0;
+    hw.seed.dac.WriteValue(DacHandle::Channel::TWO, cv2);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = 0.f;
+        
+        if(gateHigh && sequence[currentStep].active)
+        {
+            sig = osc.Process() * outputLevel;
+        }
+        
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+void UpdateSequencer()
+{
+    uint32_t now = System::GetNow();
+    
+    // Check gate off
+    if(gateHigh)
+    {
+        float gateLen = sequence[currentStep].gateLen * gateLenMult;
+        uint32_t gateDuration = static_cast<uint32_t>(stepInterval * gateLen);
+        if(now - gateStartTime > gateDuration)
+        {
+            gateHigh = false;
+        }
+    }
+    
+    // Check step advance
+    if(playing && (now - lastStepTime >= stepInterval))
+    {
+        AdvanceStep();
+    }
+}
+
+void DrawFocusedParam()
+{
+    char buf[32];
+    float value = 0.f;
+    const char* unit = "";
+    
+    // Get parameter value and format
+    switch(activeParam)
+    {
+        case 0:  // Pitch
+            value = sequence[selectedStep].pitch;
+            unit = "MIDI";
+            break;
+        case 1:  // Gate Length
+            value = sequence[selectedStep].gateLen * 100.f;
+            unit = "%";
+            break;
+        case 2:  // Tempo
+            value = tempo;
+            unit = "BPM";
+            break;
+        case 3:  // Swing
+            value = swing * 100.f;
+            unit = "%";
+            break;
+        case 4:  // Pitch Offset
+            value = pitchOffset;
+            unit = "st";
+            break;
+        case 5:  // Gate Out
+            value = gateLenMult * 100.f;
+            unit = "%";
+            break;
+        case 6:  // Seq Length
+            value = (float)seqLength;
+            unit = "steps";
+            break;
+        case 7:  // Level
+            value = outputLevel * 100.f;
+            unit = "%";
+            break;
+    }
+    
+    hw.display.Fill(false);
+    
+    // Large parameter name at top
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(paramNames[activeParam], Font_11x18, true);
+    
+    // Large value in center
+    if(activeParam == 4)  // Pitch offset shows sign
+        sprintf(buf, "%+.1f %s", value, unit);
+    else if(activeParam == 6)  // Seq length is integer
+        sprintf(buf, "%.0f %s", value, unit);
+    else
+        sprintf(buf, "%.1f %s", value, unit);
+    
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString(buf, Font_11x18, true);
+    
+    // Progress bar visualization
+    float normalized = hw.knob[activeParam].Process();
+    int barWidth = static_cast<int>(normalized * 120.f);
+    hw.display.DrawRect(3, 48, 124, 58, true, false);  // Outline
+    hw.display.DrawRect(4, 49, 4 + barWidth, 57, true, true);  // Fill
+    
+    // Knob number indicator
+    sprintf(buf, "K%d", activeParam + 1);
+    hw.display.SetCursor(105, 0);
+    hw.display.WriteString(buf, Font_7x10, true);
+    
+    hw.display.Update();
+}
+
+void DrawOverview()
+{
+    hw.display.Fill(false);
+    
+    char buf[32];
+    
+    // Header: Status
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(playing ? "PLAY" : "STOP", Font_7x10, true);
+    if(recording)
+    {
+        hw.display.SetCursor(35, 0);
+        hw.display.WriteString("REC", Font_7x10, true);
+    }
+    sprintf(buf, "S%d/%d", currentStep + 1, seqLength);
+    hw.display.SetCursor(70, 0);
+    hw.display.WriteString(buf, Font_7x10, true);
+    sprintf(buf, "%.0f", tempo);
+    hw.display.SetCursor(105, 0);
+    hw.display.WriteString(buf, Font_7x10, true);
+    
+    // Step pattern (large)
+    hw.display.SetCursor(0, 14);
+    char pattern[9];
+    for(int i = 0; i < 8; i++)
+    {
+        if(i >= seqLength)
+            pattern[i] = '.';
+        else if(i == currentStep && playing)
+            pattern[i] = 'O';
+        else if(sequence[i].active)
+            pattern[i] = 'X';
+        else
+            pattern[i] = '-';
+    }
+    pattern[8] = '\0';
+    hw.display.WriteString(pattern, Font_11x18, true);
+    
+    // Selected step info
+    hw.display.SetCursor(0, 34);
+    sprintf(buf, "Ed:%d P:%.0f G:%.0f%%", 
+            selectedStep + 1,
+            sequence[selectedStep].pitch,
+            sequence[selectedStep].gateLen * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Bottom row: All params compact
+    hw.display.SetCursor(0, 44);
+    sprintf(buf, "Sw:%.0f%% Of:%+.0f Lv:%.0f%%", 
+            swing * 100.f, pitchOffset, outputLevel * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Gate out
+    hw.display.SetCursor(0, 54);
+    sprintf(buf, "GateOut:%.0f%%", gateLenMult * 100.f);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+void UpdateDisplay()
+{
+    if(activeParam >= 0)
+    {
+        DrawFocusedParam();
+    }
+    else
+    {
+        DrawOverview();
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    osc.Init(sr);
+    osc.SetWaveform(Oscillator::WAVE_SAW);
+    osc.SetAmp(0.5f);
+    osc.SetFreq(440.f);
+    
+    // Initialize sequence with default values
+    for(int i = 0; i < 8; i++)
+    {
+        sequence[i].pitch = 48.f + i * 2.f;
+        sequence[i].gateLen = 0.5f;
+        sequence[i].active = (i < 4);
+    }
+    
+    // Initialize previous knob values
+    for(int i = 0; i < 8; i++)
+    {
+        prevKnobVals[i] = hw.knob[i].Process();
+    }
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    while(1)
+    {
+        UpdateSequencer();
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(10);
+    }
+}
+
+
+_____________________________________________________________________________________________________
+
+# Midi pod
+
+## Author
+
+Shensley
+
+## Description
+Midi Controlled oscillator with resonant LPF.  
+
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/pod/Midi)
+
+## Controls
+| Control | Description |
+| --- | --- |
+| CC 1 | Filter Cutoff |
+| CC 2 | Filter resonance |
+
+
+_____________________________________________________________________________________________________
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+class Voice
+{
+  public:
+    Voice() {}
+    ~Voice() {}
+    void Init(float samplerate)
+    {
+        active_ = false;
+        osc_.Init(samplerate);
+        osc_.SetAmp(0.75f);
+        osc_.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+        env_.Init(samplerate);
+        env_.SetSustainLevel(0.5f);
+        env_.SetTime(ADSR_SEG_ATTACK, 0.005f);
+        env_.SetTime(ADSR_SEG_DECAY, 0.005f);
+        env_.SetTime(ADSR_SEG_RELEASE, 0.2f);
+        filt_.Init(samplerate);
+        filt_.SetFreq(6000.f);
+        filt_.SetRes(0.6f);
+        filt_.SetDrive(0.8f);
+    }
+
+    float Process()
+    {
+        if(active_)
+        {
+            float sig, amp;
+            amp = env_.Process(env_gate_);
+            if(!env_.IsRunning())
+                active_ = false;
+            sig = osc_.Process();
+            filt_.Process(sig);
+            return filt_.Low() * (velocity_ / 127.f) * amp;
+        }
+        return 0.f;
+    }
+
+    void OnNoteOn(float note, float velocity)
+    {
+        note_     = note;
+        velocity_ = velocity;
+        osc_.SetFreq(mtof(note_));
+        active_   = true;
+        env_gate_ = true;
+    }
+
+    void OnNoteOff() { env_gate_ = false; }
+
+    void SetCutoff(float val) { filt_.SetFreq(val); }
+
+    inline bool  IsActive() const { return active_; }
+    inline float GetNote() const { return note_; }
+
+  private:
+    Oscillator osc_;
+    Svf        filt_;
+    Adsr       env_;
+    float      note_, velocity_;
+    bool       active_;
+    bool       env_gate_;
+};
+
+template <size_t max_voices>
+class VoiceManager
+{
+  public:
+    VoiceManager() {}
+    ~VoiceManager() {}
+
+    void Init(float samplerate)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].Init(samplerate);
+        }
+    }
+
+    float Process()
+    {
+        float sum;
+        sum = 0.f;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            sum += voices[i].Process();
+        }
+        return sum;
+    }
+
+    void OnNoteOn(float notenumber, float velocity)
+    {
+        Voice *v = FindFreeVoice();
+        if(v == NULL)
+            return;
+        v->OnNoteOn(notenumber, velocity);
+    }
+
+    void OnNoteOff(float notenumber, float velocity)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            Voice *v = &voices[i];
+            if(v->IsActive() && v->GetNote() == notenumber)
+            {
+                v->OnNoteOff();
+            }
+        }
+    }
+
+    void FreeAllVoices()
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].OnNoteOff();
+        }
+    }
+
+    void SetCutoff(float all_val)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].SetCutoff(all_val);
+        }
+    }
+
+
+  private:
+    Voice  voices[max_voices];
+    Voice *FindFreeVoice()
+    {
+        Voice *v = NULL;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            if(!voices[i].IsActive())
+            {
+                v = &voices[i];
+                break;
+            }
+        }
+        return v;
+    }
+};
+
+static VoiceManager<24> voice_handler;
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float sum = 0.f;
+    hw.ProcessDigitalControls();
+    hw.ProcessAnalogControls();
+    if(hw.GetSwitch(hw.SW_1)->FallingEdge())
+    {
+        voice_handler.FreeAllVoices();
+    }
+    voice_handler.SetCutoff(250.f + hw.GetKnobValue(hw.KNOB_1) * 8000.f);
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sum        = 0.f;
+        sum        = voice_handler.Process() * 0.5f;
+        out[i]     = sum;
+        out[i + 1] = sum;
+    }
+}
+
+// Typical Switch case for Message Type.
+void HandleMidiMessage(MidiEvent m)
+{
+    switch(m.type)
+    {
+        case NoteOn:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            // Note Off can come in as Note On w/ 0 Velocity
+            if(p.velocity == 0.f)
+            {
+                voice_handler.OnNoteOff(p.note, p.velocity);
+            }
+            else
+            {
+                voice_handler.OnNoteOn(p.note, p.velocity);
+            }
+        }
+        break;
+        case NoteOff:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            voice_handler.OnNoteOff(p.note, p.velocity);
+        }
+        break;
+        default: break;
+    }
+}
+
+// Main -- Init, and Midi Handling
+int main(void)
+{
+    // Init
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+    voice_handler.Init(samplerate);
+
+    //display
+    const char str[] = "Midi";
+    char *     cstr  = (char *)str;
+    hw.display.WriteString(cstr, Font_7x10, true);
+    hw.display.Update();
+
+    // Start stuff.
+    hw.midi.StartReceive();
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    for(;;)
+    {
+        hw.midi.Listen();
+        // Handle MIDI Events
+        while(hw.midi.HasEvents())
+        {
+            HandleMidiMessage(hw.midi.PopEvent());
+        }
+    }
+}
+
+
+/*
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+// Global variables
+DaisyField hardware;
+MidiUartHandler   midi;
+
+// Sequencer variables
+const int NUM_TRACKS = 4;
+const int NUM_STEPS = 8;
+bool step_active[NUM_TRACKS][NUM_STEPS];
+uint8_t step_note[NUM_TRACKS][NUM_STEPS];
+uint8_t step_velocity[NUM_TRACKS][NUM_STEPS];
+float step_gate_length[NUM_TRACKS][NUM_STEPS];
+uint8_t track_channel[NUM_TRACKS];
+bool track_mute[NUM_TRACKS];
+
+uint8_t current_step = 0;
+float bpm = 120.0f;
+float step_duration_ms = 0;
+bool sequencer_running = false;
+bool clock_tick = false;
+
+// MIDI clock variables
+bool sending_midi_clock = false;
+uint32_t last_clock_time = 0;
+float clock_interval_ms = 0;
+uint8_t ppq_counter = 0;
+
+// Scheduled notes
+const int MAX_SCHEDULED_NOTES = 32;
+struct ScheduledNote {
+    uint8_t channel;
+    uint8_t note;
+    uint8_t velocity;
+    float gate_length;
+    uint32_t start_time;
+    uint32_t duration;
+    bool active;
+};
+ScheduledNote scheduled_notes[MAX_SCHEDULED_NOTES];
+
+// Error handling
+bool midi_error_occurred = false;
+uint32_t last_error_time = 0;
+const uint32_t ERROR_DISPLAY_DURATION = 3000;
+
+// Function prototypes
+void InitMidi();
+void InitSequencer();
+void InitScheduledNotes();
+void StartSequencer();
+void StopSequencer();
+void ProcessSequencerStep();
+void SendMidiNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
+void SendMidiNoteOff(uint8_t channel, uint8_t note, uint8_t velocity = 0);
+void SendMidiCc(uint8_t channel, uint8_t control_number, uint8_t value);
+void ScheduleNote(uint8_t channel, uint8_t note, uint8_t velocity, float gate_length, float step_duration_ms);
+void ProcessScheduledNotes();
+void StartMidiClock(float bpm);
+void StopMidiClock();
+void ProcessMidiClock();
+void CheckMidiErrors();
+void DisplayMidiError(OledDisplay<SSD130x4WireSpi128x64Driver>& display);
+
+// Audio callback
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    // Audio processing code would go here
+    // For a MIDI-only application, this could be minimal
+    
+    for(size_t i = 0; i < size; i++)
+    {
+        // Clear output
+        out[0][i] = out[1][i] = 0.0f;
+    }
+}
+
+int main(void)
+{
+    // Initialize hardware
+    hardware.Init();
+    hardware.StartAdc();
+    
+    // Initialize MIDI
+    InitMidi();
+    
+    // Initialize sequencer
+    InitSequencer();
+    
+    // Initialize scheduled notes
+    InitScheduledNotes();
+    
+    // Display already initialized in hardware.Init()
+    
+    // Start audio
+    hardware.StartAudio(AudioCallback);
+    
+    // Main loop
+    while(1)
+    {
+        // Process controls
+        hardware.ProcessAllControls();
+        
+        // Process MIDI input
+        midi.Listen();
+        
+        // Process any incoming MIDI messages
+        while(midi.HasEvents())
+        {
+            auto event = midi.PopEvent();
+            // Process event...
+        }
+        
+        // Check for button presses to start/stop sequencer
+        if(hardware.GetSwitch(DaisyField::SW_1)->RisingEdge())
+        {
+            if(sequencer_running)
+                StopSequencer();
+            else
+                StartSequencer();
+        }
+        
+        // Update BPM based on knob
+        float new_bpm = 60.0f + hardware.GetKnobValue(DaisyField::KNOB_1) * 180.0f;
+        if(abs(new_bpm - bpm) > 0.5f)
+        {
+            bpm = new_bpm;
+            step_duration_ms = (60000.0f / bpm) / 4.0f;
+            
+            if(sending_midi_clock)
+            {
+                clock_interval_ms = (60000.0f / bpm) / 24.0f;
+            }
+        }
+        
+        // Process MIDI clock
+        ProcessMidiClock();
+        
+        // Check if it's time for a new step (based on MIDI clock)
+        if(sending_midi_clock && ppq_counter % 6 == 0)
+        {
+            clock_tick = true;
+        }
+        else
+        {
+            clock_tick = false;
+        }
+        
+        // Process sequencer step if clock ticked
+        if(clock_tick)
+        {
+            ProcessSequencerStep();
+        }
+        
+        // Process scheduled notes
+        ProcessScheduledNotes();
+        
+        // Check for MIDI errors
+        CheckMidiErrors();
+        
+        // Update display
+        hardware.display.Fill(false);
+        
+        // Display sequencer status
+        hardware.display.SetCursor(0, 0);
+        hardware.display.WriteString(sequencer_running ? "Running" : "Stopped", Font_7x10, true);
+        
+        // Display BPM
+        hardware.display.SetCursor(0, 12);
+        char bpm_str[16];
+        sprintf(bpm_str, "BPM: %.1f", bpm);
+        hardware.display.WriteString(bpm_str, Font_7x10, true);
+        
+        // Display current step
+        hardware.display.SetCursor(0, 24);
+        char step_str[16];
+        sprintf(step_str, "Step: %d", current_step + 1);
+        hardware.display.WriteString(step_str, Font_7x10, true);
+        
+        // Display MIDI error if needed
+        if(midi_error_occurred)
+        {
+            hardware.display.SetCursor(0, 36);
+            hardware.display.WriteString("MIDI Error", Font_7x10, true);
+        }
+        
+        hardware.display.Update();
+        
+        // Update LEDs
+        for(int i = 0; i < NUM_STEPS; i++)
+        {
+            bool is_current = (i == current_step && sequencer_running);
+            bool is_active = step_active[0][i]; // Show track 1 steps
+            
+            float brightness = 0.0f;
+            if(is_current && is_active)
+                brightness = 1.0f;
+            else if(is_current)
+                brightness = 0.5f;
+            else if(is_active)
+                brightness = 0.2f;
+            
+            hardware.led_driver.SetLed(DaisyField::LED_KEY_B1 + i, brightness);
+        }
+        hardware.led_driver.SwapBuffersAndTransmit();
+        
+        // Small delay to prevent CPU hogging
+        System::Delay(1);
+    }
+}
+
+// Initialize MIDI
+void InitMidi()
+{
+    MidiUartHandler::Config midi_config;
+    midi.Init(midi_config);
+    midi.StartReceive();
+}
+
+// Initialize sequencer
+void InitSequencer()
+{
+    for(int t = 0; t < NUM_TRACKS; t++)
+    {
+        track_channel[t] = t;
+        track_mute[t] = false;
+        
+        for(int s = 0; s < NUM_STEPS; s++)
+        {
+            step_active[t][s] = false;
+            step_note[t][s] = 60 + t;
+            step_velocity[t][s] = 100;
+            step_gate_length[t][s] = 0.5f;
+        }
+    }
+    
+    step_duration_ms = (60000.0f / bpm) / 4.0f;
+}
+
+// Initialize scheduled notes
+void InitScheduledNotes()
+{
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        scheduled_notes[i].active = false;
+    }
+}
+
+// Start sequencer
+void StartSequencer()
+{
+    sequencer_running = true;
+    current_step = 0;
+    StartMidiClock(bpm);
+}
+
+// Stop sequencer
+void StopSequencer()
+{
+    sequencer_running = false;
+    StopMidiClock();
+    
+    for(int c = 0; c < 16; c++)
+    {
+        SendMidiCc(c, 123, 0);
+    }
+}
+
+// Process sequencer step
+void ProcessSequencerStep()
+{
+    for(int t = 0; t < NUM_TRACKS; t++)
+    {
+        if(!track_mute[t] && step_active[t][current_step])
+        {
+            ScheduleNote(
+                track_channel[t],
+                step_note[t][current_step],
+                step_velocity[t][current_step],
+                step_gate_length[t][current_step],
+                step_duration_ms
+            );
+        }
+    }
+    
+    current_step = (current_step + 1) % NUM_STEPS;
+}
+
+// Send MIDI Note On
+void SendMidiNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+    uint8_t msg[3] = {static_cast<uint8_t>(0x90 | (channel & 0x0F)), static_cast<uint8_t>(note & 0x7F), static_cast<uint8_t>(velocity & 0x7F)};
+    midi.SendMessage(msg, 3);
+}
+
+// Send MIDI Note Off
+void SendMidiNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+    uint8_t msg[3] = {static_cast<uint8_t>(0x80 | (channel & 0x0F)), static_cast<uint8_t>(note & 0x7F), static_cast<uint8_t>(velocity & 0x7F)};
+    midi.SendMessage(msg, 3);
+}
+
+// Send MIDI CC
+void SendMidiCc(uint8_t channel, uint8_t control_number, uint8_t value)
+{
+    uint8_t msg[3] = {static_cast<uint8_t>(0xB0 | (channel & 0x0F)), static_cast<uint8_t>(control_number & 0x7F), static_cast<uint8_t>(value & 0x7F)};
+    midi.SendMessage(msg, 3);
+}
+
+// Schedule a note
+void ScheduleNote(uint8_t channel, uint8_t note, uint8_t velocity, float gate_length, float step_duration_ms)
+{
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        if(!scheduled_notes[i].active)
+        {
+            scheduled_notes[i].channel = channel;
+            scheduled_notes[i].note = note;
+            scheduled_notes[i].velocity = velocity;
+            scheduled_notes[i].gate_length = gate_length;
+            scheduled_notes[i].start_time = System::GetNow();
+            scheduled_notes[i].duration = step_duration_ms * gate_length;
+            scheduled_notes[i].active = true;
+            
+            SendMidiNoteOn(channel, note, velocity);
+            return;
+        }
+    }
+}
+
+// Process scheduled notes
+void ProcessScheduledNotes()
+{
+    uint32_t current_time = System::GetNow();
+    
+    for(int i = 0; i < MAX_SCHEDULED_NOTES; i++)
+    {
+        if(scheduled_notes[i].active)
+        {
+            if(current_time - scheduled_notes[i].start_time >= scheduled_notes[i].duration)
+            {
+                SendMidiNoteOff(scheduled_notes[i].channel, scheduled_notes[i].note);
+                scheduled_notes[i].active = false;
+            }
+        }
+    }
+}
+
+// Start MIDI clock
+void StartMidiClock(float bpm)
+{
+    clock_interval_ms = (60000.0f / bpm) / 24.0f;
+    sending_midi_clock = true;
+    ppq_counter = 0;
+    last_clock_time = System::GetNow();
+
+    uint8_t msg[1] = {0xFA}; // Start
+    midi.SendMessage(msg, 1);
+}
+
+// Stop MIDI clock
+void StopMidiClock()
+{
+    sending_midi_clock = false;
+    uint8_t msg[1] = {0xFC}; // Stop
+    midi.SendMessage(msg, 1);
+}
+
+// Process MIDI clock
+void ProcessMidiClock()
+{
+    if(!sending_midi_clock)
+        return;
+
+    uint32_t current_time = System::GetNow();
+
+    if(current_time - last_clock_time >= clock_interval_ms)
+    {
+        uint8_t msg[1] = {0xF8}; // Clock
+        midi.SendMessage(msg, 1);
+        last_clock_time = current_time;
+        ppq_counter = (ppq_counter + 1) % 24;
+    }
+}
+
+// Check for MIDI errors (simplified - no error handling available in current API)
+void CheckMidiErrors()
+{
+    // MIDI error handling not available in current libDaisy API
+    // This function is kept for compatibility but does nothing
+}
+
+// Display MIDI error
+void DisplayMidiError(OledDisplay<SSD130x4WireSpi128x64Driver>& display)
+{
+    if(midi_error_occurred)
+    {
+        display.SetCursor(0, 48);
+        display.WriteString("MIDI Error", Font_7x10, true);
+    }
+}
+*/
+
+/*
+#include "daisy_pod.h"
+#include "daisysp.h"
+#include <stdio.h>
+#include <string.h>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyPod   hw;
+Oscillator osc;
+Svf        filt;
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float sig;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sig = osc.Process();
+        filt.Process(sig);
+        out[i] = out[i + 1] = filt.Low();
+    }
+}
+
+// Typical Switch case for Message Type.
+void HandleMidiMessage(MidiEvent m)
+{
+    switch(m.type)
+    {
+        case NoteOn:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            char        buff[512];
+            sprintf(buff,
+                    "Note Received:\t%d\t%d\t%d\r\n",
+                    m.channel,
+                    m.data[0],
+                    m.data[1]);
+            hw.seed.usb_handle.TransmitInternal((uint8_t *)buff, strlen(buff));
+            // This is to avoid Max/MSP Note outs for now..
+            if(m.data[1] != 0)
+            {
+                p = m.AsNoteOn();
+                osc.SetFreq(mtof(p.note));
+                osc.SetAmp((p.velocity / 127.0f));
+            }
+        }
+        break;
+        case ControlChange:
+        {
+            ControlChangeEvent p = m.AsControlChange();
+            switch(p.control_number)
+            {
+                case 1:
+                    // CC 1 for cutoff.
+                    filt.SetFreq(mtof((float)p.value));
+                    break;
+                case 2:
+                    // CC 2 for res.
+                    filt.SetRes(((float)p.value / 127.0f));
+                    break;
+                default: break;
+            }
+            break;
+        }
+        default: break;
+    }
+}
+
+
+// Main -- Init, and Midi Handling
+int main(void)
+{
+    // Init
+    float samplerate;
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    hw.seed.usb_handle.Init(UsbHandle::FS_INTERNAL);
+    System::Delay(250);
+
+    // Synthesis
+    samplerate = hw.AudioSampleRate();
+    osc.Init(samplerate);
+    osc.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    filt.Init(samplerate);
+
+    // Start stuff.
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    hw.midi.StartReceive();
+    for(;;)
+    {
+        hw.midi.Listen();
+        // Handle MIDI Events
+        while(hw.midi.HasEvents())
+        {
+            HandleMidiMessage(hw.midi.PopEvent());
+        }
+    }
+}
+*/
+_____________________________________________________________________________________________________
+
+# FM Synthesizer Block Diagrams & Architecture
+
+**Project**: fm_synth_field  
+**Platform**: Daisy Field  
+**Date**: 2026-01-04
+
+---
+
+## Signal Flow (Audio Path)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ AUDIO SIGNAL FLOW                                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐  │
+│  │  KEYBOARD    │───►│ VOICE MGR    │───►│  8 FM VOICES │───►│  MIXER    │  │
+│  │  (16 keys)   │    │ (Allocate)   │    │              │    │  (Sum)    │  │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘    └─────┬─────┘  │
+│         ▲                   ▲                    │                  │        │
+│         │                   │                    ▼                  ▼        │
+│     Note On/Off        Octave Shift     ┌───────────────┐  ┌─────────────┐  │
+│    (Rising/Falling)      (SW1/SW2)      │  PER VOICE:   │  │   OUTPUT    │  │
+│                                          │               │  │    L / R    │  │
+│                                          │  Fm2 (OP1+2)  │  └─────────────┘  │
+│                                          │  Fm2 (OP3+4)  │                   │
+│                                          │  ADSR × 4     │                   │
+│                                          │  Algorithm    │                   │
+│                                          │  SVF Filter   │                   │
+│                                          └───────────────┘                   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Control Flow (Parameter Processing)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CONTROL / PARAMETER FLOW                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────┐                                 ┌────────────────────┐      │
+│  │  KNOBS 1-8 │────► ProcessAnalogControls() ──►│  Voice Manager     │      │
+│  └────────────┘                                 │  Global Params:     │      │
+│        │                                        │                     │      │
+│        ├─► K1-K4: Operator Levels ────────────►│  - OP Levels[4]    │      │
+│        ├─► K5: Mod Index (0-10) ──────────────►│  - Mod Index       │      │
+│        ├─► K6: Algorithm (0-7) ───────────────►│  - Algorithm       │      │
+│        ├─► K7: Filter Cutoff ─────────────────►│  - Filter Cutoff   │      │
+│        └─► K8: Resonance ─────────────────────►│  - Filter Res      │      │
+│                                                 └────────────────────┘      │
+│  ┌────────────┐                                          │                  │
+│  │ SW1 / SW2  │────► ProcessDigitalControls() ──────────►│                  │
+│  └────────────┘                                          │                  │
+│        │                                                 ▼                  │
+│        ├─► SW1: Octave Down (-1) ────────► octave_offset (-2 to +2)        │
+│        └─► SW2: Octave Up (+1)                                             │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────┐         │
+│  │              OLED DISPLAY LOGIC                                 │         │
+│  │                                                                 │         │
+│  │  CheckParameterChanges() ───► if change detected:              │         │
+│  │      - Set zoomParam (knob index)                              │         │
+│  │      - Start 1.2s timer                                        │         │
+│  │                                                                 │         │
+│  │  UpdateOLED() ───► if zoomParam != -1:                         │         │
+│  │      DrawZoomedParameter()  (large text + bar)                 │         │
+│  │  else:                                                          │         │
+│  │      DrawDefaultView()  (algo, voices, octave, OP levels)      │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## FM Voice Architecture (Per Voice)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FM VOICE INTERNAL STRUCTURE                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Note On ──► base_freq = mtof(note + octave×12)                             │
+│       │                                                                      │
+│       ▼                                                                      │
+│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  │  OPERATOR BANK                                                    │       │
+│  │                                                                   │       │
+│  │  ┌──────────────┐          ┌──────────────┐                      │       │
+│  │  │ Fm2 (Pair 1) │          │ Fm2 (Pair 2) │                      │       │
+│  │  │ OP1 + OP2    │          │ OP3 + OP4    │                      │       │
+│  │  │ Ratio: var   │          │ Ratio: var   │                      │       │
+│  │  │ Index: var   │          │ Index: var   │                      │       │
+│  │  └──────┬───────┘          └──────┬───────┘                      │       │
+│  │         │                          │                              │       │
+│  │         ▼                          ▼                              │       │
+│  │  ┌──────────────┐          ┌──────────────┐                      │       │
+│  │  │ ADSR Env 1,2 │          │ ADSR Env 3,4 │                      │       │
+│  │  │ A: 5ms       │          │ A: 5ms       │                      │       │
+│  │  │ D: 100ms     │          │ D: 100ms     │                      │       │
+│  │  │ S: 70%       │          │ S: 70%       │                      │       │
+│  │  │ R: 300ms     │          │ R: 300ms     │                      │       │
+│  │  └──────┬───────┘          └──────┬───────┘                      │       │
+│  │         │                          │                              │       │
+│  │         └────────┬─────────────────┘                              │       │
+│  │                  │                                                │       │
+│  │                  ▼                                                │       │
+│  │         ┌────────────────────┐                                   │       │
+│  │         │ ALGORITHM MATRIX   │                                   │       │
+│  │         │ (switch/case 0-7)  │                                   │       │
+│  │         │                    │                                   │       │
+│  │         │ 0: Stack           │                                   │       │
+│  │         │ 1: Parallel        │                                   │       │
+│  │         │ 2: 2+2 Split       │                                   │       │
+│  │         │ 3: Harmonic        │                                   │       │
+│  │         │ 4: Bell            │                                   │       │
+│  │         │ 5: Brass           │                                   │       │
+│  │         │ 6: E-Piano         │                                   │       │
+│  │         │ 7: Bass            │                                   │       │
+│  │         └────────┬───────────┘                                   │       │
+│  │                  │                                                │       │
+│  │                  ▼                                                │       │
+│  │         ┌────────────────────┐                                   │       │
+│  │         │   SVF FILTER       │                                   │       │
+│  │         │   Lowpass          │                                   │       │
+│  │         │   Cutoff: K7       │                                   │       │
+│  │         │   Res: K8          │                                   │       │
+│  │         └────────┬───────────┘                                   │       │
+│  │                  │                                                │       │
+│  │                  ▼                                                │       │
+│  │         Velocity Scaling (vel/127)                               │       │
+│  │                  │                                                │       │
+│  │                  ▼                                                │       │
+│  │            Voice Output                                          │       │
+│  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Voice Manager State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ VOICE ALLOCATION STATE MACHINE                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│                       Note On Event                                          │
+│                            │                                                 │
+│                            ▼                                                 │
+│                  ┌──────────────────┐                                        │
+│                  │  FindFreeVoice() │                                        │
+│                  └────────┬─────────┘                                        │
+│                           │                                                  │
+│              ┌────────────┴────────────┐                                     │
+│              │                         │                                     │
+│              ▼                         ▼                                     │
+│      ╔═══════════════╗         ╔═══════════════╗                            │
+│      ║ Voice Found   ║         ║ No Free Voice ║                            │
+│      ╚═══════┬═══════╝         ╚═══════════════╝                            │
+│              │                         │                                     │
+│              ▼                         ▼                                     │
+│      ┌──────────────────┐         (Return NULL                              │
+│      │ Activate Voice   │          Voice dropped)                           │
+│      │ - Set note       │                                                   │
+│      │ - Set velocity   │                                                   │
+│      │ - Set active=1   │                                                   │
+│      │ - Set gate=1     │                                                   │
+│      └────────┬─────────┘                                                   │
+│               │                                                              │
+│               ▼                                                              │
+│      ┌──────────────────┐                                                   │
+│      │ Voice Processing │                                                   │
+│      │ (Every sample)   │                                                   │
+│      └────────┬─────────┘                                                   │
+│               │                                                              │
+│               │                Note Off Event                               │
+│               │                      │                                       │
+│               │                      ▼                                       │
+│               │              ┌──────────────────┐                           │
+│               │              │ Find matching    │                           │
+│               │              │ active voice     │                           │
+│               │              │ (by note number) │                           │
+│               │              └────────┬─────────┘                           │
+│               │                       │                                      │
+│               │                       ▼                                      │
+│               │              ┌──────────────────┐                           │
+│               └─────────────►│ Set gate = 0     │                           │
+│                              │ (Start release)  │                           │
+│                              └────────┬─────────┘                           │
+│                                       │                                      │
+│                                       ▼                                      │
+│                              ┌──────────────────┐                           │
+│                              │ Wait for env to  │                           │
+│                              │ finish release   │                           │
+│                              └────────┬─────────┘                           │
+│                                       │                                      │
+│                                       ▼                                      │
+│                              ┌──────────────────┐                           │
+│                              │ Set active = 0   │                           │
+│                              │ (Voice freed)    │                           │
+│                              └──────────────────┘                           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Mermaid Diagram (Interactive View)
+
+```mermaid
+graph TB
+    subgraph Input["User Input"]
+        KB[Keyboard 0-15<br/>16 Keys]
+        K1[Knobs 1-4<br/>OP Levels]
+        K2[Knobs 5-6<br/>Mod + Algo]
+        K3[Knobs 7-8<br/>Filter]
+        SW[SW1/SW2<br/>Octave]
+    end
+    
+    subgraph VoiceMgr["Voice Manager"]
+        ALLOC[Voice Allocation<br/>FindFreeVoice]
+        NOTEON[Note On Handler]
+        NOTEOFF[Note Off Handler]
+        GLOBAL[Global Params<br/>SetAlgorithm, etc]
+    end
+    
+    subgraph Voice["FM Voice (×8)"]
+        FM1[Fm2 OP1+2]
+        FM2[Fm2 OP3+4]
+        ENV[ADSR × 4]
+        ALGO[Algorithm<br/>Matrix]
+        FLT[SVF Filter]
+    end
+    
+    subgraph Output["Output"]
+        MIX[Voice Mixer<br/>Sum ÷ 8]
+        AUDIO[Audio L/R]
+        OLED[OLED Display<br/>128×64]
+    end
+    
+    KB -->|Note On/Off| NOTEON
+    KB -->|Note On/Off| NOTEOFF
+    SW -->|Octave| NOTEON
+    K1 -->|Levels| GLOBAL
+    K2 -->|Mod/Algo| GLOBAL
+    K3 -->|Filter| GLOBAL
+    
+    NOTEON --> ALLOC
+    ALLOC --> FM1
+    ALLOC --> FM2
+    NOTEOFF --> ENV
+    
+    GLOBAL --> ALGO
+    GLOBAL --> FLT
+    
+    FM1 --> ENV
+    FM2 --> ENV
+    ENV --> ALGO
+    ALGO --> FLT
+    FLT --> MIX
+    
+    MIX --> AUDIO
+    
+    K1 --> OLED
+    K2 --> OLED
+    K3 --> OLED
+    ALLOC --> OLED
+    
+    style Input fill:#e1f5e1
+    style Voice fill:#ffe1e1
+    style Output fill:#e1e5ff
+    style VoiceMgr fill:#fff4e1
+```
+
+---
+
+## Algorithm Routing Examples
+
+### Algorithm 0: Stack
+```
+ OP1 (1:1)
+    ↓ mod
+ OP2 (via Fm2)
+    ↓
+  Output
+```
+
+### Algorithm 1: Parallel
+```
+ OP1 (1:1)    OP3 (2:1)
+    ↓            ↓
+    └─────┬──────┘
+          ↓
+       Output
+```
+
+### Algorithm 4: Bell (DX7-style)
+```
+ OP1 (1.4:1)    OP3 (3.5:1)
+    ↓              ↓ (×0.3)
+    └──────┬───────┘
+           ↓
+        Output
+```
+
+---
+
+## OLED Display State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OLED VISUALIZATION STATE MACHINE                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│         CheckParameterChanges() (every 16ms)                                 │
+│                    │                                                         │
+│                    ▼                                                         │
+│        ┌────────────────────┐                                               │
+│        │ Any knob changed   │                                               │
+│        │ by > 2%?           │                                               │
+│        └──────┬─────────────┘                                               │
+│               │                                                              │
+│         ┌─────┴─────┐                                                       │
+│         │           │                                                        │
+│         NO         YES                                                       │
+│         │           │                                                        │
+│         │           ▼                                                        │
+│         │     ┌────────────────┐                                            │
+│         │     │ Set zoomParam  │                                            │
+│         │     │ Start 1.2s tmr │                                            │
+│         │     └────────┬───────┘                                            │
+│         │              │                                                     │
+│         │              ▼                                                     │
+│         │       ╔═════════════╗                                             │
+│         │       ║ ZOOM MODE   ║                                             │
+│         │       ╚══════┬══════╝                                             │
+│         │              │                                                     │
+│         │              ▼                                                     │
+│         │     ┌─────────────────────┐                                       │
+│         │     │ DrawZoomedParameter │                                       │
+│         │     │ - Param name        │                                       │
+│         │     │ - Large value       │                                       │
+│         │     │ - Progress bar      │                                       │
+│         │     └─────────┬───────────┘                                       │
+│         │               │                                                    │
+│         │               ▼                                                    │
+│         │     ┌─────────────────────┐                                       │
+│         │     │ Timer expired?      │                                       │
+│         │     └──────┬──────────────┘                                       │
+│         │            │                                                       │
+│         │           YES                                                      │
+│         │            │                                                       │
+│         │            ▼                                                       │
+│         │     ┌─────────────────────┐                                       │
+│         │     │ Clear zoomParam     │                                       │
+│         │     └──────┬──────────────┘                                       │
+│         │            │                                                       │
+│         └────────────┴──────────────┐                                       │
+│                      │               │                                       │
+│                      ▼               │                                       │
+│               ╔═════════════╗        │                                       │
+│               ║ DEFAULT MODE║────────┘                                       │
+│               ╚══════┬══════╝                                               │
+│                      │                                                       │
+│                      ▼                                                       │
+│             ┌─────────────────────┐                                         │
+│             │ DrawDefaultView     │                                         │
+│             │ - Title             │                                         │
+│             │ - Algorithm name    │                                         │
+│             │ - Active voices     │                                         │
+│             │ - Octave offset     │                                         │
+│             │ - OP levels         │                                         │
+│             └─────────────────────┘                                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Performance Specs
+
+| Metric | Value |
+|--------|-------|
+| **Polyphony** | 8 voices |
+| **Sample Rate** | 48 kHz |
+| **CPU Load** | ~70% (estimated) |
+| **Latency** | <2ms (audio buffer) |
+| **OLED Update** | 60 FPS (~16ms) |
+| **RAM Usage** | ~15 KB (voice structures) |
+
+---
+
+## Quick Reference
+
+### Keyboard Layout
+```
+Row A: C  C# D  D# E  F  F# G  G# A  A# B  C  C# D  D#
+Keys:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
+```
+
+### Algorithm Quick Select
+- **K6 = 0%**: Stack (classic FM)
+- **K6 = 25%**: 2+2 Split
+- **K6 = 50%**: Bell
+- **K6 = 75%**: E-Piano
+- **K6 = 100%**: Bass
+
+---
+
+**Created**: 2026-01-04  
+**Version**: 1.0  
+**Platform**: Daisy Field
+_____________________________________________________________________________________________________
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <string>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// ========== FM VOICE CLASS ==========
+class FMVoice
+{
+  public:
+    FMVoice() {}
+    ~FMVoice() {}
+
+    void Init(float samplerate)
+    {
+        active_   = false;
+        env_gate_ = false;
+        note_     = 0.0f;
+        velocity_ = 0.0f;
+        
+        // Initialize FM operators (using 2x Fm2 for 4 operators)
+        fm_pair_1_.Init(samplerate);
+        fm_pair_2_.Init(samplerate);
+        
+        // Initialize envelopes (4 total, one per operator)
+        for(int i = 0; i < 4; i++)
+        {
+            env_[i].Init(samplerate);
+            env_[i].SetTime(ADSR_SEG_ATTACK, 0.005f);
+            env_[i].SetTime(ADSR_SEG_DECAY, 0.1f);
+            env_[i].SetTime(ADSR_SEG_RELEASE, 0.3f);
+            env_[i].SetSustainLevel(0.7f);
+        }
+        
+        // Initialize filter
+        filt_.Init(samplerate);
+        filt_.SetFreq(4000.0f);
+        filt_.SetRes(0.3f);
+        
+        // Default FM parameters
+        algorithm_   = 0;
+        mod_index_   = 2.0f;
+        op_levels_[0] = 1.0f;
+        op_levels_[1] = 0.8f;
+        op_levels_[2] = 0.6f;
+        op_levels_[3] = 0.4f;
+    }
+
+    float Process()
+    {
+        if(!active_)
+            return 0.0f;
+
+        float out = ProcessAlgorithm();
+        
+        // Check if voice should be deactivated
+        bool any_running = false;
+        for(int i = 0; i < 4; i++)
+        {
+            if(env_[i].IsRunning())
+                any_running = true;
+        }
+        if(!any_running && !env_gate_)
+            active_ = false;
+
+        return out;
+    }
+
+    void OnNoteOn(float note, float velocity)
+    {
+        note_     = note;
+        velocity_ = velocity;
+        active_   = true;
+        env_gate_ = true;
+    }
+
+    void OnNoteOff() { env_gate_ = false; }
+
+    void SetAlgorithm(int algo) { algorithm_ = algo; }
+    void SetModIndex(float idx) { mod_index_ = idx; }
+    void SetOperatorLevel(int op, float level)
+    {
+        if(op >= 0 && op < 4)
+            op_levels_[op] = level;
+    }
+    void SetCutoff(float freq) { filt_.SetFreq(freq); }
+    void SetResonance(float res) { filt_.SetRes(res); }
+
+    inline bool  IsActive() const { return active_; }
+    inline float GetNote() const { return note_; }
+
+  private:
+    // FM operators
+    Fm2  fm_pair_1_; // Operators 1+2
+    Fm2  fm_pair_2_; // Operators 3+4
+    Adsr env_[4];
+    Svf  filt_;
+
+    // Voice state
+    bool  active_;
+    bool  env_gate_;
+    float note_;
+    float velocity_;
+    
+    // FM parameters
+    int   algorithm_;
+    float mod_index_;
+    float op_levels_[4];
+
+    float ProcessAlgorithm()
+    {
+        float base_freq = mtof(note_);
+        float out       = 0.0f;
+
+        // Set base frequencies
+        fm_pair_1_.SetFrequency(base_freq);
+        fm_pair_2_.SetFrequency(base_freq);
+
+        switch(algorithm_)
+        {
+            case 0: // Stack: OP1→OP2→OP3→OP4
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(mod_index_);
+                float op1 = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                            * op_levels_[0];
+                out = op1;
+                break;
+            }
+
+            case 1: // Parallel: All ops to output
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(0.5f);
+                float op1 = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                            * op_levels_[0];
+
+                fm_pair_2_.SetRatio(2.0f);
+                fm_pair_2_.SetIndex(0.5f);
+                float op3 = fm_pair_2_.Process() * env_[2].Process(env_gate_)
+                            * op_levels_[2];
+
+                out = (op1 + op3) * 0.5f;
+                break;
+            }
+
+            case 2: // 2+2 Split
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(mod_index_ * 0.7f);
+                float sig1 = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                             * op_levels_[0];
+
+                fm_pair_2_.SetRatio(3.0f);
+                fm_pair_2_.SetIndex(mod_index_ * 0.7f);
+                float sig2 = fm_pair_2_.Process() * env_[2].Process(env_gate_)
+                             * op_levels_[2];
+
+                out = (sig1 + sig2) * 0.5f;
+                break;
+            }
+
+            case 3: // Harmonic (Organ-like)
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(0.2f);
+                float h1 = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                           * op_levels_[0];
+
+                fm_pair_2_.SetRatio(2.0f);
+                fm_pair_2_.SetIndex(0.2f);
+                float h2 = fm_pair_2_.Process() * env_[1].Process(env_gate_)
+                           * op_levels_[1];
+
+                out = (h1 * 0.6f + h2 * 0.4f);
+                break;
+            }
+
+            case 4: // Bell
+            {
+                fm_pair_1_.SetRatio(1.4f);
+                fm_pair_1_.SetIndex(mod_index_);
+                float car = fm_pair_1_.Process() * env_[0].Process(env_gate_);
+
+                fm_pair_2_.SetRatio(3.5f);
+                fm_pair_2_.SetIndex(mod_index_ * 0.5f);
+                float mod = fm_pair_2_.Process() * env_[2].Process(env_gate_);
+
+                out = (car + mod * 0.3f) * op_levels_[0];
+                break;
+            }
+
+            case 5: // Brass
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(mod_index_ * 1.5f);
+                out = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                      * op_levels_[0];
+                break;
+            }
+
+            case 6: // E-Piano
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(mod_index_ * 2.0f);
+                float car = fm_pair_1_.Process() * env_[0].Process(env_gate_);
+
+                fm_pair_2_.SetRatio(14.0f);
+                fm_pair_2_.SetIndex(0.5f);
+                float high = fm_pair_2_.Process() * env_[2].Process(env_gate_);
+
+                out = (car + high * 0.2f) * op_levels_[0];
+                break;
+            }
+
+            case 7: // Bass
+            {
+                fm_pair_1_.SetRatio(1.0f);
+                fm_pair_1_.SetIndex(mod_index_ * 3.0f);
+                out = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                      * op_levels_[0];
+                break;
+            }
+
+            default:
+                out = fm_pair_1_.Process() * env_[0].Process(env_gate_)
+                      * op_levels_[0];
+        }
+
+        // Apply filter
+        filt_.Process(out);
+        out = filt_.Low();
+
+        return out * (velocity_ / 127.0f);
+    }
+};
+
+
+// ========== VOICE MANAGER (From Field Midi.cpp) ==========
+template <size_t max_voices>
+class FMVoiceManager
+{
+  public:
+    FMVoiceManager() {}
+    ~FMVoiceManager() {}
+
+    void Init(float samplerate)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].Init(samplerate);
+        }
+    }
+
+    float Process()
+    {
+        float sum = 0.0f;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            sum += voices_[i].Process();
+        }
+        return sum;
+    }
+
+    void OnNoteOn(float notenumber, float velocity)
+    {
+        FMVoice* v = FindFreeVoice();
+        if(v == nullptr)
+            return;
+        v->OnNoteOn(notenumber, velocity);
+    }
+
+    void OnNoteOff(float notenumber)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            FMVoice* v = &voices_[i];
+            if(v->IsActive() && v->GetNote() == notenumber)
+            {
+                v->OnNoteOff();
+            }
+        }
+    }
+
+    void FreeAllVoices()
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].OnNoteOff();
+        }
+    }
+
+    void SetAlgorithm(int algo)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].SetAlgorithm(algo);
+        }
+    }
+
+    void SetModIndex(float idx)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].SetModIndex(idx);
+        }
+    }
+
+    void SetOperatorLevel(int op, float level)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].SetOperatorLevel(op, level);
+        }
+    }
+
+    void SetCutoff(float freq)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].SetCutoff(freq);
+        }
+    }
+
+    void SetResonance(float res)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices_[i].SetResonance(res);
+        }
+    }
+
+    int CountActiveVoices() const
+    {
+        int count = 0;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            if(voices_[i].IsActive())
+                count++;
+        }
+        return count;
+    }
+
+  private:
+    FMVoice  voices_[max_voices];
+    FMVoice* FindFreeVoice()
+    {
+        FMVoice* v = nullptr;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            if(!voices_[i].IsActive())
+            {
+                v = &voices_[i];
+                break;
+            }
+        }
+        return v;
+    }
+};
+
+static FMVoiceManager<8> voice_manager;
+
+
+// ========== OLED VISUALIZATION (sequencer_pod pattern) ==========
+float    prevKnob[8], currKnob[8];
+int      zoomParam     = -1;
+uint32_t zoomStartTime = 0;
+int      current_algorithm = 0;
+int      octave_offset = 0;
+
+void CheckParameterChanges()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        currKnob[i] = hw.GetKnobValue(i);
+
+        if(fabsf(currKnob[i] - prevKnob[i]) > 0.02f)
+        {
+            zoomParam     = i;
+            zoomStartTime = System::GetNow();
+            prevKnob[i]   = currKnob[i];
+        }
+    }
+
+    // Clear zoom after 1.2 seconds
+    if(System::GetNow() - zoomStartTime > 1200)
+        zoomParam = -1;
+}
+
+const char* GetAlgoName(int algo)
+{
+    switch(algo)
+    {
+        case 0: return "Stack";
+        case 1: return "Parallel";
+        case 2: return "2+2 Split";
+        case 3: return "Harmonic";
+        case 4: return "Bell";
+        case 5: return "Brass";
+        case 6: return "E-Piano";
+        case 7: return "Bass";
+        default: return "Custom";
+    }
+}
+
+void DrawZoomedParameter(int param)
+{
+    char buf[32];
+    int  percent = (int)(currKnob[param] * 100.0f);
+
+    hw.display.SetCursor(0, 10);
+
+    switch(param)
+    {
+        case 0: // OP1 Level
+            sprintf(buf, "OP1 Level");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.2f)", percent, currKnob[param]);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+
+        case 1: // OP2 Level
+            sprintf(buf, "OP2 Level");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.2f)", percent, currKnob[param]);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+
+        case 2: // OP3 Level
+            sprintf(buf, "OP3 Level");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.2f)", percent, currKnob[param]);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+
+        case 3: // OP4 Level
+            sprintf(buf, "OP4 Level");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.2f)", percent, currKnob[param]);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+
+        case 4: // Mod Index
+        {
+            float mod_val = currKnob[param] * 10.0f;
+            sprintf(buf, "Mod Index");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.1f)", percent, mod_val);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+        }
+
+        case 5: // Algorithm
+        {
+            int algo = (int)(currKnob[param] * 7.99f);
+            sprintf(buf, "Algorithm");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d: %s", algo, GetAlgoName(algo));
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+        }
+
+        case 6: // Filter Cutoff
+        {
+            float freq = 20.0f + currKnob[param] * 19980.0f;
+            sprintf(buf, "Filter Cutoff");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            if(freq < 1000.0f)
+                sprintf(buf, "%d%% (%.0fHz)", percent, freq);
+            else
+                sprintf(buf, "%d%% (%.1fkHz)", percent, freq / 1000.0f);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+        }
+
+        case 7: // Resonance
+            sprintf(buf, "Resonance");
+            hw.display.WriteString(buf, Font_7x10, true);
+            hw.display.SetCursor(0, 25);
+            sprintf(buf, "%d%% (%.2f)", percent, currKnob[param]);
+            hw.display.WriteString(buf, Font_11x18, true);
+            break;
+    }
+
+    // Progress bar
+    int barWidth = (int)(currKnob[param] * 127.0f);
+    hw.display.DrawRect(0, 50, barWidth, 58, true, true);
+}
+
+void DrawDefaultView()
+{
+    char buf[32];
+
+    // Title
+    sprintf(buf, "FM Synth");
+    hw.display.WriteString(buf, Font_7x10, true);
+
+    // Algorithm
+    hw.display.SetCursor(0, 12);
+    sprintf(buf, "Algo %d: %s", current_algorithm, GetAlgoName(current_algorithm));
+    hw.display.WriteString(buf, Font_7x10, true);
+
+    // Active voices
+    hw.display.SetCursor(0, 24);
+    int active_count = voice_manager.CountActiveVoices();
+    sprintf(buf, "Voices: %d/8", active_count);
+    hw.display.WriteString(buf, Font_7x10, true);
+
+    // Octave
+    hw.display.SetCursor(0, 36);
+    sprintf(buf, "Octave: %+d", octave_offset);
+    hw.display.WriteString(buf, Font_7x10, true);
+
+    // Operator levels (mini bars)
+    hw.display.SetCursor(0, 48);
+    sprintf(buf, "OP: %.0f %.0f %.0f %.0f",
+            currKnob[0] * 10.0f,
+            currKnob[1] * 10.0f,
+            currKnob[2] * 10.0f,
+            currKnob[3] * 10.0f);
+    hw.display.WriteString(buf, Font_7x10, true);
+}
+
+void UpdateOLED()
+{
+    hw.display.Fill(false);
+
+    if(zoomParam != -1)
+    {
+        DrawZoomedParameter(zoomParam);
+    }
+    else
+    {
+        DrawDefaultView();
+    }
+
+    hw.display.Update();
+}
+
+
+// ========== AUDIO CALLBACK ==========
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+
+    // Octave switches
+    if(hw.sw[0].RisingEdge())
+        octave_offset = fmax(-2, octave_offset - 1);
+    if(hw.sw[1].RisingEdge())
+        octave_offset = fmin(2, octave_offset + 1);
+
+    // Update FM parameters
+    voice_manager.SetOperatorLevel(0, hw.GetKnobValue(0));
+    voice_manager.SetOperatorLevel(1, hw.GetKnobValue(1));
+    voice_manager.SetOperatorLevel(2, hw.GetKnobValue(2));
+    voice_manager.SetOperatorLevel(3, hw.GetKnobValue(3));
+    voice_manager.SetModIndex(hw.GetKnobValue(4) * 10.0f);
+
+    current_algorithm = (int)(hw.GetKnobValue(5) * 7.99f);
+    voice_manager.SetAlgorithm(current_algorithm);
+
+    voice_manager.SetCutoff(20.0f + hw.GetKnobValue(6) * 19980.0f);
+    voice_manager.SetResonance(hw.GetKnobValue(7));
+
+    // Keyboard handling
+    for(int i = 0; i < 16; i++)
+    {
+        // Note layout: chromatic keyboard
+        float base_note = 48.0f + (octave_offset * 12.0f); // C3 + octave offset
+        float note      = base_note + i;
+
+        if(hw.KeyboardRisingEdge(i))
+        {
+            voice_manager.OnNoteOn(note, 100);
+        }
+
+        if(hw.KeyboardFallingEdge(i))
+        {
+            voice_manager.OnNoteOff(note);
+        }
+    }
+
+    // Process voices
+    for(size_t i = 0; i < size; i++)
+    {
+        float sum      = voice_manager.Process() * 0.125f; // Scale for 8 voices
+        out[0][i] = out[1][i] = sum;
+    }
+}
+
+
+// ========== MAIN ==========
+int main(void)
+{
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+
+    // Initialize voice manager
+    voice_manager.Init(samplerate);
+
+    // Initialize display
+    hw.display.Fill(false);
+    const char str[] = "FM Synth Init...";
+    char*      cstr  = (char*)str;
+    hw.display.WriteString(cstr, Font_7x10, true);
+    hw.display.Update();
+
+    // Start audio
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+
+    // Initialize prev knob values
+    for(int i = 0; i < 8; i++)
+    {
+        prevKnob[i] = hw.GetKnobValue(i);
+        currKnob[i] = prevKnob[i];
+    }
+
+    // Main loop
+    for(;;)
+    {
+        CheckParameterChanges();
+        UpdateOLED();
+        System::Delay(16); // ~60 FPS
+    }
+}
+
+
+_____________________________________________________________________________________________________
+
+# Tube Effect Synth (Daisy Field)
+
+A 24-voice polyphonic synthesizer playing through a vacuum tube simulation effect. This project demonstrates the integration of the DAFX Tube Distortion model into the DaisySP library.
+
+## Controls
+
+| Control | Parameter | Description |
+|---------|-----------|-------------|
+| **Knob 1** | Filter Cutoff | Controls the low-pass filter frequency for all synth voices (250Hz - 8250Hz) |
+| **Knob 5** | Tube Drive | Input gain/drive into the tube capability (0.1 - 50.0) |
+| **Knob 6** | Work Point | Biasing of the tube. Center = Pentode, Left = Triode, Right = Asymmetric |
+| **Knob 7** | Hardness | Soft-clipping hardness/character |
+| **Knob 8** | Mix | Dry/Wet blend between clean synth and tube effect |
+| **Switch 1** | Panic | Cut all voices immediately |
+| **Keyboard** | Notes | Play synthesizer voices |
+
+### Potential Mappings (Unused)
+| Control | Suggested Parameter | Implementation Hint |
+|---------|---------------------|---------------------|
+| **Knob 2** | Filter Resonance | Add `SetRes` to Voice class |
+| **Knob 3** | Amp Envelope Attack/Release | Add `SetRelease` to Voice class |
+| **Knob 4** | Oscillator Waveform | Add `SetWaveform` to Voice class (Saw/Sqr variable) |
+
+### Keyboard Suggestions (Currently Unused)
+The onboard 16 keys (A1-A8, B1-B8) are currently unmapped. Here are 3 recommended ways to use them:
+
+#### 1. Chromatic Keyboard (Piano Style)
+- **B1-B8 (Bottom)**: White Keys (C, D, E, F, G, A, B, C)
+- **A1, A2, A4, A5, A6**: Black Keys (C#, D#, F#, G#, A#)
+- **Implementation**: Map indices to MIDI note numbers in `main()` loop.
+
+#### 2. Preset Selector
+- **Row A**: Select Waveforms (A1=Saw, A2=Sqr, A3=Tri) or Filter Types.
+- **Row B**: Instant Chords (Major/Minor/7th) or Drone ON/OFF.
+
+#### 3. Scale Mode
+- **Row B**: 8 notes of a selected scale (e.g., C Major Pentatonic).
+- **Row A**: Octave Down (A1), Octave Up (A8), Scale Select (A4-A5).
+
+#### 4. "Shift" Mode (Alternative Knob Functions)
+Use keys as momentary modifiers to change what the knobs do while held:
+
+- **Hold A1 (Envelope Mode)**:
+  - Knob 1 → Attack
+  - Knob 2 → Decay
+  - Knob 3 → Sustain
+  - Knob 4 → Release
+- **Hold A2 (LFO Mode)**:
+  - Knob 1 → LFO Rate
+  - Knob 2 → LFO Depth -> Cutoff
+  - Knob 3 → LFO Waveform
+- **Hold B1 (Momentary Tube Boost)**:
+  - Maximize Tube Drive regardless of Knob 5 position while held.
+
+## Block Diagrams
+
+### Enhanced Signal Flow (with LFO/Envelope)
+```
+                                     ┌─────────────┐
+                                     │   VOICE 1   │
+                                  ┌──►[OSC]─►[LFP]─►Amp─┐
+                                  │           ▲      ▲  │
+                  ┌─────┐         │           │      │  │
+             ┌───►│ LFO ├─────────┼───────────┘      │  │
+             │    └─────┘         │                  │  │
+┌─────────┐  │   ┌────────────┐   │  ┌─────────────┐ │  │   ┌────────────┐
+│  MIDI   │  │   │   VOICE    │   │  │   VOICE 24  │ │  │   │    TUBE    │
+│  INPUT  ├──┼──►│  MANAGER   ├───┼──►[OSC]─►[LFP]─►Amp─┼───►│   EFFECT   ├─────► OUT
+└────┬────┘  │   └─────┬──────┘      └─────────────┘        └─────┬──────┘
+     │Key    │Param    │Param                                     │Param
+     │       │Rate/Dep │Att/Dec/Sus/Rel                           │Drive/Bias
+     │       │         │                                          │
+  ┌──┴──┐    │      ┌──▼──┐                                  ┌────▼─────┐
+  │ KEY │    └──────┤ MUX │◄────── [HOLD A1/A2] ────────────┤ KNOBS    │
+  │ BOARD           └──▲──┘                                  │ 1..8     │
+  └─────┘              │                                     └──────────┘
+                       │
+             ┌─────────┴─────────┐
+             │ PHYSICAL CONTROLS │
+             └───────────────────┘
+```
+
+### Layered Control Flow
+This diagram shows how the physical knobs map to different destinations based on the "Shift Key" held.
+
+```
+                  ┌──────────────┐
+                  │ PHYSICAL KNOBS│
+                  └──────┬───────┘
+                         │
+           ┌─────────────▼─────────────┐
+           │  MULTIPLEXER (SHIFT LOGIC)│
+           └──────┬─────────────┬──────┘
+                  │             │
+        [NO KEY HELD]      [HOLD A1 (ENV)]       [HOLD A2 (LFO)]
+          (Normal)            (Shift)                (Shift)
+            │                    │                      │
+    ┌───────┼───────┐    ┌───────┼───────┐      ┌───────┼───────┐
+    │       │       │    │       │       │      │       │       │
+ K1:Cutoff  │       │  K1:Attack │       │    K1:Rate   │       │
+    │    K5:Drive   │    │    K2:Decay   │      │    K2:Depth   │
+    │       │    K8:Mix  │       │    K3:Sust   │       │    K3:Wave
+    ▼       ▼       ▼    ▼       ▼       ▼      ▼       ▼       ▼
+ [FILTER] [TUBE]  [MIX] [VCA ENV] [VCA ENV]  [LFO]──►[FILTER] [LFO]
+```
+
+## OLED Visualization
+The OLED display provides real-time feedback for all parameters:
+- **Idle**: Shows knob assignment helper text.
+- **Active**: When a knob is turned, zooms in to show:
+  - Parameter Name
+  - Value (with Units like Hz, %, or Mode)
+  - Progress Bar
+
+## Build Instructions
+1. Ensure the global `DaisySP` library is built and includes the `Tube` module.
+2. Run `make clean && make`
+3. Enter bootloader (Hold BOOT, Press RESET)
+4. Run `make program-dfu`
+
+
+_____________________________________________________________________________________________________
+
+
+
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <string>
+#include <stdio.h>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// Global Tube Effect
+Tube tube;
+
+// Global Knob State for Visualization
+float prevKnob[8];
+float currKnob[8];
+int zoomParam = -1;
+uint32_t zoomStartTime = 0;
+
+class Voice
+{
+  public:
+    Voice() {}
+    ~Voice() {}
+    void Init(float samplerate)
+    {
+        active_ = false;
+        osc_.Init(samplerate);
+        osc_.SetAmp(0.75f);
+        osc_.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+        env_.Init(samplerate);
+        env_.SetSustainLevel(0.5f);
+        env_.SetTime(ADSR_SEG_ATTACK, 0.005f);
+        env_.SetTime(ADSR_SEG_DECAY, 0.005f);
+        env_.SetTime(ADSR_SEG_RELEASE, 0.2f);
+        filt_.Init(samplerate);
+        filt_.SetFreq(6000.f);
+        filt_.SetRes(0.6f);
+        filt_.SetDrive(0.8f);
+    }
+
+    float Process()
+    {
+        if(active_)
+        {
+            float sig, amp;
+            amp = env_.Process(env_gate_);
+            if(!env_.IsRunning())
+                active_ = false;
+            sig = osc_.Process();
+            filt_.Process(sig);
+            return filt_.Low() * (velocity_ / 127.f) * amp;
+        }
+        return 0.f;
+    }
+
+    void OnNoteOn(float note, float velocity)
+    {
+        note_     = note;
+        velocity_ = velocity;
+        osc_.SetFreq(mtof(note_));
+        active_   = true;
+        env_gate_ = true;
+    }
+
+    void OnNoteOff() { env_gate_ = false; }
+
+    void SetCutoff(float val) { filt_.SetFreq(val); }
+
+    inline bool  IsActive() const { return active_; }
+    inline float GetNote() const { return note_; }
+
+  private:
+    Oscillator osc_;
+    Svf        filt_;
+    Adsr       env_;
+    float      note_, velocity_;
+    bool       active_;
+    bool       env_gate_;
+};
+
+template <size_t max_voices>
+class VoiceManager
+{
+  public:
+    VoiceManager() {}
+    ~VoiceManager() {}
+
+    void Init(float samplerate)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].Init(samplerate);
+        }
+    }
+
+    float Process()
+    {
+        float sum;
+        sum = 0.f;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            sum += voices[i].Process();
+        }
+        return sum;
+    }
+
+    void OnNoteOn(float notenumber, float velocity)
+    {
+        Voice *v = FindFreeVoice();
+        if(v == NULL)
+            return;
+        v->OnNoteOn(notenumber, velocity);
+    }
+
+    void OnNoteOff(float notenumber, float velocity)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            Voice *v = &voices[i];
+            if(v->IsActive() && v->GetNote() == notenumber)
+            {
+                v->OnNoteOff();
+            }
+        }
+    }
+
+    void FreeAllVoices()
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].OnNoteOff();
+        }
+    }
+
+    void SetCutoff(float all_val)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].SetCutoff(all_val);
+        }
+    }
+
+
+  private:
+    Voice  voices[max_voices];
+    Voice *FindFreeVoice()
+    {
+        Voice *v = NULL;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            if(!voices[i].IsActive())
+            {
+                v = &voices[i];
+                break;
+            }
+        }
+        return v;
+    }
+};
+
+static VoiceManager<24> voice_handler;
+
+// OLED Logic
+void CheckParameterChanges()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        if(fabsf(currKnob[i] - prevKnob[i]) > 0.02f)
+        {
+            zoomParam     = i;
+            zoomStartTime = System::GetNow();
+            prevKnob[i]   = currKnob[i];
+        }
+    }
+    // Timeout
+    if(System::GetNow() - zoomStartTime > 1200)
+    {
+        zoomParam = -1;
+    }
+}
+
+void DrawZoomedParameter()
+{
+    hw.display.Fill(false);
+    
+    float val = currKnob[zoomParam];
+    int percent = (int)(val * 100.f);
+    char nameBuf[32];
+    char valBuf[32];
+
+    switch(zoomParam)
+    {
+        case 0: // Knob 1: Cutoff
+            sprintf(nameBuf, "Filter Cutoff");
+            sprintf(valBuf, "%d%% (%.0f Hz)", percent, 250.f + val * 8000.f); 
+            break;
+        case 4: // Knob 5: Gain
+            sprintf(nameBuf, "Tube Drive");
+            sprintf(valBuf, "%d%% (%.1f)", percent, 0.1f + (val * val * 49.9f));
+            break;
+        case 5: // Knob 6: Work Point
+            {
+                sprintf(nameBuf, "Work Point (Bias)");
+                float q = 2.0f * val - 1.0f;
+                const char* type = "Mix";
+                if (q < -0.3f) type = "Triode";
+                else if (q > 0.3f) type = "Asym";
+                else type = "Pentode";
+                sprintf(valBuf, "%d%% (%.2f %s)", percent, q, type);
+            }
+            break;
+        case 6: // Knob 7: Distortion
+            sprintf(nameBuf, "Hardness");
+            sprintf(valBuf, "%d%% (%.1f)", percent, 0.1f + (val * val * 49.9f));
+            break;
+        case 7: // Knob 8: Mix
+            sprintf(nameBuf, "Dry/Wet Mix");
+            sprintf(valBuf, "%d%%", percent);
+            break;
+        default:
+            sprintf(nameBuf, "Knob %d", zoomParam + 1);
+            sprintf(valBuf, "%d%% (%.2f)", percent, val);
+            break;
+    }
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(nameBuf, Font_11x18, true);
+    
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString(valBuf, Font_7x10, true);
+    
+    // Progress bar
+    hw.display.DrawRect(0, 50, 127, 58, true, false);
+    hw.display.DrawRect(0, 50, (int)(val * 127.f), 58, true, true);
+    
+    hw.display.Update();
+}
+
+void DrawNormalDisplay()
+{
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("Tube Synth", Font_11x18, true);
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString("Turn knobs to edit", Font_6x8, true);
+    hw.display.SetCursor(0, 40);
+    hw.display.WriteString("K5:Gain K6:Bias", Font_6x8, true);
+    hw.display.SetCursor(0, 50);
+    hw.display.WriteString("K7:Dist K8:Mix", Font_6x8, true);
+    hw.display.Update();
+}
+
+void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                   AudioHandle::InterleavingOutputBuffer out,
+                   size_t                                size)
+{
+    float sum = 0.f;
+    hw.ProcessDigitalControls();
+    hw.ProcessAnalogControls();
+    
+    // Update Knob Values
+    for(int i = 0; i < 8; i++)
+    {
+        currKnob[i] = hw.GetKnobValue(i);
+    }
+    
+    // Switch 1: Choke voices
+    if(hw.GetSwitch(hw.SW_1)->FallingEdge())
+    {
+        voice_handler.FreeAllVoices();
+    }
+    
+    // Knob 1: Filter Cutoff
+    voice_handler.SetCutoff(250.f + currKnob[0] * 8000.f);
+
+    // Knob 5: Tube Gain (0.1 - 50.0)
+    // Exponential curve for drive feels better
+    float gain_val = currKnob[4];
+    tube.SetGain(0.1f + (gain_val * gain_val * 49.9f));
+
+    // Knob 6: Work Point Q (-1.0 to 1.0)
+    tube.SetWorkPoint(2.0f * currKnob[5] - 1.0f);
+
+    // Knob 7: Distortion (0.1 - 50.0)
+    float dist_val = currKnob[6];
+    tube.SetDistortion(0.1f + (dist_val * dist_val * 49.9f));
+    
+    // Knob 8: Dry/Wet Mix (0.0 - 1.0)
+    tube.SetMix(currKnob[7]);
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sum        = 0.f;
+        // Process voices
+        float voice_out = voice_handler.Process() * 0.5f;
+        
+        // Process Tube
+        sum = tube.Process(voice_out);
+        
+        out[i]     = sum;
+        out[i + 1] = sum;
+    }
+}
+
+void HandleMidiMessage(MidiEvent m)
+{
+    switch(m.type)
+    {
+        case NoteOn:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            if(p.velocity == 0.f)
+            {
+                voice_handler.OnNoteOff(p.note, p.velocity);
+            }
+            else
+            {
+                voice_handler.OnNoteOn(p.note, p.velocity);
+            }
+        }
+        break;
+        case NoteOff:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            voice_handler.OnNoteOff(p.note, p.velocity);
+        }
+        break;
+        default: break;
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+    voice_handler.Init(samplerate);
+    
+    // Init Tube
+    tube.Init(samplerate);
+
+    // Start stuff
+    hw.midi.StartReceive();
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    for(;;)
+    {
+        hw.midi.Listen();
+        while(hw.midi.HasEvents())
+        {
+            HandleMidiMessage(hw.midi.PopEvent());
+        }
+        
+        CheckParameterChanges();
+        
+        if(zoomParam >= 0)
+        {
+            DrawZoomedParameter();
+        }
+        else
+        {
+            DrawNormalDisplay();
+        }
+        
+        // Update LEDs for tube knobs
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_5, currKnob[4]);
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_6, currKnob[5]); 
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_7, currKnob[6]); 
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_8, currKnob[7]); 
+        hw.led_driver.SwapBuffersAndTransmit();
+
+        System::Delay(16); // ~60fps
+    }
+}
+
+
+/*
+#include "daisy_field.h"
+#include "daisysp.h"
+#include <string>
+#include <stdio.h>
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// Global Tube Effect
+Tube tube;
+
+// Global Knob State for Visualization
+float prevKnob[8];
+float currKnob[8];
+int zoomParam = -1;
+uint32_t zoomStartTime = 0;
+
+class Voice
+{
+  public:
+    Voice() {}
+    ~Voice() {}
+    void Init(float samplerate)
+    {
+        active_ = false;
+        osc_.Init(samplerate);
+        osc_.SetAmp(0.75f);
+        osc_.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+        env_.Init(samplerate);
+        env_.SetSustainLevel(0.5f);
+        env_.SetTime(ADSR_SEG_ATTACK, 0.005f);
+        env_.SetTime(ADSR_SEG_DECAY, 0.005f);
+        env_.SetTime(ADSR_SEG_RELEASE, 0.2f);
+        filt_.Init(samplerate);
+        filt_.SetFreq(6000.f);
+        filt_.SetRes(0.6f);
+        filt_.SetDrive(0.8f);
+    }
+
+    float Process()
+    {
+        if(active_)
+        {
+            float sig, amp;
+            amp = env_.Process(env_gate_);
+            if(!env_.IsRunning())
+                active_ = false;
+            sig = osc_.Process();
+            filt_.Process(sig);
+            return filt_.Low() * (velocity_ / 127.f) * amp;
+        }
+        return 0.f;
+    }
+
+    void OnNoteOn(float note, float velocity)
+    {
+        note_     = note;
+        velocity_ = velocity;
+        osc_.SetFreq(mtof(note_));
+        active_   = true;
+        env_gate_ = true;
+    }
+
+    void OnNoteOff() { env_gate_ = false; }
+
+    void SetCutoff(float val) { filt_.SetFreq(val); }
+
+    inline bool  IsActive() const { return active_; }
+    inline float GetNote() const { return note_; }
+
+  private:
+    Oscillator osc_;
+    Svf        filt_;
+    Adsr       env_;
+    float      note_, velocity_;
+    bool       active_;
+    bool       env_gate_;
+};
+
+template <size_t max_voices>
+class VoiceManager
+{
+  public:
+    VoiceManager() {}
+    ~VoiceManager() {}
+
+    void Init(float samplerate)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].Init(samplerate);
+        }
+    }
+
+    float Process()
+    {
+        float sum;
+        sum = 0.f;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            sum += voices[i].Process();
+        }
+        return sum;
+    }
+
+    void OnNoteOn(float notenumber, float velocity)
+    {
+        Voice *v = FindFreeVoice();
+        if(v == NULL)
+            return;
+        v->OnNoteOn(notenumber, velocity);
+    }
+
+    void OnNoteOff(float notenumber, float velocity)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            Voice *v = &voices[i];
+            if(v->IsActive() && v->GetNote() == notenumber)
+            {
+                v->OnNoteOff();
+            }
+        }
+    }
+
+    void FreeAllVoices()
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].OnNoteOff();
+        }
+    }
+
+    void SetCutoff(float all_val)
+    {
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            voices[i].SetCutoff(all_val);
+        }
+    }
+
+
+  private:
+    Voice  voices[max_voices];
+    Voice *FindFreeVoice()
+    {
+        Voice *v = NULL;
+        for(size_t i = 0; i < max_voices; i++)
+        {
+            if(!voices[i].IsActive())
+            {
+                v = &voices[i];
+                break;
+            }
+        }
+        return v;
+    }
+};
+
+static VoiceManager<24> voice_handler;
+
+// OLED Logic
+void CheckParameterChanges()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        if(fabsf(currKnob[i] - prevKnob[i]) > 0.02f)
+        {
+            zoomParam     = i;
+            zoomStartTime = System::GetNow();
+            prevKnob[i]   = currKnob[i];
+        }
+    }
+    // Timeout
+    if(System::GetNow() - zoomStartTime > 1200)
+    {
+        zoomParam = -1;
+    }
+}
+
+void DrawZoomedParameter()
+{
+    hw.display.Fill(false);
+    
+    float val = currKnob[zoomParam];
+    int percent = (int)(val * 100.f);
+    char nameBuf[32];
+    char valBuf[32];
+
+    switch(zoomParam)
+    {
+        case 0: // Knob 1: Cutoff
+            sprintf(nameBuf, "Filter Cutoff");
+            sprintf(valBuf, "%d%% (%.0f Hz)", percent, 250.f + val * 8000.f); 
+            break;
+        case 4: // Knob 5: Gain
+            sprintf(nameBuf, "Tube Drive");
+            sprintf(valBuf, "%d%% (%.1f)", percent, 0.1f + (val * val * 49.9f));
+            break;
+        case 5: // Knob 6: Work Point
+            {
+                sprintf(nameBuf, "Work Point (Bias)");
+                float q = 2.0f * val - 1.0f;
+                const char* type = "Mix";
+                if (q < -0.3f) type = "Triode";
+                else if (q > 0.3f) type = "Asym";
+                else type = "Pentode";
+                sprintf(valBuf, "%d%% (%.2f %s)", percent, q, type);
+            }
+            break;
+        case 6: // Knob 7: Distortion
+            sprintf(nameBuf, "Hardness");
+            sprintf(valBuf, "%d%% (%.1f)", percent, 0.1f + (val * val * 49.9f));
+            break;
+        case 7: // Knob 8: Mix
+            sprintf(nameBuf, "Dry/Wet Mix");
+            sprintf(valBuf, "%d%%", percent);
+            break;
+        default:
+            sprintf(nameBuf, "Knob %d", zoomParam + 1);
+            sprintf(valBuf, "%d%% (%.2f)", percent, val);
+            break;
+    }
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(nameBuf, Font_11x18, true);
+    
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString(valBuf, Font_7x10, true);
+    
+    // Progress bar
+    hw.display.DrawRect(0, 50, 127, 58, true, false);
+    hw.display.DrawRect(0, 50, (int)(val * 127.f), 58, true, true);
+    
+    hw.display.Update();
+}
+
+void DrawNormalDisplay()
+{
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("Tube Synth", Font_11x18, true);
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString("Turn knobs to edit", Font_6x8, true);
+    hw.display.SetCursor(0, 40);
+    hw.display.WriteString("K5:Gain K6:Bias", Font_6x8, true);
+    hw.display.SetCursor(0, 50);
+    hw.display.WriteString("K7:Dist K8:Mix", Font_6x8, true);
+    hw.display.Update();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    float sum = 0.f;
+    hw.ProcessDigitalControls();
+    hw.ProcessAnalogControls();
+    
+    // Update Knob Values
+    for(int i = 0; i < 8; i++)
+    {
+        currKnob[i] = hw.GetKnobValue(i);
+    }
+    
+    // Switch 1: Choke voices
+    if(hw.GetSwitch(hw.SW_1)->FallingEdge())
+    {
+        voice_handler.FreeAllVoices();
+    }
+    
+    // Knob 1: Filter Cutoff
+    voice_handler.SetCutoff(250.f + currKnob[0] * 8000.f);
+
+    // Knob 5: Tube Gain (0.1 - 50.0)
+    // Exponential curve for drive feels better
+    float gain_val = currKnob[4];
+    tube.SetGain(0.1f + (gain_val * gain_val * 49.9f));
+
+    // Knob 6: Work Point Q (-1.0 to 1.0)
+    tube.SetWorkPoint(2.0f * currKnob[5] - 1.0f);
+
+    // Knob 7: Distortion (0.1 - 50.0)
+    float dist_val = currKnob[6];
+    tube.SetDistortion(0.1f + (dist_val * dist_val * 49.9f));
+    
+    // Knob 8: Dry/Wet Mix (0.0 - 1.0)
+    tube.SetMix(currKnob[7]);
+
+    for(size_t i = 0; i < size; i++)
+    {
+        sum = 0.f;
+        // Process voices
+        float voice_out = voice_handler.Process() * 0.5f;
+        
+        // Process Tube
+        sum = tube.Process(voice_out);
+        
+        out[0][i] = sum;  // Left
+        out[1][i] = sum;  // Right
+    }
+}
+
+void HandleMidiMessage(MidiEvent m)
+{
+    switch(m.type)
+    {
+        case NoteOn:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            if(p.velocity == 0.f)
+            {
+                voice_handler.OnNoteOff(p.note, p.velocity);
+            }
+            else
+            {
+                voice_handler.OnNoteOn(p.note, p.velocity);
+            }
+        }
+        break;
+        case NoteOff:
+        {
+            NoteOnEvent p = m.AsNoteOn();
+            voice_handler.OnNoteOff(p.note, p.velocity);
+        }
+        break;
+        default: break;
+    }
+}
+
+int main(void)
+{
+    float samplerate;
+    hw.Init();
+    samplerate = hw.AudioSampleRate();
+    voice_handler.Init(samplerate);
+    
+    // Init Tube
+    tube.Init(samplerate);
+
+    // Start stuff
+    hw.midi.StartReceive();
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    for(;;)
+    {
+        hw.midi.Listen();
+        while(hw.midi.HasEvents())
+        {
+            HandleMidiMessage(hw.midi.PopEvent());
+        }
+        
+        CheckParameterChanges();
+        
+        if(zoomParam >= 0)
+        {
+            DrawZoomedParameter();
+        }
+        else
+        {
+            DrawNormalDisplay();
+        }
+        
+        // Update LEDs for tube knobs
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_5, currKnob[4]);
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_6, currKnob[5]); 
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_7, currKnob[6]); 
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_8, currKnob[7]); 
+        hw.led_driver.SwapBuffersAndTransmit();
+
+        System::Delay(16); // ~60fps
+    }
+}
+*/
+
+/**
+ * DrumMachine v2.2 - Daisy Field
+ * 
+ * 16-step drum machine with 3 voices.
+ * 
+ * Controls:
+ * Knob 0: Tempo (40-240 BPM)
+ * Knob 1: Swing (0-50%)
+ * Knob 2: Kick Decay
+ * Knob 3: Kick Tone
+ * Knob 4: Snare Decay
+ * Knob 5: Snare Snappy
+ * Knob 6: HiHat Decay
+ * Knob 7: Master Volume
+ * 
+ * Keys 0-15: Toggle steps for selected drum
+ * SW1: Cycle selected drum (Kick → Snare → HiHat)
+ * SW2: Play/Pause
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// Drum voices
+AnalogBassDrum     kick;
+SyntheticSnareDrum snare;
+HiHat<>            hihat;
+
+// Constants
+constexpr int NUM_DRUMS = 3;
+constexpr int NUM_STEPS = 16;
+
+// Patterns
+bool patterns[NUM_DRUMS][NUM_STEPS];
+
+// State
+uint8_t currentStep  = 0;
+uint8_t selectedDrum = 0;
+bool    playing      = true;
+uint8_t swingStep    = 0;
+
+// Timing
+float    tempo       = 120.f;
+float    swing       = 0.f;
+uint32_t lastStepTime = 0;
+
+// Knob values cache
+float kvals[8];
+
+// Smoothed parameters
+float kickDecay = 0.5f, kickDecayCur = 0.5f;
+float kickTone = 0.5f, kickToneCur = 0.5f;
+float snareDecay = 0.5f, snareDecayCur = 0.5f;
+float snareSnappy = 0.5f, snareSnappyCur = 0.5f;
+float hihatDecay = 0.5f, hihatDecayCur = 0.5f;
+float masterVol = 0.8f, masterVolCur = 0.8f;
+
+// LED arrays
+const size_t knob_leds[8] = {
+    DaisyField::LED_KNOB_1, DaisyField::LED_KNOB_2,
+    DaisyField::LED_KNOB_3, DaisyField::LED_KNOB_4,
+    DaisyField::LED_KNOB_5, DaisyField::LED_KNOB_6,
+    DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
+};
+
+const size_t keyboard_leds[16] = {
+    DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
+    DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
+    DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
+    DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+    DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
+    DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
+    DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
+    DaisyField::LED_KEY_B7, DaisyField::LED_KEY_B8,
+};
+
+const char* drumNames[3] = {"KICK", "SNARE", "HIHAT"};
+
+void InitPatterns()
+{
+    for(int d = 0; d < NUM_DRUMS; d++)
+        for(int s = 0; s < NUM_STEPS; s++)
+            patterns[d][s] = false;
+    
+    // Kick: 4-on-the-floor
+    patterns[0][0] = patterns[0][4] = patterns[0][8] = patterns[0][12] = true;
+    
+    // Snare: backbeat
+    patterns[1][4] = patterns[1][12] = true;
+    
+    // HiHat: 8th notes
+    for(int s = 0; s < NUM_STEPS; s += 2)
+        patterns[2][s] = true;
+}
+
+void UpdateLeds()
+{
+    for(int i = 0; i < 8; i++)
+        hw.led_driver.SetLed(knob_leds[i], kvals[i]);
+    
+    for(int s = 0; s < NUM_STEPS; s++)
+    {
+        float brightness = 0.1f;
+        if(patterns[selectedDrum][s]) brightness = 0.5f;
+        if(s == currentStep && playing) brightness = 1.0f;
+        hw.led_driver.SetLed(keyboard_leds[s], brightness);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+    
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(playing ? "DRUM MACHINE" : "DRUMS [STOP]", Font_7x10, true);
+    
+    char buf[40];
+    hw.display.SetCursor(0, 12);
+    sprintf(buf, "%s %dBPM Sw:%d%%", drumNames[selectedDrum], (int)tempo, (int)(swing * 100.f));
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Pattern boxes row 1 (steps 0-7)
+    for(int s = 0; s < 8; s++)
+    {
+        int x = 2 + s * 15;
+        hw.display.DrawRect(x, 24, x + 12, 34, true, patterns[selectedDrum][s]);
+        if(s == currentStep && playing)
+            hw.display.DrawRect(x + 3, 26, x + 9, 32, true, !patterns[selectedDrum][s]);
+    }
+    
+    // Pattern boxes row 2 (steps 8-15)
+    for(int s = 0; s < 8; s++)
+    {
+        int x = 2 + s * 15;
+        hw.display.DrawRect(x, 38, x + 12, 48, true, patterns[selectedDrum][s + 8]);
+        if((s + 8) == currentStep && playing)
+            hw.display.DrawRect(x + 3, 40, x + 9, 46, true, !patterns[selectedDrum][s + 8]);
+    }
+    
+    hw.display.SetCursor(0, 54);
+    sprintf(buf, "Step: %d/16", currentStep + 1);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+uint32_t GetStepInterval()
+{
+    float baseInterval = 60000.f / tempo / 4.f;
+    bool swingBeat = (swingStep % 2 == 1);
+    return (uint32_t)(baseInterval * (swingBeat ? (1.f + swing) : (1.f - swing * 0.5f)));
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    // Process controls
+    hw.ProcessAnalogControls();
+    hw.ProcessDigitalControls();
+    
+    // Read knob values (using GetKnobValue, not Process!)
+    for(int i = 0; i < 8; i++)
+        kvals[i] = hw.GetKnobValue(i);
+    
+    // SWITCHES: Use GetSwitch() with Field constants!
+    if(hw.GetSwitch(DaisyField::SW_1)->RisingEdge())
+    {
+        selectedDrum = (selectedDrum + 1) % NUM_DRUMS;
+    }
+    
+    if(hw.GetSwitch(DaisyField::SW_2)->RisingEdge())
+    {
+        playing = !playing;
+    }
+    
+    // KEYBOARD: Use KeyboardRisingEdge()
+    for(size_t k = 0; k < NUM_STEPS; k++)
+    {
+        if(hw.KeyboardRisingEdge(k))
+        {
+            patterns[selectedDrum][k] = !patterns[selectedDrum][k];
+        }
+    }
+    
+    // Map knobs to parameters
+    tempo       = 40.f + kvals[0] * 200.f;
+    swing       = kvals[1] * 0.5f;
+    kickDecay   = kvals[2];
+    kickTone    = kvals[3];
+    snareDecay  = kvals[4];
+    snareSnappy = kvals[5];
+    hihatDecay  = kvals[6];
+    masterVol   = kvals[7];
+    
+    // Audio processing
+    for(size_t i = 0; i < size; i++)
+    {
+        // Smooth parameters
+        fonepole(kickDecayCur, kickDecay, 0.001f);
+        fonepole(kickToneCur, kickTone, 0.001f);
+        fonepole(snareDecayCur, snareDecay, 0.001f);
+        fonepole(snareSnappyCur, snareSnappy, 0.001f);
+        fonepole(hihatDecayCur, hihatDecay, 0.001f);
+        fonepole(masterVolCur, masterVol, 0.001f);
+        
+        kick.SetDecay(kickDecayCur);
+        kick.SetTone(kickToneCur);
+        snare.SetDecay(snareDecayCur);
+        snare.SetSnappy(snareSnappyCur);
+        hihat.SetDecay(hihatDecayCur);
+        
+        float kickOut  = kick.Process(false);
+        float snareOut = snare.Process(false);
+        float hihatOut = hihat.Process(false);
+        
+        float mix = (kickOut + snareOut * 0.8f + hihatOut * 0.4f) * masterVolCur;
+        mix = fclamp(mix, -1.f, 1.f);
+        
+        out[0][i] = mix;
+        out[1][i] = mix;
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float sr = hw.AudioSampleRate();
+    
+    kick.Init(sr);
+    kick.SetFreq(50.f);
+    kick.SetAccent(0.8f);
+    
+    snare.Init(sr);
+    snare.SetFreq(200.f);
+    snare.SetAccent(0.8f);
+    
+    hihat.Init(sr);
+    hihat.SetFreq(3000.f);
+    hihat.SetAccent(0.8f);
+    
+    InitPatterns();
+    
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    lastStepTime = System::GetNow();
+    
+    while(1)
+    {
+        uint32_t now = System::GetNow();
+        uint32_t interval = GetStepInterval();
+        
+        if(playing && (now - lastStepTime >= interval))
+        {
+            currentStep = (currentStep + 1) % NUM_STEPS;
+            swingStep++;
+            lastStepTime = now;
+            
+            // Trigger drums from main loop
+            if(patterns[0][currentStep]) kick.Trig();
+            if(patterns[1][currentStep]) snare.Trig();
+            if(patterns[2][currentStep]) hihat.Trig();
+        }
+        
+        UpdateDisplay();
+        UpdateLeds();
+        System::Delay(5);
+    }
+}
+
+
+/**
+ * Dual Oscillator Subtractive Synthesizer
+ * Platform: Daisy Field
+ * 
+ * Features:
+ * - 2 oscillators with detune
+ * - SVF lowpass filter with resonance
+ * - Dual ADSR envelopes (amplitude + filter)
+ * - Piano-style keyboard layout
+ * - Octave switching via switches
+ */
+
+#include "daisy_field.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisyField hw;
+
+// DSP Objects
+Oscillator osc1, osc2;
+Svf        filter;
+Adsr       ampEnv, filtEnv;
+Crossfade  oscMix;
+
+// Keyboard state
+uint8_t buttons[16];
+
+// Piano-style layout: Major scale on bottom, accidentals on top
+// Keys 8, 11, 15 are unused (black key gaps)
+float scale[16] = {
+    0.f, 2.f, 4.f, 5.f, 7.f, 9.f, 11.f, 12.f,   // C D E F G A B C (bottom row)
+    0.f, 1.f, 3.f, 0.f, 6.f, 8.f, 10.f, 0.0f    // C# D# - F# G# A# - (top row)
+};
+
+float    active_note = scale[0];
+int8_t   octave      = 2;      // Base octave (C2 = MIDI 36)
+bool     gate        = false;
+uint8_t  active_key  = 255;    // No key active
+
+// Parameter values
+float osc1_wave   = 0.f;
+float osc2_detune = 0.f;
+float osc_mix     = 0.5f;
+float filt_cutoff = 2000.f;
+float filt_res    = 0.3f;
+float filt_env_amt = 0.5f;
+float attack_time = 0.01f;
+float release_time = 0.2f;
+
+// Convert semitone to frequency
+float SemiToFreq(float semi)
+{
+    return 440.f * powf(2.f, (semi - 69.f) / 12.f);
+}
+
+void UpdateOled()
+{
+    hw.display.Fill(false);
+    
+    // Title
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString("DUAL OSC SYNTH", Font_6x8, true);
+    
+    // Octave
+    char buf[16];
+    sprintf(buf, "Oct: %d", octave);
+    hw.display.SetCursor(0, 12);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Filter cutoff
+    sprintf(buf, "Filt: %dHz", (int)filt_cutoff);
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    // Detune
+    sprintf(buf, "Det: %.1f", osc2_detune);
+    hw.display.SetCursor(0, 36);
+    hw.display.WriteString(buf, Font_6x8, true);
+    
+    hw.display.Update();
+}
+
+void UpdateLeds()
+{
+    // Clear all LEDs
+    for(int i = 0; i < 16; i++)
+    {
+        hw.led_driver.SetLed(i, 0.f);
+    }
+    
+    // Light active key
+    if(active_key < 16)
+    {
+        hw.led_driver.SetLed(active_key, 1.f);
+    }
+    
+    // Octave indicator on LEDs 16-20
+    for(int i = 0; i < 5; i++)
+    {
+        hw.led_driver.SetLed(16 + i, (i == octave) ? 1.f : 0.1f);
+    }
+    
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    hw.ProcessAllControls();
+    
+    // Read knobs
+    osc1_wave    = hw.knob[0].Process();                        // 0-1
+    osc2_detune  = (hw.knob[1].Process() - 0.5f) * 24.f;        // -12 to +12 semitones
+    osc_mix      = hw.knob[2].Process();                        // 0-1
+    filt_cutoff  = 50.f + hw.knob[3].Process() * 9950.f;        // 50-10000 Hz
+    filt_res     = hw.knob[4].Process() * 0.95f;                // 0-0.95
+    filt_env_amt = hw.knob[5].Process();                        // 0-1
+    attack_time  = 0.005f + hw.knob[6].Process() * 1.995f;      // 5ms-2s
+    release_time = 0.01f + hw.knob[7].Process() * 2.99f;        // 10ms-3s
+    
+    // Update envelope times
+    ampEnv.SetTime(ADSR_SEG_ATTACK, attack_time);
+    ampEnv.SetTime(ADSR_SEG_RELEASE, release_time);
+    filtEnv.SetTime(ADSR_SEG_ATTACK, attack_time);
+    filtEnv.SetTime(ADSR_SEG_RELEASE, release_time);
+    
+    // Set oscillator waveform (morph saw->square)
+    if(osc1_wave < 0.5f)
+    {
+        osc1.SetWaveform(Oscillator::WAVE_SAW);
+        osc2.SetWaveform(Oscillator::WAVE_SAW);
+    }
+    else
+    {
+        osc1.SetWaveform(Oscillator::WAVE_SQUARE);
+        osc2.SetWaveform(Oscillator::WAVE_SQUARE);
+    }
+    
+    // Calculate note frequency
+    float midi_note = 36.f + (octave * 12.f) + active_note;
+    float freq1 = SemiToFreq(midi_note);
+    float freq2 = SemiToFreq(midi_note + osc2_detune);
+    
+    osc1.SetFreq(freq1);
+    osc2.SetFreq(freq2);
+    
+    // Set crossfade position
+    oscMix.SetPos(osc_mix);
+    
+    // Set filter resonance
+    filter.SetRes(filt_res);
+    
+    // Process audio
+    for(size_t i = 0; i < size; i++)
+    {
+        // Get oscillator outputs
+        float sig1 = osc1.Process();
+        float sig2 = osc2.Process();
+        
+        // Mix oscillators
+        float sig = oscMix.Process(sig1, sig2);
+        
+        // Filter envelope modulation
+        float filt_env = filtEnv.Process(gate);
+        float cutoff_mod = filt_cutoff + (filt_env * filt_env_amt * 8000.f);
+        cutoff_mod = fclamp(cutoff_mod, 20.f, 18000.f);
+        filter.SetFreq(cutoff_mod);
+        
+        // Apply filter
+        filter.Process(sig);
+        sig = filter.Low();
+        
+        // Apply amplitude envelope
+        float amp_env = ampEnv.Process(gate);
+        sig *= amp_env;
+        
+        // Output to both channels
+        out[0][i] = sig;
+        out[1][i] = sig;
+    }
+}
+
+int main(void)
+{
+    hw.Init();
+    float sample_rate = hw.AudioSampleRate();
+    
+    // Initialize oscillators
+    osc1.Init(sample_rate);
+    osc1.SetWaveform(Oscillator::WAVE_SAW);
+    osc1.SetAmp(0.5f);
+    
+    osc2.Init(sample_rate);
+    osc2.SetWaveform(Oscillator::WAVE_SAW);
+    osc2.SetAmp(0.5f);
+    
+    // Initialize filter
+    filter.Init(sample_rate);
+    filter.SetFreq(2000.f);
+    filter.SetRes(0.3f);
+    
+    // Initialize amplitude envelope
+    ampEnv.Init(sample_rate);
+    ampEnv.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    ampEnv.SetTime(ADSR_SEG_DECAY, 0.1f);
+    ampEnv.SetTime(ADSR_SEG_RELEASE, 0.2f);
+    ampEnv.SetSustainLevel(0.8f);
+    
+    // Initialize filter envelope
+    filtEnv.Init(sample_rate);
+    filtEnv.SetTime(ADSR_SEG_ATTACK, 0.01f);
+    filtEnv.SetTime(ADSR_SEG_DECAY, 0.3f);
+    filtEnv.SetTime(ADSR_SEG_RELEASE, 0.2f);
+    filtEnv.SetSustainLevel(0.3f);
+    
+    // Initialize crossfade
+    oscMix.Init();
+    
+    // Start audio
+    hw.StartAdc();
+    hw.StartAudio(AudioCallback);
+    
+    // Main loop - handle keyboard, switches, display
+    while(1)
+    {
+        hw.ProcessDigitalControls();
+        
+        // Handle octave switches
+        if(hw.sw[0].RisingEdge() && octave > 0)
+        {
+            octave--;
+        }
+        if(hw.sw[1].RisingEdge() && octave < 4)
+        {
+            octave++;
+        }
+        
+        // Scan keyboard
+        bool any_key_pressed = false;
+        for(int i = 0; i < 16; i++)
+        {
+            if(hw.KeyboardRisingEdge(i))
+            {
+                // Skip gap keys (8, 11, 15)
+                if(i == 8 || i == 11 || i == 15) continue;
+                
+                active_note = scale[i];
+                active_key = i;
+                gate = true;
+                any_key_pressed = true;
+            }
+            
+            if(hw.KeyboardFallingEdge(i))
+            {
+                if(i == active_key)
+                {
+                    gate = false;
+                    active_key = 255;
+                }
+            }
+            
+            if(hw.KeyboardState(i))
+            {
+                any_key_pressed = true;
+            }
+        }
+        
+        // Update display and LEDs
+        UpdateOled();
+        UpdateLeds();
+        
+        System::Delay(1);
+    }
+}

@@ -27,16 +27,23 @@
 
 ```
 DAISY_QAE/
-├── README.md                      ← You are here
-├── DAISY_TUTORIALS_KNOWLEDGE.md   ← Official API reference (GPIO, Audio, ADC, etc.)
-├── DAISY_DEVELOPMENT_STANDARDS.md ← Workflow and code patterns (Field/Pod/Seed)
-├── DAISY_DEBUG_STRATEGY.md        ← Serial and hardware debugging techniques
-├── DAISY_TECHNICAL_REPORT.md      ← Comprehensive process documentation
-├── DAISY_BUGS.md                  ← Bug tracker with priority queue
-├── DVPE_MODULE_CATALOG.md         ← Complete list of available DSP blocks
-├── create_field_project.sh        ← Project scaffolding (fixes helper.py anti-pattern)
-├── validate_daisy_code.py         ← Automated standards linter
-└── generate_module_catalog.py     ← Script to regenerate module catalog from source
+├── README.md                         ← You are here
+├── DAISY_TUTORIALS_KNOWLEDGE.md      ← Official API reference (GPIO, Audio, ADC, etc.)
+├── DAISY_DEVELOPMENT_STANDARDS.md   ← Workflow and code patterns (Field/Pod/Seed)
+├── DAISY_DEBUG_STRATEGY.md           ← Serial and hardware debugging techniques
+├── DAISY_TECHNICAL_REPORT.md         ← Comprehensive process documentation
+├── DAISY_BUGS.md                     ← Bug tracker with priority queue
+├── DVPE_MODULE_CATALOG.md            ← Complete list of available DSP blocks
+│
+├── ── De-Hallucination System (Tier 1) ──────────────────────────────────────
+├── DAISY_HALLUCINATION_REFERENCE.md  ← LLM prompt reference: paste into any AI prompt
+├── daisyApiIndex.ts                  ← Verified DaisySP API database (35+ classes)
+├── apiReferenceInjector.ts           ← Generates grounding comment blocks for .cpp files
+│
+├── ── Tooling ────────────────────────────────────────────────────────────────
+├── create_field_project.sh           ← Project scaffolding (fixes helper.py anti-pattern)
+├── validate_daisy_code.py            ← Automated linter (9 rules incl. hallucination detect)
+└── generate_module_catalog.py        ← Script to regenerate module catalog from source
 ```
 
 ---
@@ -53,6 +60,27 @@ DAISY_QAE/
 | Found a bug, documenting fix | [DAISY_BUGS.md](DAISY_BUGS.md) |
 | Checking code against standards | `python validate_daisy_code.py MyProject.cpp` |
 | Browsing available DSP blocks | [DVPE_MODULE_CATALOG.md](DVPE_MODULE_CATALOG.md) |
+| Prompting an AI to write Daisy C++ | [DAISY_HALLUCINATION_REFERENCE.md](DAISY_HALLUCINATION_REFERENCE.md) |
+| Integrating API grounding into DVPE | [daisyApiIndex.ts](daisyApiIndex.ts) + [apiReferenceInjector.ts](apiReferenceInjector.ts) |
+
+---
+
+## Field Platform MIDI Projects
+
+> **Base Project**: Use [`field/Midi/Midi.cpp`](https://github.com/electro-smith/DaisyExamples/tree/master/field/Midi/Midi.cpp) as the starting point for external MIDI-oriented projects on the Daisy Field platform.
+
+This project provides:
+- MIDI input handling (NoteOn, NoteOff, ControlChange)
+- Voice management with ADSR envelope
+- Filter control via MIDI CC
+- Display feedback for MIDI notes
+
+### Why field/Midi?
+- Clean, well-structured MIDI event handling
+- Proper voice allocation (24 voices)
+- Includes both NoteOn/NoteOff and CC message processing
+- Working display integration for note feedback
+- Compatible with Daisy Field hardware
 
 ---
 
@@ -346,16 +374,19 @@ quadrantChart
 ## How to Use This Ecosystem
 
 ### For New Developers
+
 1. Read `DAISY_DEVELOPMENT_STANDARDS.md` first
 2. Use `DAISY_TUTORIALS_KNOWLEDGE.md` as API reference
 3. Follow the workflow: Concept → Block Diagrams → CONTROLS.md → Implementation
 
 ### When Debugging
+
 1. Check `DAISY_BUGS.md` for similar past issues
 2. Follow patterns in `DAISY_DEBUG_STRATEGY.md`
 3. Document your findings back to `DAISY_BUGS.md`
 
 ### For Comprehensive Understanding
+
 - Read `DAISY_TECHNICAL_REPORT.md` for full process documentation
 
 ---
@@ -370,4 +401,3 @@ quadrantChart
 | 2.1 | 2026-02-08 | Added tooling entries (create_field_project.sh, validate_daisy_code.py) |
 | 2.0 | 2026-02-08 | Added 10 mermaid diagrams, visual diagram index, usage-by-phase chart |
 | 1.0 | 2026-02-08 | Initial version: document overview, quick reference table |
-

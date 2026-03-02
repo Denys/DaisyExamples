@@ -1,0 +1,1881 @@
+CONTENTS:
+ 1. oscillator.cpp
+ 2. fm2.cpp
+ 3. blosc.cpp
+ 4. harmonic_osc.cpp
+ 5. vosim.cpp
+ 6. zoscillator.cpp
+ 7. varisaw.cpp
+ 8. variableshapeosc.cpp
+ 9. grainlet.cpp
+10. formantosc.cpp
+11. adenv.cpp
+12. adsr.cpp
+13. analogbassdrum.cpp
+14. analogsnaredrum.cpp
+15. synthbassdrum.cpp
+16. synthsnaredrum.cpp
+17. hihat.cpp
+18. whitenoise.cpp
+19. dust.cpp
+20. particle.cpp
+21. clockednoise.cpp
+22. fractal_noise.cpp
+23. metro.cpp
+24. line.cpp
+25. phasor.cpp
+26. port.cpp
+27. maytrig.cpp
+28. samplehold.cpp
+29. jitter.cpp
+30. dcblock.cpp
+31. crossfade.cpp
+32. balance.cpp
+33. sampleratereducer.cpp
+
+=================================================================================
+
+___Makefile template___
+# Project Name
+TARGET = [ProjectName]
+
+# Sources
+CPP_SOURCES = [ProjectName].cpp 
+
+# Library Locations
+LIBDAISY_DIR = ../../../libDaisy
+DAISYSP_DIR = ../../../DaisySP
+
+# Uncomment for LGPL modules (StringVoice, ModalVoice, ReverbSc)
+# USE_DAISYSP_LGPL = 1
+
+# Core location, and generic makefile.
+SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
+include $(SYSTEM_FILES_DIR)/Makefile
+
+___
+
+___oscillator.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Oscillator osc;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sig;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sig = osc.Process();
+
+        // left out
+        out[i] = sig;
+
+        // right out
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and oscillator daisysp module
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    osc.Init(sample_rate);
+
+    // Set parameters for oscillator
+    osc.SetWaveform(osc.WAVE_SIN);
+    osc.SetFreq(440);
+    osc.SetAmp(0.5);
+
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+
+    while(1) {}
+}
+
+___
+
+___fm2.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed hw;
+Fm2              osc;
+Oscillator       lfo1, lfo2, lfo3;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float output;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        float lfo1out = lfo1.Process();
+        float lfo2out = lfo2.Process();
+        float lfo3out = lfo3.Process();
+
+        osc.SetIndex(lfo1out);
+        osc.SetRatio(lfo2out + 3);
+        osc.SetFrequency((lfo3out + 1) * 220.f + 440.f);
+
+        output = osc.Process();
+        out[i] = out[i + 1] = output;
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and daisysp modules
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    osc.Init(sample_rate);
+    lfo1.Init(sample_rate);
+    lfo2.Init(sample_rate);
+    lfo3.Init(sample_rate);
+
+    lfo1.SetFreq(.05f);
+
+    lfo2.SetFreq(.01f);
+    lfo2.SetWaveform(Oscillator::WAVE_SQUARE);
+
+    lfo3.SetFreq(.5f);
+    lfo3.SetAmp(1);
+    lfo3.SetWaveform(Oscillator::WAVE_SQUARE);
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___blosc.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed hw;
+static BlOsc     osc;
+static Metro     tick;
+
+uint8_t     waveform;
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sig;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        if(tick.Process())
+        {
+            waveform++;
+            osc.SetWaveform(waveform % 3);
+        }
+
+        sig = osc.Process();
+
+        out[i] = sig;
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    osc.Init(sample_rate);
+
+    tick.Init(1.0f, sample_rate);
+
+    osc.SetFreq(440);
+    osc.SetAmp(0.5);
+    osc.SetPw(.5);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___harmonic_osc.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed              hw;
+static HarmonicOscillator<16> harm;
+static Oscillator             lfo;
+static AdEnv                  env;
+
+float scale[] = {55.f, 65.41f, 73.42f, 82.41f, 98.f, 110.f};
+int   note    = 0;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    for(size_t i = 0; i < size; i += 2)
+    {
+        //retrig env on EOC and go to next note
+        if(!env.GetCurrentSegment())
+        {
+            env.Trigger();
+            harm.SetFreq(scale[note]);
+            note = (note + 1) % 6;
+        }
+
+        //calculate the new amplitudes based on env value
+        float center = env.Process();
+        for(int i = 0; i < 16; i++)
+        {
+            float dist = fabsf(center - (float)i) + 1.f;
+            harm.SetSingleAmp(1.f / ((float)dist * 10.f), i);
+        }
+
+        out[i] = out[i + 1] = harm.Process();
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and daisysp modules
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    //init harmonic oscillator
+    harm.Init(sample_rate);
+    harm.SetFirstHarmIdx(1);
+
+    //init envelope
+    env.Init(sample_rate);
+    env.SetTime(ADENV_SEG_ATTACK, 0.05f);
+    env.SetTime(ADENV_SEG_DECAY, 0.35f);
+    env.SetMin(0.0);
+    env.SetMax(15.f);
+    env.SetCurve(0); // linear
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___vosim.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed       hw;
+VosimOscillator vosim;
+Oscillator      lfo;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float mod = lfo.Process();
+        vosim.SetForm2Freq(817.2f * (mod + 1.f));
+        vosim.SetShape(mod);
+
+        out[0][i] = out[1][i] = vosim.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    vosim.Init(sample_rate);
+    vosim.SetFreq(105.f);
+    vosim.SetForm1Freq(1390.7);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(.5f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___zoscillator.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed   hw;
+ZOscillator zosc;
+Oscillator  lfo1, lfo2;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float mod1 = lfo1.Process();
+        float mod2 = lfo2.Process();
+
+        zosc.SetFormantFreq(250.f * (1.f + mod1 * .8f));
+        zosc.SetMode(mod2);
+
+        out[0][i] = out[1][i] = zosc.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    zosc.Init(sample_rate);
+    zosc.SetFreq(80.f);
+    zosc.SetShape(1.f);
+
+    lfo1.Init(sample_rate);
+    lfo1.SetAmp(1.f);
+    lfo1.SetFreq(1.f);
+
+    lfo2.Init(sample_rate);
+    lfo2.SetAmp(1.f);
+    lfo2.SetFreq(.5f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___varisaw.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed             hw;
+VariableSawOscillator varisaw;
+Oscillator            lfo;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float sig = lfo.Process();
+        varisaw.SetPW(sig);
+
+        out[0][i] = out[1][i] = varisaw.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    varisaw.Init(sample_rate);
+    varisaw.SetFreq(62.5f);
+    varisaw.SetWaveshape(1.f);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(1.f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___variableshapeosc.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed               hw;
+VariableShapeOscillator variosc;
+Oscillator              lfo, lfo2;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float mod  = lfo.Process();
+        float mod2 = lfo2.Process();
+        variosc.SetSyncFreq(110.f * (mod + 3));
+        variosc.SetPW(mod * .8f);
+        variosc.SetWaveshape(mod2);
+
+        out[0][i] = out[1][i] = variosc.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    variosc.Init(sample_rate);
+    variosc.SetSync(true);
+    variosc.SetFreq(110.f);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(.25f);
+
+    lfo2.Init(sample_rate);
+    lfo2.SetAmp(1.f);
+    lfo2.SetFreq(.125f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___grainlet.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed          hw;
+GrainletOscillator grainlet, subgrainlet;
+Oscillator         lfo;
+Metro              tick;
+
+float notes[]
+    = {329.63f, 392.f, 440.f, 392.f, 587.33f, 523.25f, 587.33f, 659.25};
+int idx = 0;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    for(size_t i = 0; i < size; i += 2)
+    {
+        if(tick.Process())
+        {
+            grainlet.SetFreq(notes[idx] * .5f);
+            subgrainlet.SetFreq(notes[idx] * .25f);
+            idx = (idx + 1) % 8;
+        }
+
+        float sig = fabsf(lfo.Process());
+        grainlet.SetShape(sig * .5f);
+        grainlet.SetFormantFreq(2000.f - 2000.f * sig);
+        subgrainlet.SetShape(.5f - sig * .5f);
+        subgrainlet.SetFormantFreq(2000.f * sig);
+
+        out[i]     = grainlet.Process();
+        out[i + 1] = subgrainlet.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    grainlet.Init(sample_rate);
+    grainlet.SetBleed(.5f);
+
+    subgrainlet.Init(sample_rate);
+    subgrainlet.SetBleed(1.f);
+
+    grainlet.SetFreq(notes[idx] * .5f);
+    subgrainlet.SetFreq(notes[idx] * .25f);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(.125f);
+
+    tick.Init(11.f, sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___formantosc.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed         hw;
+static FormantOscillator form[2];
+static Metro             tick;
+static Oscillator        lfo;
+
+float freqs[3][2] = {{390, 2300}, {610, 1900}, {820, 1530}};
+int   idx         = 0;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    for(size_t i = 0; i < size; i += 2)
+    {
+        if(tick.Process())
+        {
+            idx = (idx + 1) % 3;
+        }
+
+        form[0].SetPhaseShift(lfo.Process());
+        form[1].SetPhaseShift(lfo.Process());
+
+        form[0].SetFormantFreq(freqs[idx][0]);
+        form[1].SetFormantFreq(freqs[idx][1]);
+        out[i] = out[i + 1]
+            = (form[0].Process() * .6f + form[1].Process() * .4f);
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and oscillator daisysp module
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    form[0].Init(sample_rate);
+    form[0].SetCarrierFreq(200.f);
+
+    form[1].Init(sample_rate);
+    form[1].SetCarrierFreq(200.f);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(1.f);
+    lfo.SetFreq(.2f);
+
+    tick.Init(1.f, sample_rate);
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___adenv.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+// Shortening long macro for sample rate
+#ifndef sample_rate
+
+#endif
+
+// Interleaved audio definitions
+#define LEFT (i)
+#define RIGHT (i + 1)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static AdEnv      env;
+static Oscillator osc;
+static Metro      tick;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float osc_out, env_out;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        // When the metro ticks, trigger the envelope to start.
+        if(tick.Process())
+        {
+            env.Trigger();
+        }
+
+        // Use envelope to control the amplitude of the oscillator.
+        env_out = env.Process();
+        osc.SetAmp(env_out);
+        osc_out = osc.Process();
+
+        out[LEFT]  = osc_out;
+        out[RIGHT] = osc_out;
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and daisysp modules
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    env.Init(sample_rate);
+    osc.Init(sample_rate);
+
+    // Set up metro to pulse every second
+    tick.Init(1.0f, sample_rate);
+
+    // set adenv parameters
+    env.SetTime(ADENV_SEG_ATTACK, 0.15);
+    env.SetTime(ADENV_SEG_DECAY, 0.35);
+    env.SetMin(0.0);
+    env.SetMax(0.25);
+    env.SetCurve(0); // linear
+
+    // Set parameters for oscillator
+    osc.SetWaveform(osc.WAVE_TRI);
+    osc.SetFreq(220);
+    osc.SetAmp(0.25);
+
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+
+    while(1) {}
+}
+
+___
+
+___adsr.cpp___
+// adsr envelope example
+
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+// Shortening long macro for sample rate
+#ifndef sample_rate
+
+#endif
+
+// Interleaved audio definitions
+#define LEFT (i)
+#define RIGHT (i + 1)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Adsr       env;
+static Oscillator osc;
+static Metro      tick;
+bool              gate;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float osc_out, env_out;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        // When the metro ticks, trigger the envelope to start.
+        if(tick.Process())
+        {
+            gate = !gate;
+        }
+
+        // Use envelope to control the amplitude of the oscillator.
+        env_out = env.Process(gate);
+        osc.SetAmp(env_out);
+        osc_out = osc.Process();
+
+        out[LEFT]  = osc_out;
+        out[RIGHT] = osc_out;
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and daisysp modules
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    env.Init(sample_rate);
+    osc.Init(sample_rate);
+
+    // Set up metro to pulse every second
+    tick.Init(1.0f, sample_rate);
+
+    //Set envelope parameters
+    env.SetTime(ADSR_SEG_ATTACK, .1);
+    env.SetTime(ADSR_SEG_DECAY, .1);
+    env.SetTime(ADSR_SEG_RELEASE, .01);
+
+    env.SetSustainLevel(.25);
+
+    // Set parameters for oscillator
+    osc.SetWaveform(osc.WAVE_TRI);
+    osc.SetFreq(220);
+    osc.SetAmp(0.25);
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___analogbassdrum.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed      hw;
+AnalogBassDrum bd;
+Metro          tick;
+
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        bool t = tick.Process();
+        if(t)
+        {
+            bd.SetTone(.7f * random() / (float)RAND_MAX);
+            bd.SetDecay(random() / (float)RAND_MAX);
+            bd.SetSelfFmAmount(random() / (float)RAND_MAX);
+        }
+
+        out[0][i] = out[1][i] = bd.Process(t);
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    bd.Init(sample_rate);
+    bd.SetFreq(50.f);
+
+    tick.Init(2.f, sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___analogsnaredrum.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed       hw;
+AnalogSnareDrum sd;
+Metro           tick;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        bool t = tick.Process();
+        if(t)
+        {
+            sd.SetDecay(random() / (float)RAND_MAX);
+            sd.SetSnappy(random() / (float)RAND_MAX);
+            sd.SetTone(.8f * random() / (float)RAND_MAX);
+        }
+        out[0][i] = out[1][i] = sd.Process(t);
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    tick.Init(2.f, sample_rate);
+
+    sd.Init(sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___synthbassdrum.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed         hw;
+SyntheticBassDrum bd;
+Metro             tick;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float t = tick.Process();
+        if(t)
+        {
+            bd.SetAccent(random() / (float)RAND_MAX);
+            bd.SetDirtiness(random() / (float)RAND_MAX);
+            bd.SetDecay(random() / (float)RAND_MAX);
+        }
+        out[0][i] = out[1][i] = bd.Process(t);
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    bd.Init(sample_rate);
+    bd.SetFreq(50.f);
+    bd.SetDirtiness(.5f);
+    bd.SetFmEnvelopeAmount(.6f);
+
+    tick.Init(2.f, sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___synthsnaredrum.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed          hw;
+SyntheticSnareDrum sd;
+Metro              tick;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        bool t = tick.Process();
+        if(t)
+        {
+            sd.SetAccent(random() / (float)RAND_MAX);
+            sd.SetDecay(random() / (float)RAND_MAX);
+            sd.SetSnappy(random() / (float)RAND_MAX);
+        }
+        out[0][i] = out[1][i] = sd.Process(t);
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    tick.Init(2.f, sample_rate);
+
+    sd.Init(sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___hihat.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed hw;
+HiHat<>   hihat;
+Metro     tick;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        bool t = tick.Process();
+        if(t)
+        {
+            hihat.SetDecay(random() / (float)RAND_MAX);
+            hihat.SetSustain((random() / (float)RAND_MAX) > .8f);
+            hihat.SetTone(random() / (float)RAND_MAX);
+            hihat.SetNoisiness(random() / (float)RAND_MAX);
+        }
+        out[0][i] = out[1][i] = hihat.Process(t);
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    hihat.Init(sample_rate);
+
+    tick.Init(8.f, sample_rate);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___whitenoise.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static WhiteNoise nse;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sig;
+
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sig = nse.Process();
+
+        out[i] = sig;
+        out[i + 1] = sig;
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    nse.Init();
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___dust.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed  hw;
+Dust       dust;
+Oscillator lfo;
+void       AudioCallback(AudioHandle::InputBuffer  in,
+                         AudioHandle::OutputBuffer out,
+                         size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        dust.SetDensity(fabsf(lfo.Process()));
+        out[0][i] = out[1][i] = dust.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    dust.Init();
+    lfo.Init(sample_rate);
+    lfo.SetFreq(.1f);
+    lfo.SetAmp(1.f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+
+___particle.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed  hw;
+Particle   particle;
+Oscillator lfo;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        particle.SetDensity(fabsf(lfo.Process()));
+        out[0][i] = out[1][i] = particle.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(.5f);
+    lfo.SetFreq(.1f);
+
+    particle.Init(sample_rate);
+    particle.SetSpread(2.f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___clockednoise.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed    hw;
+ClockedNoise noise;
+Oscillator   lfo;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        noise.SetFreq(fabsf(lfo.Process()));
+        out[0][i] = out[1][i] = noise.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    noise.Init(sample_rate);
+
+    lfo.Init(sample_rate);
+    lfo.SetAmp(sample_rate / 3.f);
+    lfo.SetFreq(.125f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___fractal_noise.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed hw;
+
+FractalRandomGenerator<ClockedNoise, 5> fract;
+Oscillator                              lfo[2];
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        fract.SetFreq(fabsf(lfo[0].Process()));
+        fract.SetColor(fabsf(lfo[1].Process()));
+        out[0][i] = out[1][i] = fract.Process();
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    fract.Init(sample_rate);
+    fract.SetFreq(sample_rate / 10.f);
+
+    lfo[0].Init(sample_rate);
+    lfo[1].Init(sample_rate);
+
+    lfo[0].SetFreq(.25f);
+    lfo[0].SetAmp(sample_rate / 3.f);
+    lfo[1].SetFreq(.1f);
+    lfo[1].SetAmp(1.f);
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
+___metro.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Metro      clock;
+static Oscillator osc_sine;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float   sine, freq;
+    uint8_t tic;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        tic = clock.Process();
+        if(tic)
+        {
+            freq = rand() % 500;
+            osc_sine.SetFreq(freq);
+        }
+
+        sine = osc_sine.Process();
+
+        out[i] = sine;
+        out[i + 1] = sine;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    clock.Init(2, sample_rate);
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___line.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Line       line_seg;
+static Oscillator osc_sine;
+
+uint8_t finished;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sine, freq;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        if(finished)
+        {
+            line_seg.Start(100, 500, 1);
+        }
+
+        freq = line_seg.Process(&finished);
+        osc_sine.SetFreq(freq);
+        sine = osc_sine.Process();
+
+        out[i] = sine;
+        out[i + 1] = sine;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    line_seg.Init(sample_rate);
+    finished = 1;
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___phasor.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Phasor     ramp;
+static Oscillator osc_sine;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sine, freq;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        freq = ramp.Process() * 300;
+
+        osc_sine.SetFreq(freq);
+        sine = osc_sine.Process();
+
+        out[i] = sine;
+        out[i + 1] = sine;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    ramp.Init(sample_rate, 1, 0);
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___port.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Port       slew;
+static Metro      clock;
+static Oscillator osc_sine;
+
+float freq;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float   sine, slewed_freq;
+    uint8_t tic;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        tic = clock.Process();
+        if(tic)
+        {
+            freq = rand() % 500;
+        }
+
+        slewed_freq = slew.Process(freq);
+        osc_sine.SetFreq(slewed_freq);
+
+        sine = osc_sine.Process();
+
+        out[i] = sine;
+        out[i + 1] = sine;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    slew.Init(sample_rate, .09);
+
+    clock.Init(1, sample_rate);
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+
+___maytrig.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+#define LEFT (i)
+#define RIGHT (i + 1)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static AdEnv      env;
+static Oscillator osc;
+static Maytrig    maytrig;
+static Metro      tick;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float osc_out, env_out;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        if(tick.Process())
+        {
+            if(maytrig.Process(.7))
+            {
+                env.Trigger();
+                osc.SetFreq(((float)rand() / RAND_MAX) * 800 + 200);
+            }
+        }
+
+        env_out = env.Process();
+        osc.SetAmp(env_out);
+        osc_out = osc.Process();
+
+        out[LEFT]  = osc_out;
+        out[RIGHT] = osc_out;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    env.Init(sample_rate);
+    osc.Init(sample_rate);
+    tick.Init(1, sample_rate);
+
+    env.SetTime(ADENV_SEG_ATTACK, 0.01);
+    env.SetTime(ADENV_SEG_DECAY, 0.1);
+    env.SetMin(0.0);
+    env.SetMax(0.25);
+    env.SetCurve(0.5);
+
+    osc.SetWaveform(osc.WAVE_TRI);
+    osc.SetFreq(220);
+    osc.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___samplehold.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+// Interleaved audio definitions
+#define LEFT (i)
+#define RIGHT (i + 1)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Oscillator osc;
+static Metro      tick;
+static WhiteNoise noise;
+static AdEnv      env;
+static SampleHold sh;
+
+float osc_out = 0;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float osc_out, env_out;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        uint8_t trig      = tick.Process();
+        float   newsample = sh.Process(
+            trig, noise.Process() * 500 + 500, sh.MODE_SAMPLE_HOLD);
+
+        // When the metro ticks, trigger the envelope to start.
+        if(trig)
+        {
+            env.Trigger();
+            tick.SetFreq(newsample / 100 + 1);
+            osc.SetFreq(newsample);
+        }
+
+        // Use envelope to control the amplitude of the oscillator.
+        env_out = env.Process();
+        osc.SetAmp(env_out);
+        osc_out = osc.Process();
+
+        out[LEFT]  = osc_out;
+        out[RIGHT] = osc_out;
+    }
+}
+
+int main(void)
+{
+    // initialize seed hardware and daisysp modules
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    env.Init(sample_rate);
+    osc.Init(sample_rate);
+    tick.Init(1, sample_rate);
+
+    // set adenv parameters
+    env.SetTime(ADENV_SEG_ATTACK, 0.01);
+    env.SetTime(ADENV_SEG_DECAY, 0.1);
+    env.SetMin(0.0);
+    env.SetMax(0.25);
+    env.SetCurve(0.5);
+
+    // Set parameters for oscillator
+    osc.SetWaveform(osc.WAVE_TRI);
+    osc.SetFreq(220);
+    osc.SetAmp(0.25);
+
+    noise.Init();
+
+    // start callback
+    hw.StartAudio(AudioCallback);
+
+
+    while(1) {}
+}
+
+___
+
+___jitter.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+#ifndef sample_rate
+
+#endif
+
+#define LEFT (i)
+#define RIGHT (i + 1)
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Jitter     jitter;
+static Oscillator osc;
+bool              gate;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float osc_out, jitter_out;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        jitter_out = jitter.Process();
+        osc.SetAmp(jitter_out);
+        osc_out = osc.Process();
+
+        out[LEFT]  = osc_out;
+        out[RIGHT] = osc_out;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    osc.Init(sample_rate);
+
+    jitter.Init(sample_rate);
+    jitter.SetAmp(1);
+    jitter.SetCpsMin(1);
+    jitter.SetCpsMax(25);
+
+    osc.SetWaveform(osc.WAVE_TRI);
+    osc.SetFreq(440);
+    osc.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___dcblock.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static DcBlock    block;
+static Oscillator osc_sine;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float output;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        output = osc_sine.Process();
+        output += 1;
+        output = block.Process(output);
+
+        out[i] = output;
+        out[i + 1] = output;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    block.Init(sample_rate);
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___crossfade.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static CrossFade  cfade;
+static Oscillator osc_sine, osc_saw, lfo;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float saw, sine, pos, output;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sine = osc_sine.Process();
+        saw  = osc_saw.Process();
+
+        pos = lfo.Process();
+        pos = (pos + 1) / 2;
+
+        cfade.SetPos(pos);
+        output = cfade.Process(sine, saw);
+
+        out[i] = output;
+        out[i + 1] = output;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    cfade.Init();
+    cfade.SetCurve(CROSSFADE_LIN);
+
+    osc_sine.Init(sample_rate);
+    osc_sine.SetWaveform(Oscillator::WAVE_SIN);
+    osc_sine.SetFreq(100);
+    osc_sine.SetAmp(0.25);
+
+    osc_saw.Init(sample_rate);
+    osc_saw.SetWaveform(Oscillator::WAVE_POLYBLEP_SAW);
+    osc_saw.SetFreq(100);
+    osc_saw.SetAmp(0.25);
+
+    lfo.Init(sample_rate);
+    lfo.SetWaveform(Oscillator::WAVE_TRI);
+    lfo.SetFreq(.25);
+    lfo.SetAmp(1);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___balance.cpp___
+#include "daisysp.h"
+#include "daisy_seed.h"
+
+using namespace daisysp;
+using namespace daisy;
+
+static DaisySeed  hw;
+static Oscillator osc1, osc2, lfo;
+static Balance    bal;
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t                                size)
+{
+    float sig1, sig2, sig3;
+    for(size_t i = 0; i < size; i += 2)
+    {
+        sig1 = osc1.Process();
+        sig2 = osc2.Process();
+        sig3 = lfo.Process();
+        sig2 *= sig3;
+        sig1 = bal.Process(sig1, sig2);
+
+        out[i] = sig1;
+        out[i + 1] = sig1;
+    }
+}
+
+int main(void)
+{
+    float sample_rate;
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+    osc1.Init(sample_rate);
+    osc2.Init(sample_rate);
+    lfo.Init(sample_rate);
+    bal.Init(sample_rate);
+
+    osc1.SetWaveform(osc1.WAVE_SIN);
+    osc1.SetFreq(440);
+    osc1.SetAmp(0.1);
+
+    osc2.SetWaveform(osc2.WAVE_SIN);
+    osc2.SetFreq(220);
+    osc2.SetAmp(0.5);
+
+    lfo.SetWaveform(lfo.WAVE_TRI);
+    lfo.SetFreq(0.4);
+    lfo.SetAmp(0.5);
+
+    hw.StartAudio(AudioCallback);
+
+    while(1) {}
+}
+
+___
+
+___sampleratereducer.cpp___
+#include "daisy_seed.h"
+#include "daisysp.h"
+
+using namespace daisy;
+using namespace daisysp;
+
+DaisySeed         hw;
+Oscillator        osc, lfo;
+SampleRateReducer sr;
+
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        sr.SetFreq(fabsf(lfo.Process()));
+        out[0][i] = out[1][i] = sr.Process(osc.Process());
+    }
+}
+
+int main(void)
+{
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    float sample_rate = hw.AudioSampleRate();
+
+    osc.Init(sample_rate);
+    osc.SetFreq(440.f);
+
+    lfo.Init(sample_rate);
+    lfo.SetFreq(.1f);
+    lfo.SetAmp(.25f);
+
+    sr.Init();
+
+    hw.StartAudio(AudioCallback);
+    while(1) {}
+}
+
+___
+
