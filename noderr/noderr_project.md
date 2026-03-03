@@ -1,7 +1,7 @@
 ﻿> **[INSTANCE: DAISY-FIRMWARE]** C/C++ ARM / libDaisy / DaisySP | Noderr: `DaisyExamples/noderr/` | Mode: Firmware
 > NodeIDs: `DSP_`, `FX_`, `LIBDASY_`, `DVPE_` — Wrong instance? Navigate to `noderr/noderr/`
 
-# Project Overview: DaisyExamples - Visual Programming Environment
+# Project Overview: Daisy Firmware — DVPE C++ Pipeline
 
 ---
 
@@ -11,8 +11,8 @@
 
 ### 1. Project Goal & Core Problem
 
-*   **Goal:** Create a comprehensive collection of embedded audio processing examples and a visual programming environment for the Daisy audio platform, enabling musicians and developers to create audio effects and instruments.
-*   **Core Problem Solved:** Provides working code examples, documentation, and tools for developing audio applications on embedded hardware (Daisy platform), reducing the learning curve for embedded audio development.
+*   **Goal:** Provide the C++ firmware layer for the DVPE pipeline — verifying, building, and flashing generated audio firmware to Daisy hardware (Seed, Pod, Field). Includes a reference library of DaisySP module implementations (oscillators, filters, effects, granular) that serve as verified building blocks for DVPE code generation.
+*   **Core Problem Solved:** DVPE generates C++ firmware from visual patches; this noderr instance ensures that generated code compiles correctly, follows Daisy real-time audio constraints, and produces audible output on hardware. The reference examples (DaisySP Core, Field Effects, Nimbus) serve as ground-truth verification targets for the code generator.
 
 ---
 
@@ -67,7 +67,7 @@
 | Version Control      | Git                                                                                                                                                               |                                          | Repository hosted on GitHub                         |
 | Deployment Target    | Daisy Hardware (Seed, Patch, Pod, Field, Petal, Versio, Cube)                                                                                                  |                                          | Various Daisy board form factors                   |
 | Debugger             | OpenOCD / ST-Link                                                                                                                                                |                                          | For debugging with GDB                            |
-| Programmer           | USB DFU (Device Firmware Update)                                                                                                                                |                                          | Primary flashing method                            |
+| Programmer           | ST-Link via OpenOCD (`make program`) — DFU fallback (`make program-dfu`)                                                                                       |                                          | ST-Link is **primary**; DFU only if ST-Link unavailable |
 
 * **Tech Stack Rationale:** C++ with libDaisy provides low-level hardware access while DaisySP offers pre-built DSP algorithms. The ARM GCC toolchain is the standard for STM32 embedded development. Using Makefile-based builds keeps the system simple and portable.
 
@@ -179,7 +179,7 @@
 3.  **Install Build Tools:** Ensure make is available (MINGW64 on Windows)
 4.  **Build Libraries:** `./ci/build_libs.sh`
 5.  **Build Example:** `cd field/chorus && make`
-6.  **Flash to Hardware:** Use Daisy Web Programmer or `make program-dfu`
+6.  **Flash to Hardware:** `make program` (ST-Link, primary) — or `make program-dfu` (DFU fallback)
 
 ---
 

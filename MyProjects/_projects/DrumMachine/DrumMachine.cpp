@@ -6,12 +6,12 @@
  * Controls:
  * Knob 0: Tempo (40-240 BPM)
  * Knob 1: Swing (0-50%)
- * Knob 2: Kick Decaym
+ * Knob 2: Kick Decay
  * Knob 3: Kick Tone
  * Knob 4: Snare Decay
  * Knob 5: Snare Snappy
  * Knob 6: HiHat Decay
- * Knob 7: Master Volume
+ * Knob 7: Hi-Hat Tone (2000-8000 Hz)
  * 
  * Keys 0-15: Toggle steps for selected drum
  * SW1: Cycle selected drum (Kick → Snare → HiHat)
@@ -53,12 +53,12 @@ uint32_t lastStepTime = 0;
 float kvals[8];
 
 // Smoothed parameters
-float kickDecay = 0.5f, kickDecayCur = 0.5f;
+float kickDecay = 0.0f, kickDecayCur = 0.0f;
 float kickTone = 0.5f, kickToneCur = 0.5f;
 float snareDecay = 0.5f, snareDecayCur = 0.5f;
 float snareSnappy = 0.5f, snareSnappyCur = 0.5f;
 float hihatDecay = 0.5f, hihatDecayCur = 0.5f;
-float masterVol = 0.8f, masterVolCur = 0.8f;
+float hihatTone = 0.5f, hihatToneCur = 0.5f;
 
 // LED arrays
 const size_t knob_leds[8] = {
@@ -171,19 +171,21 @@ void AudioCallback(AudioHandle::InputBuffer  in,
         fonepole(snareDecayCur, snareDecay, 0.001f);
         fonepole(snareSnappyCur, snareSnappy, 0.001f);
         fonepole(hihatDecayCur, hihatDecay, 0.001f);
-        fonepole(masterVolCur, masterVol, 0.001f);
-        
+        fonepole(hihatToneCur, hihatTone, 0.001f);
+
         kick.SetDecay(kickDecayCur);
         kick.SetTone(kickToneCur);
         snare.SetDecay(snareDecayCur);
         snare.SetSnappy(snareSnappyCur);
         hihat.SetDecay(hihatDecayCur);
-        
+        hihat.SetFreq(2000.f + hihatToneCur * 6000.f);
+
         float kickOut  = kick.Process(false);
         float snareOut = snare.Process(false);
         float hihatOut = hihat.Process(false);
-        
-        float mix = (kickOut + snareOut * 0.8f + hihatOut * 0.4f) * masterVolCur;
+
+        float mix = (kickOut + snareOut * 0.8f + hihatOut * 0.4f) * 0.8f;
+        if(!isfinite(mix)) mix = 0.f;
         mix = fclamp(mix, -1.f, 1.f);
         
         out[0][i] = mix;
@@ -199,6 +201,8 @@ int main(void)
     kick.Init(sr);
     kick.SetFreq(50.f);
     kick.SetAccent(0.8f);
+    kick.SetSelfFmAmount(0.1f);    // limit self-FM: swing 50–444 Hz vs default 53–3990 Hz
+    kick.SetAttackFmAmount(0.2f);  // reduce FM sweep on attack
     
     snare.Init(sr);
     snare.SetFreq(200.f);
@@ -248,12 +252,12 @@ int main(void)
         // Parameter mapping from knobs
         tempo       = 40.f + kvals[0] * 200.f;
         swing       = kvals[1] * 0.5f;
-        kickDecay   = kvals[2];
+        kickDecay   = fclamp(kvals[2], 0.0f, 0.4f);
         kickTone    = kvals[3];
         snareDecay  = kvals[4];
         snareSnappy = kvals[5];
         hihatDecay  = kvals[6];
-        masterVol   = kvals[7];
+        hihatTone   = kvals[7];
         
         uint32_t now = System::GetNow();
         uint32_t interval = GetStepInterval();

@@ -37,8 +37,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/denko/OneDrive/Documents/DaisyExamplesCopy/field/stringvoice",
-      "program": "c:/Users/denko/OneDrive/Documents/DaisyExamplesCopy/field/stringvoice/build/Debug/outDebug",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
