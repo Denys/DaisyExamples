@@ -89,12 +89,10 @@ struct Params
     float wet_dry    = 0.6f;  // K8
 } params;
 
-// Smoothed values for click-free audio
+// Smoothed values for click-free audio (reverb + LPF params only)
+// Note: brightness/damping/structure are applied at 60Hz via ProcessKnobs() — sufficient
 struct SmoothedParams
 {
-    float brightness = 0.5f;
-    float damping    = 0.4f;
-    float structure  = 0.5f;
     float lpf_cutoff = 4000.f;
     float rev_decay  = 0.85f;
     float rev_lpfreq = 8000.f;
@@ -144,9 +142,15 @@ inline float Smooth(float current, float target, float coeff)
     return current + (target - current) * coeff;
 }
 
+// xorshift32 PRNG — lock-free, callback-safe (rand() is NOT real-time safe)
+static uint32_t xr_state = 12345u;
+
 inline float RandomFloat()
 {
-    return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    xr_state ^= xr_state << 13;
+    xr_state ^= xr_state >> 17;
+    xr_state ^= xr_state << 5;
+    return static_cast<float>(xr_state) * 2.3283064e-10f; // / 2^32 → [0, 1)
 }
 
 int FreqToMidiNote(float freq)
@@ -279,11 +283,6 @@ void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
                    size_t                    size)
 {
-    // Smooth parameters per block
-    smoothed.brightness = Smooth(smoothed.brightness, params.brightness, kSmoothCoeff);
-    smoothed.damping    = Smooth(smoothed.damping, params.damping, kSmoothCoeff);
-    smoothed.structure  = Smooth(smoothed.structure, params.structure, kSmoothCoeff);
-
     // Map reverb knob to reverb params
     float rev_target_decay  = 0.7f + params.reverb_size * 0.29f;  // 0.70 - 0.99
     float rev_target_lpfreq = 2000.f + params.reverb_size * 14000.f; // 2k-16k
@@ -374,8 +373,8 @@ int main(void)
     hw.SetAudioBlockSize(kRecommendedBlockSize);
     float sr = hw.AudioSampleRate();
 
-    // Seed random from hardware timer
-    srand(System::GetNow());
+    // Seed xorshift32 PRNG from hardware timer (never allow 0)
+    xr_state = System::GetNow() | 1u;
 
     // Initialize UI helpers
     keyLeds.Init(&hw);
@@ -429,6 +428,17 @@ int main(void)
     keyLeds.SetB(0, true); // B1: Glass Bells
 
     hw.StartAdc();
+
+    // Pre-warm display: process controls once so last_values[] holds real ADC
+    // readings. Without this, FieldOLEDDisplay's -999 init causes all 8 knobs
+    // to register as "changed" on the first SetValue() loop, leaving K8 (Wet/Dry)
+    // as active_param_ at boot — display shows "> Wet/Dry" for 2 seconds.
+    hw.ProcessAllControls();
+    ProcessKnobs();
+    for(int i = 0; i < 8; i++)
+        display.SetValue(i, knob_values[i]);
+    display.SetActiveParam(-1); // start in voice view, no active param
+
     hw.StartAudio(AudioCallback);
 
     // ========================================================================

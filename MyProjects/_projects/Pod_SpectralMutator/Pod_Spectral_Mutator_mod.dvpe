@@ -1,0 +1,1368 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Pod Spectral Mutator",
+      "author": "Antigravity",
+      "description": "Simplified DVPE schematic for the Pod spectral mutator. One shared processing lane represents the duplicated left/right mono chain; stereo appears only at the audio input and output ports.",
+      "created": "2026-03-07T12:00:00Z",
+      "modified": "2026-03-07T15:58:51.715Z",
+      "version": "1.0.0",
+      "targetHardware": "pod",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "audio_in_1",
+        "definitionId": "audio_input",
+        "position": {
+          "x": 40,
+          "y": 720
+        },
+        "parameterValues": {},
+        "label": "AUDIO IN L/R"
+      },
+      {
+        "id": "audio_out_1",
+        "definitionId": "audio_output",
+        "position": {
+          "x": 2540,
+          "y": 720
+        },
+        "parameterValues": {},
+        "label": "AUDIO OUT L/R"
+      },
+      {
+        "id": "encoder_page",
+        "definitionId": "encoder",
+        "position": {
+          "x": 0,
+          "y": 460
+        },
+        "parameterValues": {
+          "min_val": 0,
+          "max_val": 2,
+          "step": 1
+        },
+        "label": "ENC PAGE"
+      },
+      {
+        "id": "switch_mode",
+        "definitionId": "switch",
+        "position": {
+          "x": 0,
+          "y": 220
+        },
+        "parameterValues": {
+          "channel": "0"
+        },
+        "label": "B1 MODE"
+      },
+      {
+        "id": "switch_hold",
+        "definitionId": "switch",
+        "position": {
+          "x": 180,
+          "y": -80
+        },
+        "parameterValues": {
+          "channel": "1"
+        },
+        "label": "B2 HOLD"
+      },
+      {
+        "id": "led_page",
+        "definitionId": "led_output",
+        "position": {
+          "x": 360,
+          "y": 460
+        },
+        "parameterValues": {
+          "pin": 0,
+          "pwm": true
+        },
+        "label": "LED PAGE"
+      },
+      {
+        "id": "led_state",
+        "definitionId": "led_output",
+        "position": {
+          "x": 680,
+          "y": 500
+        },
+        "parameterValues": {
+          "pin": 1,
+          "pwm": true
+        },
+        "label": "LED MODE/HOLD"
+      },
+      {
+        "id": "knob_focus_freq",
+        "definitionId": "knob",
+        "position": {
+          "x": 260,
+          "y": -300
+        },
+        "parameterValues": {
+          "channel": "0",
+          "min": 80,
+          "max": 20000,
+          "curve": "logarithmic"
+        },
+        "label": "K1 FOCUS FREQ"
+      },
+      {
+        "id": "knob_focus_res",
+        "definitionId": "knob",
+        "position": {
+          "x": 380,
+          "y": 900
+        },
+        "parameterValues": {
+          "channel": "1",
+          "min": 0,
+          "max": 1,
+          "curve": "linear"
+        },
+        "label": "K2 FOCUS RES"
+      },
+      {
+        "id": "knob_motion_depth",
+        "definitionId": "knob",
+        "position": {
+          "x": -60,
+          "y": -260
+        },
+        "parameterValues": {
+          "channel": "0",
+          "min": 0,
+          "max": 1,
+          "curve": "linear"
+        },
+        "label": "K1 MOTION DEPTH"
+      },
+      {
+        "id": "knob_motion_rate",
+        "definitionId": "knob",
+        "position": {
+          "x": -60,
+          "y": -160
+        },
+        "parameterValues": {
+          "channel": "1",
+          "min": 0.05,
+          "max": 4,
+          "curve": "logarithmic"
+        },
+        "label": "K2 MOTION RATE"
+      },
+      {
+        "id": "knob_color_amount",
+        "definitionId": "knob",
+        "position": {
+          "x": -20,
+          "y": 20
+        },
+        "parameterValues": {
+          "channel": "0",
+          "min": 0,
+          "max": 1,
+          "curve": "linear"
+        },
+        "label": "K1 COLOR AMT"
+      },
+      {
+        "id": "knob_wet_mix",
+        "definitionId": "knob",
+        "position": {
+          "x": 160,
+          "y": 140
+        },
+        "parameterValues": {
+          "channel": "1",
+          "min": 0,
+          "max": 1,
+          "curve": "linear"
+        },
+        "label": "K2 WET MIX"
+      },
+      {
+        "id": "counter_mode",
+        "definitionId": "counter",
+        "position": {
+          "x": 200,
+          "y": 240
+        },
+        "parameterValues": {
+          "max": 4
+        },
+        "label": "MODE COUNT"
+      },
+      {
+        "id": "map_mode_select",
+        "definitionId": "range_map",
+        "position": {
+          "x": 360,
+          "y": 220
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 3,
+          "out_min": 0,
+          "out_max": 1
+        },
+        "label": "MODE -> MUX"
+      },
+      {
+        "id": "map_mode_led",
+        "definitionId": "range_map",
+        "position": {
+          "x": 360,
+          "y": 340
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 3,
+          "out_min": 0.25,
+          "out_max": 0.85
+        },
+        "label": "MODE -> LED"
+      },
+      {
+        "id": "toggle_hold",
+        "definitionId": "toggle",
+        "position": {
+          "x": 580,
+          "y": 20
+        },
+        "parameterValues": {},
+        "label": "HOLD TOGGLE"
+      },
+      {
+        "id": "lfo_motion",
+        "definitionId": "lfo",
+        "position": {
+          "x": 880,
+          "y": -140
+        },
+        "parameterValues": {
+          "freq": 1,
+          "amp": 0.3,
+          "waveform": "WAVE_SIN"
+        },
+        "label": "MOTION LFO",
+        "enabledCvPorts": [
+          "amp",
+          "freq"
+        ]
+      },
+      {
+        "id": "sample_hold_motion",
+        "definitionId": "sample_hold",
+        "position": {
+          "x": 1140,
+          "y": -40
+        },
+        "parameterValues": {
+          "mode": 0
+        },
+        "label": "HOLD SAMPLE"
+      },
+      {
+        "id": "select_motion_source",
+        "definitionId": "select",
+        "position": {
+          "x": 1340,
+          "y": -40
+        },
+        "parameterValues": {},
+        "label": "LIVE / HELD MOTION"
+      },
+      {
+        "id": "dc_mode_offset",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 940,
+          "y": 120
+        },
+        "parameterValues": {
+          "value": 1.1
+        },
+        "label": "DC 1.10"
+      },
+      {
+        "id": "dc_freq_min",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 1580,
+          "y": 260
+        },
+        "parameterValues": {
+          "value": 80
+        },
+        "label": "MIN 80 Hz"
+      },
+      {
+        "id": "dc_freq_max",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 1580,
+          "y": 340
+        },
+        "parameterValues": {
+          "value": 15484
+        },
+        "label": "MAX MODE FREQ"
+      },
+      {
+        "id": "dc_delay_min",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 1800,
+          "y": 120
+        },
+        "parameterValues": {
+          "value": 1
+        },
+        "label": "MIN DELAY"
+      },
+      {
+        "id": "dc_delay_max",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 1800,
+          "y": 0
+        },
+        "parameterValues": {
+          "value": 25
+        },
+        "label": "MAX DELAY"
+      },
+      {
+        "id": "dc_led_hold",
+        "definitionId": "dc_source",
+        "position": {
+          "x": 360,
+          "y": 580
+        },
+        "parameterValues": {
+          "value": 1
+        },
+        "label": "LED HOLD FULL"
+      },
+      {
+        "id": "map_trim",
+        "definitionId": "range_map",
+        "position": {
+          "x": 360,
+          "y": 100
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 1,
+          "out_min": 0.9,
+          "out_max": 0.7
+        },
+        "label": "COLOR -> TRIM"
+      },
+      {
+        "id": "map_drive",
+        "definitionId": "range_map",
+        "position": {
+          "x": 1000,
+          "y": 520
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 1,
+          "out_min": 0.08,
+          "out_max": 0.8
+        },
+        "label": "COLOR -> DRIVE"
+      },
+      {
+        "id": "map_comb_feedback",
+        "definitionId": "range_map",
+        "position": {
+          "x": 980,
+          "y": 400
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 1,
+          "out_min": 0.2,
+          "out_max": 0.75
+        },
+        "label": "COLOR -> COMB FB"
+      },
+      {
+        "id": "map_peak_gain",
+        "definitionId": "range_map",
+        "position": {
+          "x": 980,
+          "y": 280
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 1,
+          "out_min": 3,
+          "out_max": 12
+        },
+        "label": "COLOR -> PEAK GAIN"
+      },
+      {
+        "id": "map_peak_bw",
+        "definitionId": "range_map",
+        "position": {
+          "x": 1140,
+          "y": 940
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 1,
+          "out_min": 200,
+          "out_max": 4000
+        },
+        "label": "RES -> PEAK BW"
+      },
+      {
+        "id": "map_focus_to_delay",
+        "definitionId": "range_map",
+        "position": {
+          "x": 1360,
+          "y": -180
+        },
+        "parameterValues": {
+          "in_min": 80,
+          "in_max": 20000,
+          "out_min": 3,
+          "out_max": 21
+        },
+        "label": "FOCUS -> COMB DELAY"
+      },
+      {
+        "id": "scale_motion_freq",
+        "definitionId": "scale",
+        "position": {
+          "x": 1580,
+          "y": -40
+        },
+        "parameterValues": {
+          "factor": 0.35
+        },
+        "label": "MOTION x0.35"
+      },
+      {
+        "id": "scale_motion_delay",
+        "definitionId": "scale",
+        "position": {
+          "x": 1580,
+          "y": -180
+        },
+        "parameterValues": {
+          "factor": 2
+        },
+        "label": "MOTION DELAY MOD"
+      },
+      {
+        "id": "add_mode_base",
+        "definitionId": "add",
+        "position": {
+          "x": 1140,
+          "y": 120
+        },
+        "parameterValues": {
+          "inputCount": "2"
+        },
+        "label": "1.10 + COLOR"
+      },
+      {
+        "id": "add_mode_factor",
+        "definitionId": "add",
+        "position": {
+          "x": 1360,
+          "y": 120
+        },
+        "parameterValues": {
+          "inputCount": "2"
+        },
+        "label": "MODE FACTOR"
+      },
+      {
+        "id": "multiply_mode_freq",
+        "definitionId": "multiply",
+        "position": {
+          "x": 1580,
+          "y": 120
+        },
+        "parameterValues": {},
+        "label": "FOCUS x FACTOR"
+      },
+      {
+        "id": "clamp_mode_freq",
+        "definitionId": "clamp",
+        "position": {
+          "x": 1780,
+          "y": 280
+        },
+        "parameterValues": {},
+        "label": "CLAMP MODE FREQ"
+      },
+      {
+        "id": "add_delay_l",
+        "definitionId": "add",
+        "position": {
+          "x": 1800,
+          "y": -180
+        },
+        "parameterValues": {
+          "inputCount": "2"
+        },
+        "label": "DELAY SUM"
+      },
+      {
+        "id": "clamp_delay_l",
+        "definitionId": "clamp",
+        "position": {
+          "x": 2020,
+          "y": -180
+        },
+        "parameterValues": {},
+        "label": "CLAMP DLY"
+      },
+      {
+        "id": "map_page_led",
+        "definitionId": "range_map",
+        "position": {
+          "x": 180,
+          "y": 460
+        },
+        "parameterValues": {
+          "in_min": 0,
+          "in_max": 2,
+          "out_min": 0.25,
+          "out_max": 1
+        },
+        "label": "PAGE -> LED"
+      },
+      {
+        "id": "select_state_led",
+        "definitionId": "select",
+        "position": {
+          "x": 600,
+          "y": 340
+        },
+        "parameterValues": {},
+        "label": "MODE / HOLD LED"
+      },
+      {
+        "id": "input_sum",
+        "definitionId": "mixer",
+        "position": {
+          "x": 220,
+          "y": 720
+        },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 0.5,
+          "level_2": 0.5,
+          "level_3": 0,
+          "level_4": 0,
+          "master": 1
+        },
+        "label": "INPUT SUM"
+      },
+      {
+        "id": "trim_l",
+        "definitionId": "gain",
+        "position": {
+          "x": 420,
+          "y": 720
+        },
+        "parameterValues": {
+          "gain": 1
+        },
+        "label": "TRIM",
+        "enabledCvPorts": [
+          "gain"
+        ]
+      },
+      {
+        "id": "focus_svf_l",
+        "definitionId": "svf",
+        "position": {
+          "x": 660,
+          "y": 720
+        },
+        "parameterValues": {
+          "freq": 1200,
+          "res": 0.25,
+          "drive": 0
+        },
+        "label": "FOCUS SVF",
+        "enabledCvPorts": [
+          "freq",
+          "res"
+        ]
+      },
+      {
+        "id": "focus_mix_l",
+        "definitionId": "mixer",
+        "position": {
+          "x": 900,
+          "y": 720
+        },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 0.7,
+          "level_2": 0.3,
+          "level_3": 0,
+          "level_4": 0,
+          "master": 1
+        },
+        "label": "FOCUS MIX"
+      },
+      {
+        "id": "mode_svf_l",
+        "definitionId": "svf",
+        "position": {
+          "x": 1140,
+          "y": 720
+        },
+        "parameterValues": {
+          "freq": 1800,
+          "res": 0.35,
+          "drive": 0
+        },
+        "label": "MODE SVF",
+        "enabledCvPorts": [
+          "freq",
+          "res"
+        ]
+      },
+      {
+        "id": "notch_mix_l",
+        "definitionId": "mixer",
+        "position": {
+          "x": 1380,
+          "y": 620
+        },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 0.55,
+          "level_2": 0.45,
+          "level_3": 0,
+          "level_4": 0,
+          "master": 1
+        },
+        "label": "NOTCH MIX"
+      },
+      {
+        "id": "peak_l",
+        "definitionId": "peakFilter",
+        "position": {
+          "x": 1380,
+          "y": 720
+        },
+        "parameterValues": {
+          "frequency": 1800,
+          "bandwidth": 1200,
+          "gain": 6
+        },
+        "label": "PEAK EQ",
+        "enabledCvPorts": [
+          "frequency",
+          "bandwidth",
+          "gain"
+        ]
+      },
+      {
+        "id": "peak_mix_l",
+        "definitionId": "mixer",
+        "position": {
+          "x": 1620,
+          "y": 720
+        },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 0.5,
+          "level_2": 0.5,
+          "level_3": 0,
+          "level_4": 0,
+          "master": 1
+        },
+        "label": "PEAK MIX"
+      },
+      {
+        "id": "comb_l",
+        "definitionId": "universalComb",
+        "position": {
+          "x": 1380,
+          "y": 820
+        },
+        "parameterValues": {
+          "delayMs": 10,
+          "feedback": 0.25,
+          "feedforward": 0.35,
+          "blend": 0.65
+        },
+        "label": "COMB",
+        "enabledCvPorts": [
+          "delayMs",
+          "feedback"
+        ]
+      },
+      {
+        "id": "mode_mux_l",
+        "definitionId": "mux",
+        "position": {
+          "x": 1860,
+          "y": 720
+        },
+        "parameterValues": {
+          "inputCount": "4",
+          "select": 0
+        },
+        "label": "MODE MUX",
+        "enabledCvPorts": [
+          "select"
+        ]
+      },
+      {
+        "id": "drive_l",
+        "definitionId": "overdrive",
+        "position": {
+          "x": 2080,
+          "y": 720
+        },
+        "parameterValues": {
+          "drive": 0.25
+        },
+        "label": "DRIVE",
+        "enabledCvPorts": [
+          "drive"
+        ]
+      },
+      {
+        "id": "wetdry_l",
+        "definitionId": "crossfade",
+        "position": {
+          "x": 2300,
+          "y": 720
+        },
+        "parameterValues": {
+          "pos": 0.35
+        },
+        "label": "WET/DRY",
+        "enabledCvPorts": [
+          "pos"
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-encoder-page-led-map",
+        "sourceBlockId": "encoder_page",
+        "sourcePortId": "value",
+        "targetBlockId": "map_page_led",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-page-led-map-led",
+        "sourceBlockId": "map_page_led",
+        "sourcePortId": "out",
+        "targetBlockId": "led_page",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-switch-mode-counter",
+        "sourceBlockId": "switch_mode",
+        "sourcePortId": "trig",
+        "targetBlockId": "counter_mode",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-counter-mode-select",
+        "sourceBlockId": "counter_mode",
+        "sourcePortId": "out",
+        "targetBlockId": "map_mode_select",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-counter-mode-led",
+        "sourceBlockId": "counter_mode",
+        "sourcePortId": "out",
+        "targetBlockId": "map_mode_led",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-switch-hold-toggle",
+        "sourceBlockId": "switch_hold",
+        "sourcePortId": "trig",
+        "targetBlockId": "toggle_hold",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-switch-hold-sample",
+        "sourceBlockId": "switch_hold",
+        "sourcePortId": "trig",
+        "targetBlockId": "sample_hold_motion",
+        "targetPortId": "trigger",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-mode-led-select-a",
+        "sourceBlockId": "map_mode_led",
+        "sourcePortId": "out",
+        "targetBlockId": "select_state_led",
+        "targetPortId": "in_a",
+        "type": "cv"
+      },
+      {
+        "id": "conn-mode-led-select-b",
+        "sourceBlockId": "dc_led_hold",
+        "sourcePortId": "out",
+        "targetBlockId": "select_state_led",
+        "targetPortId": "in_b",
+        "type": "cv"
+      },
+      {
+        "id": "conn-toggle-hold-select-led",
+        "sourceBlockId": "toggle_hold",
+        "sourcePortId": "out",
+        "targetBlockId": "select_state_led",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-select-led-state",
+        "sourceBlockId": "select_state_led",
+        "sourcePortId": "out",
+        "targetBlockId": "led_state",
+        "targetPortId": "brightness",
+        "type": "cv"
+      },
+      {
+        "id": "conn-motion-depth-lfo",
+        "sourceBlockId": "knob_motion_depth",
+        "sourcePortId": "out",
+        "targetBlockId": "lfo_motion",
+        "targetPortId": "amp_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-motion-rate-lfo",
+        "sourceBlockId": "knob_motion_rate",
+        "sourcePortId": "out",
+        "targetBlockId": "lfo_motion",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-lfo-samplehold",
+        "sourceBlockId": "lfo_motion",
+        "sourcePortId": "out",
+        "targetBlockId": "sample_hold_motion",
+        "targetPortId": "input",
+        "type": "cv"
+      },
+      {
+        "id": "conn-lfo-select-live",
+        "sourceBlockId": "lfo_motion",
+        "sourcePortId": "out",
+        "targetBlockId": "select_motion_source",
+        "targetPortId": "in_a",
+        "type": "cv"
+      },
+      {
+        "id": "conn-samplehold-select-held",
+        "sourceBlockId": "sample_hold_motion",
+        "sourcePortId": "out",
+        "targetBlockId": "select_motion_source",
+        "targetPortId": "in_b",
+        "type": "audio"
+      },
+      {
+        "id": "conn-toggle-hold-select-motion",
+        "sourceBlockId": "toggle_hold",
+        "sourcePortId": "out",
+        "targetBlockId": "select_motion_source",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-selected-motion-scale-freq",
+        "sourceBlockId": "select_motion_source",
+        "sourcePortId": "out",
+        "targetBlockId": "scale_motion_freq",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-selected-motion-scale-delay",
+        "sourceBlockId": "select_motion_source",
+        "sourcePortId": "out",
+        "targetBlockId": "scale_motion_delay",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-color-add-base",
+        "sourceBlockId": "knob_color_amount",
+        "sourcePortId": "out",
+        "targetBlockId": "add_mode_base",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "conn-dc-offset-add-base",
+        "sourceBlockId": "dc_mode_offset",
+        "sourcePortId": "out",
+        "targetBlockId": "add_mode_base",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "conn-add-base-add-factor",
+        "sourceBlockId": "add_mode_base",
+        "sourcePortId": "out",
+        "targetBlockId": "add_mode_factor",
+        "targetPortId": "in1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-motion-scale-add-factor",
+        "sourceBlockId": "scale_motion_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "add_mode_factor",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focus-multiply-modefreq",
+        "sourceBlockId": "knob_focus_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "multiply_mode_freq",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "conn-modefactor-multiply-modefreq",
+        "sourceBlockId": "add_mode_factor",
+        "sourcePortId": "out",
+        "targetBlockId": "multiply_mode_freq",
+        "targetPortId": "in2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-modefreq-clamp",
+        "sourceBlockId": "multiply_mode_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_mode_freq",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-modefreq-min",
+        "sourceBlockId": "dc_freq_min",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_mode_freq",
+        "targetPortId": "min",
+        "type": "cv"
+      },
+      {
+        "id": "conn-modefreq-max",
+        "sourceBlockId": "dc_freq_max",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_mode_freq",
+        "targetPortId": "max",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focusres-map-peakbw",
+        "sourceBlockId": "knob_focus_res",
+        "sourcePortId": "out",
+        "targetBlockId": "map_peak_bw",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focusfreq-map-delay",
+        "sourceBlockId": "knob_focus_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "map_focus_to_delay",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-delay-base-left",
+        "sourceBlockId": "map_focus_to_delay",
+        "sourcePortId": "out",
+        "targetBlockId": "add_delay_l",
+        "targetPortId": "in1",
+        "type": "cv"
+      },
+      {
+        "id": "conn-motiondelay-left",
+        "sourceBlockId": "scale_motion_delay",
+        "sourcePortId": "out",
+        "targetBlockId": "add_delay_l",
+        "targetPortId": "in2",
+        "type": "cv"
+      },
+      {
+        "id": "conn-adddelay-left-clamp",
+        "sourceBlockId": "add_delay_l",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_delay_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-delaymin-left",
+        "sourceBlockId": "dc_delay_min",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_delay_l",
+        "targetPortId": "min",
+        "type": "cv"
+      },
+      {
+        "id": "conn-delaymax-left",
+        "sourceBlockId": "dc_delay_max",
+        "sourcePortId": "out",
+        "targetBlockId": "clamp_delay_l",
+        "targetPortId": "max",
+        "type": "cv"
+      },
+      {
+        "id": "conn-color-map-trim",
+        "sourceBlockId": "knob_color_amount",
+        "sourcePortId": "out",
+        "targetBlockId": "map_trim",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-color-map-drive",
+        "sourceBlockId": "knob_color_amount",
+        "sourcePortId": "out",
+        "targetBlockId": "map_drive",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-color-map-combfb",
+        "sourceBlockId": "knob_color_amount",
+        "sourcePortId": "out",
+        "targetBlockId": "map_comb_feedback",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-color-map-peakgain",
+        "sourceBlockId": "knob_color_amount",
+        "sourcePortId": "out",
+        "targetBlockId": "map_peak_gain",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-trim-cv-left",
+        "sourceBlockId": "map_trim",
+        "sourcePortId": "out",
+        "targetBlockId": "trim_l",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-trim-left-focus",
+        "sourceBlockId": "trim_l",
+        "sourcePortId": "out",
+        "targetBlockId": "focus_svf_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-focusfreq-left",
+        "sourceBlockId": "knob_focus_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "focus_svf_l",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focusres-left",
+        "sourceBlockId": "knob_focus_res",
+        "sourcePortId": "out",
+        "targetBlockId": "focus_svf_l",
+        "targetPortId": "res_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focus-low-left",
+        "sourceBlockId": "focus_svf_l",
+        "sourcePortId": "low",
+        "targetBlockId": "focus_mix_l",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-focus-band-left",
+        "sourceBlockId": "focus_svf_l",
+        "sourcePortId": "band",
+        "targetBlockId": "focus_mix_l",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-focusmix-left-mode",
+        "sourceBlockId": "focus_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_svf_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-modefreq-left-svf",
+        "sourceBlockId": "clamp_mode_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_svf_l",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-moderes-left-svf",
+        "sourceBlockId": "knob_focus_res",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_svf_l",
+        "targetPortId": "res_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focusmix-left-notchmix",
+        "sourceBlockId": "focus_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "notch_mix_l",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-mode-notch-left",
+        "sourceBlockId": "mode_svf_l",
+        "sourcePortId": "notch",
+        "targetBlockId": "notch_mix_l",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-focusmix-left-peak",
+        "sourceBlockId": "focus_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-modefreq-left-peak",
+        "sourceBlockId": "clamp_mode_freq",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_l",
+        "targetPortId": "frequency_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-peakbw-left",
+        "sourceBlockId": "map_peak_bw",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_l",
+        "targetPortId": "bandwidth_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-peakgain-left",
+        "sourceBlockId": "map_peak_gain",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_l",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-focusmix-left-peakmix",
+        "sourceBlockId": "focus_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_mix_l",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-peak-left-peakmix",
+        "sourceBlockId": "peak_l",
+        "sourcePortId": "out",
+        "targetBlockId": "peak_mix_l",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-focusmix-left-comb",
+        "sourceBlockId": "focus_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "comb_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-delay-left-comb",
+        "sourceBlockId": "clamp_delay_l",
+        "sourcePortId": "out",
+        "targetBlockId": "comb_l",
+        "targetPortId": "delayMs_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-combfb-left",
+        "sourceBlockId": "map_comb_feedback",
+        "sourcePortId": "out",
+        "targetBlockId": "comb_l",
+        "targetPortId": "feedback_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-notch-left-mux",
+        "sourceBlockId": "notch_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_mux_l",
+        "targetPortId": "in0",
+        "type": "audio"
+      },
+      {
+        "id": "conn-band-left-mux",
+        "sourceBlockId": "mode_svf_l",
+        "sourcePortId": "band",
+        "targetBlockId": "mode_mux_l",
+        "targetPortId": "in1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-peakmix-left-mux",
+        "sourceBlockId": "peak_mix_l",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_mux_l",
+        "targetPortId": "in2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-comb-left-mux",
+        "sourceBlockId": "comb_l",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_mux_l",
+        "targetPortId": "in3",
+        "type": "audio"
+      },
+      {
+        "id": "conn-modeselect-left-mux",
+        "sourceBlockId": "map_mode_select",
+        "sourcePortId": "out",
+        "targetBlockId": "mode_mux_l",
+        "targetPortId": "select_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-mux-left-drive",
+        "sourceBlockId": "mode_mux_l",
+        "sourcePortId": "out",
+        "targetBlockId": "drive_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-drivecv-left",
+        "sourceBlockId": "map_drive",
+        "sourcePortId": "out",
+        "targetBlockId": "drive_l",
+        "targetPortId": "drive_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-drive-left-wet",
+        "sourceBlockId": "drive_l",
+        "sourcePortId": "out",
+        "targetBlockId": "wetdry_l",
+        "targetPortId": "in2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-wetmix-left",
+        "sourceBlockId": "knob_wet_mix",
+        "sourcePortId": "out",
+        "targetBlockId": "wetdry_l",
+        "targetPortId": "pos_cv",
+        "type": "cv"
+      },
+      {
+        "id": "conn-left-out",
+        "sourceBlockId": "wetdry_l",
+        "sourcePortId": "out",
+        "targetBlockId": "audio_out_1",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "conn-audio-left-inputsum",
+        "sourceBlockId": "audio_in_1",
+        "sourcePortId": "left",
+        "targetBlockId": "input_sum",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-audio-right-inputsum",
+        "sourceBlockId": "audio_in_1",
+        "sourcePortId": "right",
+        "targetBlockId": "input_sum",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-inputsum-trim",
+        "sourceBlockId": "input_sum",
+        "sourcePortId": "out",
+        "targetBlockId": "trim_l",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-inputsum-dry",
+        "sourceBlockId": "input_sum",
+        "sourcePortId": "out",
+        "targetBlockId": "wetdry_l",
+        "targetPortId": "in1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-right-out",
+        "sourceBlockId": "wetdry_l",
+        "sourcePortId": "out",
+        "targetBlockId": "audio_out_1",
+        "targetPortId": "right",
+        "type": "audio"
+      }
+    ],
+    "hardwareConfig": {
+      "platform": "pod",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}

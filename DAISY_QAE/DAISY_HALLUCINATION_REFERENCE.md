@@ -159,12 +159,13 @@ bool IsRunning()                                              // [audio]
 
 // AdEnv — Attack-Decay (two-segment envelope, no sustain)
 void Init(float sample_rate)                                  // [init]
-void SetTime(AdEnv::SegIndex seg, float time)                 // [control]
+void SetTime(uint8_t seg, float time)                         // [control]
   // ^ seg: ADENV_SEG_ATTACK | ADENV_SEG_DECAY
-void SetCurve(float shape)        // -1.0 - 1.0               [control]
-void SetMax(float max)            // 0.0 - 1.0                [control]
-void SetMin(float min)            // 0.0 - 1.0                [control]
-float Process(bool trig)                                      // [audio]
+void SetCurve(float scalar)      // -100.0 to 100.0+         [control]
+void SetMax(float max)           // any float                [control]
+void SetMin(float min)           // any float                [control]
+void Trigger()                                               // [audio]
+float Process()                                              // [audio]
 ```
 
 ---

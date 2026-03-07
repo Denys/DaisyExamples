@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <cstdlib>
 
 /**
  * RandomClock - Sample-accurate trigger generator with variable density.
@@ -58,7 +57,9 @@ class RandomClock
         float ms  = 50.0f + inv * inv * inv * 1950.0f;
 
         // Humanize: +/- 20% jitter
-        float jitter = 0.8f + (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 0.4f;
+        static uint32_t s = 0xC10C1001u;
+        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+        float jitter = 0.8f + static_cast<float>(s) * 2.3283064e-10f * 0.4f;
         ms *= jitter;
 
         uint32_t samples = static_cast<uint32_t>(ms * sample_rate_ / 1000.0f);

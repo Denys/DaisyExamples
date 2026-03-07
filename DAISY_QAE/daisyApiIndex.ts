@@ -442,18 +442,21 @@ export const DAISY_API_INDEX: Record<string, DaisyAPIRef> = {
         methods: [
             { name: 'Init', signature: 'void Init(float sample_rate)', callRate: 'init' },
             {
-                name: 'SetTime', signature: 'void SetTime(AdEnv::SegIndex seg, float time)',
+                name: 'SetTime', signature: 'void SetTime(uint8_t seg, float time)',
                 paramRanges: 'time: 0.001 - 10.0 s', callRate: 'control',
                 notes: '⚠ SetTime (not SetAttack/SetDecay). seg: ADENV_SEG_ATTACK | ADENV_SEG_DECAY'
             },
-            { name: 'SetCurve', signature: 'void SetCurve(float shape)', paramRanges: '-1.0 - 1.0', callRate: 'control' },
-            { name: 'SetMax', signature: 'void SetMax(float max)', paramRanges: '0.0 - 1.0', callRate: 'control' },
-            { name: 'SetMin', signature: 'void SetMin(float min)', paramRanges: '0.0 - 1.0', callRate: 'control' },
+            {
+                name: 'SetCurve', signature: 'void SetCurve(float scalar)', paramRanges: '-100.0 to 100.0+', callRate: 'control',
+                notes: '0.0 is linear. Positive values create a log curve.'
+            },
+            { name: 'SetMax', signature: 'void SetMax(float max)', paramRanges: 'any float', callRate: 'control' },
+            { name: 'SetMin', signature: 'void SetMin(float min)', paramRanges: 'any float', callRate: 'control' },
             {
                 name: 'Trigger', signature: 'void Trigger()', callRate: 'audio',
-                notes: 'Triggers the envelope. Also available: Process(bool trig) variant.'
+                notes: 'Triggers or retriggers the envelope. Call once when an event starts.'
             },
-            { name: 'Process', signature: 'float Process(bool trig)', callRate: 'audio' },
+            { name: 'Process', signature: 'float Process()', callRate: 'audio' },
         ]
     },
 

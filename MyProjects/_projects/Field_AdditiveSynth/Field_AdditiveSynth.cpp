@@ -712,9 +712,9 @@ int main(void) {
         ProcessSwitches();
         ProcessKnobs();
         ProcessKeys();
-
-        // Display & LEDs
         UpdateDisplay();
+
+        // LEDs
         UpdateLeds();
 
         System::Delay(1);

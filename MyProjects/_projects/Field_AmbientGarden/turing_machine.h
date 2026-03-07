@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <cstdlib>
 
 /**
  * TuringMachine - 16-bit shift register with probabilistic feedback.
@@ -27,7 +26,9 @@ class TuringMachine
     {
         uint16_t msb = (register_ >> (length_ - 1)) & 1;
 
-        float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        static uint32_t s = 0xACE10001u;
+        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+        float r = static_cast<float>(s) * 2.3283064e-10f;
         if(r < probability_)
         {
             msb ^= 1;

@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Untitled Patch",
+      "author": "",
+      "description": "",
+      "created": "2026-03-07T16:11:23.720Z",
+      "modified": "2026-03-07T16:11:27.979Z",
+      "version": "1.0.0",
+      "targetHardware": "seed",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "0fa4680f-00a1-4d4d-89d4-4bc665dfb0c8",
+        "definitionId": "oscillator",
+        "position": {
+          "x": -40,
+          "y": -200
+        },
+        "parameterValues": {
+          "freq": 440,
+          "amp": 0.5,
+          "waveform": "WAVE_POLYBLEP_SAW",
+          "pw": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "0401e795-87cc-405d-9c9e-b0e2f881f53e",
+        "definitionId": "fm2",
+        "position": {
+          "x": 220,
+          "y": 120
+        },
+        "parameterValues": {
+          "freq": 440,
+          "ratio": 2,
+          "index": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "0c76cae2-fdc8-4e6f-b421-ad8d940b0254",
+        "definitionId": "grainlet_oscillator",
+        "position": {
+          "x": 180,
+          "y": 460
+        },
+        "parameterValues": {
+          "freq": 220,
+          "formant_freq": 800,
+          "shape": 0.5,
+          "bleed": 0
+        },
+        "selected": false
+      }
+    ],
+    "connections": [],
+    "hardwareConfig": {
+      "platform": "seed",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}

@@ -16,6 +16,14 @@
  * Keys 0-15: Toggle steps for selected drum
  * SW1: Cycle selected drum (Kick → Snare → HiHat)
  * SW2: Play/Pause
+ *
+ * Kick Voice Select (patch CV OUT1 to):
+ *   CV IN1: Analog Kick  — 808-style resonant filter [default]
+ *   CV IN3: Synth Kick   — 909-ish modulated oscillator
+ *
+ * Snare Voice Select (patch CV OUT2 to):
+ *   CV IN2: Analog Snare — 808-style multi-mode resonators
+ *   CV IN4: Synth Snare  — noise + oscillator mix [default]
  */
 
 #include "daisy_field.h"
@@ -24,11 +32,20 @@
 using namespace daisy;
 using namespace daisysp;
 
+// ── Voice selection defaults ─────────────────────────────────────────────────
+// Edit these two lines and recompile to switch voices.
+// CV patch (OUT1→IN3 / OUT2→IN2) overrides these at runtime when CV outs work.
+#define DEFAULT_SYNTH_KICK   1  // 0=AnalogBassDrum (808)    1=SyntheticBassDrum (909)
+#define DEFAULT_ANALOG_SNARE 1  // 0=SyntheticSnareDrum       1=AnalogSnareDrum (808)
+// ─────────────────────────────────────────────────────────────────────────────
+
 DaisyField hw;
 
 // Drum voices
-AnalogBassDrum     kick;
-SyntheticSnareDrum snare;
+AnalogBassDrum     kick;        // CV IN1 → Analog Kick (default)
+SyntheticBassDrum  synthKick;   // CV IN3 → Synth Kick
+SyntheticSnareDrum snare;       // CV IN4 → Synth Snare (default)
+AnalogSnareDrum    analogSnare; // CV IN2 → Analog Snare
 HiHat<>            hihat;
 
 // Constants
@@ -43,6 +60,10 @@ uint8_t currentStep  = 0;
 uint8_t selectedDrum = 0;
 bool    playing      = true;
 uint8_t swingStep    = 0;
+
+// Voice selection (overridden by CV patch at runtime when CV outs reach >0.5 normalized)
+volatile bool useSynthKick   = DEFAULT_SYNTH_KICK;   // false=AnalogBassDrum, true=SyntheticBassDrum
+volatile bool useAnalogSnare = DEFAULT_ANALOG_SNARE; // false=SyntheticSnareDrum, true=AnalogSnareDrum
 
 // Timing
 float    tempo       = 120.f;
@@ -123,7 +144,9 @@ void UpdateDisplay()
     
     char buf[40];
     hw.display.SetCursor(0, 12);
-    sprintf(buf, "%s %dBPM Sw:%d%%", drumNames[selectedDrum], (int)tempo, (int)(swing * 100.f));
+    sprintf(buf, "K:%s S:%s %s %dBPM",
+        useSynthKick ? "S" : "A", useAnalogSnare ? "A" : "S",
+        drumNames[selectedDrum], (int)tempo);
     hw.display.WriteString(buf, Font_6x8, true);
     
     // Pattern boxes row 1 (steps 0-7)
@@ -145,7 +168,7 @@ void UpdateDisplay()
     }
     
     hw.display.SetCursor(0, 54);
-    sprintf(buf, "Step: %d/16", currentStep + 1);
+    sprintf(buf, "Stp:%d/16 Sw:%d%%", currentStep + 1, (int)(swing * 100.f));
     hw.display.WriteString(buf, Font_6x8, true);
     
     hw.display.Update();
@@ -175,13 +198,17 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
         kick.SetDecay(kickDecayCur);
         kick.SetTone(kickToneCur);
+        synthKick.SetDecay(kickDecayCur);
+        synthKick.SetTone(kickToneCur);
         snare.SetDecay(snareDecayCur);
         snare.SetSnappy(snareSnappyCur);
+        analogSnare.SetDecay(snareDecayCur);
+        analogSnare.SetSnappy(snareSnappyCur);
         hihat.SetDecay(hihatDecayCur);
         hihat.SetFreq(2000.f + hihatToneCur * 6000.f);
 
-        float kickOut  = kick.Process(false);
-        float snareOut = snare.Process(false);
+        float kickOut  = useSynthKick   ? synthKick.Process(false)   : kick.Process(false);
+        float snareOut = useAnalogSnare ? analogSnare.Process(false) : snare.Process(false);
         float hihatOut = hihat.Process(false);
 
         float mix = (kickOut + snareOut * 0.8f + hihatOut * 0.4f) * 0.8f;
@@ -203,15 +230,30 @@ int main(void)
     kick.SetAccent(0.8f);
     kick.SetSelfFmAmount(0.1f);    // limit self-FM: swing 50–444 Hz vs default 53–3990 Hz
     kick.SetAttackFmAmount(0.2f);  // reduce FM sweep on attack
-    
+
+    synthKick.Init(sr);
+    synthKick.SetFreq(50.f);
+    synthKick.SetAccent(0.8f);
+
     snare.Init(sr);
     snare.SetFreq(200.f);
     snare.SetAccent(0.8f);
-    
+
+    analogSnare.Init(sr);
+    analogSnare.SetFreq(200.f);
+    analogSnare.SetAccent(0.8f);
+
     hihat.Init(sr);
     hihat.SetFreq(3000.f);
     hihat.SetAccent(0.8f);
-    
+
+    // CV OUT1/OUT2 at 5V — patch to CV IN1/IN3 (kick) or CV IN2/IN4 (snare) to select voice
+    hw.SetCvOut1(4095);
+    hw.SetCvOut2(4095);
+
+    // Gate out held HIGH — use as 5V patch source if CV outs don't reach threshold
+    dsy_gpio_write(&hw.gate_out, 1);
+
     InitPatterns();
     
     hw.StartAdc();
@@ -228,7 +270,12 @@ int main(void)
         // Read knob values
         for(int i = 0; i < 8; i++)
             kvals[i] = hw.GetKnobValue(i);
-        
+
+        // CV voice selection (CV outs measured ~1V, normalized threshold is 0.5 — disabled)
+        // Re-enable when CV OUT voltage issue is resolved:
+        // useSynthKick   = (hw.GetCvValue(DaisyField::CV_3) > 0.5f);
+        // useAnalogSnare = (hw.GetCvValue(DaisyField::CV_2) > 0.5f);
+
         // Switch handling
         if(hw.GetSwitch(DaisyField::SW_1)->RisingEdge())
         {
@@ -269,8 +316,8 @@ int main(void)
             lastStepTime = now;
             
             // Trigger drums from main loop (timing-sensitive)
-            if(patterns[0][currentStep]) kick.Trig();
-            if(patterns[1][currentStep]) snare.Trig();
+            if(patterns[0][currentStep]) { if(useSynthKick)   synthKick.Trig();   else kick.Trig();  }
+            if(patterns[1][currentStep]) { if(useAnalogSnare) analogSnare.Trig(); else snare.Trig(); }
             if(patterns[2][currentStep]) hihat.Trig();
         }
         
