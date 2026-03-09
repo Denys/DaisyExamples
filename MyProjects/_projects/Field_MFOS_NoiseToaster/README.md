@@ -1,16 +1,19 @@
 # Field_MFOS_NoiseToaster
 
-`Field_MFOS_NoiseToaster` is a Daisy Field mono synth inspired by the MFOS Noise Toaster signal path and performance style. It keeps the patch compact and immediate: one oscillator, one noise source, one filter, one VCA envelope, and a small set of front-panel performance controls.
+`Field_MFOS_NoiseToaster` is a Daisy Field mono synth adapted from the MFOS Noise Toaster with a more analog-style control model than the first digital draft. The current build centers the patch around one `AREG`, repeat/manual behavior, manual retriggering, and three front-panel selector keys that cycle modes with LED on/blink/off feedback.
 
 ## What It Does
 
-- Single VCO with three waveforms: saw, square, triangle
-- White noise source with continuous oscillator/noise crossfade
-- Fixed AR contour routed to either pitch or filter
-- Shared LFO depth that simultaneously affects pitch vibrato and filter sweep
-- Resonant SVF low-pass filter
-- Fixed ADSR VCA envelope
-- Daisy Field OLED status screen
+- Monophonic `A1..A8` note select plus trigger
+- `B1` three-state VCO output cycling: `Saw / Square / Triangle`
+- `B2` three-state LFO wave cycling: `Sine / Square / Triangle`
+- `B3` three-state VCF modulation source cycling: `LFO / AREG / Off`
+- Live `AREG` attack and release on `K7` and `K8`
+- `B4` repeat/manual envelope behavior
+- `SW1` manual gate retrigger
+- `B5` VCA bypass
+- Low-pass SVF with source-selected modulation
+- OLED idle overview plus focused parameter zoom while a knob is moving
 - Stereo mirrored output
 
 ## Project Docs
@@ -21,93 +24,101 @@
 
 ## Analog Reference
 
-The analog reference for this project comparison is the original MFOS Noise Toaster documentation in:
+The analog comparison reference for this project is still:
 
 - [Make  Analog Synthesizers - Ray Wilson.pdf](./Make%20%20Analog%20Synthesizers%20-%20Ray%20Wilson.pdf)
 - [4-2_Noise_Toaster_Block_Diagram.png](./4-2_Noise_Toaster_Block_Diagram.png)
 
-The current Daisy Field patch is inspired by that signal path, but it is not yet a 1:1 digital replica of the analog control architecture.
+The current firmware is closer to that reference than the earlier Field version, but it is still an adaptation, not a literal panel-for-panel replica.
 
 ## Architecture Summary
 
-The synth runs as a single monophonic voice. Each key press selects one note from the Daisy Field A-row note map, then the audio path applies:
+The current firmware is an `AREG`-centric monophonic voice:
 
-1. VCO waveform generation
-2. Oscillator/noise blend
-3. Low-pass SVF filtering
-4. Fixed ADSR VCA envelope
-5. Output gain
+1. `A1..A8` select a note and trigger the contour
+2. `K1` coarse-tunes the selected pitch
+3. The VCO runs in one of three `B1`-selected waveforms
+4. A fixed `18%` white-noise blend is mixed in before the filter
+5. The SVF low-pass filter uses `K4` cutoff, `K5` resonance, and `K6` source-selected modulation depth
+6. The same `AREG` modulates pitch and, when selected on `B3`, the filter
+7. The same `AREG` also controls amplitude unless `B5` bypass is enabled
+8. Output is sent to both channels at a fixed internal level
 
-The AR contour is switchable between pitch modulation and filter modulation. The LFO does not have a routing selector in the current implementation; one depth control drives both pitch and filter modulation with fixed internal scaling.
+`B4` repeat mode retriggers the `AREG` automatically whenever it falls idle and a note is armed. In manual mode, a note press or `SW1` creates a single contour cycle.
 
 ## Quick Controls
 
 ### Knobs
 
-- `K1`: coarse tune, approximately +/- 1 octave around the selected note
-- `K2`: oscillator/noise mix
-- `K3`: base filter cutoff
-- `K4`: filter resonance
-- `K5`: AR contour depth
-- `K6`: LFO rate
-- `K7`: shared LFO depth
-- `K8`: output level
+- `K1`: VCO frequency / coarse tune
+- `K2`: VCO LFO modulation depth
+- `K3`: VCO AREG modulation depth
+- `K4`: VCF cutoff
+- `K5`: VCF resonance
+- `K6`: VCF modulation depth for the source selected on `B3`
+- `K7`: AREG attack
+- `K8`: AREG release
 
 ### Keyboard And Switches
 
-- `A1..A8`: play notes `C3, D3, E3, F3, G3, A3, B3, C4`
-- `B1/B2/B3`: select waveform `Saw / Square / Triangle`
-- `B4`: toggle hold/drone
-- `B5`: toggle AR destination `Pitch / Filter`
-- `SW1`: duplicate hold toggle
-- `SW2`: panic, gate off and hold off
+- `A1..A8`: select and trigger notes `C3, D3, E3, F3, G3, A3, B3, C4`
+- `B1`: cycle VCO output `Saw -> Square -> Triangle`
+- `B2`: cycle LFO wave `Sine -> Square -> Triangle`
+- `B3`: cycle VCF mod source `LFO -> AREG -> Off`
+- `B4`: toggle `Repeat / Manual`
+- `B5`: toggle `VCA Bypass`
+- `B6..B8`: unused in the current firmware
+- `SW1`: manual gate retrigger for the armed note
+- `SW2`: panic, clear the armed note and stop repeating activity
 
 ## Defaults And Startup Behavior
 
-- Boot waveform: `Saw`
-- Boot AR destination: `Pitch`
-- Hold starts `Off`
+- Boot VCO wave: `Saw`
+- Boot LFO wave: `Sine`
+- Boot VCF mod source: `LFO`
+- Boot repeat mode: `Manual`
+- Boot VCA bypass: `Off`
+- Boot state: no note armed
+- Fixed internal LFO rate: `2.2 Hz`
+- Fixed white-noise blend: `18%`
+- Fixed output level: `72%`
 - Output is duplicated to left and right channels
-- OLED shows waveform, hold state, and quick control reminders
-- Serial boot log prints a short startup summary over the seed logger
+- OLED shows all knob functions in idle view and zooms the active parameter while a knob is moving
+- Serial boot log prints the new mode mapping and fixed internal settings
 
-The synth is intentionally simple:
+## Fixed Internal Settings
 
-- It is monophonic, not polyphonic
-- The most recent played A-row note becomes the active pitch
-- Releasing an older held key does not restore a previous note
-- Envelope times are fixed in code; only depth, filter, mix, rate, and level are on the panel
+These are hard-coded in the current pass:
 
-## Fixed Internal Envelope Settings
+- LFO rate: `2.2 Hz`
+- White-noise blend: `18%`
+- Output level: `72%`
+- AREG curve: `-18.0`
 
-These are hard-coded in the current firmware:
-
-- VCA ADSR: attack `2 ms`, decay `120 ms`, sustain `0.75`, release `220 ms`
-- AR contour: attack `5 ms`, decay `280 ms`
+`K7` and `K8` do control `AREG` timing live, but the `LFO rate` and `output level` are fixed in this version to make room for the new analog-style panel functions on the eight available Field knobs.
 
 ## Analog-Faithfulness Gaps
 
-Compared with the original MFOS Noise Toaster described in the Ray Wilson reference, the current Field build still differs in several structural ways:
+Compared with the original MFOS Noise Toaster, the current Field build still differs in these important ways:
 
-- It is driven from an `A1..A8` note-key layout instead of centering on `Manual Gate` and `Repeat/Manual` interaction.
-- The AR envelope times are fixed in code instead of being front-panel `Attack` and `Release` controls.
-- The LFO is fixed to sine instead of offering the analog `Square / Differentiated Square / Integrated Square` selection.
-- The filter does not have a true `Mod Source` selector with dedicated modulation depth; LFO-to-filter is effectively always present.
-- The VCA is driven by a separate fixed ADSR instead of being directly shaped by the same AREG block, and there is no VCA bypass control.
-- VCO sync is not implemented.
-- Oscillator and noise input selection are simplified into a continuous crossfade instead of the analog switch-based routing.
+- It still uses an `A1..A8` note-key adaptation instead of the pure analog `Freq knob + Manual Gate` interaction model.
+- White noise is a fixed blend, not a discrete front-panel on/off source.
+- The analog `VCF input select` behavior is still simplified into one selected VCO waveform plus a fixed noise blend.
+- `VCO Sync` is still not implemented.
+- `LFO Rate` is now fixed internally rather than being a live panel control.
+- `Output Level` is fixed internally rather than exposed as a knob.
+- The original speaker / amp / line-out switching is not represented on Daisy Field.
 
-## Highest-Value Analog Improvements
+## Highest-Value Next Improvements
 
-After reviewing the Ray Wilson PDF, the best analog-faithful improvement per unit of work is now:
+After this pass, the best analog-faithful improvements per unit of work are now:
 
-1. Expose live AREG `Attack` and `Release` controls.
-2. Add `Repeat / Manual` behavior and a true `Manual Gate` action.
-3. Replace the fixed sine LFO with selectable `Square / Differentiated Square / Integrated Square` modes.
-4. Add a real VCF `Mod Source` selector and dedicated `Mod Depth`.
-5. Add `VCA Bypass` and move amplitude behavior closer to the analog AREG-driven VCA model.
-6. Add VCO sync behavior driven from the LFO square output.
-7. Replace the current oscillator/noise crossfade with a more analog-like input-selection model if strict control fidelity is the goal.
+1. Add white-noise on/off control instead of the fixed blend.
+2. Restore a live `LFO Rate` control.
+3. Restore a live `Output Level` control.
+4. Add `VCO Sync` driven from the LFO reset path.
+5. Move the pre-filter source routing closer to the analog `VCF input select` behavior.
+6. Add an optional no-key mode that behaves more like pure manual-gate analog operation.
 
 ## Build
 
@@ -124,10 +135,11 @@ make
 ## Known Limitations
 
 - No MIDI input handling in this project
-- No patch memory or preset system
-- No held-note stack or note priority recovery
-- No dedicated LFO routing switch; pitch and filter modulation are driven together
-- No manual gate / repeat behavior matching the analog Noise Toaster
-- No exposed AR attack and release controls
-- No LFO waveform selection, VCO sync, or VCA bypass
-- Build validation depends on local libDaisy core files being present
+- No preset or patch memory system
+- No note stack or last-note recovery
+- `B6..B8` are currently unused
+- No discrete white-noise switch yet
+- No live LFO-rate control in this pass
+- No live output-level control in this pass
+- No VCO sync yet
+- No literal analog speaker-stage replica

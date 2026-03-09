@@ -33,132 +33,170 @@ flowchart TB
     VCA --> OUT
 ```
 
-## 2. Current Firmware Block Diagram
+## 2. Analog Reference Audio Signal Flow
 
-This block diagram is a 1:1 representation of the current `Field_MFOS_NoiseToaster.cpp` firmware, drawn in the same style as the analog reference rather than the same architecture.
+```mermaid
+flowchart LR
+    VCOSEL["VCO Ramp / Square Select"] --> VCFIN["VCF Input"]
+    NOISE["White Noise Switch"] --> VCFIN
+    VCFIN --> VCF["VCF"]
+    VCF --> VCA["VCA"]
+    VCF -. bypass .-> OUT["Output Stage"]
+    VCA --> OUT
+
+    LFO["LFO"] -. VCO mod .-> VCOSEL
+    LFO -. sync .-> VCOSEL
+    LFO -. VCF mod source .-> VCF
+
+    AREG["AREG"] -. VCO mod .-> VCOSEL
+    AREG -. VCF mod source .-> VCF
+    AREG -. VCA CV .-> VCA
+```
+
+## 3. Analog Reference Control And Event Flow
+
+```mermaid
+flowchart TD
+    PANEL["Analog Front Panel"] --> VCOCTL["VCO Freq / LFO Mod / AR Mod / Sync"]
+    PANEL --> VCFCTL["VCF Cutoff / Res / Mod Depth / Mod Source"]
+    PANEL --> LFOCTL["LFO Rate / Wave Select"]
+    PANEL --> AREGCTL["AREG Attack / Release / Repeat / Manual Gate"]
+    PANEL --> VCACTL["VCA Bypass"]
+    PANEL --> OUTCTL["Output Level"]
+
+    AREGCTL --> AREG["AREG"]
+    LFOCTL --> LFO["LFO"]
+    VCOCTL --> VCO["VCO"]
+    VCFCTL --> VCF["VCF"]
+    VCACTL --> VCA["VCA"]
+    OUTCTL --> OUT["Output"]
+
+    LFO --> VCO
+    LFO --> VCF
+    AREG --> VCO
+    AREG --> VCF
+    AREG --> VCA
+    VCO --> VCF
+    VCF --> VCA
+    VCA --> OUT
+```
+
+## 4. Current Firmware Block Diagram
+
+This block diagram is a 1:1 representation of the current `Field_MFOS_NoiseToaster.cpp` firmware.
 
 ```mermaid
 flowchart TB
     classDef block fill:#f3f3f3,stroke:#222,stroke-width:1px,color:#000;
 
-    KEYS["Field Note / Gate Logic<br/>A1-A8 Notes<br/>B4 or SW1 Hold<br/>SW2 Panic"]:::block
-    VCO["VCO<br/>Saw / Square / Triangle<br/>K1 Tune | B1-B3 Wave"]:::block
-    WN["White Noise<br/>Always Available"]:::block
-    MIX["Mix<br/>K2 Osc / Noise Mix"]:::block
-    VCF["SVF Low-Pass<br/>K3 Cutoff | K4 Res"]:::block
-    LFO["LFO<br/>Fixed Sine<br/>K6 Rate | K7 Shared Depth"]:::block
-    AR["AR Contour<br/>Fixed Attack / Decay<br/>K5 Depth | B5 Pitch/Filter"]:::block
-    VCA["VCA<br/>Fixed ADSR<br/>No Bypass"]:::block
-    OUT["Output Stage<br/>K8 Level<br/>Stereo Mirrored Out"]:::block
+    PERF["Field Performance Logic<br/>A1-A8 Note Select + Trigger<br/>SW1 Manual Gate<br/>SW2 Panic"]:::block
+    VCO["VCO<br/>Saw / Square / Triangle<br/>K1 Freq | K2 LFO Mod | K3 AREG Mod<br/>B1 Cycle"]:::block
+    LFO["LFO<br/>Fixed 2.2 Hz<br/>Sine / Square / Triangle<br/>B2 Cycle"]:::block
+    WN["White Noise<br/>Fixed 18% Blend"]:::block
+    VCF["SVF Low-Pass<br/>K4 Cutoff | K5 Res | K6 Mod Depth<br/>B3 Source: LFO / AREG / Off"]:::block
+    AREG["AREG<br/>K7 Attack | K8 Release<br/>B4 Repeat / Manual"]:::block
+    VCA["VCA<br/>AREG Driven or Bypassed<br/>B5 Bypass"]:::block
+    OUT["Output Stage<br/>Fixed 72% Level<br/>Stereo Mirrored Out"]:::block
 
-    KEYS --> VCO
-    KEYS --> AR
-    KEYS --> VCA
-
-    VCO --> MIX
-    WN --> MIX
-    MIX --> VCF
+    PERF --> VCO
+    PERF --> AREG
+    VCO --> VCF
+    WN --> VCF
     VCF --> VCA
     VCA --> OUT
 
-    LFO -. pitch depth always active .-> VCO
-    LFO -. filter depth always active .-> VCF
-    AR -. B5 selects pitch or filter .-> VCO
-    AR -. B5 selects pitch or filter .-> VCF
+    LFO -. pitch mod .-> VCO
+    LFO -. if B3=LFO .-> VCF
+    AREG -. pitch mod .-> VCO
+    AREG -. if B3=AREG .-> VCF
+    AREG -. if B5 off .-> VCA
 ```
 
-## 3. Target Post-Improvement Block Diagram
+## 5. Current Firmware Audio Signal Flow
 
-This target diagram shows the closest practical Daisy Field adaptation to the analog Figure 4-2 architecture after the highest-value faithfulness improvements are applied. It is not the current firmware.
+```mermaid
+flowchart LR
+    NOTE["Armed Note"] --> TUNE["K1 Coarse Tune"]
+    TUNE --> PITCH["Final Oscillator Pitch"]
+    LFOP["K2 LFO -> VCO"] -. always active .-> PITCH
+    ARP["K3 AREG -> VCO"] -. always active .-> PITCH
+
+    PITCH --> VCO["VCO (B1 Wave)"]
+    NOISE["Fixed 18% White Noise"] --> MIX["Pre-Filter Blend"]
+    VCO --> MIX
+
+    MIX --> LPF["SVF Low-Pass"]
+    CUTOFF["K4 Cutoff"] --> LPF
+    RES["K5 Resonance"] --> LPF
+    VCFMOD["K6 Filter Mod Depth"] --> LPF
+    LFOSRC["B3 = LFO"] -. selected source .-> LPF
+    ARSRC["B3 = AREG"] -. selected source .-> LPF
+
+    LPF --> VCA["VCA"]
+    AREG["AREG"] -. if B5 off .-> VCA
+    VCA --> LEVEL["Fixed 72% Output Level"]
+    LEVEL --> OUT["Left + Right Outputs"]
+```
+
+## 6. Current Firmware Control And Event Flow
+
+```mermaid
+flowchart TD
+    LOOP["Main Loop"] --> PROC["hw.ProcessAllControls()"]
+    PROC --> KNOBS["Snapshot K1-K8 and detect focus"]
+    PROC --> AROW["Check A1-A8 rising edges"]
+    PROC --> BROW["Check B1-B5 rising edges"]
+    PROC --> SWITCH["Check SW1 / SW2"]
+    PROC --> UI["Update LEDs and OLED"]
+
+    AROW --> NOTEON["Arm note_hz and queue AREG trigger"]
+    BROW --> B1["B1 -> cycle VCO wave"]
+    BROW --> B2["B2 -> cycle LFO wave"]
+    BROW --> B3["B3 -> cycle VCF mod source"]
+    BROW --> B4["B4 -> toggle Repeat / Manual"]
+    BROW --> B5["B5 -> toggle VCA bypass"]
+    SWITCH --> SW1["SW1 -> retrigger armed note"]
+    SWITCH --> SW2["SW2 -> panic and clear armed note"]
+
+    AUDIO["Audio Callback"] --> PARAMS["Read cached knobs, set AREG times, keep LFO at 2.2 Hz"]
+    PARAMS --> REP["If Repeat and AREG idle, queue retrigger"]
+    REP --> DSP["Process LFO, AREG, VCO, noise, filter, VCA"]
+    DSP --> OUT["Write stereo outputs"]
+```
+
+## 7. Next Faithfulness Target
+
+This target diagram shows the next logical step after the current firmware if the project keeps moving toward the analog panel.
 
 ```mermaid
 flowchart TB
     classDef block fill:#f3f3f3,stroke:#222,stroke-width:1px,color:#000;
 
-    PERF["Field Performance Controls<br/>Manual Gate | Repeat / Manual<br/>Optional note actions"]:::block
-    WN["White Noise<br/>On / Off"]:::block
-    VCO["VCO<br/>Ramp / Square<br/>Freq | LFO Mod | AR Mod | Sync"]:::block
+    PERF["Field Performance Logic<br/>Optional No-Key Manual-Gate Mode"]:::block
+    WN["White Noise<br/>Discrete On / Off"]:::block
+    VCO["VCO<br/>Ramp / Square / Triangle<br/>Freq | LFO Mod | AREG Mod | Sync"]:::block
     VCF["VCF<br/>Input Select | Cutoff | Res<br/>Mod Source | Mod Depth"]:::block
-    LFO["LFO<br/>Rate | Wave Select<br/>Square | Diff Square | Int Square"]:::block
-    AREG["AREG<br/>Attack | Release<br/>Manual Gate | Repeat"]:::block
+    LFO["LFO<br/>Live Rate | Wave Select"]:::block
+    AREG["AREG<br/>Attack | Release<br/>Repeat / Manual | Manual Gate"]:::block
     VCA["VCA<br/>AREG CV | Bypass"]:::block
-    OUT["Output Stage<br/>Out Level<br/>Stereo-Mirrored Line Out"]:::block
+    OUT["Output Stage<br/>Live Out Level"]:::block
 
-    PERF --> AREG
     PERF --> VCO
-
+    PERF --> AREG
     WN --> VCF
     VCO --> VCF
     VCF --> VCA
-    VCF -. bypass path .-> OUT
     VCA --> OUT
 
-    LFO -. VCO mod .-> VCO
-    LFO -. sync source .-> VCO
+    LFO -. VCO mod / sync .-> VCO
     LFO -. VCF mod source .-> VCF
-
     AREG -. VCO mod .-> VCO
     AREG -. VCF mod source .-> VCF
     AREG -. VCA control .-> VCA
 ```
 
-## 4. Audio Signal Flow
+## 8. Documentation Notes
 
-```mermaid
-flowchart LR
-    NOTE["Selected Note"] --> TUNE["K1 Coarse Tune"]
-    TUNE --> PITCH["Final Oscillator Pitch"]
-    ARP["AR To Pitch"] -. if selected .-> PITCH
-    LFOP["LFO To Pitch"] -. always active .-> PITCH
-
-    PITCH --> VCO["VCO"]
-    NOISE["White Noise"] --> MIX["K2 Mix"]
-    VCO --> MIX
-
-    MIX --> LPF["SVF Low-Pass"]
-    ARC["AR To Filter"] -. if selected .-> LPF
-    LFOF["LFO To Filter"] -. always active .-> LPF
-    CUTOFF["K3 Cutoff"] --> LPF
-    RES["K4 Resonance"] --> LPF
-
-    LPF --> VCA["VCA"]
-    ADSR["Fixed ADSR"] --> VCA
-    VCA --> LEVEL["K8 Output Level"]
-    LEVEL --> OUT["Left + Right Outputs"]
-```
-
-## 5. Control And Event Flow
-
-```mermaid
-flowchart TD
-    LOOP["Main Loop"] --> PROC["hw.ProcessAllControls()"]
-    PROC --> AROW["Check A1-A8 edges"]
-    PROC --> BROW["Check B1-B5 edges"]
-    PROC --> SWITCH["Check SW1 / SW2"]
-    PROC --> OLED["Refresh OLED"]
-
-    AROW --> NOTEON["TriggerKey(index)"]
-    NOTEON --> GATE["Set note_hz and gate = true"]
-    AROW --> NOTEOFF["If active key released and hold is off -> gate = false"]
-
-    BROW --> WAVE["B1/B2/B3 -> SetWaveform()"]
-    BROW --> HOLD["B4 -> toggle hold"]
-    BROW --> ROUTE["B5 -> toggle AR destination"]
-
-    SWITCH --> SWHOLD["SW1 -> toggle hold"]
-    SWITCH --> PANIC["SW2 -> gate off, hold off"]
-
-    AUDIO["Audio Callback"] --> KNOBS["Read K1-K8"]
-    KNOBS --> MOD["Update AR depth, LFO rate, LFO depth"]
-    MOD --> DSP["Process LFO, AR, ADSR, VCO, noise, filter, VCA"]
-    DSP --> OUT["Write stereo outputs"]
-```
-
-## 6. Documentation Notes
-
-- The current firmware has one shared LFO depth control, not separate routing buttons.
-- The AR contour destination is switchable, but the LFO destination is not.
-- `SW1` and `B4` both control the same hold state.
-- The analog reference redraw is based on the Ray Wilson PDF and the included `4-2_Noise_Toaster_Block_Diagram.png`.
-- The current-firmware block diagram is intentionally less faithful to the analog architecture than the reference redraw, because it reflects the code as it exists today.
-- The target post-improvement diagram is a planning aid only and must not be read as a statement about current firmware behavior.
+- The current firmware now implements the analog-style `Repeat / Manual`, `Manual Gate`, `VCF mod source`, `VCA bypass`, and live `AREG` timing controls.
+- The current firmware still uses a fixed white-noise blend, a fixed LFO rate, and a fixed output level.
+- The current block and flow diagrams are intended to be literal reflections of the code, not aspirational sketches.

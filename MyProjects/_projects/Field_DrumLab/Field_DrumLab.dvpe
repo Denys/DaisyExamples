@@ -1,0 +1,489 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Field DrumLab",
+      "author": "Antigravity",
+      "description": "5-voice drum synthesizer on Daisy Field. Voices: Kick (AnalogBassDrum), Snare (SyntheticSnareDrum), HiHat, Clap (AnalogSnareDrum), Perc (SyntheticBassDrum). Focus-track knob routing: B1-B5 select voice, K1-K7 edit Pitch/Decay/Tone/Timbre/Accent/Pan/Level. SW1=Synth/Mix page toggle, SW2=Panic. A1-A7 trigger pads. MIDI ch10 GM percussion. Stereo pan per voice.",
+      "created": "2026-03-09T00:26:00Z",
+      "modified": "2026-03-09T00:26:00Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "midi_note_1",
+        "definitionId": "midi_note",
+        "position": { "x": -2000, "y": 0 },
+        "parameterValues": { "channel": 10 },
+        "label": "MIDI CH10 GM Perc"
+      },
+      {
+        "id": "kick_1",
+        "definitionId": "analog_bass_drum",
+        "position": { "x": -800, "y": -800 },
+        "parameterValues": {
+          "freq": 55.0,
+          "tone": 0.5,
+          "decay": 0.4,
+          "attack_fm_amount": 0.3,
+          "self_fm_amount": 0.2,
+          "accent": 0.6
+        },
+        "enabledCvPorts": ["freq_cv", "tone_cv", "decay_cv", "accent_cv"],
+        "label": "KICK (Analog BD)"
+      },
+      {
+        "id": "snare_1",
+        "definitionId": "synth_snare_drum",
+        "position": { "x": -800, "y": -500 },
+        "parameterValues": {
+          "freq": 200.0,
+          "tone": 0.5,
+          "decay": 0.15,
+          "snappy": 0.5,
+          "fm_amount": 0.4,
+          "accent": 0.6
+        },
+        "enabledCvPorts": ["freq_cv", "decay_cv", "snappy_cv", "fm_amount_cv", "accent_cv"],
+        "label": "SNARE (Synth SD)"
+      },
+      {
+        "id": "hihat_1",
+        "definitionId": "hihat",
+        "position": { "x": -800, "y": -200 },
+        "parameterValues": {
+          "freq": 3000.0,
+          "tone": 0.5,
+          "decay": 0.2,
+          "accent": 0.8,
+          "noisiness": 0.8,
+          "sustain": 0
+        },
+        "enabledCvPorts": ["freq_cv", "decay_cv", "noisiness_cv", "accent_cv"],
+        "label": "HIHAT closed/open"
+      },
+      {
+        "id": "clap_1",
+        "definitionId": "analog_snare_drum",
+        "position": { "x": -800, "y": 100 },
+        "parameterValues": {
+          "freq": 300.0,
+          "tone": 0.6,
+          "decay": 0.3,
+          "snappy": 0.85,
+          "accent": 0.6
+        },
+        "enabledCvPorts": ["freq_cv", "tone_cv", "decay_cv", "snappy_cv", "accent_cv"],
+        "label": "CLAP (Analog SD)"
+      },
+      {
+        "id": "perc_1",
+        "definitionId": "synth_bass_drum",
+        "position": { "x": -800, "y": 400 },
+        "parameterValues": {
+          "freq": 400.0,
+          "tone": 0.5,
+          "decay": 0.2,
+          "dirty": 0.3,
+          "fm_envelope_amount": 0.5,
+          "fm_envelope_decay": 0.3,
+          "accent": 0.6
+        },
+        "enabledCvPorts": ["freq_cv", "tone_cv", "decay_cv", "dirty_cv", "accent_cv"],
+        "label": "PERC (Synth BD)"
+      },
+      {
+        "id": "pan_kick",
+        "definitionId": "pan",
+        "position": { "x": -400, "y": -800 },
+        "parameterValues": { "pan": 0.5 },
+        "enabledCvPorts": ["pan_cv"],
+        "label": "PAN Kick CTR"
+      },
+      {
+        "id": "pan_snare",
+        "definitionId": "pan",
+        "position": { "x": -400, "y": -500 },
+        "parameterValues": { "pan": 0.6 },
+        "enabledCvPorts": ["pan_cv"],
+        "label": "PAN Snare R12"
+      },
+      {
+        "id": "pan_hihat",
+        "definitionId": "pan",
+        "position": { "x": -400, "y": -200 },
+        "parameterValues": { "pan": 0.7 },
+        "enabledCvPorts": ["pan_cv"],
+        "label": "PAN HiHat R40"
+      },
+      {
+        "id": "pan_clap",
+        "definitionId": "pan",
+        "position": { "x": -400, "y": 100 },
+        "parameterValues": { "pan": 0.4 },
+        "enabledCvPorts": ["pan_cv"],
+        "label": "PAN Clap L20"
+      },
+      {
+        "id": "pan_perc",
+        "definitionId": "pan",
+        "position": { "x": -400, "y": 400 },
+        "parameterValues": { "pan": 0.35 },
+        "enabledCvPorts": ["pan_cv"],
+        "label": "PAN Perc L30"
+      },
+      {
+        "id": "mix_l_1",
+        "definitionId": "mixer",
+        "position": { "x": 0, "y": -600 },
+        "parameterValues": {
+          "inputCount": "4",
+          "level_1": 0.8,
+          "level_2": 0.8,
+          "level_3": 0.8,
+          "level_4": 0.8,
+          "master": 1.0
+        },
+        "enabledCvPorts": ["level_1_cv", "level_2_cv", "level_3_cv", "level_4_cv"],
+        "label": "MIX-L (K-S-H-C)"
+      },
+      {
+        "id": "mix_l_2",
+        "definitionId": "mixer",
+        "position": { "x": 0, "y": -300 },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 1.0,
+          "level_2": 0.8,
+          "master": 1.0
+        },
+        "enabledCvPorts": ["level_2_cv"],
+        "label": "MIX-L2 sum+Perc"
+      },
+      {
+        "id": "mix_r_1",
+        "definitionId": "mixer",
+        "position": { "x": 0, "y": 0 },
+        "parameterValues": {
+          "inputCount": "4",
+          "level_1": 0.8,
+          "level_2": 0.8,
+          "level_3": 0.8,
+          "level_4": 0.8,
+          "master": 1.0
+        },
+        "enabledCvPorts": ["level_1_cv", "level_2_cv", "level_3_cv", "level_4_cv"],
+        "label": "MIX-R (K-S-H-C)"
+      },
+      {
+        "id": "mix_r_2",
+        "definitionId": "mixer",
+        "position": { "x": 0, "y": 300 },
+        "parameterValues": {
+          "inputCount": "2",
+          "level_1": 1.0,
+          "level_2": 0.8,
+          "master": 1.0
+        },
+        "enabledCvPorts": ["level_2_cv"],
+        "label": "MIX-R2 sum+Perc"
+      },
+      {
+        "id": "gain_master_l",
+        "definitionId": "gain",
+        "position": { "x": 300, "y": -400 },
+        "parameterValues": { "gain": 0.8 },
+        "enabledCvPorts": ["gain_cv"],
+        "label": "MASTER VOL L"
+      },
+      {
+        "id": "gain_master_r",
+        "definitionId": "gain",
+        "position": { "x": 300, "y": 100 },
+        "parameterValues": { "gain": 0.8 },
+        "enabledCvPorts": ["gain_cv"],
+        "label": "MASTER VOL R"
+      },
+      {
+        "id": "audio_out_1",
+        "definitionId": "audio_output",
+        "position": { "x": 600, "y": -150 },
+        "parameterValues": {},
+        "label": "AUDIO OUT"
+      },
+      {
+        "id": "key_a1_kick",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": -900 },
+        "parameterValues": { "note": 36, "velocity": 0.8, "gate": false },
+        "label": "A1 KICK MIDI-36"
+      },
+      {
+        "id": "key_a2_snare",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": -600 },
+        "parameterValues": { "note": 38, "velocity": 0.8, "gate": false },
+        "label": "A2 SNARE MIDI-38"
+      },
+      {
+        "id": "key_a3_chat",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": -300 },
+        "parameterValues": { "note": 42, "velocity": 0.8, "gate": false },
+        "label": "A3 CLOSED HAT MIDI-42"
+      },
+      {
+        "id": "key_a4_ohat",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": 0 },
+        "parameterValues": { "note": 46, "velocity": 0.8, "gate": false },
+        "label": "A4 OPEN HAT MIDI-46"
+      },
+      {
+        "id": "key_a5_clap",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": 300 },
+        "parameterValues": { "note": 39, "velocity": 0.8, "gate": false },
+        "label": "A5 CLAP MIDI-39"
+      },
+      {
+        "id": "key_a6_perc",
+        "definitionId": "key",
+        "position": { "x": -1400, "y": 600 },
+        "parameterValues": { "note": 37, "velocity": 0.8, "gate": false },
+        "label": "A6 PERC MIDI-37"
+      },
+      {
+        "id": "key_b1_focus_kick",
+        "definitionId": "key",
+        "position": { "x": -2200, "y": -900 },
+        "parameterValues": { "note": 0, "velocity": 1.0, "gate": false },
+        "label": "B1 FOCUS KICK"
+      },
+      {
+        "id": "key_b2_focus_snare",
+        "definitionId": "key",
+        "position": { "x": -2200, "y": -600 },
+        "parameterValues": { "note": 0, "velocity": 1.0, "gate": false },
+        "label": "B2 FOCUS SNARE"
+      },
+      {
+        "id": "key_b3_focus_hihat",
+        "definitionId": "key",
+        "position": { "x": -2200, "y": -300 },
+        "parameterValues": { "note": 0, "velocity": 1.0, "gate": false },
+        "label": "B3 FOCUS HIHAT"
+      },
+      {
+        "id": "key_b4_focus_clap",
+        "definitionId": "key",
+        "position": { "x": -2200, "y": 0 },
+        "parameterValues": { "note": 0, "velocity": 1.0, "gate": false },
+        "label": "B4 FOCUS CLAP"
+      },
+      {
+        "id": "key_b5_focus_perc",
+        "definitionId": "key",
+        "position": { "x": -2200, "y": 300 },
+        "parameterValues": { "note": 0, "velocity": 1.0, "gate": false },
+        "label": "B5 FOCUS PERC"
+      },
+      {
+        "id": "knob_k1_pitch",
+        "definitionId": "knob",
+        "position": { "x": -2200, "y": -1600 },
+        "parameterValues": { "channel": "0", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K1 PITCH (Focus)"
+      },
+      {
+        "id": "knob_k2_decay",
+        "definitionId": "knob",
+        "position": { "x": -2000, "y": -1600 },
+        "parameterValues": { "channel": "1", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K2 DECAY (Focus)"
+      },
+      {
+        "id": "knob_k3_tone",
+        "definitionId": "knob",
+        "position": { "x": -1800, "y": -1600 },
+        "parameterValues": { "channel": "2", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K3 TONE (Focus)"
+      },
+      {
+        "id": "knob_k4_timbre",
+        "definitionId": "knob",
+        "position": { "x": -1600, "y": -1600 },
+        "parameterValues": { "channel": "3", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K4 TIMBRE (Focus)"
+      },
+      {
+        "id": "knob_k5_accent",
+        "definitionId": "knob",
+        "position": { "x": -1400, "y": -1600 },
+        "parameterValues": { "channel": "4", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K5 ACCENT (Focus)"
+      },
+      {
+        "id": "knob_k6_pan",
+        "definitionId": "knob",
+        "position": { "x": -1200, "y": -1600 },
+        "parameterValues": { "channel": "5", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K6 PAN (Focus)"
+      },
+      {
+        "id": "knob_k7_level",
+        "definitionId": "knob",
+        "position": { "x": -1000, "y": -1600 },
+        "parameterValues": { "channel": "6", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K7 LEVEL (Focus)"
+      },
+      {
+        "id": "knob_k8_master_vol",
+        "definitionId": "knob",
+        "position": { "x": -800, "y": -1600 },
+        "parameterValues": { "channel": "7", "min": 0, "max": 1, "curve": "linear" },
+        "label": "K8 MASTER VOL"
+      },
+      {
+        "id": "knob_mx1_kick_lvl",
+        "definitionId": "knob",
+        "position": { "x": -2200, "y": -1400 },
+        "parameterValues": { "channel": "0", "min": 0, "max": 1, "curve": "linear" },
+        "label": "MX K1 KICK LVL"
+      },
+      {
+        "id": "knob_mx2_snare_lvl",
+        "definitionId": "knob",
+        "position": { "x": -2000, "y": -1400 },
+        "parameterValues": { "channel": "1", "min": 0, "max": 1, "curve": "linear" },
+        "label": "MX K2 SNARE LVL"
+      },
+      {
+        "id": "knob_mx3_hihat_lvl",
+        "definitionId": "knob",
+        "position": { "x": -1800, "y": -1400 },
+        "parameterValues": { "channel": "2", "min": 0, "max": 1, "curve": "linear" },
+        "label": "MX K3 HIHAT LVL"
+      },
+      {
+        "id": "knob_mx4_clap_lvl",
+        "definitionId": "knob",
+        "position": { "x": -1600, "y": -1400 },
+        "parameterValues": { "channel": "3", "min": 0, "max": 1, "curve": "linear" },
+        "label": "MX K4 CLAP LVL"
+      },
+      {
+        "id": "knob_mx5_perc_lvl",
+        "definitionId": "knob",
+        "position": { "x": -1400, "y": -1400 },
+        "parameterValues": { "channel": "4", "min": 0, "max": 1, "curve": "linear" },
+        "label": "MX K5 PERC LVL"
+      }
+    ],
+    "connections": [
+      { "id": "conn-midi-kick",   "sourceBlockId": "midi_note_1",     "sourcePortId": "gate",      "targetBlockId": "kick_1",     "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-midi-snare",  "sourceBlockId": "midi_note_1",     "sourcePortId": "gate",      "targetBlockId": "snare_1",    "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-midi-hihat",  "sourceBlockId": "midi_note_1",     "sourcePortId": "gate",      "targetBlockId": "hihat_1",    "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-midi-clap",   "sourceBlockId": "midi_note_1",     "sourcePortId": "gate",      "targetBlockId": "clap_1",     "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-midi-perc",   "sourceBlockId": "midi_note_1",     "sourcePortId": "gate",      "targetBlockId": "perc_1",     "targetPortId": "trig",         "type": "trigger" },
+
+      { "id": "conn-a1-kick",     "sourceBlockId": "key_a1_kick",     "sourcePortId": "gate_out",  "targetBlockId": "kick_1",     "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-a2-snare",    "sourceBlockId": "key_a2_snare",    "sourcePortId": "gate_out",  "targetBlockId": "snare_1",    "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-a3-chat",     "sourceBlockId": "key_a3_chat",     "sourcePortId": "gate_out",  "targetBlockId": "hihat_1",    "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-a4-ohat",     "sourceBlockId": "key_a4_ohat",     "sourcePortId": "gate_out",  "targetBlockId": "hihat_1",    "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-a5-clap",     "sourceBlockId": "key_a5_clap",     "sourcePortId": "gate_out",  "targetBlockId": "clap_1",     "targetPortId": "trig",         "type": "trigger" },
+      { "id": "conn-a6-perc",     "sourceBlockId": "key_a6_perc",     "sourcePortId": "gate_out",  "targetBlockId": "perc_1",     "targetPortId": "trig",         "type": "trigger" },
+
+      { "id": "conn-k1-kick-pitch",   "sourceBlockId": "knob_k1_pitch",    "sourcePortId": "out", "targetBlockId": "kick_1",    "targetPortId": "freq_cv",      "type": "cv" },
+      { "id": "conn-k1-snare-pitch",  "sourceBlockId": "knob_k1_pitch",    "sourcePortId": "out", "targetBlockId": "snare_1",   "targetPortId": "freq_cv",      "type": "cv" },
+      { "id": "conn-k1-hihat-pitch",  "sourceBlockId": "knob_k1_pitch",    "sourcePortId": "out", "targetBlockId": "hihat_1",   "targetPortId": "freq_cv",      "type": "cv" },
+      { "id": "conn-k1-clap-pitch",   "sourceBlockId": "knob_k1_pitch",    "sourcePortId": "out", "targetBlockId": "clap_1",    "targetPortId": "freq_cv",      "type": "cv" },
+      { "id": "conn-k1-perc-pitch",   "sourceBlockId": "knob_k1_pitch",    "sourcePortId": "out", "targetBlockId": "perc_1",    "targetPortId": "freq_cv",      "type": "cv" },
+
+      { "id": "conn-k2-kick-decay",   "sourceBlockId": "knob_k2_decay",    "sourcePortId": "out", "targetBlockId": "kick_1",    "targetPortId": "decay_cv",     "type": "cv" },
+      { "id": "conn-k2-snare-decay",  "sourceBlockId": "knob_k2_decay",    "sourcePortId": "out", "targetBlockId": "snare_1",   "targetPortId": "decay_cv",     "type": "cv" },
+      { "id": "conn-k2-hihat-decay",  "sourceBlockId": "knob_k2_decay",    "sourcePortId": "out", "targetBlockId": "hihat_1",   "targetPortId": "decay_cv",     "type": "cv" },
+      { "id": "conn-k2-clap-decay",   "sourceBlockId": "knob_k2_decay",    "sourcePortId": "out", "targetBlockId": "clap_1",    "targetPortId": "decay_cv",     "type": "cv" },
+      { "id": "conn-k2-perc-decay",   "sourceBlockId": "knob_k2_decay",    "sourcePortId": "out", "targetBlockId": "perc_1",    "targetPortId": "decay_cv",     "type": "cv" },
+
+      { "id": "conn-k3-kick-tone",    "sourceBlockId": "knob_k3_tone",     "sourcePortId": "out", "targetBlockId": "kick_1",    "targetPortId": "tone_cv",      "type": "cv" },
+      { "id": "conn-k3-snare-fmamt",  "sourceBlockId": "knob_k3_tone",     "sourcePortId": "out", "targetBlockId": "snare_1",   "targetPortId": "fm_amount_cv", "type": "cv" },
+      { "id": "conn-k3-hihat-tone",   "sourceBlockId": "knob_k3_tone",     "sourcePortId": "out", "targetBlockId": "hihat_1",   "targetPortId": "tone_cv",      "type": "cv" },
+      { "id": "conn-k3-clap-tone",    "sourceBlockId": "knob_k3_tone",     "sourcePortId": "out", "targetBlockId": "clap_1",    "targetPortId": "tone_cv",      "type": "cv" },
+      { "id": "conn-k3-perc-tone",    "sourceBlockId": "knob_k3_tone",     "sourcePortId": "out", "targetBlockId": "perc_1",    "targetPortId": "tone_cv",      "type": "cv" },
+
+      { "id": "conn-k4-snare-snappy",     "sourceBlockId": "knob_k4_timbre",   "sourcePortId": "out", "targetBlockId": "snare_1",   "targetPortId": "snappy_cv",    "type": "cv" },
+      { "id": "conn-k4-hihat-noisiness",  "sourceBlockId": "knob_k4_timbre",   "sourcePortId": "out", "targetBlockId": "hihat_1",   "targetPortId": "noisiness_cv", "type": "cv" },
+      { "id": "conn-k4-clap-snappy",      "sourceBlockId": "knob_k4_timbre",   "sourcePortId": "out", "targetBlockId": "clap_1",    "targetPortId": "snappy_cv",    "type": "cv" },
+      { "id": "conn-k4-perc-dirty",       "sourceBlockId": "knob_k4_timbre",   "sourcePortId": "out", "targetBlockId": "perc_1",    "targetPortId": "dirty_cv",     "type": "cv" },
+
+      { "id": "conn-k5-kick-accent",  "sourceBlockId": "knob_k5_accent",   "sourcePortId": "out", "targetBlockId": "kick_1",    "targetPortId": "accent_cv",    "type": "cv" },
+      { "id": "conn-k5-snare-accent", "sourceBlockId": "knob_k5_accent",   "sourcePortId": "out", "targetBlockId": "snare_1",   "targetPortId": "accent_cv",    "type": "cv" },
+      { "id": "conn-k5-hihat-accent", "sourceBlockId": "knob_k5_accent",   "sourcePortId": "out", "targetBlockId": "hihat_1",   "targetPortId": "accent_cv",    "type": "cv" },
+      { "id": "conn-k5-clap-accent",  "sourceBlockId": "knob_k5_accent",   "sourcePortId": "out", "targetBlockId": "clap_1",    "targetPortId": "accent_cv",    "type": "cv" },
+      { "id": "conn-k5-perc-accent",  "sourceBlockId": "knob_k5_accent",   "sourcePortId": "out", "targetBlockId": "perc_1",    "targetPortId": "accent_cv",    "type": "cv" },
+
+      { "id": "conn-k6-pan-kick",   "sourceBlockId": "knob_k6_pan",      "sourcePortId": "out", "targetBlockId": "pan_kick",  "targetPortId": "pan_cv",       "type": "cv" },
+      { "id": "conn-k6-pan-snare",  "sourceBlockId": "knob_k6_pan",      "sourcePortId": "out", "targetBlockId": "pan_snare", "targetPortId": "pan_cv",       "type": "cv" },
+      { "id": "conn-k6-pan-hihat",  "sourceBlockId": "knob_k6_pan",      "sourcePortId": "out", "targetBlockId": "pan_hihat", "targetPortId": "pan_cv",       "type": "cv" },
+      { "id": "conn-k6-pan-clap",   "sourceBlockId": "knob_k6_pan",      "sourcePortId": "out", "targetBlockId": "pan_clap",  "targetPortId": "pan_cv",       "type": "cv" },
+      { "id": "conn-k6-pan-perc",   "sourceBlockId": "knob_k6_pan",      "sourcePortId": "out", "targetBlockId": "pan_perc",  "targetPortId": "pan_cv",       "type": "cv" },
+
+      { "id": "conn-k7-mixl-kick-lvl",  "sourceBlockId": "knob_k7_level",    "sourcePortId": "out", "targetBlockId": "mix_l_1",   "targetPortId": "level_1_cv",   "type": "cv" },
+      { "id": "conn-k7-mixr-kick-lvl",  "sourceBlockId": "knob_k7_level",    "sourcePortId": "out", "targetBlockId": "mix_r_1",   "targetPortId": "level_1_cv",   "type": "cv" },
+
+      { "id": "conn-k8-master-l",   "sourceBlockId": "knob_k8_master_vol", "sourcePortId": "out", "targetBlockId": "gain_master_l", "targetPortId": "gain_cv",    "type": "cv" },
+      { "id": "conn-k8-master-r",   "sourceBlockId": "knob_k8_master_vol", "sourcePortId": "out", "targetBlockId": "gain_master_r", "targetPortId": "gain_cv",    "type": "cv" },
+
+      { "id": "conn-mx1-kick-lvl-l",   "sourceBlockId": "knob_mx1_kick_lvl",  "sourcePortId": "out", "targetBlockId": "mix_l_1",   "targetPortId": "level_1_cv",   "type": "cv" },
+      { "id": "conn-mx1-kick-lvl-r",   "sourceBlockId": "knob_mx1_kick_lvl",  "sourcePortId": "out", "targetBlockId": "mix_r_1",   "targetPortId": "level_1_cv",   "type": "cv" },
+      { "id": "conn-mx2-snare-lvl-l",  "sourceBlockId": "knob_mx2_snare_lvl", "sourcePortId": "out", "targetBlockId": "mix_l_1",   "targetPortId": "level_2_cv",   "type": "cv" },
+      { "id": "conn-mx2-snare-lvl-r",  "sourceBlockId": "knob_mx2_snare_lvl", "sourcePortId": "out", "targetBlockId": "mix_r_1",   "targetPortId": "level_2_cv",   "type": "cv" },
+      { "id": "conn-mx3-hihat-lvl-l",  "sourceBlockId": "knob_mx3_hihat_lvl", "sourcePortId": "out", "targetBlockId": "mix_l_1",   "targetPortId": "level_3_cv",   "type": "cv" },
+      { "id": "conn-mx3-hihat-lvl-r",  "sourceBlockId": "knob_mx3_hihat_lvl", "sourcePortId": "out", "targetBlockId": "mix_r_1",   "targetPortId": "level_3_cv",   "type": "cv" },
+      { "id": "conn-mx4-clap-lvl-l",   "sourceBlockId": "knob_mx4_clap_lvl",  "sourcePortId": "out", "targetBlockId": "mix_l_1",   "targetPortId": "level_4_cv",   "type": "cv" },
+      { "id": "conn-mx4-clap-lvl-r",   "sourceBlockId": "knob_mx4_clap_lvl",  "sourcePortId": "out", "targetBlockId": "mix_r_1",   "targetPortId": "level_4_cv",   "type": "cv" },
+      { "id": "conn-mx5-perc-lvl-l",   "sourceBlockId": "knob_mx5_perc_lvl",  "sourcePortId": "out", "targetBlockId": "mix_l_2",   "targetPortId": "level_2_cv",   "type": "cv" },
+      { "id": "conn-mx5-perc-lvl-r",   "sourceBlockId": "knob_mx5_perc_lvl",  "sourcePortId": "out", "targetBlockId": "mix_r_2",   "targetPortId": "level_2_cv",   "type": "cv" },
+
+      { "id": "conn-kick-pan",   "sourceBlockId": "kick_1",    "sourcePortId": "out", "targetBlockId": "pan_kick",  "targetPortId": "in",  "type": "audio" },
+      { "id": "conn-snare-pan",  "sourceBlockId": "snare_1",   "sourcePortId": "out", "targetBlockId": "pan_snare", "targetPortId": "in",  "type": "audio" },
+      { "id": "conn-hihat-pan",  "sourceBlockId": "hihat_1",   "sourcePortId": "out", "targetBlockId": "pan_hihat", "targetPortId": "in",  "type": "audio" },
+      { "id": "conn-clap-pan",   "sourceBlockId": "clap_1",    "sourcePortId": "out", "targetBlockId": "pan_clap",  "targetPortId": "in",  "type": "audio" },
+      { "id": "conn-perc-pan",   "sourceBlockId": "perc_1",    "sourcePortId": "out", "targetBlockId": "pan_perc",  "targetPortId": "in",  "type": "audio" },
+
+      { "id": "conn-pan-kick-l",   "sourceBlockId": "pan_kick",  "sourcePortId": "left",  "targetBlockId": "mix_l_1", "targetPortId": "in_1", "type": "audio" },
+      { "id": "conn-pan-snare-l",  "sourceBlockId": "pan_snare", "sourcePortId": "left",  "targetBlockId": "mix_l_1", "targetPortId": "in_2", "type": "audio" },
+      { "id": "conn-pan-hihat-l",  "sourceBlockId": "pan_hihat", "sourcePortId": "left",  "targetBlockId": "mix_l_1", "targetPortId": "in_3", "type": "audio" },
+      { "id": "conn-pan-clap-l",   "sourceBlockId": "pan_clap",  "sourcePortId": "left",  "targetBlockId": "mix_l_1", "targetPortId": "in_4", "type": "audio" },
+      { "id": "conn-pan-perc-l",   "sourceBlockId": "pan_perc",  "sourcePortId": "left",  "targetBlockId": "mix_l_2", "targetPortId": "in_2", "type": "audio" },
+      { "id": "conn-mixl1-mixl2",  "sourceBlockId": "mix_l_1",   "sourcePortId": "out",   "targetBlockId": "mix_l_2", "targetPortId": "in_1", "type": "audio" },
+
+      { "id": "conn-pan-kick-r",   "sourceBlockId": "pan_kick",  "sourcePortId": "right", "targetBlockId": "mix_r_1", "targetPortId": "in_1", "type": "audio" },
+      { "id": "conn-pan-snare-r",  "sourceBlockId": "pan_snare", "sourcePortId": "right", "targetBlockId": "mix_r_1", "targetPortId": "in_2", "type": "audio" },
+      { "id": "conn-pan-hihat-r",  "sourceBlockId": "pan_hihat", "sourcePortId": "right", "targetBlockId": "mix_r_1", "targetPortId": "in_3", "type": "audio" },
+      { "id": "conn-pan-clap-r",   "sourceBlockId": "pan_clap",  "sourcePortId": "right", "targetBlockId": "mix_r_1", "targetPortId": "in_4", "type": "audio" },
+      { "id": "conn-pan-perc-r",   "sourceBlockId": "pan_perc",  "sourcePortId": "right", "targetBlockId": "mix_r_2", "targetPortId": "in_2", "type": "audio" },
+      { "id": "conn-mixr1-mixr2",  "sourceBlockId": "mix_r_1",   "sourcePortId": "out",   "targetBlockId": "mix_r_2", "targetPortId": "in_1", "type": "audio" },
+
+      { "id": "conn-mixl2-gain-l", "sourceBlockId": "mix_l_2",      "sourcePortId": "out", "targetBlockId": "gain_master_l", "targetPortId": "in",    "type": "audio" },
+      { "id": "conn-mixr2-gain-r", "sourceBlockId": "mix_r_2",      "sourcePortId": "out", "targetBlockId": "gain_master_r", "targetPortId": "in",    "type": "audio" },
+
+      { "id": "conn-gain-l-out",   "sourceBlockId": "gain_master_l", "sourcePortId": "out", "targetBlockId": "audio_out_1",   "targetPortId": "left",  "type": "audio" },
+      { "id": "conn-gain-r-out",   "sourceBlockId": "gain_master_r", "sourcePortId": "out", "targetBlockId": "audio_out_1",   "targetPortId": "right", "type": "audio" }
+    ],
+    "hardwareConfig": {
+      "platform": "field",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}

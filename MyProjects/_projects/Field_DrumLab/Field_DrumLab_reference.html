@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Field DrumLab Reference</title>
+    <style>
+        :root {
+            --bg: #0b0908;
+            --bg2: #1a1410;
+            --panel: rgba(22, 19, 17, .94);
+            --line: rgba(230, 200, 155, .22);
+            --line2: rgba(255, 239, 210, .42);
+            --ink: #f5ead7;
+            --soft: #d0c1a8;
+            --muted: #8b7a66;
+            --gold: #efad57;
+            --teal: #73d2c8;
+            --rust: #ff8d5b;
+            --field: #9fd7ff;
+            --fixed: #b6a38c;
+            --future: #c6a0ff;
+            --shadow: 0 26px 80px rgba(0, 0, 0, .38);
+            --display: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+            --body: "Trebuchet MS", "Franklin Gothic Medium", "Arial Narrow", sans-serif;
+            --mono: Consolas, "Lucida Console", monospace;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        button {
+            font: inherit;
+            color: inherit;
+            text-align: left;
+            background: none
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--body);
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 18% 16%, rgba(239, 173, 87, .16), transparent 24%),
+                radial-gradient(circle at 82% 14%, rgba(115, 210, 200, .12), transparent 22%),
+                linear-gradient(145deg, #241a14 0, #0f0e0d 48%, #060606 100%)
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .18;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, .02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .02) 1px, transparent 1px);
+            background-size: 28px 28px
+        }
+
+        .shell {
+            width: min(1500px, calc(100vw - 28px));
+            margin: 16px auto 40px;
+            display: grid;
+            gap: 16px
+        }
+
+        .card {
+            position: relative;
+            background: linear-gradient(180deg, rgba(31, 26, 23, .95), rgba(16, 14, 13, .97));
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            overflow: hidden
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .03), transparent 18%, transparent 86%, rgba(255, 255, 255, .015))
+        }
+
+        .hero {
+            padding: 30px 32px
+        }
+
+        .hero-grid,
+        .main-grid,
+        .legend-grid,
+        .brainstorm-grid {
+            display: grid;
+            gap: 16px
+        }
+
+        .hero-grid {
+            grid-template-columns: minmax(0, 1.45fr) minmax(320px, .85fr)
+        }
+
+        .main-grid {
+            grid-template-columns: minmax(0, 1.5fr) minmax(300px, .7fr)
+        }
+
+        .legend-grid,
+        .brainstorm-grid {
+            grid-template-columns: 1fr 1fr
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: #d7b98a;
+            font-size: 11px;
+            letter-spacing: .24em;
+            text-transform: uppercase
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin: 0;
+            font-family: var(--display);
+            font-weight: 600;
+            letter-spacing: .02em
+        }
+
+        h1 {
+            font-size: clamp(2.6rem, 6vw, 4.8rem);
+            line-height: .95;
+            max-width: 15ch
+        }
+
+        h2 {
+            font-size: 1.95rem
+        }
+
+        h3 {
+            font-size: 1.1rem
+        }
+
+        .lead,
+        .head p,
+        .inspector p,
+        .mini p,
+        .legend-item span,
+        .brain-chip span,
+        .notes li {
+            margin: 0;
+            color: var(--soft);
+            line-height: 1.65
+        }
+
+        .facts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 22px
+        }
+
+        .fact,
+        .toggle-box,
+        .inspector,
+        .mini,
+        .legend,
+        .brain-box {
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(255, 255, 255, .08)
+        }
+
+        .fact b {
+            display: block;
+            margin-top: 6px;
+            color: #f0d7ad
+        }
+
+        .fact span,
+        .tag {
+            display: block;
+            color: var(--muted);
+            font-size: .74rem;
+            letter-spacing: .13em;
+            text-transform: uppercase
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px
+        }
+
+        .mode {
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .03);
+            color: var(--ink);
+            font: inherit;
+            padding: 11px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: .16s ease
+        }
+
+        .mode:hover,
+        .node:hover,
+        .block:hover,
+        .legend-item:hover,
+        .brain-chip:hover {
+            transform: translateY(-2px)
+        }
+
+        body[data-mode="reference"] .mode[data-mode="reference"],
+        body[data-mode="brainstorm"] .mode[data-mode="brainstorm"] {
+            background: linear-gradient(135deg, rgba(239, 173, 87, .22), rgba(115, 210, 200, .14));
+            border-color: rgba(255, 236, 207, .38)
+        }
+
+        .status-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 11px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(255, 255, 255, .06);
+            color: var(--soft);
+            font-size: .9rem
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 99px;
+            display: inline-block
+        }
+
+        .mapped {
+            background: var(--field)
+        }
+
+        .fieldonly {
+            background: var(--rust)
+        }
+
+        .fixed {
+            background: var(--fixed)
+        }
+
+        .future {
+            background: var(--future)
+        }
+
+        .section {
+            padding: 22px
+        }
+
+        .head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 16px;
+            margin-bottom: 16px
+        }
+
+        .diagram,
+        .mapping {
+            position: relative;
+            width: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .07);
+            background: rgba(7, 7, 7, .34)
+        }
+
+        .diagram {
+            aspect-ratio: 1000/760
+        }
+
+        .mapping {
+            aspect-ratio: 1200/900
+        }
+
+        .diagram svg,
+        .mapping svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none
+        }
+
+        .block,
+        .node {
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 20px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, .25);
+            backdrop-filter: blur(9px);
+            cursor: pointer;
+            transition: .16s ease
+        }
+
+        .block {
+            padding: 14px 15px
+        }
+
+        .block p {
+            margin: 8px 0 0;
+            color: #fff2dc;
+            line-height: 1.45;
+            font-size: .9rem
+        }
+
+        .performance {
+            background: linear-gradient(160deg, rgba(159, 215, 255, .16), rgba(18, 28, 37, .9))
+        }
+
+        .kick {
+            background: linear-gradient(160deg, rgba(239, 173, 87, .18), rgba(41, 29, 16, .9))
+        }
+
+        .snare,
+        .clap {
+            background: linear-gradient(160deg, rgba(115, 210, 200, .17), rgba(16, 32, 34, .92))
+        }
+
+        .hihat,
+        .perc {
+            background: linear-gradient(160deg, rgba(255, 141, 91, .15), rgba(40, 24, 18, .92))
+        }
+
+        .mixer,
+        .output {
+            background: linear-gradient(160deg, rgba(205, 179, 138, .14), rgba(34, 27, 21, .92))
+        }
+
+        .audio,
+        .mod,
+        .control,
+        .ghost {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: .16s ease
+        }
+
+        .audio {
+            stroke: var(--gold);
+            stroke-width: 3.8
+        }
+
+        .mod {
+            stroke: var(--teal);
+            stroke-width: 3;
+            stroke-dasharray: 8 10
+        }
+
+        .control {
+            stroke: var(--rust);
+            stroke-width: 2.7;
+            stroke-dasharray: 3 11
+        }
+
+        .ghost {
+            stroke: var(--future);
+            stroke-width: 2.2;
+            stroke-dasharray: 3 10
+        }
+
+        .label {
+            fill: #f8efd9;
+            font-family: var(--mono);
+            font-size: 14px;
+            text-transform: uppercase;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .inspector-wrap {
+            display: grid;
+            gap: 14px
+        }
+
+        .inspector .pill {
+            display: inline-flex;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            background: rgba(255, 255, 255, .04);
+            font-size: .72rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #e6c99b
+        }
+
+        .inspector h3 {
+            margin-top: 12px;
+            font-size: 1.62rem
+        }
+
+        .list {
+            margin: 16px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 9px
+        }
+
+        .list li {
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, .16);
+            border: 1px solid rgba(255, 255, 255, .06)
+        }
+
+        .list strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #f2dcb8;
+            font-size: .79rem;
+            letter-spacing: .11em;
+            text-transform: uppercase
+        }
+
+        .list span {
+            line-height: 1.45
+        }
+
+        .node {
+            display: grid;
+            gap: 5px;
+            padding: 12px 13px;
+            min-width: 164px;
+            max-width: 228px
+        }
+
+        .node .short {
+            font-family: var(--mono);
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .16em;
+            color: #e9c98f
+        }
+
+        .node .title {
+            font-size: .92rem;
+            line-height: 1.35;
+            color: #fff4e4
+        }
+
+        .node .meta {
+            font-size: .76rem;
+            color: var(--soft);
+            line-height: 1.35
+        }
+
+        .status-mapped {
+            background: linear-gradient(160deg, rgba(31, 49, 66, .84), rgba(12, 18, 26, .92));
+            border-color: rgba(159, 215, 255, .32)
+        }
+
+        .status-field-only {
+            background: linear-gradient(160deg, rgba(68, 35, 24, .84), rgba(24, 15, 12, .92));
+            border-color: rgba(255, 141, 91, .34)
+        }
+
+        .status-fixed {
+            background: linear-gradient(160deg, rgba(53, 45, 36, .82), rgba(24, 20, 16, .92));
+            border-color: rgba(205, 179, 138, .28)
+        }
+
+        .status-future {
+            background: linear-gradient(160deg, rgba(55, 35, 78, .8), rgba(20, 14, 28, .92));
+            border-color: rgba(198, 160, 255, .34)
+        }
+
+        body[data-mode="reference"] .status-future,
+        body[data-mode="reference"] .brainstorm-only {
+            display: none
+        }
+
+        .legend {
+            display: grid;
+            gap: 10px
+        }
+
+        .legend-item {
+            display: block;
+            position: relative;
+            padding: 12px 13px;
+            background: rgba(0, 0, 0, .16);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 20px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, .18);
+            cursor: pointer;
+            transition: .16s ease
+        }
+
+        .legend-item strong {
+            display: block;
+            color: #fff4df;
+            margin-bottom: 4px
+        }
+
+        .brain-box {
+            display: grid;
+            gap: 12px
+        }
+
+        .brain-chip {
+            display: block;
+            position: relative;
+            padding: 14px 15px;
+            border: 1px dashed rgba(198, 160, 255, .34);
+            border-radius: 20px;
+            background: rgba(198, 160, 255, .08);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, .16);
+            cursor: pointer;
+            transition: .16s ease
+        }
+
+        .notes {
+            margin: 0;
+            padding-left: 18px;
+            display: grid;
+            gap: 10px
+        }
+
+        .active {
+            border-color: var(--line2) !important;
+            box-shadow: 0 0 0 1px rgba(255, 229, 190, .16), 0 16px 36px rgba(0, 0, 0, .28) !important;
+            opacity: 1 !important;
+            z-index: 4
+        }
+
+        .dim {
+            opacity: .34
+        }
+
+        .activepath {
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 9px rgba(255, 255, 255, .18))
+        }
+
+        .dimpath {
+            opacity: .18
+        }
+
+        .footer {
+            padding: 0 22px 22px;
+            color: var(--muted);
+            font-size: .84rem;
+            line-height: 1.6
+        }
+
+        @media (max-width:1180px) {
+
+            .hero-grid,
+            .main-grid,
+            .legend-grid,
+            .brainstorm-grid,
+            .facts {
+                grid-template-columns: 1fr
+            }
+
+            .shell {
+                width: min(1500px, calc(100vw - 18px))
+            }
+
+            .hero,
+            .section {
+                padding: 18px
+            }
+
+            h1 {
+                max-width: none
+            }
+        }
+
+        @media (max-width:760px) {
+            .node {
+                min-width: 126px;
+                padding: 9px 10px
+            }
+
+            .node .title {
+                font-size: .78rem
+            }
+
+            .node .meta {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <header class="card hero">
+            <div class="hero-grid">
+                <div>
+                    <p class="eyebrow">Field_DrumLab / Firmware Reference Atlas</p>
+                    <h1>DrumLab, 5-voice rhythm center for Daisy Field.</h1>
+                    <p class="lead">A single-file HTML reference that reconstructs the DrumLab firmware as a
+                        block-diagram equivalent, overlaying Daisy Field controls (A-row pads, B-row focus select, and
+                        dual-page K1-K8 knobs) onto a logical visualization map.</p>
+                    <div class="facts">
+                        <div class="fact"><span>Diagram Basis</span><b>Field_DrumLab.cpp</b></div>
+                        <div class="fact"><span>Panel Basis</span><b>Daisy Field Abstract Layout</b></div>
+                        <div class="fact"><span>Modes</span><b>Reference + Brainstorm</b></div>
+                    </div>
+                </div>
+                <aside class="toggle-box">
+                    <div class="buttons">
+                        <button class="mode" type="button" data-mode="reference">Reference Mode</button>
+                        <button class="mode" type="button" data-mode="brainstorm">Interactive Brainstorm Mode</button>
+                    </div>
+                    <p id="modeSummary" style="margin-top:14px">Reference Mode is documentation-first: accurate firmware
+                        flow, exact Daisy Field mappings, and dynamic parameter roles based on the focus-track
+                        mechanism.</p>
+                    <div class="status-list">
+                        <div class="status-row"><span>Mapped to the current firmware</span><i class="dot mapped"></i>
+                        </div>
+                        <div class="status-row"><span>Field-only adaptation</span><i class="dot fieldonly"></i></div>
+                        <div class="status-row"><span>Fixed internal value</span><i class="dot fixed"></i></div>
+                        <div class="status-row"><span>Future brainstorm opportunity</span><i class="dot future"></i>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </header>
+
+        <section class="main-grid">
+            <article class="card section">
+                <div class="head">
+                    <div>
+                        <h2>Firmware Block Diagram</h2>
+                        <p>HTML block diagram highlighting the 5 drum voices, focus-control logic, and stereo mix bus.
+                        </p>
+                    </div>
+                </div>
+                <div class="diagram" id="diagram"></div>
+            </article>
+            <aside class="card section">
+                <div class="head">
+                    <div>
+                        <h2>Inspector</h2>
+                        <p>Hover or click a block, callout, or brainstorm card to lock its mapping details.</p>
+                    </div>
+                </div>
+                <div class="inspector-wrap">
+                    <div class="inspector" id="inspector"></div>
+                    <div class="mini">
+                        <h3>Fixed Internal / Shared</h3>
+                        <ul class="list">
+                            <li><strong>MIDI</strong><span>Channel 10 (GM Percussion)</span></li>
+                            <li><strong>Stereo Mix</strong><span>Linear Pan Law</span></li>
+                            <li><strong>Global FX</strong><span>None (Future Space)</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="card section">
+            <div class="head">
+                <div>
+                    <h2>Front Panel Layout Representation</h2>
+                    <p>This portrays the abstract logical layout of the Field_DrumLab firmware. <strong>A-row =
+                            Triggers</strong>, <strong>B-row = Focus Select</strong>, <strong>Knobs = Active Edit
+                            Page</strong>.</p>
+                </div>
+            </div>
+            <div class="mapping" id="mapping" style="background:#111;"></div>
+            <div class="legend-grid" style="margin-top:18px">
+                <section class="legend">
+                    <h3>Current Firmware Map</h3>
+                    <div id="legendList"></div>
+                </section>
+                <section class="legend">
+                    <h3>Reference Notes</h3>
+                    <div id="notesList"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="card section brainstorm-only">
+            <div class="head">
+                <div>
+                    <h2>Interactive Brainstorm Mode</h2>
+                    <p>Exposes potential future expansions and alternate UX metaphors for the DrumLab concept.</p>
+                </div>
+            </div>
+            <div class="brainstorm-grid">
+                <div class="brain-box" id="brainList"></div>
+                <div class="brain-box">
+                    <h3>Prompt Stack</h3>
+                    <ul class="notes">
+                        <li>Could B6-B8 (currently unused) become quick-mute toggles or solo buttons?</li>
+                        <li>Should the master delay or reverb send be added to the Mix page, replacing the general
+                            Decay/Accent masters?</li>
+                        <li>What visual animation could be added to the OLED to better represent hi-hat choke
+                            interactions?</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        <div class="footer">This artifact is firmware-accurate to the current <code>Field_DrumLab.cpp</code>.</div>
+    </div>
+
+    <script>
+        const statusNames = { mapped: "Mapped", "field-only": "Field-specific", fixed: "Fixed internal", future: "Future opportunity" };
+        const modeText = { reference: "Reference Mode is documentation-first: accurate firmware flow, exact Daisy Field mappings.", brainstorm: "Interactive Brainstorm Mode exposes missing or future features as opportunity cards." };
+        const reg = []; const lookup = new Map(); let pinned = null, hovered = null;
+
+        const blocks = [
+            { id: "performance", title: "Focus & Trigger Logic", lines: ["A1-A7 Triggers", "B1-B5 Focus Select", "SW1 Page Toggle"], x: 40, y: 300, w: 228, h: 120, cls: "performance", note: "Handles all user inputs: dynamic knob mappings via focus and routing." },
+            { id: "kick", title: "AnalogBD (Kick)", lines: ["Midi 36 | Focus B1 | Pad A1", "Pitch, Tone, Decay", "Attack FM, Self FM, Accent"], x: 380, y: 56, w: 236, h: 110, cls: "kick", note: "Analog-style 808-esque bass drum." },
+            { id: "snare", title: "SynthSD (Snare)", lines: ["Midi 38 | Focus B2 | Pad A2", "Pitch, Tone, Decay", "Snappy, FM Amt, Accent"], x: 380, y: 196, w: 236, h: 110, cls: "snare", note: "Digital snare with distinct noise snare wires component." },
+            { id: "hihat", title: "HiHat (Closed/Open)", lines: ["Midi 42/46 | Focus B3", "Pad A3 (Closed) / A4 (Open)", "Choke Logic Built-in"], x: 380, y: 336, w: 236, h: 110, cls: "hihat", note: "Single HiHat voice shared by closed and open triggers, handling choke." },
+            { id: "clap", title: "AnalogSD (Clap)", lines: ["Midi 39 | Focus B4 | Pad A5", "High Snappy settings", "AnalogSD repurposed"], x: 380, y: 476, w: 236, h: 110, cls: "clap", note: "AnalogSnareDrum tuned with high Snappy to approximate a clap/zap." },
+            { id: "perc", title: "SynthBD (Perc)", lines: ["Midi 37 | Focus B5 | Pad A6", "Dirty parameter active", "FM Env modulation"], x: 380, y: 616, w: 236, h: 110, cls: "perc", note: "SyntheticBassDrum utilized for tom and percussion timbres." },
+            { id: "mixer", title: "Stereo Mix Bus", lines: ["5x Per-voice Pan", "Left + Right Summing", "Mix Page Levels"], x: 720, y: 250, w: 210, h: 120, cls: "mixer", note: "Pans and scales each voice before final 2-channel summation." },
+            { id: "output", title: "Master Output", lines: ["K8 Master Volume", "Stereo Out"], x: 720, y: 450, w: 210, h: 90, cls: "output", note: "Final gain stage outputting via DAC." }
+        ];
+
+        const connections = [
+            { f: "performance", t: "kick", k: "control", l: "Trig/Params" },
+            { f: "performance", t: "snare", k: "control", l: "Trig/Params" },
+            { f: "performance", t: "hihat", k: "control", l: "Trig/Params" },
+            { f: "performance", t: "clap", k: "control", l: "Trig/Params" },
+            { f: "performance", t: "perc", k: "control", l: "Trig/Params" },
+            { f: "kick", t: "mixer", k: "audio", l: "L+R" },
+            { f: "snare", t: "mixer", k: "audio", l: "L+R" },
+            { f: "hihat", t: "mixer", k: "audio", l: "L+R" },
+            { f: "clap", t: "mixer", k: "audio", l: "L+R" },
+            { f: "perc", t: "mixer", k: "audio", l: "L+R" },
+            { f: "performance", t: "mixer", k: "mod", l: "Mix Levels" },
+            { f: "performance", t: "output", k: "mod", l: "Master Vol (K8)" },
+            { f: "mixer", t: "output", k: "audio", l: "Stereo Sum" }
+        ];
+
+        const items = [
+            { id: "item-k1", blockId: "performance", control: "K1", title: "K1 -> Pitch / Kick Mix", analog: "Pitch control", firmware: "Controls pitch of focused voice (Synth page) or Kick level (Mix page)", detail: "Dynamically mapped based on SW1 and B-row focus.", status: "mapped", box: { x: 50, y: 50, w: 180, h: 60 }, point: { x: 90, y: 150 } },
+            { id: "item-k2", blockId: "performance", control: "K2", title: "K2 -> Decay / Snare Mix", analog: "Decay control", firmware: "Controls decay of focused voice (Synth page) or Snare level (Mix page)", detail: "Dynamic assignment.", status: "mapped", box: { x: 250, y: 50, w: 180, h: 60 }, point: { x: 290, y: 150 } },
+            { id: "item-k3", blockId: "performance", control: "K3", title: "K3 -> Tone / HiHat Mix", analog: "Tone control", firmware: "Controls Tone (or FM Amount for Snare) (Synth) or HiHat level (Mix)", detail: "Adapts to specific voice parameters.", status: "mapped", box: { x: 450, y: 50, w: 180, h: 60 }, point: { x: 490, y: 150 } },
+            { id: "item-k4", blockId: "performance", control: "K4", title: "K4 -> Timbre / Clap Mix", analog: "Timbre control", firmware: "Controls Snappy/Noisiness/Dirty based on voice (Synth) or Clap level (Mix)", detail: "Kick ignores this parameter.", status: "mapped", box: { x: 650, y: 50, w: 180, h: 60 }, point: { x: 690, y: 150 } },
+            { id: "item-k5", blockId: "performance", control: "K5", title: "K5 -> Accent / Perc Mix", analog: "Accent control", firmware: "Controls Accent of focused voice (Synth) or Perc level (Mix)", detail: "Volume shaping factor.", status: "mapped", box: { x: 850, y: 50, w: 180, h: 60 }, point: { x: 890, y: 150 } },
+            { id: "item-k6", blockId: "mixer", control: "K6", title: "K6 -> Pan", analog: "Pan control", firmware: "Pans the focused voice (Synth page).", detail: "Linear panning law.", status: "mapped", box: { x: 50, y: 180, w: 180, h: 60 }, point: { x: 90, y: 280 } },
+            { id: "item-k7", blockId: "mixer", control: "K7", title: "K7 -> Level", analog: "Level control", firmware: "Controls Level of the focused voice (Synth page).", detail: "Mixer component.", status: "mapped", box: { x: 250, y: 180, w: 180, h: 60 }, point: { x: 290, y: 280 } },
+            { id: "item-k8", blockId: "output", control: "K8", title: "K8 -> Master Volume", analog: "Master Volume", firmware: "Controls global master volume independently of page/focus.", detail: "Hardwired to master output level.", status: "mapped", box: { x: 450, y: 180, w: 180, h: 60 }, point: { x: 490, y: 280 } },
+            { id: "item-sw1", blockId: "performance", control: "SW1", title: "SW1 -> Page Toggle", analog: "Page Selection", firmware: "Toggles between Synth parameter edits and Mix levels.", detail: "OLED and Knob roles update accordingly.", status: "mapped", box: { x: 650, y: 180, w: 180, h: 60 }, point: { x: 690, y: 280 } },
+            { id: "item-sw2", blockId: "performance", control: "SW2", title: "SW2 -> Panic", analog: "Panic", firmware: "Clears focus, jumps to overview.", detail: "Utility function.", status: "field-only", box: { x: 850, y: 180, w: 180, h: 60 }, point: { x: 890, y: 280 } },
+
+            { id: "item-pads", blockId: "performance", control: "A1-A7", title: "A1-A7 -> Trigger Pads", analog: "Drum Triggers", firmware: "A1=Kick, A2=Snare, A3=CHat, A4=OHat, A5=Clap, A6=Perc, A7=Crash All", detail: "Immediate voice triggering.", status: "mapped", box: { x: 50, y: 550, w: 220, h: 60 }, point: { x: 190, y: 450 } },
+            { id: "item-focus", blockId: "performance", control: "B1-B5", title: "B1-B5 -> Focus Keys", analog: "Voice Selection", firmware: "Selects the voice for editing via K1-K7 on Synth page.", detail: "Isolates the active edit target.", status: "mapped", box: { x: 350, y: 550, w: 220, h: 60 }, point: { x: 490, y: 450 } },
+
+            { id: "future-fx", blockId: "output", control: "Future", title: "Future: Global FX Send", analog: "Reverb/Delay", firmware: "Not implemented. Would require reusing K6/K7 on the Mix page for FX sends.", detail: "High-value future feature.", status: "future", box: { x: 650, y: 550, w: 220, h: 60 }, point: { x: 790, y: 450 } },
+            { id: "future-b6", blockId: "performance", control: "Future", title: "Future: B6 Solo", analog: "Solo Button", firmware: "B6 unassigned. Could solo the active focus voice.", detail: "Useful live performance feature.", status: "future", box: { x: 920, y: 550, w: 220, h: 60 }, point: { x: 990, y: 450 } }
+        ];
+
+        const brain = [
+            { id: "brain-fx", blockId: "output", title: "Implement Global Reverb Space", note: "Drum machines benefit greatly from a unified room context. The Mix page currently under-utilizes K6 and K7." },
+            { id: "brain-solo", blockId: "performance", title: "Utilize B6-B8 for Mute/Solo", note: "B-row has 3 spare buttons. Mute toggles for Kick/Snare/Hats would enhance live jamming." },
+            { id: "brain-decaymix", blockId: "performance", title: "Global Decay control on Mix page", note: "K6 on the Mix page could serve as a macro that globally scales decay times for all voices." }
+        ];
+
+        const defaults = { title: "Current firmware overview", status: "mapped", subtitle: "Select any block or callout to inspect the DrumLab firmware map.", details: [["Voices", "5 discrete DaisySP synthesis models"], ["Interface", "Focus-tracked UI leveraging the Field grid and OLED"], ["Use case", "Reference Mode documents today; Brainstorm Mode visualizes futures"]] };
+
+        function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+        function addLookup() {
+            blocks.forEach(b => lookup.set(b.id, { id: b.id, title: b.title, status: "mapped", subtitle: b.note, details: [["In firmware", b.lines.join(" | ")], ["Role", b.note]], keys: [b.id] }));
+            items.forEach(i => lookup.set(i.id, { id: i.id, title: i.title, status: i.status, subtitle: i.detail, details: [["Field control", i.control], ["Logic Concept", i.analog], ["Firmware behavior", i.firmware], ["Status", statusNames[i.status]]], keys: [i.id, i.blockId] }));
+            brain.forEach(i => lookup.set(i.id, { id: i.id, title: i.title, status: "future", subtitle: i.note, details: [["Target block", i.blockId.toUpperCase()], ["Prompt", i.note], ["Status", statusNames.future]], keys: [i.id, i.blockId] }))
+        }
+        function bind(el, id, keys) { el.dataset.keys = keys.join(","); el.addEventListener("mouseenter", () => { hovered = lookup.get(id); sync(); inspect(hovered) }); el.addEventListener("mouseleave", () => { hovered = null; sync(); inspect(pinned) }); el.addEventListener("click", () => { pinned = lookup.get(id); sync(); inspect(pinned) }); reg.push(el) }
+        function activeKeys() { return (hovered || pinned)?.keys || [] }
+        function sync() { const set = new Set(activeKeys()); reg.forEach(el => { const keys = (el.dataset.keys || "").split(",").filter(Boolean); const path = /^(path|line|circle|text|rect)$/i.test(el.tagName); el.classList.remove("active", "dim", "activepath", "dimpath"); if (!set.size) return; const hit = keys.some(k => set.has(k)); el.classList.add(hit ? (path ? "activepath" : "active") : (path ? "dimpath" : "dim")); }) }
+        function inspect(item) { const s = item || defaults; const st = s.status || "mapped"; document.getElementById("inspector").innerHTML = `<span class="pill">${statusNames[st] || "Reference"}</span><h3>${esc(s.title)}</h3><p>${esc(s.subtitle)}</p><ul class="list">${(s.details || []).map(([a, b]) => `<li><strong>${esc(a)}</strong><span>${esc(b)}</span></li>`).join("")}</ul>` }
+        function pathD(x1, y1, x2, y2, mid) { return `M ${x1} ${y1} C ${mid} ${y1}, ${(mid + x2) / 2} ${y2}, ${x2} ${y2}` }
+
+        function renderDiagram() {
+            const host = document.getElementById("diagram"), w = 1000, h = 760; const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("viewBox", `0 0 ${w} ${h}`); host.appendChild(svg);
+            const byId = Object.fromEntries(blocks.map(b => [b.id, b]));
+            connections.forEach(c => { const f = byId[c.f], t = byId[c.t], x1 = f.x + f.w, y1 = f.y + f.h * .5, x2 = t.x, y2 = t.y + t.h * .5, m = (x1 + x2) / 2; const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", pathD(x1, y1, x2, y2, m)); p.setAttribute("class", c.k); p.dataset.keys = [c.f, c.t].join(","); svg.appendChild(p); reg.push(p); const tx = document.createElementNS("http://www.w3.org/2000/svg", "text"); tx.setAttribute("class", "label"); tx.setAttribute("x", m - 50); tx.setAttribute("y", (y1 + y2) / 2 - 8); tx.textContent = c.l; tx.dataset.keys = [c.f, c.t].join(","); svg.appendChild(tx); reg.push(tx); });
+            blocks.forEach(b => { const el = document.createElement("button"); el.type = "button"; el.className = `block ${b.cls}`; el.style.left = (b.x / w * 100) + "%"; el.style.top = (b.y / h * 100) + "%"; el.style.width = (b.w / w * 100) + "%"; el.style.height = (b.h / h * 100) + "%"; el.innerHTML = `<h3>${esc(b.title)}</h3><p>${b.lines.map(esc).join("<br>")}</p>`; host.appendChild(el); bind(el, b.id, [b.id]) })
+        }
+
+        function renderMapping() {
+            const host = document.getElementById("mapping"), w = 1200, h = 900;
+            // Using abstract grid instead of image for DrumLab
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("viewBox", `0 0 ${w} ${h}`); host.appendChild(svg);
+
+            // Draw grid abstract lines
+            const gridLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            gridLine.setAttribute("x1", 0); gridLine.setAttribute("y1", 380); gridLine.setAttribute("x2", w); gridLine.setAttribute("y2", 380);
+            gridLine.setAttribute("stroke", "rgba(255,255,255,0.05)"); gridLine.setAttribute("stroke-width", "2"); svg.appendChild(gridLine);
+
+            const lbl1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            lbl1.setAttribute("x", 40); lbl1.setAttribute("y", 370); lbl1.setAttribute("fill", "rgba(255,255,255,0.2)"); lbl1.setAttribute("font-family", "var(--mono)"); lbl1.textContent = "KNOB ROW & SWITCHES"; svg.appendChild(lbl1);
+
+            const lbl2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            lbl2.setAttribute("x", 40); lbl2.setAttribute("y", 400); lbl2.setAttribute("fill", "rgba(255,255,255,0.2)"); lbl2.setAttribute("font-family", "var(--mono)"); lbl2.textContent = "KEYBOARD ROWS"; svg.appendChild(lbl2);
+
+            items.forEach(i => {
+                const sx = i.box.x + i.box.w / 2, sy = i.box.y < h / 2 ? i.box.y + i.box.h : i.box.y, ex = i.point.x, ey = i.point.y, mid = sy + (ey - sy) / 2;
+                const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", `M ${sx} ${sy} C ${sx} ${mid}, ${ex} ${mid}, ${ex} ${ey}`); p.setAttribute("class", i.status === "future" ? "ghost" : "control"); p.dataset.keys = [i.id, i.blockId].join(","); svg.appendChild(p); reg.push(p);
+                const col = i.status === "future" ? "var(--future)" : i.status === "fixed" ? "var(--fixed)" : i.status === "field-only" ? "var(--rust)" : "var(--field)";
+                const rw = 24;
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                rect.setAttribute("cx", ex); rect.setAttribute("cy", ey);
+                rect.setAttribute("r", rw / 2); rect.setAttribute("fill", col);
+                rect.dataset.keys = [i.id, i.blockId].join(","); svg.appendChild(rect); reg.push(rect);
+
+                const el = document.createElement("button"); el.type = "button"; el.className = `node status-${i.status}`; el.style.left = (i.box.x / w * 100) + "%"; el.style.top = (i.box.y / h * 100) + "%"; el.style.width = (i.box.w / w * 100) + "%"; el.innerHTML = `<span class="short">${esc(i.control)}</span><span class="title">${esc(i.title)}</span><span class="meta">${esc(i.analog)}</span>`; host.appendChild(el); bind(el, i.id, [i.id, i.blockId])
+            })
+        }
+
+        function renderLegend() {
+            const legend = document.getElementById("legendList"); items.filter(i => i.status !== "future").forEach(i => { const el = document.createElement("button"); el.type = "button"; el.className = "legend-item"; el.innerHTML = `<strong>${esc(i.title)}</strong><span>${esc(i.firmware)}</span>`; legend.appendChild(el); bind(el, i.id, [i.id, i.blockId]) });
+            const notes = document.getElementById("notesList");[["Live Mapping", "Field keys and knobs provide contextual editing based on the active focus voice and page mode."], ["Multi-Voice Constraints", "With only 5 voices, K4 Timbre maps to snappy/noisiness/dirty where applicable (ignored by kick)."], ["Mix Page", "Mix page overrides K1-K7 to become level controls, retaining K8 as master level."]].forEach(([a, b]) => { const el = document.createElement("div"); el.className = "legend-item"; el.innerHTML = `<strong>${esc(a)}</strong><span>${esc(b)}</span>`; notes.appendChild(el) })
+        }
+
+        function renderBrain() { const host = document.getElementById("brainList"); brain.forEach(i => { const el = document.createElement("button"); el.type = "button"; el.className = "brain-chip"; el.innerHTML = `<strong>${esc(i.title)}</strong><span>${esc(i.note)}</span>`; host.appendChild(el); bind(el, i.id, [i.id, i.blockId]) }) }
+        function setMode(m) { document.body.dataset.mode = m; document.getElementById("modeSummary").textContent = modeText[m]; if (m === "reference" && pinned && pinned.status === "future") { pinned = null; hovered = null; inspect(null); sync() } }
+        document.querySelectorAll(".mode").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+        addLookup(); inspect(null); renderDiagram(); renderMapping(); renderLegend(); renderBrain(); setMode("reference");
+    </script>
+</body>
+
+</html>
