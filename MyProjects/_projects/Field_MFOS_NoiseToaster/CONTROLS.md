@@ -2,45 +2,74 @@
 
 ## Overview
 
-`Field_MFOS_NoiseToaster` is now a single-page Daisy Field patch with no menus or alternate pages. All eight knobs are live all the time, and the B-row is used as a small analog-style mode strip rather than as direct one-shot selectors.
+This document describes the approved next control model for `Field_MFOS_NoiseToaster`.
 
-The synth is monophonic. A note remains armed after an `A` key press until another note is selected or `SW2` panic clears it.
+It no longer describes the older `SW1 = Manual Gate` layout. The approved direction is:
 
-## Knobs
+- `SW1` switches between `MOD0` and `MOD1`
+- `MOD0` keeps the current synth surface
+- `MOD1` is a sparse analog-recovery bank
+- `SW2` remains `Panic`
 
-| Knob | Parameter | Behavior In Code | Practical Result |
-|------|-----------|------------------|------------------|
-| `K1` | VCO Frequency / Coarse Tune | `note * 2^((k - 0.5) * 2.0)` before modulation | About `-1` to `+1` octave around the armed note |
-| `K2` | VCO LFO Depth | `0.0..1.0` depth into oscillator pitch | Controls vibrato or stepped pitch motion depending on the selected LFO wave |
-| `K3` | VCO AREG Depth | `0.0..1.0` depth into oscillator pitch | Adds contour pitch sweep from the same AREG that drives the patch |
-| `K4` | VCF Cutoff | About `50 + knob^2 * 8000 Hz` before modulation | Sets the base brightness of the low-pass filter |
-| `K5` | VCF Resonance | `0.05 + 0.92 * knob` | Mild to strong resonance |
-| `K6` | VCF Mod Depth | `0.0..1.0` depth for the source selected on `B3` | Sets how much the filter moves from LFO or AREG |
-| `K7` | AREG Attack | `0.002 + knob^2 * 1.20 s` | About `2 ms` to `1202 ms` attack |
-| `K8` | AREG Release | `0.010 + knob^2 * 1.80 s` | About `10 ms` to `1810 ms` release |
+The synth remains monophonic. A note stays armed after an `A` key press until another note is selected or `SW2` clears it.
+
+## Active Bank Summary
+
+- `MOD0` is the main performance bank.
+- `MOD1` exposes only the genuinely missing analog-original controls.
+- `K1..K8` values are saved per bank.
+- `B1..B8` states are saved per bank.
+- Switching banks must restore the saved state of that bank instead of overwriting it with raw physical control positions.
+
+## MOD0 Knobs
+
+| Knob | Parameter | Practical Result |
+|------|-----------|------------------|
+| `K1` | VCO Frequency / Coarse Tune | About `-1` to `+1` octave around the armed note |
+| `K2` | VCO LFO Depth | Controls vibrato or stepped pitch motion depending on the selected LFO wave |
+| `K3` | VCO AREG Depth | Adds contour pitch sweep from the same AREG that drives the patch |
+| `K4` | VCF Cutoff | Sets the base brightness of the low-pass filter |
+| `K5` | VCF Resonance | Mild to strong resonance |
+| `K6` | VCF Mod Depth | Sets how much the filter moves from LFO or AREG |
+| `K7` | AREG Attack | About `2 ms` to `1202 ms` attack |
+| `K8` | AREG Release | About `10 ms` to `1810 ms` release |
+
+## MOD1 Knobs
+
+`MOD1` is intentionally parsimonious.
+
+| Knob | Parameter | Status |
+|------|-----------|--------|
+| `K1` | LFO Rate | Active analog-recovery control |
+| `K2` | Output Level | Active analog-recovery control |
+| `K3` | Reserved | Saved per bank for future features |
+| `K4` | Reserved | Saved per bank for future features |
+| `K5` | Reserved | Saved per bank for future features |
+| `K6` | Reserved | Saved per bank for future features |
+| `K7` | Reserved | Saved per bank for future features |
+| `K8` | Reserved | Saved per bank for future features |
 
 ## A Row Note Map
 
 | Key | MIDI Note | Pitch | Behavior |
 |-----|-----------|-------|----------|
-| `A1` | `48` | `C3` | Arms `C3` and triggers the AREG |
-| `A2` | `50` | `D3` | Arms `D3` and triggers the AREG |
-| `A3` | `52` | `E3` | Arms `E3` and triggers the AREG |
-| `A4` | `53` | `F3` | Arms `F3` and triggers the AREG |
-| `A5` | `55` | `G3` | Arms `G3` and triggers the AREG |
-| `A6` | `57` | `A3` | Arms `A3` and triggers the AREG |
-| `A7` | `59` | `B3` | Arms `B3` and triggers the AREG |
-| `A8` | `60` | `C4` | Arms `C4` and triggers the AREG |
+| `A1` | `48` | `C3` | Arms `C3` and triggers the contour |
+| `A2` | `50` | `D3` | Arms `D3` and triggers the contour |
+| `A3` | `52` | `E3` | Arms `E3` and triggers the contour |
+| `A4` | `53` | `F3` | Arms `F3` and triggers the contour |
+| `A5` | `55` | `G3` | Arms `G3` and triggers the contour |
+| `A6` | `57` | `A3` | Arms `A3` and triggers the contour |
+| `A7` | `59` | `B3` | Arms `B3` and triggers the contour |
+| `A8` | `60` | `C4` | Arms `C4` and triggers the contour |
 
 ### Note Behavior
 
 - A-row keys are trigger actions, not sustained gate-hold actions.
 - Releasing an A-row key does not silence the synth.
-- If `B4` is in `Manual`, the AREG runs once per key press unless retriggered again.
-- If `B4` is in `Repeat`, the AREG keeps cycling on the armed note until `SW2` panic or a new note is selected.
 - The currently armed note LED stays lit on the A-row.
+- `SW1` no longer retriggers the contour directly; it switches banks.
 
-## B Row And Switches
+## MOD0 B Row
 
 | Control | Function | States | LED Meaning |
 |---------|----------|--------|-------------|
@@ -49,112 +78,73 @@ The synth is monophonic. A note remains armed after an `A` key press until anoth
 | `B3` | VCF mod source cycle | `LFO -> AREG -> Off` | `On = LFO`, `Blink = AREG`, `Off = Off` |
 | `B4` | Repeat / Manual | toggle | `On = Repeat`, `Off = Manual` |
 | `B5` | VCA Bypass | toggle | `On = Bypass`, `Off = AREG VCA` |
-| `B6` | Unused | none | `Off` |
-| `B7` | Unused | none | `Off` |
-| `B8` | Unused | none | `Off` |
-| `SW1` | Manual Gate | retrigger | LED glows dimly when a note is armed |
-| `SW2` | Panic | clear note and stop repeat | LED remains off in normal operation |
+| `B6` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B7` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B8` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
 
-## Modulation And Envelope Behavior
+## MOD1 B Row
 
-### AREG
+| Control | Function | States | LED Meaning |
+|---------|----------|--------|-------------|
+| `B1` | White Noise switch | toggle | `On = enabled`, `Off = disabled` |
+| `B2` | VCO Sync switch | toggle | `On = enabled`, `Off = disabled` |
+| `B3` | VCF Input Select | discrete routing cycle | bank-specific saved selector state |
+| `B4` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B5` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B6` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B7` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
+| `B8` | Reserved | saved state only | `On / Blink / Off` are restored per bank |
 
-- The AREG is the central contour block in the current firmware.
-- `K7` sets attack and `K8` sets release.
-- Every A-row note press retriggers the AREG.
-- `SW1` retriggers the AREG on the currently armed note.
-- `B4` repeat mode retriggers the AREG automatically whenever it falls idle and a note is armed.
+## Switches
 
-### Pitch Modulation
+| Control | Function | Behavior |
+|---------|----------|----------|
+| `SW1` | MOD bank switch | Toggles between `MOD0` and `MOD1` |
+| `SW2` | Panic | Clears the armed note and stops repeat behavior |
 
-- `K2` sets `LFO -> VCO` depth.
-- `K3` sets `AREG -> VCO` depth.
-- Both pitch modulation paths are active together.
+## State Persistence
 
-### Filter Modulation
+The key requirement of the bank system is that each bank owns its own saved control state.
 
-- `B3` chooses the filter modulation source:
-  - `LFO`
-  - `AREG`
-  - `Off`
-- `K6` sets the modulation depth for that selected source.
+This applies to:
 
-### VCA Behavior
+- `K1..K8` saved parameter values
+- `B1..B8` saved logical button states
 
-- With `B5` off, the low-pass signal is multiplied by the current AREG value.
-- With `B5` on, the VCA is bypassed and the armed note becomes a continuous tone through the filter path.
-- Even when `B5` bypass is on, the AREG can still modulate pitch or filter if the corresponding depths are up.
+Example:
 
-## Fixed Internal Settings
+- `MOD0:B6 = Blink`
+- `MOD1:B6 = On`
 
-These are not exposed on the panel in the current pass:
+Switching away from `MOD0` and back must restore `B6` blinking again. Switching into `MOD1` must restore `B6` solid on. The firmware must save logical state, not just raw LED brightness.
 
-| Block | Setting | Value |
-|-------|---------|-------|
-| LFO | Rate | `2.2 Hz` |
-| Noise | Pre-filter blend | `18%` |
-| Output | Level | `72%` |
-| AREG | Curve | `-18.0` |
-| Output | Routing | Same signal to left and right outputs |
+## Knob Pickup Behavior
 
-## OLED Display
+Each bank also owns its own saved `K1..K8` values.
 
-The OLED is now a live parameter display rather than a static instruction card.
+When the active bank changes:
 
-### Idle Overview
+- the synth should use the saved values of the selected bank
+- knobs should not jump immediately to their physical positions
+- a knob should only take control after crossing the saved value for the selected bank
 
-When no knob is moving, the OLED shows:
+This makes `MOD0` and `MOD1` behave like real saved banks rather than temporary overlays.
 
-- title
-- current `VCO`, `LFO`, and `VCF mod source` modes
-- current armed note
-- `Repeat` and `Bypass` state
-- all eight knob functions with live values
-- fixed internal `LFO` rate and output level summary
+## Analog-Recovery Controls Assigned To MOD1
 
-### Focused Parameter View
+The missing analog-original controls chosen for `MOD1` are:
 
-When a knob moves far enough:
-
-- the OLED zooms that parameter name
-- shows a larger value readout
-- shows the current mode summary underneath
-- shows a progress bar
-- returns to the overview after about `1.4 s` of inactivity
-
-The old hint rows:
-
-- `A1-A8 Notes`
-- `B1-3 Wave`
-- `B4 Hold`
-- `SW2 Panic`
-
-are intentionally removed from the display.
-
-## Serial Boot Log
-
-At boot, the project prints short status lines with the seed logger:
-
-- `Field_MFOS_NoiseToaster ready`
-- `A1-A8 note select+trigger | B1 VCO | B2 LFO | B3 VCF src`
-- `B4 repeat | B5 bypass | SW1 manual gate | SW2 panic`
-- fixed internal `LFO`, `OUT`, and `Noise` summary
-
-## Analog Counterpart Controls Still Missing
-
-Compared with the original MFOS Noise Toaster panel, these analog controls or routing behaviors are still absent or simplified:
-
-- discrete white-noise on/off switching
 - live `LFO Rate`
 - live `Output Level`
+- `White Noise`
 - `VCO Sync`
-- a closer replica of the analog `VCF input select` routing
-- the original speaker / internal amp section
-- a pure analog-style no-key interaction mode that removes the Daisy Field note-key adaptation
+- `VCF Input Select`
+
+Other possible future additions should stay unassigned until they are explicitly designed.
 
 ## Operational Notes
 
-- If no note is armed, `SW1` manual gate does nothing.
-- `SW2` clears the armed note and stops repeat behavior immediately.
-- `B5` bypass does not bypass the filter; it bypasses only AREG amplitude shaping.
-- White noise is always present at a fixed pre-filter blend in this pass.
+- `SW1` is now a bank selector, not `Manual Gate`.
+- `SW2` remains panic.
+- `A1..A8` note-entry behavior is unchanged.
+- Reserved controls do not need to affect audio yet, but their saved state and LED behavior must still survive bank switches.

@@ -1,0 +1,810 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Untitled Patch",
+      "author": "",
+      "description": "",
+      "created": "2026-03-10T21:11:16.975Z",
+      "modified": "2026-03-10T22:03:23.099Z",
+      "version": "1.0.0",
+      "targetHardware": "seed",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "4656f3f4-2a29-48d8-ae6f-53ac626e4bad",
+        "definitionId": "oscillator",
+        "position": {
+          "x": 140,
+          "y": 180
+        },
+        "parameterValues": {
+          "freq": 7832,
+          "amp": 0.5,
+          "waveform": "WAVE_POLYBLEP_SAW",
+          "pw": 0.5
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "amp",
+          "freq"
+        ]
+      },
+      {
+        "id": "79b33013-c5bb-489d-872c-72ff0754966d",
+        "definitionId": "ad_env",
+        "position": {
+          "x": 820,
+          "y": 600
+        },
+        "parameterValues": {
+          "attack": 0.01,
+          "decay": 0.5,
+          "curve": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "29d62c11-a20b-43ba-879a-df90fe88e742",
+        "definitionId": "mixer",
+        "position": {
+          "x": 820,
+          "y": 180
+        },
+        "parameterValues": {
+          "inputCount": "3",
+          "level_1": 1,
+          "level_2": 1,
+          "level_3": 1,
+          "level_4": 1,
+          "master": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "ed24e873-a2a3-4475-9963-728f53ef68f1",
+        "definitionId": "yin_pitch",
+        "position": {
+          "x": 260,
+          "y": 1500
+        },
+        "parameterValues": {
+          "freq_min": 50,
+          "freq_max": 500
+        },
+        "selected": false
+      },
+      {
+        "id": "ce44bc3b-a7b9-4a95-9b98-178201d56b8b",
+        "definitionId": "equals",
+        "position": {
+          "x": 280,
+          "y": 1440
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "03f47862-98c8-4dd1-b5b9-eb761f1a2055",
+        "definitionId": "edge_rise",
+        "position": {
+          "x": 680,
+          "y": 1420
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "76f00784-20d1-4e0a-be8f-ce263849f36f",
+        "definitionId": "window_blackman",
+        "position": {
+          "x": 520,
+          "y": 1440
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "eb0a9fa3-6c89-4e83-9c16-d31bbd5ed45d",
+        "definitionId": "phaser",
+        "position": {
+          "x": 1520,
+          "y": 180
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "lfo_freq": 0.5,
+          "lfo_depth": 0.5,
+          "feedback": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "535f86a8-9bf8-45ee-a1a2-7cf0f216d817",
+        "definitionId": "fdnReverb",
+        "position": {
+          "x": 1260,
+          "y": 180
+        },
+        "parameterValues": {
+          "decay": 0.97,
+          "mix": 0.5,
+          "damping": 0.3,
+          "delayScale": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "bbb981b7-91bf-45b9-9827-f57985ddca5e",
+        "definitionId": "moog_ladder",
+        "position": {
+          "x": 600,
+          "y": 180
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "res": 0.4
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "freq"
+        ]
+      },
+      {
+        "id": "1b179935-7748-49c0-8b96-a22c9b085930",
+        "definitionId": "step_sequencer",
+        "position": {
+          "x": 520,
+          "y": 1540
+        },
+        "parameterValues": {
+          "trackSelect": 0,
+          "tempo": 120,
+          "swing": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "2fac5125-d948-4be2-acdc-f033c3eb46ee",
+        "definitionId": "reverb_sc",
+        "position": {
+          "x": 1260,
+          "y": 380
+        },
+        "parameterValues": {
+          "feedback": 0.7,
+          "lpfreq": 10000,
+          "wet_dry": 0.3
+        },
+        "selected": false
+      },
+      {
+        "id": "25c3cff0-1dce-4f54-a747-987b60972a32",
+        "definitionId": "audio_input",
+        "position": {
+          "x": 2060,
+          "y": 1620
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "d943aebf-04a0-4b3b-b99c-c7e1ac6a9ae0",
+        "definitionId": "knob",
+        "position": {
+          "x": -180,
+          "y": 880
+        },
+        "parameterValues": {
+          "channel": "0",
+          "min": 0,
+          "max": 1,
+          "curve": "linear"
+        },
+        "selected": false
+      },
+      {
+        "id": "0840934d-b42f-4eba-94af-b7b2b34227f4",
+        "definitionId": "audio_output",
+        "position": {
+          "x": 2060,
+          "y": 1500
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "8b3dd7d1-09fb-4e59-b9db-3a2e816425c9",
+        "definitionId": "gate_trigger_in",
+        "position": {
+          "x": 1240,
+          "y": 1120
+        },
+        "parameterValues": {
+          "channel": "0"
+        },
+        "selected": false
+      },
+      {
+        "id": "c50682aa-cf61-473c-9121-a2140b097b18",
+        "definitionId": "encoder",
+        "position": {
+          "x": 1240,
+          "y": 1320
+        },
+        "parameterValues": {
+          "min_val": 0,
+          "max_val": 1,
+          "step": 0.074
+        },
+        "selected": false
+      },
+      {
+        "id": "18645d9e-78d7-4b6a-aba1-5fe306c9488e",
+        "definitionId": "key",
+        "position": {
+          "x": 1480,
+          "y": 1400
+        },
+        "parameterValues": {
+          "note": 60,
+          "velocity": 0.8,
+          "gate": false
+        },
+        "selected": false
+      },
+      {
+        "id": "a592663b-6cf5-4651-9149-faf1d3559869",
+        "definitionId": "midi_note",
+        "position": {
+          "x": 1240,
+          "y": 900
+        },
+        "parameterValues": {
+          "channel": 12
+        },
+        "selected": false
+      },
+      {
+        "id": "489860b5-b8c4-41d7-bb13-5440301ba7de",
+        "definitionId": "midi_cc",
+        "position": {
+          "x": 1860,
+          "y": 1500
+        },
+        "parameterValues": {
+          "channel": 1,
+          "cc_number": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "a0a0b3d6-49d7-4a17-b729-b38dbac44de1",
+        "definitionId": "cv_output",
+        "position": {
+          "x": 1480,
+          "y": 1200
+        },
+        "parameterValues": {
+          "channel": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "1afb626c-1988-448f-baae-ec232fa33697",
+        "definitionId": "gate_output",
+        "position": {
+          "x": 1240,
+          "y": 1620
+        },
+        "parameterValues": {
+          "pin": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "9d6534ce-5503-448c-926c-26490b141775",
+        "definitionId": "led_output",
+        "position": {
+          "x": 1680,
+          "y": 1500
+        },
+        "parameterValues": {
+          "pin": 11,
+          "pwm": true
+        },
+        "selected": false
+      },
+      {
+        "id": "49b90c2d-635b-4a4c-845f-4ac00176501f",
+        "definitionId": "slider",
+        "position": {
+          "x": -180,
+          "y": 1160
+        },
+        "parameterValues": {
+          "channel": "0",
+          "min": -722.26,
+          "max": 1,
+          "curve": "linear"
+        },
+        "selected": false
+      },
+      {
+        "id": "412a8a34-d0a9-4788-99c7-7628e9152acb",
+        "definitionId": "switch",
+        "position": {
+          "x": -180,
+          "y": 680
+        },
+        "parameterValues": {
+          "channel": "0"
+        },
+        "selected": false
+      },
+      {
+        "id": "8f965278-6082-44af-bcc6-219dcb2d3c05",
+        "definitionId": "arpeggiator",
+        "position": {
+          "x": 840,
+          "y": 1420
+        },
+        "parameterValues": {
+          "mode": 0,
+          "octave_range": 1,
+          "gate_length": 0.68
+        },
+        "selected": false
+      },
+      {
+        "id": "03d60840-06d1-45de-80e0-c36bba0addcf",
+        "definitionId": "adsr",
+        "position": {
+          "x": 140,
+          "y": 520
+        },
+        "parameterValues": {
+          "attack": 0.01,
+          "decay": 0.1,
+          "sustain": 0.7,
+          "release": 0.3
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "attack",
+          "decay",
+          "sustain",
+          "release"
+        ]
+      },
+      {
+        "id": "7f3a43a1-c985-4670-9fb7-3e7c8d41816f",
+        "definitionId": "lfo",
+        "position": {
+          "x": -180,
+          "y": 180
+        },
+        "parameterValues": {
+          "freq": 1,
+          "amp": 1,
+          "waveform": "WAVE_SQUARE"
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "freq"
+        ]
+      },
+      {
+        "id": "074dbf8f-ca4e-4d0b-afe3-846701da4e26",
+        "definitionId": "svf",
+        "position": {
+          "x": 600,
+          "y": 380
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "res": 0.5,
+          "drive": 0
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "freq",
+          "res",
+          "drive"
+        ]
+      },
+      {
+        "id": "6b645642-53dc-4945-8db8-b76f26df1cd2",
+        "definitionId": "audio_output",
+        "position": {
+          "x": 1560,
+          "y": 440
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "6d26d606-89f2-405e-8f2a-045dcd319f6f",
+        "definitionId": "drip",
+        "position": {
+          "x": 640,
+          "y": -340
+        },
+        "parameterValues": {
+          "damp": 0.2,
+          "amp": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "65ae7783-23c1-4307-980a-e8c80e59e862",
+        "definitionId": "string_voice",
+        "position": {
+          "x": 380,
+          "y": 520
+        },
+        "parameterValues": {
+          "freq": 220,
+          "structure": 0.5,
+          "brightness": 0.5,
+          "damping": 0.5,
+          "accent": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "c38e84fa-a797-41da-a0c2-81c319e76367",
+        "definitionId": "oscillator",
+        "position": {
+          "x": 180,
+          "y": -560
+        },
+        "parameterValues": {
+          "freq": 440,
+          "amp": 0.5,
+          "waveform": "WAVE_POLYBLEP_SAW",
+          "pw": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "25df91ab-1651-439c-905e-83c2aa504d33",
+        "definitionId": "moog_ladder",
+        "position": {
+          "x": 640,
+          "y": -560
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "res": 0.4
+        },
+        "selected": false
+      },
+      {
+        "id": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "definitionId": "vca",
+        "position": {
+          "x": 1040,
+          "y": 360
+        },
+        "parameterValues": {
+          "gain": 1
+        },
+        "selected": false,
+        "enabledCvPorts": [
+          "gain"
+        ]
+      },
+      {
+        "id": "58dd4299-c5ea-44f1-a044-6793e09bd94f",
+        "definitionId": "mixer",
+        "position": {
+          "x": 860,
+          "y": -560
+        },
+        "parameterValues": {
+          "inputCount": "4",
+          "level_1": 1,
+          "level_2": 1,
+          "level_3": 1,
+          "level_4": 1,
+          "master": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "31d92dde-195d-44d0-807b-30dd3ad2075a",
+        "definitionId": "midi_note",
+        "position": {
+          "x": -180,
+          "y": 480
+        },
+        "parameterValues": {
+          "channel": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "f791ea2b-95f3-4060-8a95-14db3143ba0c",
+        "definitionId": "particle",
+        "position": {
+          "x": 440,
+          "y": 860
+        },
+        "parameterValues": {
+          "density": 0.5,
+          "spread": 0.5,
+          "freq": 440,
+          "resonance": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "e48787e6-6b79-4990-a0e6-fb16877ddbd4",
+        "definitionId": "synth_bass_drum",
+        "position": {
+          "x": 1060,
+          "y": 920
+        },
+        "parameterValues": {
+          "freq": 50,
+          "tone": 0.5,
+          "decay": 0.4,
+          "dirty": 0,
+          "fm_envelope_amount": 0.5,
+          "fm_envelope_decay": 0.1,
+          "accent": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "c8a942bd-4f2e-4635-a437-7f01053012ea",
+        "definitionId": "smooth",
+        "position": {
+          "x": 1140,
+          "y": 1020
+        },
+        "parameterValues": {
+          "smooth": 0.99
+        },
+        "selected": false
+      },
+      {
+        "id": "be7671b4-7dd0-4d69-bf4e-94f76f5dda49",
+        "definitionId": "crossfade",
+        "position": {
+          "x": 1520,
+          "y": 720
+        },
+        "parameterValues": {
+          "pos": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "ecdcebbc-e3e5-4ff4-9a63-3c7699e3a7a4",
+        "definitionId": "divide",
+        "position": {
+          "x": 880,
+          "y": 960
+        },
+        "parameterValues": {},
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "197cac6f-1635-4a53-b15b-5551515c91da",
+        "sourceBlockId": "4656f3f4-2a29-48d8-ae6f-53ac626e4bad",
+        "sourcePortId": "out",
+        "targetBlockId": "bbb981b7-91bf-45b9-9827-f57985ddca5e",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "27c21030-7e47-4792-962a-b5b5b09228b0",
+        "sourceBlockId": "bbb981b7-91bf-45b9-9827-f57985ddca5e",
+        "sourcePortId": "out",
+        "targetBlockId": "29d62c11-a20b-43ba-879a-df90fe88e742",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "1f6c9aa7-f62a-4cfa-9163-8c71beb9142f",
+        "sourceBlockId": "4656f3f4-2a29-48d8-ae6f-53ac626e4bad",
+        "sourcePortId": "out",
+        "targetBlockId": "074dbf8f-ca4e-4d0b-afe3-846701da4e26",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "8065bdc0-31d1-4853-8ce4-16b05da37d2f",
+        "sourceBlockId": "074dbf8f-ca4e-4d0b-afe3-846701da4e26",
+        "sourcePortId": "high",
+        "targetBlockId": "29d62c11-a20b-43ba-879a-df90fe88e742",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "dfb82689-608a-4724-b032-3642e620a4a3",
+        "sourceBlockId": "535f86a8-9bf8-45ee-a1a2-7cf0f216d817",
+        "sourcePortId": "out",
+        "targetBlockId": "eb0a9fa3-6c89-4e83-9c16-d31bbd5ed45d",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "d79b33aa-b0e2-4040-ae54-cd838419ed66",
+        "sourceBlockId": "7f3a43a1-c985-4670-9fb7-3e7c8d41816f",
+        "sourcePortId": "out",
+        "targetBlockId": "4656f3f4-2a29-48d8-ae6f-53ac626e4bad",
+        "targetPortId": "amp_cv",
+        "type": "cv"
+      },
+      {
+        "id": "fc850be5-96a1-42de-a3ca-85043f387ea2",
+        "sourceBlockId": "03d60840-06d1-45de-80e0-c36bba0addcf",
+        "sourcePortId": "out",
+        "targetBlockId": "bbb981b7-91bf-45b9-9827-f57985ddca5e",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "21b46735-533c-429b-a583-bb492f2ca414",
+        "sourceBlockId": "03d60840-06d1-45de-80e0-c36bba0addcf",
+        "sourcePortId": "out",
+        "targetBlockId": "074dbf8f-ca4e-4d0b-afe3-846701da4e26",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "9099f3f8-22ac-44f2-8712-2c7b2c9215ea",
+        "sourceBlockId": "eb0a9fa3-6c89-4e83-9c16-d31bbd5ed45d",
+        "sourcePortId": "out",
+        "targetBlockId": "6b645642-53dc-4945-8db8-b76f26df1cd2",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "4f9e5379-b487-4322-b034-0dab91f3dca7",
+        "sourceBlockId": "2fac5125-d948-4be2-acdc-f033c3eb46ee",
+        "sourcePortId": "out_l",
+        "targetBlockId": "6b645642-53dc-4945-8db8-b76f26df1cd2",
+        "targetPortId": "right",
+        "type": "audio"
+      },
+      {
+        "id": "ef1125b0-a8f7-4fde-9ca8-1f3e6ff98bea",
+        "sourceBlockId": "2fac5125-d948-4be2-acdc-f033c3eb46ee",
+        "sourcePortId": "out_r",
+        "targetBlockId": "6b645642-53dc-4945-8db8-b76f26df1cd2",
+        "targetPortId": "right",
+        "type": "audio"
+      },
+      {
+        "id": "9d00c41f-6611-42ee-abbb-6a66dd331373",
+        "sourceBlockId": "c38e84fa-a797-41da-a0c2-81c319e76367",
+        "sourcePortId": "out",
+        "targetBlockId": "25df91ab-1651-439c-905e-83c2aa504d33",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "005d5908-8f77-43ff-9ee2-66a1a04c9f8e",
+        "sourceBlockId": "25df91ab-1651-439c-905e-83c2aa504d33",
+        "sourcePortId": "out",
+        "targetBlockId": "58dd4299-c5ea-44f1-a044-6793e09bd94f",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "974fe690-5f62-4556-8e37-c0256c79d099",
+        "sourceBlockId": "6d26d606-89f2-405e-8f2a-045dcd319f6f",
+        "sourcePortId": "out",
+        "targetBlockId": "58dd4299-c5ea-44f1-a044-6793e09bd94f",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "92b39906-b6cf-4b2f-baea-cb4961e86763",
+        "sourceBlockId": "65ae7783-23c1-4307-980a-e8c80e59e862",
+        "sourcePortId": "out",
+        "targetBlockId": "29d62c11-a20b-43ba-879a-df90fe88e742",
+        "targetPortId": "in_3",
+        "type": "audio"
+      },
+      {
+        "id": "b7d53afe-fa7c-4765-958b-d2331af1e2e3",
+        "sourceBlockId": "79b33013-c5bb-489d-872c-72ff0754966d",
+        "sourcePortId": "out",
+        "targetBlockId": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "targetPortId": "gain_cv",
+        "type": "cv"
+      },
+      {
+        "id": "fe403cfe-4b50-4ba8-8a73-0adf5ac810c8",
+        "sourceBlockId": "29d62c11-a20b-43ba-879a-df90fe88e742",
+        "sourcePortId": "out",
+        "targetBlockId": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "1b02a37d-eec5-4ad9-829c-792f736761fd",
+        "sourceBlockId": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "sourcePortId": "out",
+        "targetBlockId": "2fac5125-d948-4be2-acdc-f033c3eb46ee",
+        "targetPortId": "in_l",
+        "type": "audio"
+      },
+      {
+        "id": "b63b18ac-4a6f-4b02-8f6a-7f422dc3426b",
+        "sourceBlockId": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "sourcePortId": "out",
+        "targetBlockId": "2fac5125-d948-4be2-acdc-f033c3eb46ee",
+        "targetPortId": "in_r",
+        "type": "audio"
+      },
+      {
+        "id": "f3b09eb3-8d89-4b7c-bddb-2ef69837e7e5",
+        "sourceBlockId": "d7eebd46-2f7b-425a-a696-075ab174e374",
+        "sourcePortId": "out",
+        "targetBlockId": "535f86a8-9bf8-45ee-a1a2-7cf0f216d817",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "3aff82a5-471a-4e9a-bd63-cbb8aa7bdc78",
+        "sourceBlockId": "31d92dde-195d-44d0-807b-30dd3ad2075a",
+        "sourcePortId": "gate",
+        "targetBlockId": "03d60840-06d1-45de-80e0-c36bba0addcf",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "76016f90-0de7-402f-adf7-d7134789b6f9",
+        "sourceBlockId": "31d92dde-195d-44d0-807b-30dd3ad2075a",
+        "sourcePortId": "gate",
+        "targetBlockId": "79b33013-c5bb-489d-872c-72ff0754966d",
+        "targetPortId": "trig",
+        "type": "trigger"
+      },
+      {
+        "id": "bf4d754b-b274-4ad0-a61f-b98993c317e7",
+        "sourceBlockId": "31d92dde-195d-44d0-807b-30dd3ad2075a",
+        "sourcePortId": "pitch",
+        "targetBlockId": "4656f3f4-2a29-48d8-ae6f-53ac626e4bad",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "09df8e93-bf2c-4cc0-bd98-597e160046dc",
+        "sourceBlockId": "d943aebf-04a0-4b3b-b99c-c7e1ac6a9ae0",
+        "sourcePortId": "out",
+        "targetBlockId": "7f3a43a1-c985-4670-9fb7-3e7c8d41816f",
+        "targetPortId": "freq_cv",
+        "type": "cv"
+      },
+      {
+        "id": "959c717a-a702-4c02-bd06-061d722d6a52",
+        "sourceBlockId": "49b90c2d-635b-4a4c-845f-4ac00176501f",
+        "sourcePortId": "out",
+        "targetBlockId": "074dbf8f-ca4e-4d0b-afe3-846701da4e26",
+        "targetPortId": "res_cv",
+        "type": "cv"
+      }
+    ],
+    "hardwareConfig": {
+      "platform": "seed",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}
