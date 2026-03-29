@@ -1,0 +1,687 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Untitled Patch",
+      "author": "",
+      "description": "",
+      "created": "2026-03-10T22:22:14.114Z",
+      "modified": "2026-03-10T22:55:28.338Z",
+      "version": "1.0.0",
+      "targetHardware": "seed",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "e5eaf7a1-5ca6-4ffd-9c2f-f90e245e59bc",
+        "definitionId": "tan",
+        "position": {
+          "x": 1280,
+          "y": -80
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "f935d615-8c6b-4a0e-9c35-fa2bef88daa6",
+        "definitionId": "sqrt",
+        "position": {
+          "x": 1280,
+          "y": 180
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "9715cf6a-99df-41f0-9472-69b7046a2cc7",
+        "definitionId": "sin",
+        "position": {
+          "x": 1280,
+          "y": 100
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "c581ba1d-242e-4946-a5e2-eaca0adbe366",
+        "definitionId": "freq_to_midi",
+        "position": {
+          "x": 1280,
+          "y": -160
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "55e7e63e-0397-405b-89fb-262f86fa71c7",
+        "definitionId": "sin",
+        "position": {
+          "x": 1280,
+          "y": 260
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "7945510d-c74e-4ea2-b455-595d6a4a07fc",
+        "definitionId": "integral",
+        "position": {
+          "x": 1280,
+          "y": 0
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "29ff7334-a22c-452a-82b0-d779b64c07fa",
+        "definitionId": "gate",
+        "position": {
+          "x": 1840,
+          "y": -440
+        },
+        "parameterValues": {
+          "threshold": 0.01
+        },
+        "selected": false
+      },
+      {
+        "id": "e85c4014-f7a4-44e0-98eb-c95e0fba4a5b",
+        "definitionId": "led_output",
+        "position": {
+          "x": 1480,
+          "y": -140
+        },
+        "parameterValues": {
+          "pin": 0,
+          "pwm": false
+        },
+        "selected": false
+      },
+      {
+        "id": "afdcf765-bffe-480c-9b47-ccca76c6b18b",
+        "definitionId": "linearvca",
+        "position": {
+          "x": 1840,
+          "y": -280
+        },
+        "parameterValues": {
+          "level": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "bcb643bb-d193-470a-bbc9-0f4891fbc84e",
+        "definitionId": "switch",
+        "position": {
+          "x": 1480,
+          "y": 20
+        },
+        "parameterValues": {
+          "channel": "0"
+        },
+        "selected": false
+      },
+      {
+        "id": "59b59069-091d-42fa-abdd-a8ec8b40ccf9",
+        "definitionId": "gate_output",
+        "position": {
+          "x": 1480,
+          "y": 180
+        },
+        "parameterValues": {
+          "pin": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "2f36c3c0-903c-4665-9618-873bef9608a8",
+        "definitionId": "toneStack",
+        "position": {
+          "x": 1200,
+          "y": -980
+        },
+        "parameterValues": {
+          "bass": 0,
+          "middle": 0.14,
+          "treble": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "ef3f3e52-a70a-471c-bcf2-d49218d79e93",
+        "definitionId": "wahwah",
+        "position": {
+          "x": 1200,
+          "y": -800
+        },
+        "parameterValues": {
+          "frequency": 500,
+          "q": 5,
+          "depth": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "a6aa831c-24c0-4a47-aafc-bda38bc14f4d",
+        "definitionId": "distortion",
+        "position": {
+          "x": 1200,
+          "y": -620
+        },
+        "parameterValues": {
+          "drive": 0.5,
+          "tone": 0.5,
+          "level": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "377716b9-dff7-4ae2-950a-74d3cc706c95",
+        "definitionId": "wavefolder",
+        "position": {
+          "x": 1200,
+          "y": -440
+        },
+        "parameterValues": {
+          "gain": 0.1,
+          "offset": 0.02
+        },
+        "selected": false
+      },
+      {
+        "id": "39d915fe-61f2-4064-964c-9e5c3ed059d4",
+        "definitionId": "merger",
+        "position": {
+          "x": 1680,
+          "y": -840
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "cdc22f7f-a9ed-4293-83e1-d3f99e0c9b08",
+        "definitionId": "logic_or",
+        "position": {
+          "x": 1840,
+          "y": -960
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "ccbce186-cb2b-4f6a-9f86-01f5eb5595eb",
+        "definitionId": "step_sequencer",
+        "position": {
+          "x": 2040,
+          "y": -960
+        },
+        "parameterValues": {
+          "trackSelect": 0,
+          "tempo": 120,
+          "swing": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "61193f31-e54e-4a9e-bb0e-2854a016a146",
+        "definitionId": "demux",
+        "position": {
+          "x": 700,
+          "y": -560
+        },
+        "parameterValues": {
+          "outputCount": "4",
+          "select": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "00136a01-8f4a-46e7-9b46-ed36710d3a08",
+        "definitionId": "bypass",
+        "position": {
+          "x": 1680,
+          "y": -960
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "1695699f-7826-483a-aeb7-a9f574103527",
+        "definitionId": "adsr",
+        "position": {
+          "x": 760,
+          "y": 100
+        },
+        "parameterValues": {
+          "attack": 0.01,
+          "decay": 0.1,
+          "sustain": 0.7,
+          "release": 6.19
+        },
+        "selected": false
+      },
+      {
+        "id": "80931171-6672-44f4-aec6-dee32e06f2e0",
+        "definitionId": "lfo",
+        "position": {
+          "x": 460,
+          "y": 100
+        },
+        "parameterValues": {
+          "freq": 1,
+          "amp": 1,
+          "waveform": "WAVE_SIN"
+        },
+        "selected": false
+      },
+      {
+        "id": "8d9de697-c865-408a-bfb9-b7ac2a6a84cd",
+        "definitionId": "vibrato",
+        "position": {
+          "x": 980,
+          "y": 100
+        },
+        "parameterValues": {
+          "frequency": 5,
+          "width": 0.005
+        },
+        "selected": false
+      },
+      {
+        "id": "97edca2f-e110-4f1f-8349-f88f5f29f7bf",
+        "definitionId": "moog_ladder",
+        "position": {
+          "x": 260,
+          "y": -980
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "res": 0.4
+        },
+        "selected": false
+      },
+      {
+        "id": "36b18027-cea2-4905-85a4-beab7e3a2caa",
+        "definitionId": "svf",
+        "position": {
+          "x": 460,
+          "y": -980
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "res": 0.5,
+          "drive": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "9a41f7ab-5c30-49e0-b12a-9fce8437a85d",
+        "definitionId": "dcblock",
+        "position": {
+          "x": 260,
+          "y": -800
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "26c9fbff-7db3-48e4-9b57-43f14437dc21",
+        "definitionId": "lowShelving",
+        "position": {
+          "x": 440,
+          "y": -700
+        },
+        "parameterValues": {
+          "frequency": 100,
+          "gain": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "f120141c-e78c-4f64-8d47-f91fac76fe97",
+        "definitionId": "peakFilter",
+        "position": {
+          "x": 260,
+          "y": -700
+        },
+        "parameterValues": {
+          "frequency": 20,
+          "bandwidth": 100,
+          "gain": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "ac6f8f7b-1c34-4d2c-945c-2b74c1b455f0",
+        "definitionId": "oscillator",
+        "position": {
+          "x": -440,
+          "y": -980
+        },
+        "parameterValues": {
+          "freq": 440,
+          "amp": 0.5,
+          "waveform": "WAVE_POLYBLEP_SAW",
+          "pw": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "76e4001d-cf4e-4e3b-b565-598269832484",
+        "definitionId": "analog_bass_drum",
+        "position": {
+          "x": 0,
+          "y": -980
+        },
+        "parameterValues": {
+          "freq": 50,
+          "tone": 0.5,
+          "decay": 0.3,
+          "attack_fm_amount": 0.5,
+          "self_fm_amount": 0.1,
+          "accent": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "3471a043-aef1-4108-a230-086ef584984c",
+        "definitionId": "synth_snare_drum",
+        "position": {
+          "x": 0,
+          "y": -560
+        },
+        "parameterValues": {
+          "freq": 180,
+          "tone": 0.5,
+          "decay": 0.15,
+          "snappy": 0.5,
+          "fm_amount": 0.2,
+          "accent": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "efa552ac-cc77-49a8-8670-56a24c17dac9",
+        "definitionId": "harmonic_oscillator",
+        "position": {
+          "x": -440,
+          "y": -640
+        },
+        "parameterValues": {
+          "freq": 110,
+          "first_harm_idx": 1,
+          "amp_1": 1,
+          "amp_2": 0.5,
+          "amp_3": 0.33,
+          "amp_4": 0.25,
+          "amp_5": 0.2,
+          "amp_6": 0.16,
+          "amp_7": 0.14,
+          "amp_8": 0.125
+        },
+        "selected": false
+      },
+      {
+        "id": "e0b55aef-1738-47ac-9679-12d71d676c86",
+        "definitionId": "oscillator_bank",
+        "position": {
+          "x": -200,
+          "y": -640
+        },
+        "parameterValues": {
+          "freq": 440,
+          "amp_saw_8": 0.5,
+          "amp_sqr_8": 0,
+          "amp_saw_4": 0,
+          "amp_sqr_4": 0,
+          "amp_saw_2": 0,
+          "amp_sqr_2": 0,
+          "amp_saw_1": 0,
+          "gain": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "9dea4c4d-1570-435c-8b5b-45c680678741",
+        "definitionId": "limiter",
+        "position": {
+          "x": 1840,
+          "y": -620
+        },
+        "parameterValues": {
+          "pre_gain": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "cdb3b4d9-d030-481f-96ba-fdf62a4d2789",
+        "definitionId": "vca",
+        "position": {
+          "x": 700,
+          "y": -980
+        },
+        "parameterValues": {
+          "gain": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "5063cc11-0124-4e69-93af-151513aebf49",
+        "definitionId": "linearvca",
+        "position": {
+          "x": 1840,
+          "y": -840
+        },
+        "parameterValues": {
+          "level": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "de35396d-e4f4-466c-a4e0-ce98e360910c",
+        "definitionId": "mux",
+        "position": {
+          "x": 700,
+          "y": -820
+        },
+        "parameterValues": {
+          "inputCount": "4",
+          "select": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "6107e230-2fbb-496c-b45d-dea33c41e093",
+        "definitionId": "mixer",
+        "position": {
+          "x": 920,
+          "y": -980
+        },
+        "parameterValues": {
+          "inputCount": "4",
+          "level_1": 1,
+          "level_2": 1,
+          "level_3": 1,
+          "level_4": 1,
+          "master": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "334ad64e-3dfc-4e59-9758-1295371f4796",
+        "definitionId": "reverb_sc",
+        "position": {
+          "x": 1440,
+          "y": -980
+        },
+        "parameterValues": {
+          "feedback": 0.7,
+          "lpfreq": 10000,
+          "wet_dry": 0.3
+        },
+        "selected": false
+      },
+      {
+        "id": "4a18a6b5-a093-4582-aadf-66dbe4d1450f",
+        "definitionId": "fold",
+        "position": {
+          "x": 1440,
+          "y": -760
+        },
+        "parameterValues": {
+          "incr": 1
+        },
+        "selected": false
+      },
+      {
+        "id": "d3633206-56f0-4647-8330-4a6715f7764b",
+        "definitionId": "tremolo",
+        "position": {
+          "x": 1440,
+          "y": -560
+        },
+        "parameterValues": {
+          "freq": 5,
+          "depth": 0.5,
+          "waveform": 0
+        },
+        "selected": false
+      },
+      {
+        "id": "a9ebfb8f-0c0e-43db-be33-0ebd40aec82c",
+        "definitionId": "delay_line",
+        "position": {
+          "x": 200,
+          "y": -160
+        },
+        "parameterValues": {
+          "delay_time": 0.25,
+          "feedback": 0.7000000000000001,
+          "wet_dry": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "798c734c-88ac-452e-ad09-796d3bdc2499",
+        "definitionId": "chorus",
+        "position": {
+          "x": 380,
+          "y": -160
+        },
+        "parameterValues": {
+          "lfo_freq": 0.5,
+          "lfo_depth": 0.5,
+          "delay": 0.5,
+          "feedback": 0.2
+        },
+        "selected": false
+      },
+      {
+        "id": "a351ed60-03c6-49fd-a3d5-38ea69a876c2",
+        "definitionId": "phaser",
+        "position": {
+          "x": 620,
+          "y": -160
+        },
+        "parameterValues": {
+          "freq": 1000,
+          "lfo_freq": 0.5,
+          "lfo_depth": 0.5,
+          "feedback": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "d9edee5f-dc74-48ea-afdb-41b9d2c12bbb",
+        "definitionId": "distortion",
+        "position": {
+          "x": 860,
+          "y": -160
+        },
+        "parameterValues": {
+          "drive": 0.5,
+          "tone": 0.5,
+          "level": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "40d3fdc3-f02b-48b2-a361-8c232a6c5e46",
+        "definitionId": "crosstalk_canceller",
+        "position": {
+          "x": 1040,
+          "y": -160
+        },
+        "parameterValues": {
+          "angle": 10,
+          "regularization": 0.00001
+        },
+        "selected": false
+      },
+      {
+        "id": "2af60715-6939-43c9-8c22-dea2d8993678",
+        "definitionId": "audio_input",
+        "position": {
+          "x": 1480,
+          "y": 300
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "f02a17d3-33ab-4e0b-b454-663870938e3c",
+        "definitionId": "audio_input",
+        "position": {
+          "x": 1480,
+          "y": -260
+        },
+        "parameterValues": {},
+        "selected": false
+      },
+      {
+        "id": "80fac223-8d27-4a50-ae71-8de89c8324b7",
+        "definitionId": "drip",
+        "position": {
+          "x": 0,
+          "y": -140
+        },
+        "parameterValues": {
+          "damp": 0.2,
+          "amp": 0.5
+        },
+        "selected": false
+      },
+      {
+        "id": "59bd4356-e900-476b-a183-9534684a2f03",
+        "definitionId": "sin",
+        "position": {
+          "x": 200,
+          "y": 20
+        },
+        "parameterValues": {},
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "c638b8cb-4c8a-4f54-9cdc-0d47f6394380",
+        "sourceBlockId": "ac6f8f7b-1c34-4d2c-945c-2b74c1b455f0",
+        "sourcePortId": "out",
+        "targetBlockId": "97edca2f-e110-4f1f-8349-f88f5f29f7bf",
+        "targetPortId": "in",
+        "type": "audio"
+      }
+    ],
+    "hardwareConfig": {
+      "platform": "seed",
+      "pinMapping": {},
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}

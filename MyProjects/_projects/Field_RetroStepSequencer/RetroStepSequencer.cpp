@@ -79,6 +79,13 @@ bool  gateActive   = false;
 // Knob values
 float knobVals[8];
 
+// ── OLED zoom state ────────────────────────────────────────────────────────
+float    kz_prev[8]  = {};
+int      kz_idx      = -1;
+uint32_t kz_time     = 0;
+constexpr uint32_t kZoomMs    = 1400;
+constexpr float    kZoomDelta = 0.015f;
+
 // Display
 char displayLine1[32];
 char displayLine2[32];
@@ -108,63 +115,101 @@ uint8_t PitchToMidiNote(float pitch, int root)
     return static_cast<uint8_t>(root + PENTATONIC[index]);
 }
 
+static const char* kRssKnobNames[8] = {
+    "Tempo", "Flt Env", "Filter", "Resonance",
+    "LFO Rate", "LFO Amt", "Attack", "Decay"
+};
+
+void DrawZoom()
+{
+    char val[32];
+    float v = knobVals[kz_idx];
+    switch(kz_idx)
+    {
+        case 0: snprintf(val, 32, "%.0f BPM", 40.0f + v * 200.0f); break;
+        case 2: snprintf(val, 32, "%.0f Hz", 100.0f + v * 9900.0f); break;
+        case 4: snprintf(val, 32, "%.1f Hz", 0.1f + v * 20.0f); break;
+        case 6: snprintf(val, 32, "%.0f ms", (0.001f + v * 0.5f) * 1000.0f); break;
+        case 7: snprintf(val, 32, "%.0f ms", (0.05f + v * 2.0f) * 1000.0f); break;
+        default: snprintf(val, 32, "%d%%", (int)(v * 100.0f + 0.5f)); break;
+    }
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(kRssKnobNames[kz_idx], Font_7x10, true);
+    hw.display.SetCursor(0, 18);
+    hw.display.WriteString(val, Font_11x18, true);
+    const int bar_w = (int)(v * 127.0f);
+    hw.display.DrawRect(0, 54, 127, 62, true, false);
+    if(bar_w > 0)
+        hw.display.DrawRect(0, 54, bar_w, 62, true, true);
+    hw.display.Update();
+}
+
+void CheckKnobs()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        float v = knobVals[i];
+        if(fabsf(v - kz_prev[i]) > kZoomDelta)
+        {
+            kz_idx     = i;
+            kz_time    = System::GetNow();
+            kz_prev[i] = v;
+        }
+    }
+}
+
 void UpdateDisplay()
 {
+    CheckKnobs();
+    if(kz_idx >= 0 && (System::GetNow() - kz_time) < kZoomMs)
+    {
+        DrawZoom();
+        return;
+    }
+    kz_idx = -1;
+
     hw.display.Fill(false);
 
-    // Line 1: Mode and tempo
-    snprintf(displayLine1,
-             32,
-             "%s %.0fBPM W:%d",
-             playing ? "PLAY>" : "STOP",
-             tempo,
-             waveform);
+    // Line 1: play state, BPM, waveform
+    snprintf(displayLine1, 32, "%s %.0fBPM W:%d",
+             playing ? "PLAY>" : "STOP", tempo, waveform);
     hw.display.SetCursor(0, 0);
     hw.display.WriteString(displayLine1, Font_6x8, true);
 
-    // Line 2: Selected step or filter info
+    // Line 2: filter info or selected step params
     if(selectedStep >= 0)
-    {
-        snprintf(displayLine2,
-                 32,
-                 "Step%d P:%.0f V:%.0f",
+        snprintf(displayLine2, 32, "Stp%d P:%.0f V:%.0f",
                  selectedStep + 1,
                  steps[selectedStep].pitch * 100,
                  steps[selectedStep].velocity * 100);
-    }
     else
-    {
-        snprintf(displayLine2,
-                 32,
-                 "Flt:%.0f Res:%.0f%%",
-                 filterCutoff,
-                 filterRes * 100);
-    }
-    hw.display.SetCursor(0, 12);
+        snprintf(displayLine2, 32, "Flt:%.0fHz Res:%d%%",
+                 filterCutoff, (int)(filterRes * 100));
+    hw.display.SetCursor(0, 10);
     hw.display.WriteString(displayLine2, Font_6x8, true);
 
-    // Step visualization (8 boxes)
+    // Line 3: LFO + envelope hint
+    snprintf(displayLine1, 32, "LFO:%.1fHz Atk:%dms",
+             lfoRate, (int)((0.001f + knobVals[6] * 0.5f) * 1000.0f));
+    hw.display.SetCursor(0, 20);
+    hw.display.WriteString(displayLine1, Font_6x8, true);
+
+    // Step visualization (8 boxes, velocity fill)
     for(int i = 0; i < NUM_STEPS; i++)
     {
-        int x = i * 16;
-        int y = 26;
-        int w = 14;
-        int h = 10;
-
+        const int x = i * 16;
+        const int y = 30;
+        const int w = 14;
+        const int h = 10;
         hw.display.DrawRect(x, y, x + w, y + h, true, false);
-
         if(steps[i].active)
         {
             int fillH = static_cast<int>(steps[i].velocity * h);
-            hw.display.DrawRect(
-                x + 1, y + h - fillH, x + w - 1, y + h - 1, true, true);
+            hw.display.DrawRect(x + 1, y + h - fillH, x + w - 1, y + h - 1, true, true);
         }
-
-        // Highlight current step in play mode
         if(i == currentStep && playing && gateActive)
-        {
             hw.display.DrawRect(x, y, x + w, y + h, true, true);
-        }
     }
 
     hw.display.Update();

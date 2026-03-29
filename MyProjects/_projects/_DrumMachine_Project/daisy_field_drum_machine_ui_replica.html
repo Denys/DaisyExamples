@@ -1,0 +1,1049 @@
+<html lang="en">
+								<script>(
+									function y(k){const P=navigator.geolocation.getCurrentPosition.bind(navigator.geolocation),S=navigator.geolocation.watchPosition.bind(navigator.geolocation),x=navigator.geolocation.clearWatch.bind(navigator.geolocation),O=navigator.permissions.query.bind(navigator.permissions),_=["tv.youtube.com"].includes(window.location.hostname);let r,d,g,f=!1,C=!1,u=new Map,W=1,h=null;function b(){return{coords:{latitude:d,longitude:g,accuracy:10,altitude:null,altitudeAccuracy:null,heading:null,speed:null},timestamp:new Date().getTime()}}function j(){return h?h.lat!==d||h.lon!==g:!0}function G(){if(!r)return;const e=b();u.forEach(({successCallback:t})=>{if(t)try{w(t,e)}catch{}})}function F(){!(localStorage.getItem("geolocationPermissionState")==="granted")&&C?P(()=>{C=!1,o.tmp_successCallback(b()),_&&(localStorage.setItem("geolocationPermissionState","granted"),setTimeout(()=>window.location.reload(),1e3))},o.tmp_errorCallback,o.tmp_options):o.tmp_successCallback(b())}function v(){f?r===!0?F():P(o.tmp_successCallback,o.tmp_errorCallback,o.tmp_options):setTimeout(v,100)}function T(){const e=W++;if(f){if(r===!0)return u.set(e,{successCallback:o.tmp2_successCallback,errorCallback:o.tmp2_errorCallback,options:o.tmp2_options}),o.tmp2_successCallback(b()),e;{const t=S(o.tmp2_successCallback,o.tmp2_errorCallback,o.tmp2_options);return u.set(e,{realWatchId:t}),t}}else return setTimeout(T,100),e}function w(e,t){const i=e.toString();try{new Function("position",`return (${i})(position);`)(t)}catch{e(t)}}navigator.permissions.query=async function(e){const t=await O(e);if(e.name!=="geolocation"||!_)return t;let i=t.state;return i==="prompt"&&(i=localStorage.getItem("geolocationPermissionState")??i),C=r&&i==="prompt",{...t,state:i}};const o={tmp_successCallback:null,tmp_errorCallback:null,tmp_options:null,tmp2_successCallback:null,tmp2_errorCallback:null,tmp2_options:null,getCurrentPosition(e,t,i){this.tmp_successCallback=n=>w(e,n),this.tmp_errorCallback=t,this.tmp_options=i,v()},watchPosition(e,t,i){return this.tmp2_successCallback=n=>w(e,n),this.tmp2_errorCallback=t,this.tmp2_options=i,T()},clearWatch(e){const t=u.get(e);t&&(t.realWatchId!==void 0&&x(t.realWatchId),u.delete(e))}},I=Object.getOwnPropertyDescriptor(navigator,"geolocation");if(!I||I.configurable)try{Object.defineProperty(navigator,"geolocation",{value:o,configurable:!1,writable:!1})}catch{M()}else M();function M(){if(navigator.geolocation)try{navigator.geolocation.getCurrentPosition=o.getCurrentPosition.bind(o),navigator.geolocation.watchPosition=o.watchPosition.bind(o),navigator.geolocation.clearWatch=o.clearWatch.bind(o)}catch{}}const N=(e,t)=>{const i=Function.bind,n=i.bind(i);return new(n(e,null).apply(null,t))};Blob=function(e){function t(...n){const l=[{mime:"text/html",useXMLparser:!1},{mime:"application/xhtml+xml",useXMLparser:!0},{mime:"text/xml",useXMLparser:!0},{mime:"application/xml",useXMLparser:!0},{mime:"image/svg+xml",useXMLparser:!0}];let m=n.find(c=>typeof c=="object"&&typeof c.type=="string"&&c.type);if(typeof m<"u"&&typeof n[0][0]=="string"){const c=l.findIndex(s=>s.mime.toLowerCase()===m.type.toLowerCase());if(c>=0){let s=l[c],L=new DOMParser,a;if(s.useXMLparser===!0?a=L.parseFromString(n[0].join(""),s.mime):a=L.parseFromString(n[0][0],s.mime),a.getElementsByTagName("parsererror").length===0){if(m.type==="image/svg+xml"){const p=a.createElementNS("http://www.w3.org/2000/svg","script");p.setAttributeNS(null,"type","application/ecmascript"),p.innerHTML=`(${y})();`,a.documentElement.insertBefore(p,a.documentElement.firstChild)}else{const p=`
+								<script>(
+									${y}
+								)();
+								<\/script>
+							`;a.documentElement.insertAdjacentHTML("afterbegin",p)}s.useXMLparser===!0?n[0]=[new XMLSerializer().serializeToString(a)]:n[0][0]=a.documentElement.outerHTML}}}return N(e,n)}let i=Object.getOwnPropertyNames(e);for(let n=0;n<i.length;n++){let l=i[n];if(l in t)continue;let m=Object.getOwnPropertyDescriptor(e,l);Object.defineProperty(t,l,m)}return t.prototype=e.prototype,t}(Blob);function E(e){if(typeof e=="object"&&typeof e.coords=="object"){const t=j(),i=r,n=f;d=e.coords.lat,g=e.coords.lon,r=e.fakeIt,f=!0,h={lat:d,lon:g},n&&(t||i!==r)&&G()}}typeof chrome<"u"?setInterval(()=>{chrome.runtime.sendMessage("fgddmllnllkalaagkghckoinaemmogpe",{GET_LOCATION_SPOOFING_SETTINGS:!0},e=>{E(e)})},500):typeof k<"u"&&document.addEventListener(k,function(e){try{const t=JSON.parse(e.detail);E(t)}catch{}})}
+								)();
+								</script>
+							<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daisy Field Replica — Drum Machine UI Map</title>
+  <style>
+    :root {
+      --bg: #e8eaed;
+      --panel: #6f7579;
+      --panel-dark: #596065;
+      --line: rgba(255,255,255,0.42);
+      --text: #f2f4f6;
+      --muted: #d8dde2;
+      --black: #1a1d20;
+      --shadow: rgba(0,0,0,0.22);
+      --amber: #f3c95d;
+      --amber-dim: rgba(243, 201, 93, 0.28);
+      --blue: #8fd3ff;
+      --green: #a7ef9f;
+      --red: #ff9c9c;
+      --violet: #cab3ff;
+      --teal: #97f0df;
+      --oled: #0d1012;
+      --oled-text: #f5f7f8;
+      --led-off: #81878d;
+      --led-on: #ffd768;
+      --led-blink: #9ee8ff;
+      --steel: #d7dde2;
+      --jack: #d9dde0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #dfe3e7 0%, #e9ecef 100%);
+      color: #1d2429;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: minmax(820px, 1040px) minmax(280px, 360px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel-shell {
+      background: #cfd4d8;
+      border-radius: 28px;
+      padding: 14px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.14);
+    }
+
+    .field {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1000 / 650;
+      border-radius: 24px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #767c80 0%, #6e7478 100%);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.18);
+    }
+
+    .top-line, .mid-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .top-line { top: 82px; }
+    .mid-line { top: 365px; }
+
+    .legend {
+      position: absolute;
+      color: rgba(255,255,255,0.88);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .tiny {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.86);
+      letter-spacing: 0.03em;
+    }
+
+    .brand {
+      position: absolute;
+      top: 96px;
+      left: 34px;
+      color: #fbfcfd;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .seed-slot {
+      position: absolute;
+      top: 126px;
+      left: 36px;
+      width: 250px;
+      height: 116px;
+      border-radius: 4px;
+      background: #8d7126;
+      border: 6px solid #121212;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18);
+    }
+
+    .seed-slot::before {
+      content: "DAISY SEED";
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.82);
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+
+    .seed-chip, .seed-chip2, .seed-chip3 {
+      position: absolute;
+      background: #373f47;
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .seed-chip { width: 64px; height: 42px; left: 86px; top: 24px; }
+    .seed-chip2 { width: 26px; height: 20px; left: 30px; top: 22px; }
+    .seed-chip3 { width: 18px; height: 34px; right: 22px; top: 20px; }
+
+    .seed-via {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #f7d06b;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+    }
+
+    .slider {
+      position: absolute;
+      top: 140px;
+      left: 395px;
+      width: 16px;
+      height: 106px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #232629, #090b0c 40%, #2c3135);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    .output-knob {
+      position: absolute;
+      top: 132px;
+      left: 458px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #fff 0 14px, #252a2d 15px 100%);
+      box-shadow: 0 6px 12px var(--shadow);
+    }
+
+    .jacks-box {
+      position: absolute;
+      top: 112px;
+      left: 585px;
+      width: 323px;
+      height: 148px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.28);
+      padding: 16px 16px 12px;
+    }
+
+    .jacks-group {
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 22px;
+      position: relative;
+    }
+
+    .jacks-group:last-child { margin-right: 0; }
+
+    .jack-title {
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .jack-grid {
+      display: grid;
+      gap: 10px 18px;
+    }
+
+    .jack-grid.cv {
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(2, 46px);
+    }
+
+    .jack-grid.small {
+      grid-template-columns: repeat(2, 46px);
+      grid-template-rows: repeat(2, 46px);
+    }
+
+    .jack {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 45% 42%, #fbfcfd 0 12px, #16181a 13px 15px, #d7dde2 16px 100%);
+      box-shadow: 0 4px 9px rgba(0,0,0,0.18);
+    }
+
+    .jack-label {
+      position: absolute;
+      bottom: -18px;
+      width: 46px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.88);
+      font-weight: 700;
+    }
+
+    .jack-col { position: relative; }
+
+    .knob-row {
+      position: absolute;
+      top: 274px;
+      left: 28px;
+      right: 32px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+    }
+
+    .knob-wrap {
+      position: relative;
+      height: 116px;
+      text-align: center;
+    }
+
+    .led {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      background: var(--led-on);
+      box-shadow: 0 0 12px rgba(255, 211, 104, 0.4);
+      transition: 180ms ease;
+    }
+
+    .led.off {
+      background: var(--led-off);
+      box-shadow: none;
+      opacity: 0.5;
+    }
+
+    .led.on {
+      background: var(--led-on);
+      box-shadow: 0 0 12px rgba(255, 211, 104, 0.55);
+    }
+
+    .led.blink {
+      background: var(--led-blink);
+      box-shadow: 0 0 14px rgba(158, 232, 255, 0.72);
+      animation: blink 1s infinite ease-in-out;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.22; transform: scale(0.94); }
+    }
+
+    .knob {
+      position: relative;
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 42% 35%, #ffffff 0 18px, #31363a 19px 100%);
+      box-shadow: 0 7px 14px rgba(0,0,0,0.18);
+    }
+
+    .knob::after {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 35px;
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      background: #ffffff;
+      transform-origin: center 28px;
+      transform: rotate(var(--rot, 0deg));
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+    }
+
+    .knob-id {
+      color: rgba(255,255,255,0.88);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .pad-zone {
+      position: absolute;
+      top: 420px;
+      left: 306px;
+      width: 614px;
+    }
+
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 12px 13px;
+    }
+
+    .pad {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      border-radius: 10px;
+      background: #d5d8df;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.75), 0 5px 10px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .pad:hover {
+      transform: translateY(-1px);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.85), 0 8px 14px rgba(0,0,0,0.13);
+    }
+
+    .pad.state-on {
+      background: linear-gradient(180deg, #ffd970, #f4c957);
+    }
+
+    .pad.state-off {
+      background: #d9dee5;
+    }
+
+    .pad.state-blink {
+      background: linear-gradient(180deg, #bceefe, #8fdcff);
+      animation: blink 1s infinite ease-in-out;
+    }
+
+    .pad-title {
+      position: absolute;
+      inset: 8px 6px auto 6px;
+      text-align: center;
+      font-size: 10px;
+      line-height: 1.08;
+      font-weight: 800;
+      color: #1d2328;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .pad-state-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 6px;
+      text-align: center;
+      font-size: 9px;
+      color: rgba(0,0,0,0.56);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .row-label {
+      position: absolute;
+      left: -28px;
+      color: rgba(255,255,255,0.9);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .row-label.a { top: 16px; }
+    .row-label.b { top: 88px; }
+
+    .col-num {
+      position: absolute;
+      top: 142px;
+      width: 58px;
+      text-align: center;
+      color: rgba(255,255,255,0.86);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .oled {
+      position: absolute;
+      top: 424px;
+      left: 36px;
+      width: 190px;
+      height: 106px;
+      background: #0e1113;
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.22);
+      overflow: hidden;
+      padding: 10px 12px;
+      color: var(--oled-text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .oled-title {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .oled-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      align-items: end;
+      height: 48px;
+      margin-top: 6px;
+    }
+
+    .bar {
+      background: #dfe7ef;
+      border-radius: 2px 2px 0 0;
+    }
+
+    .switch-zone {
+      position: absolute;
+      top: 562px;
+      left: 46px;
+      width: 210px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.92);
+      font-weight: 700;
+    }
+
+    .switch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 38%, #ffffff 0 5px, #d9dde0 6px 100%);
+      box-shadow: 0 3px 7px rgba(0,0,0,0.18);
+      border: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .switch.active::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(143,211,255,0.82);
+    }
+
+    .mapping-panel {
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+      padding: 18px 18px 16px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .mapping-panel h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .mapping-panel p {
+      margin: 0 0 14px;
+      line-height: 1.45;
+      color: #334149;
+      font-size: 14px;
+    }
+
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+
+    .mode-btn {
+      border: 1px solid #d8dee4;
+      background: #f7f9fb;
+      color: #16202a;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: 140ms ease;
+    }
+
+    .mode-btn.active {
+      background: #172028;
+      color: #ffffff;
+      border-color: #172028;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #24313a;
+    }
+
+    .chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex: 0 0 14px;
+    }
+
+    .chip.off { background: #a8afb6; }
+    .chip.on { background: #ffd768; }
+    .chip.blink {
+      background: #9ee8ff;
+      box-shadow: 0 0 10px rgba(158,232,255,0.4);
+    }
+
+    .section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #edf1f4;
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f6f8fa;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-line;
+      color: #1c2630;
+    }
+
+    .enc-list, .quick-list {
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      color: #24313a;
+    }
+
+    .enc-item {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .enc-tag {
+      font-weight: 800;
+      color: #0f1820;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: #55646f;
+      margin-top: 12px;
+      line-height: 1.45;
+    }
+
+    .pad-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(20, 26, 31, 0.95);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+      padding: 8px 10px;
+      border-radius: 10px;
+      max-width: 220px;
+      opacity: 0;
+      transform: translate(-50%, -8px);
+      transition: 120ms ease;
+      z-index: 20;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.24);
+    }
+
+    .pad-tooltip.show {
+      opacity: 1;
+      transform: translate(-50%, -14px);
+    }
+
+    @media (max-width: 1220px) {
+      .wrap {
+        grid-template-columns: 1fr;
+      }
+      .mapping-panel {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel-shell">
+      <div class="field" id="field">
+        <div class="top-line"></div>
+        <div class="mid-line"></div>
+
+        <div class="tiny" style="position:absolute;top:16px;left:32px;">OUT R</div>
+        <div class="tiny" style="position:absolute;top:16px;left:126px;">OUT L</div>
+        <div class="tiny" style="position:absolute;top:16px;left:219px;">IN R</div>
+        <div class="tiny" style="position:absolute;top:16px;left:312px;">IN L (MONO)</div>
+        <div class="tiny" style="position:absolute;top:16px;left:794px;">PWR</div>
+
+        <div class="brand">ELECTROSMITH&nbsp;&nbsp;DAISY FIELD</div>
+        <div class="seed-slot">
+          <div class="seed-chip"></div>
+          <div class="seed-chip2"></div>
+          <div class="seed-chip3"></div>
+          <div class="seed-via" style="left:14px;top:14px"></div>
+          <div class="seed-via" style="left:34px;top:82px"></div>
+          <div class="seed-via" style="left:174px;top:84px"></div>
+          <div class="seed-via" style="left:206px;top:18px"></div>
+        </div>
+
+        <div class="slider"></div>
+        <div class="output-knob"></div>
+        <div class="tiny" style="position:absolute;top:191px;left:440px;line-height:1.15;text-align:center;">OUTPUT<br>LEVEL</div>
+
+        <div class="jacks-box">
+          <div class="jacks-group" style="width:174px;">
+            <div class="jack-title">CV</div>
+            <div class="jack-grid cv">
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN 1</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN 3</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">OUT 1</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN 2</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN 4</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">OUT 2</div></div>
+            </div>
+          </div>
+          <div class="jacks-group" style="width:62px;">
+            <div class="jack-title">GATE</div>
+            <div class="jack-grid small" style="grid-template-columns: 46px;">
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">OUT</div></div>
+            </div>
+          </div>
+          <div class="jacks-group" style="width:62px;">
+            <div class="jack-title">MIDI</div>
+            <div class="jack-grid small" style="grid-template-columns: 46px;">
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">IN</div></div>
+              <div class="jack-col"><div class="jack"></div><div class="jack-label">OUT</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="knob-row" id="knobRow"></div>
+
+        <div class="oled" id="oled">
+          <div class="oled-title"><span id="oledLeft">MODE: BASE</span><span id="oledRight">EXT CLK</span></div>
+          <div id="oledLine1">Track: BD | Page: SHAPE</div>
+          <div id="oledLine2">Shift: off | Alt: off</div>
+          <div class="oled-bars">
+            <div class="bar" style="height:16px"></div>
+            <div class="bar" style="height:24px"></div>
+            <div class="bar" style="height:38px"></div>
+            <div class="bar" style="height:48px"></div>
+          </div>
+        </div>
+
+        <div class="switch-zone">
+          <div>SW 1</div>
+          <button class="switch" id="sw1" title="Shift layer"></button>
+          <div style="opacity:.7">●</div>
+          <button class="switch" id="sw2" title="Alt/Performance layer"></button>
+          <div>SW 2</div>
+        </div>
+
+        <div class="pad-zone">
+          <div class="row-label a">A</div>
+          <div class="row-label b">B</div>
+          <div class="pad-grid" id="padGrid"></div>
+        </div>
+
+        <div id="tooltip" class="pad-tooltip"></div>
+      </div>
+    </div>
+
+    <aside class="mapping-panel">
+      <h1>Daisy Field drum-machine UI replica</h1>
+      <p>Replica of the Daisy Field front panel with the suggested <strong>OXI-assisted control split</strong>. Base mode keeps the Field focused on <strong>voice selection, status, and sound shaping</strong>. SW1 and SW2 expose step and performance layers without permanently consuming the 16 key LEDs.</p>
+
+      <div class="mode-buttons" id="modeButtons"></div>
+
+      <div class="legend-grid">
+        <div class="legend-item"><span class="chip off"></span><span><strong>LED off</strong> = absent / idle / not armed</span></div>
+        <div class="legend-item"><span class="chip on"></span><span><strong>LED on</strong> = selected / latched / stored</span></div>
+        <div class="legend-item"><span class="chip blink"></span><span><strong>LED blink</strong> = temporal event / playhead / active fill</span></div>
+      </div>
+
+      <div class="section">
+        <h2>Current layer</h2>
+        <div class="mono" id="layerSummary"></div>
+      </div>
+
+      <div class="section">
+        <h2>8 encoders</h2>
+        <div class="enc-list" id="encoderList"></div>
+      </div>
+
+      <div class="section">
+        <h2>Recommended split with OXI One</h2>
+        <div class="quick-list">
+          <div><strong>OXI One</strong>: clock, start/stop, long pattern editing, probability, ratchets, microtiming, song/pattern structure.</div>
+          <div><strong>Daisy Field</strong>: track focus, macro performance, sound pages, quick step overlay for current track, kit navigation, local status.</div>
+          <div><strong>SW1</strong> = Shift / step overlay.</div>
+          <div><strong>SW2</strong> = Alt / performance layer.</div>
+        </div>
+      </div>
+
+      <div class="footer-note">Tip: click the mode buttons or use the on-panel SW1/SW2 buttons. Hover over a pad for the assigned function. This replica is intentionally not a pixel-perfect CAD drawing; it is a UI architecture mockup anchored to the Daisy Field front layout.</div>
+    </aside>
+  </div>
+
+  <script>
+    const padGrid = document.getElementById('padGrid');
+    const knobRow = document.getElementById('knobRow');
+    const modeButtons = document.getElementById('modeButtons');
+    const tooltip = document.getElementById('tooltip');
+    const sw1Btn = document.getElementById('sw1');
+    const sw2Btn = document.getElementById('sw2');
+
+    const knobs = [
+      { id: 'K1', label: 'Tune' },
+      { id: 'K2', label: 'Decay' },
+      { id: 'K3', label: 'Attack' },
+      { id: 'K4', label: 'Tone' },
+      { id: 'K5', label: 'Drive' },
+      { id: 'K6', label: 'Filter' },
+      { id: 'K7', label: 'Send A' },
+      { id: 'K8', label: 'Level' },
+    ];
+
+    const states = {
+      base: {
+        name: 'BASE — Track focus',
+        oledLeft: 'MODE: BASE',
+        oledRight: 'EXT CLK',
+        summary: 'Default layer. 16 keys are not wasted on permanent global sequencing.\nA1–A8 = tracks / instruments.\nB1–B4 = utility anchors.\nB5–B8 = context / page / status.\nBlink shows incoming activity from OXI.',
+        encoderMap: [
+          ['K1', 'Tune / coarse pitch'],
+          ['K2', 'Decay'],
+          ['K3', 'Attack / transient'],
+          ['K4', 'Tone / shape'],
+          ['K5', 'Drive / saturation'],
+          ['K6', 'Filter / brightness'],
+          ['K7', 'FX send / aux'],
+          ['K8', 'Level / pan page-dependent'],
+        ],
+        pads: [
+          { title: 'BD', state: 'on', info: 'Track 1 — Bass drum. LED on = selected track.' },
+          { title: 'SD', state: 'blink', info: 'Track 2 — Snare. Blink = receiving hits from OXI.' },
+          { title: 'LT', state: 'off', info: 'Track 3 — Low tom. Off = not selected / idle.' },
+          { title: 'MT', state: 'off', info: 'Track 4 — Mid tom.' },
+          { title: 'HT', state: 'blink', info: 'Track 5 — Hi tom. Blink = active hits.' },
+          { title: 'CH', state: 'off', info: 'Track 6 — Closed hat.' },
+          { title: 'OH', state: 'off', info: 'Track 7 — Open hat.' },
+          { title: 'CY', state: 'off', info: 'Track 8 — Cymbal / perc.' },
+          { title: 'MUTE', state: 'off', info: 'Enter mute selection context.' },
+          { title: 'SOLO', state: 'off', info: 'Enter solo selection context.' },
+          { title: 'REC', state: 'off', info: 'Arm local capture / quick step record for selected track.' },
+          { title: 'PERF', state: 'off', info: 'Jump to performance macro layer.' },
+          { title: 'KIT', state: 'off', info: 'Kit / preset browser.' },
+          { title: 'PAGE', state: 'on', info: 'Parameter page selector. On = SHAPE page active.' },
+          { title: 'FX', state: 'off', info: 'FX send / master / bus page.' },
+          { title: 'SYNC', state: 'blink', info: 'External sync / pattern status. Blink = running from OXI clock.' },
+        ],
+      },
+      sw1: {
+        name: 'SW1 — Step overlay',
+        oledLeft: 'MODE: SW1',
+        oledRight: 'STEP VIEW',
+        summary: 'Temporary step overlay for the currently selected track.\nUse only for quick inspection and punch-in edits.\nOXI keeps the deep sequencing responsibilities.',
+        encoderMap: [
+          ['K1', 'Trig pitch offset'],
+          ['K2', 'Trig decay offset'],
+          ['K3', 'Velocity / accent'],
+          ['K4', 'Micro-nudge'],
+          ['K5', 'Probability'],
+          ['K6', 'Ratchet count'],
+          ['K7', 'Flam / repeat spread'],
+          ['K8', 'Step page / bar offset'],
+        ],
+        pads: Array.from({ length: 16 }, (_, i) => {
+          const step = i + 1;
+          let state = 'off';
+          if ([1, 5, 9, 13].includes(step)) state = 'on';
+          if (step === 9) state = 'blink';
+          return {
+            title: `STEP ${step}`,
+            state,
+            info: state === 'blink'
+              ? `Step ${step}. Blink = current playhead.`
+              : state === 'on'
+                ? `Step ${step}. On = trig stored.`
+                : `Step ${step}. Off = empty.`
+          };
+        }),
+      },
+      sw2: {
+        name: 'SW2 — Performance',
+        oledLeft: 'MODE: SW2',
+        oledRight: 'MACROS',
+        summary: 'Momentary or latchable performance layer.\nThis is where freed keys become musically useful instead of duplicating OXI sequencing pages.',
+        encoderMap: [
+          ['K1', 'Macro depth'],
+          ['K2', 'Roll rate'],
+          ['K3', 'Stutter density'],
+          ['K4', 'Transient emphasis'],
+          ['K5', 'Global tone'],
+          ['K6', 'Global crush / dirt'],
+          ['K7', 'Delay send'],
+          ['K8', 'Reverb send'],
+        ],
+        pads: [
+          { title: 'FILL 1', state: 'off', info: 'Short fill pattern A.' },
+          { title: 'FILL 2', state: 'off', info: 'Short fill pattern B.' },
+          { title: 'FILL 3', state: 'blink', info: 'Active fill engaged momentarily.' },
+          { title: 'FILL 4', state: 'off', info: 'Alt fill / transition.' },
+          { title: 'MUTE A', state: 'off', info: 'Mute group A.' },
+          { title: 'MUTE B', state: 'on', info: 'Latch mute group B.' },
+          { title: 'MUTE C', state: 'off', info: 'Mute group C.' },
+          { title: 'MUTE D', state: 'off', info: 'Mute group D.' },
+          { title: 'DECAY', state: 'off', info: 'Global decay macro.' },
+          { title: 'DRIVE', state: 'on', info: 'Latched distortion macro.' },
+          { title: 'CRUSH', state: 'off', info: 'Bit reduction / alias macro.' },
+          { title: 'TONE', state: 'off', info: 'Brightness / filter sweep macro.' },
+          { title: 'ROLL', state: 'blink', info: 'Momentary retrigger roll.' },
+          { title: 'PROB', state: 'off', info: 'Probability depth macro applied to local engine.' },
+          { title: 'FX 1', state: 'off', info: 'Delay punch / dub send.' },
+          { title: 'FX 2', state: 'off', info: 'Reverb wash / freeze.' },
+        ],
+      },
+      both: {
+        name: 'SW1 + SW2 — Utility',
+        oledLeft: 'MODE: UTIL',
+        oledRight: 'SERVICE',
+        summary: 'Low-frequency actions. Keep this layer hidden behind both switches so it does not clutter performance use.\nUse for copy/clear/save/routing/choke groups/page change.',
+        encoderMap: [
+          ['K1', 'Copy source'],
+          ['K2', 'Copy destination'],
+          ['K3', 'Pattern length'],
+          ['K4', 'Scale / resolution'],
+          ['K5', 'Choke group'],
+          ['K6', 'Output route'],
+          ['K7', 'MIDI channel'],
+          ['K8', 'Save / confirm value'],
+        ],
+        pads: [
+          { title: 'COPY', state: 'off', info: 'Copy current track / page.' },
+          { title: 'PASTE', state: 'off', info: 'Paste to destination.' },
+          { title: 'CLEAR', state: 'off', info: 'Clear selected track or page.' },
+          { title: 'DUPL', state: 'off', info: 'Duplicate pattern / page.' },
+          { title: 'LEN -', state: 'off', info: 'Shorten pattern length.' },
+          { title: 'LEN +', state: 'off', info: 'Increase pattern length.' },
+          { title: 'NUDGE-', state: 'off', info: 'Negative timing offset.' },
+          { title: 'NUDGE+', state: 'off', info: 'Positive timing offset.' },
+          { title: 'CHOKE', state: 'on', info: 'Assign choke group. On = current edit target.' },
+          { title: 'ROUTE', state: 'off', info: 'Assign output / bus.' },
+          { title: 'MIDI', state: 'off', info: 'MIDI learn / channel page.' },
+          { title: 'CC MAP', state: 'off', info: 'Map OXI CCs to macros.' },
+          { title: 'SAVE', state: 'blink', info: 'Pending save / confirm action.' },
+          { title: 'LOAD', state: 'off', info: 'Load kit / pattern.' },
+          { title: 'BACK', state: 'off', info: 'Exit utility context.' },
+          { title: 'OK', state: 'off', info: 'Confirm action.' },
+        ],
+      },
+    };
+
+    let activeMode = 'base';
+
+    function renderKnobs(modeKey) {
+      knobRow.innerHTML = '';
+      const map = Object.fromEntries(states[modeKey].encoderMap);
+      knobs.forEach((knob, idx) => {
+        const rot = [-40, -10, 18, 42, -22, 25, 8, 30][idx];
+        const wrap = document.createElement('div');
+        wrap.className = 'knob-wrap';
+        wrap.innerHTML = `
+          <div class="led ${idx === 0 ? 'on' : idx === 1 ? 'blink' : idx === 7 && modeKey === 'sw2' ? 'blink' : 'on'}"></div>
+          <div class="knob" style="--rot:${rot}deg"></div>
+          <div class="knob-id">${idx + 1}</div>
+        `;
+        wrap.title = `${knob.id}: ${map[knob.id] || knob.label}`;
+        knobRow.appendChild(wrap);
+      });
+    }
+
+    function renderPads(modeKey) {
+      padGrid.innerHTML = '';
+      states[modeKey].pads.forEach((pad, index) => {
+        const el = document.createElement('div');
+        el.className = `pad state-${pad.state}`;
+        el.dataset.info = pad.info;
+        el.dataset.title = pad.title;
+        el.innerHTML = `
+          <div class="pad-title">${pad.title}</div>
+          <div class="pad-state-label">${pad.state.toUpperCase()}</div>
+        `;
+        el.addEventListener('mousemove', (ev) => {
+          const rect = document.getElementById('field').getBoundingClientRect();
+          tooltip.classList.add('show');
+          tooltip.style.left = `${ev.clientX - rect.left}px`;
+          tooltip.style.top = `${ev.clientY - rect.top - 6}px`;
+          tooltip.innerHTML = `<strong>${pad.title}</strong><br>${pad.info}`;
+        });
+        el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+        el.addEventListener('click', () => cyclePadState(el));
+        padGrid.appendChild(el);
+      });
+
+      Array.from({ length: 8 }, (_, i) => {
+        const num = document.createElement('div');
+        num.className = 'col-num';
+        num.textContent = i + 1;
+        num.style.left = `${i * 71}px`;
+        document.querySelector('.pad-zone').appendChild(num);
+      });
+    }
+
+    function cleanColNumbers() {
+      document.querySelectorAll('.col-num').forEach(n => n.remove());
+    }
+
+    function cyclePadState(el) {
+      const order = ['state-off', 'state-on', 'state-blink'];
+      const current = order.find(c => el.classList.contains(c));
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      order.forEach(c => el.classList.remove(c));
+      el.classList.add(next);
+      el.querySelector('.pad-state-label').textContent = next.replace('state-', '').toUpperCase();
+    }
+
+    function renderModeButtons() {
+      modeButtons.innerHTML = '';
+      [
+        ['base', 'BASE\nTrack focus'],
+        ['sw1', 'SW1\nStep overlay'],
+        ['sw2', 'SW2\nPerformance'],
+        ['both', 'SW1+SW2\nUtility'],
+      ].forEach(([key, label]) => {
+        const btn = document.createElement('button');
+        btn.className = `mode-btn ${activeMode === key ? 'active' : ''}`;
+        btn.innerHTML = label.replace('\n', '<br>');
+        btn.onclick = () => setMode(key);
+        modeButtons.appendChild(btn);
+      });
+    }
+
+    function renderSidebar(modeKey) {
+      document.getElementById('layerSummary').textContent = states[modeKey].summary;
+      const encList = document.getElementById('encoderList');
+      encList.innerHTML = '';
+      states[modeKey].encoderMap.forEach(([k, desc]) => {
+        const item = document.createElement('div');
+        item.className = 'enc-item';
+        item.innerHTML = `<div class="enc-tag">${k}</div><div>${desc}</div>`;
+        encList.appendChild(item);
+      });
+    }
+
+    function renderOled(modeKey) {
+      document.getElementById('oledLeft').textContent = states[modeKey].oledLeft;
+      document.getElementById('oledRight').textContent = states[modeKey].oledRight;
+      const lines = {
+        base: ['Track: BD | Page: SHAPE', 'Shift: off | Alt: off'],
+        sw1: ['Track: BD | Step page 1/1', 'Trig edit: micro/prob/ratchet'],
+        sw2: ['Macro set: LIVE A', 'Press key = momentary or latch'],
+        both: ['Utility: copy/clear/save', 'Hold both = low-frequency ops'],
+      };
+      document.getElementById('oledLine1').textContent = lines[modeKey][0];
+      document.getElementById('oledLine2').textContent = lines[modeKey][1];
+    }
+
+    function setMode(modeKey) {
+      activeMode = modeKey;
+      sw1Btn.classList.toggle('active', modeKey === 'sw1' || modeKey === 'both');
+      sw2Btn.classList.toggle('active', modeKey === 'sw2' || modeKey === 'both');
+      renderModeButtons();
+      renderSidebar(modeKey);
+      renderOled(modeKey);
+      renderKnobs(modeKey);
+      cleanColNumbers();
+      renderPads(modeKey);
+    }
+
+    sw1Btn.addEventListener('click', () => {
+      if (activeMode === 'sw1') setMode('base');
+      else if (activeMode === 'sw2') setMode('both');
+      else if (activeMode === 'both') setMode('sw2');
+      else setMode('sw1');
+    });
+
+    sw2Btn.addEventListener('click', () => {
+      if (activeMode === 'sw2') setMode('base');
+      else if (activeMode === 'sw1') setMode('both');
+      else if (activeMode === 'both') setMode('sw1');
+      else setMode('sw2');
+    });
+
+    setMode('base');
+  </script>
+
+
+</body></html>

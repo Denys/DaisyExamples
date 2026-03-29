@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daisy Field — Drum Machine Control Mapping</title>
+<style>
+  :root {
+    --panel-bg: #5a6270;
+    --panel-edge: #3d444e;
+    --knob-body: #2a2d33;
+    --knob-ring: #3e4249;
+    --led-off: #3a3d42;
+    --led-on: #f5c400;
+    --pad-active: #f5c400;
+    --pad-inactive: #8a9099;
+    --pad-b-active: #f5c400;
+    --pad-b-inactive: #b0b8c2;
+    --text-label: #c8cdd4;
+    --text-label-sm: #909599;
+    --accent-blue: #4a9edd;
+    --accent-green: #4db87a;
+    --accent-orange: #f07d30;
+    --accent-pink: #e05c8a;
+    --badge-bg: rgba(0,0,0,0.35);
+    --tooltip-bg: #1a1d22;
+    --tooltip-text: #e8ecf0;
+    --shift-color: #e05c8a;
+    --normal-color: #f5c400;
+    --layer-line: rgba(255,255,255,0.12);
+    --bg: #f0f0ec;
+    --text-primary: #1a1d28;
+    --text-secondary: #6b7280;
+    --bg-secondary: #e4e3de;
+    --border-tertiary: rgba(0,0,0,0.12);
+    --border-secondary: rgba(0,0,0,0.25);
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1d24;
+      --text-primary: #e8ecf0;
+      --text-secondary: #8a95a8;
+      --bg-secondary: #222630;
+      --border-tertiary: rgba(255,255,255,0.10);
+      --border-secondary: rgba(255,255,255,0.20);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    padding: 1.5rem 1rem 2rem;
+  }
+  .widget { max-width: 880px; margin: 0 auto; }
+
+  .mode-toggle {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .mode-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+  .mode-btn {
+    font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.06em;
+    padding: 5px 14px; border-radius: 3px; border: 1.5px solid var(--border-secondary);
+    background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn.active-normal { border-color: #f5c400; color: #f5c400; background: rgba(245,196,0,0.1); }
+  .mode-btn.active-shift  { border-color: #e05c8a; color: #e05c8a; background: rgba(224,92,138,0.1); }
+
+  .field-panel {
+    background: var(--panel-bg); border-radius: 10px; border: 2.5px solid var(--panel-edge);
+    padding: 14px 14px 18px;
+  }
+  .brand-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .brand-text { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; color: #e0e4ea; letter-spacing: 0.12em; text-transform: uppercase; }
+  .brand-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.25); }
+
+  .jack-row { display: flex; gap: 6px; align-items: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
+  .jack-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .jack-label { font-family: 'Courier New', monospace; font-size: 8px; color: var(--text-label-sm); text-align: center; letter-spacing: 0.04em; text-transform: uppercase; }
+  .jack { width: 14px; height: 14px; border-radius: 50%; background: #1a1d22; border: 1.5px solid #555; position: relative; }
+  .jack::after { content: ''; width: 5px; height: 5px; background: #333; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .jack-section { display: flex; flex-direction: column; gap: 2px; padding: 5px 6px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; }
+  .section-title { font-family: 'Courier New', monospace; font-size: 8px; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; text-align: center; }
+  .jack-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .output-knob-section { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-left: auto; }
+  .output-knob { width: 28px; height: 28px; border-radius: 50%; background: var(--knob-body); border: 2px solid var(--knob-ring); position: relative; display: flex; align-items: center; justify-content: center; }
+  .output-knob::after { content: ''; position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 2px; height: 7px; background: rgba(255,255,255,0.5); border-radius: 1px; }
+  .seed-placeholder { width: 58px; height: 44px; background: #b8880a; border-radius: 4px; border: 1px solid #d4a020; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .seed-text { font-family: 'Courier New', monospace; font-size: 7px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.3; }
+
+  .knob-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 6px 0; }
+  .knob-unit { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; position: relative; }
+  .knob-led { width: 5px; height: 5px; border-radius: 50%; background: var(--led-on); flex-shrink: 0; }
+  .knob-body { width: 32px; height: 32px; border-radius: 50%; background: var(--knob-body); border: 2px solid var(--knob-ring); position: relative; transition: border-color 0.15s; }
+  .knob-body:hover { border-color: rgba(255,255,255,0.3); }
+  .knob-mark { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 2px; height: 8px; background: rgba(255,255,255,0.45); border-radius: 1px; }
+  .knob-label { font-family: 'Courier New', monospace; font-size: 8px; text-align: center; line-height: 1.2; color: var(--text-label); max-width: 38px; transition: color 0.2s; }
+  .knob-label.shifted { color: var(--shift-color); }
+  .knob-num { font-family: 'Courier New', monospace; font-size: 7px; color: var(--text-label-sm); text-align: center; }
+
+  .bottom-section { display: flex; gap: 8px; align-items: stretch; margin-top: 6px; }
+  .oled-section { background: #0a1a12; border-radius: 4px; border: 1.5px solid #1e3028; padding: 7px; min-width: 96px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+  .oled-line { font-family: 'Courier New', monospace; font-size: 8px; color: #7fff7f; line-height: 1.3; white-space: nowrap; }
+  .oled-line.dim { color: #3a8a4a; font-size: 7px; }
+  .oled-bar { display: flex; gap: 2px; align-items: flex-end; height: 12px; }
+  .oled-bar-item { width: 5px; background: #4aff4a; border-radius: 1px; }
+
+  .sw-section { display: flex; gap: 12px; align-items: center; }
+  .sw-unit { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .sw-label { font-family: 'Courier New', monospace; font-size: 8px; color: var(--text-label-sm); text-transform: uppercase; letter-spacing: 0.05em; }
+  .sw-btn { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #888; background: #d0d4d8; cursor: pointer; transition: background 0.12s, transform 0.08s; }
+  .sw-btn:active, .sw-btn.pressed { background: #b0b5ba; transform: scale(0.92); }
+  .sw-btn.sw1-active { background: #e05c8a; border-color: #e05c8a; }
+
+  .pad-section { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .pad-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .pad-row-label { font-family: 'Courier New', monospace; font-size: 8px; color: var(--text-label-sm); text-align: center; text-transform: uppercase; margin-bottom: 1px; }
+  .pad { border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: opacity 0.15s; min-height: 42px; border: 1px solid rgba(0,0,0,0.2); }
+  .pad.row-a { background: var(--pad-active); }
+  .pad.row-a.inactive { background: var(--pad-inactive); }
+  .pad.row-a.selected { background: #ffde1a; box-shadow: 0 0 0 2px rgba(255,222,26,0.5); }
+  .pad.row-b { background: var(--pad-b-active); }
+  .pad.row-b.step-off { background: var(--pad-b-inactive); opacity: 0.6; }
+  .pad.row-b.step-playing { background: #fff; }
+  .pad-inner-label { font-family: 'Courier New', monospace; font-size: 8px; font-weight: 700; color: rgba(0,0,0,0.65); text-align: center; line-height: 1.1; transition: color 0.2s; padding: 0 2px; }
+  .pad.row-a.inactive .pad-inner-label { color: rgba(0,0,0,0.35); }
+  .pad-num { font-family: 'Courier New', monospace; font-size: 7px; color: rgba(0,0,0,0.3); position: absolute; bottom: 2px; right: 3px; }
+  .pad-led { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,0,0,0.3); position: absolute; top: 3px; left: 50%; transform: translateX(-50%); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding: 10px 12px; border: 0.5px solid var(--border-tertiary); border-radius: var(--border-radius-md); background: var(--bg-secondary); }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); font-family: 'Courier New', monospace; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  .knob-table { margin-top: 14px; border: 0.5px solid var(--border-tertiary); border-radius: var(--border-radius-md); overflow: hidden; }
+  .knob-table table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 11px; }
+  .knob-table th { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-secondary); background: var(--bg-secondary); padding: 7px 10px; text-align: left; border-bottom: 0.5px solid var(--border-tertiary); }
+  .knob-table td { padding: 6px 10px; border-bottom: 0.5px solid var(--border-tertiary); color: var(--text-primary); vertical-align: middle; }
+  .knob-table tr:last-child td { border-bottom: none; }
+  .knob-table tr:nth-child(even) td { background: var(--bg-secondary); }
+  .tag { display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 3px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .tag-normal { background: rgba(245,196,0,0.15); color: #c8a000; }
+  .tag-shift  { background: rgba(224,92,138,0.15); color: #e05c8a; }
+  .tag-sw2    { background: rgba(74,158,221,0.15); color: #4a9edd; }
+</style>
+</head>
+<body>
+<div class="widget">
+  <div class="mode-toggle">
+    <span class="mode-label">View mode:</span>
+    <button class="mode-btn active-normal" id="btn-normal" onclick="setMode('normal')">Normal</button>
+    <button class="mode-btn" id="btn-shift" onclick="setMode('shift')">SW1 Shift held</button>
+    <button class="mode-btn" id="btn-sw2" onclick="setMode('sw2')">SW2 held</button>
+  </div>
+
+  <div class="field-panel">
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+      <div class="seed-placeholder"><span class="seed-text">DAISY<br>SEED</span></div>
+      <div style="flex:1;min-width:200px;">
+        <div class="brand-row">
+          <span class="brand-text">Electro<b>smith</b></span>
+          <div class="brand-sep"></div>
+          <span class="brand-text" style="font-weight:400;font-size:10px;">Daisy Field</span>
+        </div>
+        <div class="jack-row">
+          <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT R</div></div>
+          <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT L</div></div>
+          <div class="jack-group"><div class="jack"></div><div class="jack-label">IN R</div></div>
+          <div class="jack-group"><div class="jack"></div><div class="jack-label">IN L</div></div>
+          <div style="width:8px;"></div>
+          <div class="jack-group"><div class="jack" style="background:#222;"></div><div class="jack-label">PHONES</div></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end;">
+            <div class="jack-section">
+              <div class="section-title">CV</div>
+              <div class="jack-grid-2">
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">IN1</div></div>
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">IN3</div></div>
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">IN2</div></div>
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">IN4</div></div>
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT1</div></div>
+                <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT2</div></div>
+              </div>
+            </div>
+            <div class="jack-section">
+              <div class="section-title">Gate</div>
+              <div class="jack-group"><div class="jack"></div><div class="jack-label">IN</div></div>
+              <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT</div></div>
+            </div>
+            <div class="jack-section">
+              <div class="section-title">MIDI</div>
+              <div class="jack-group"><div class="jack"></div><div class="jack-label">IN</div></div>
+              <div class="jack-group"><div class="jack"></div><div class="jack-label">OUT</div></div>
+            </div>
+          </div>
+          <div class="output-knob-section" style="margin-left:8px;">
+            <div class="output-knob"></div>
+            <div class="jack-label">OUT LVL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="knob-row" id="knob-row"></div>
+
+    <div class="bottom-section">
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <div class="oled-section" id="oled">
+          <div class="oled-line" id="oled-l1">BPM:128  SW:18%</div>
+          <div class="oled-line" id="oled-l2">TRK:BD  PG:1/2</div>
+          <div class="oled-bar">
+            <div class="oled-bar-item" style="height:10px;"></div>
+            <div class="oled-bar-item" style="height:7px;"></div>
+            <div class="oled-bar-item" style="height:12px;"></div>
+            <div class="oled-bar-item" style="height:5px;"></div>
+            <div class="oled-bar-item" style="height:9px;"></div>
+            <div class="oled-bar-item" style="height:11px;"></div>
+            <div class="oled-bar-item" style="height:4px;"></div>
+            <div class="oled-bar-item" style="height:8px;"></div>
+          </div>
+          <div class="oled-line dim" id="oled-l3">LVL PIT DEC PAN</div>
+          <div class="oled-line dim" id="oled-l4">FIL REV DLY PRB</div>
+        </div>
+        <div class="sw-section">
+          <div class="sw-unit">
+            <div class="sw-label">SW1</div>
+            <div class="sw-btn" id="sw1-btn" onclick="toggleSW1()" title="Shift key"></div>
+            <div class="sw-label" style="font-size:7px;color:var(--shift-color);text-align:center;max-width:30px;">SHIFT</div>
+          </div>
+          <div class="sw-unit">
+            <div class="sw-label">SW2</div>
+            <div class="sw-btn" id="sw2-btn" onclick="toggleSW2()" title="Step page / Pattern select"></div>
+            <div class="sw-label" style="font-size:7px;color:#4a9edd;text-align:center;max-width:30px;">PAGE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pad-section">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+          <span class="pad-row-label">A</span>
+          <span class="pad-row-label" style="font-size:7px;flex:1;text-align:center;" id="row-a-hint">— track select (1–8) —</span>
+        </div>
+        <div class="pad-row" id="pad-row-a"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;margin-top:3px;">
+          <span class="pad-row-label">B</span>
+          <span class="pad-row-label" style="font-size:7px;flex:1;text-align:center;" id="row-b-hint">— steps 1–8 for selected track —</span>
+        </div>
+        <div class="pad-row" id="pad-row-b"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:3px;gap:8px;">
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">1</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">2</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">3</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">4</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">5</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">6</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">7</span>
+          <span style="font-family:'Courier New',monospace;font-size:7px;color:var(--text-label-sm);">8</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#f5c400;"></div>Normal layer</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e05c8a;"></div>SW1-shift layer</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a9edd;"></div>SW2 function</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4db87a;"></div>Step active (on)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8a9099;"></div>Step inactive (off)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffde1a;border:1.5px solid rgba(0,0,0,0.2);"></div>Selected track</div>
+  </div>
+
+  <div class="knob-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Knob</th>
+          <th>Normal (play mode)</th>
+          <th>SW1-shift layer</th>
+        </tr>
+      </thead>
+      <tbody id="knob-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="knob-table" style="margin-top:10px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Control</th>
+          <th>Normal</th>
+          <th>Shifted / held</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Row A (A1–A8)</td><td>Select track 1–8 (BD SD CH OH CP TM RM FX)</td><td>Mute / unmute track</td></tr>
+        <tr><td>Row B (B1–B8)</td><td>Toggle steps 1–8 on/off for selected track</td><td>Steps 9–16 (via SW2)</td></tr>
+        <tr><td>SW1</td><td>Hold = shift layer active</td><td>—</td></tr>
+        <tr><td>SW2 tap</td><td>Toggle step page (1–8 ↔ 9–16)</td><td>Hold = pattern select mode</td></tr>
+        <tr><td>SW1 + SW2</td><td colspan="2">Save pattern</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const TRACKS = ['BD','SD','CH','OH','CP','TM','RM','FX'];
+const KNOB_NORMAL = ['Level','Pitch','Decay','Pan','Filter','Reverb','Delay','Prob'];
+const KNOB_SHIFT  = ['BPM','Swing','MstVol','PatLen','FillP','ClkDiv','GateL','Acnt'];
+const KNOB_FULL_NORMAL = ['Level (voice)','Pitch / tune','Decay time','Pan L–R','Filter cutoff','Reverb send','Delay send','Step probability'];
+const KNOB_FULL_SHIFT  = ['Tempo (BPM)','Swing amount','Master volume','Pattern length','Fill probability','Clock divider','Gate length','Accent level'];
+const STEP_PATTERN   = [1,0,0,0,1,0,1,0];
+const STEP_PATTERN_B = [0,0,1,0,0,0,0,1];
+
+let currentMode  = 'normal';
+let currentTrack = 0;
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btn-normal').className = 'mode-btn' + (mode==='normal' ? ' active-normal' : '');
+  document.getElementById('btn-shift').className  = 'mode-btn' + (mode==='shift'  ? ' active-shift'  : '');
+  document.getElementById('btn-sw2').className    = 'mode-btn' + (mode==='sw2'    ? ' active-normal'  : '');
+  updateSW1Btn(mode==='shift');
+  updateSW2Btn(mode==='sw2');
+  renderKnobs();
+  renderPads();
+  updateOLED();
+}
+function toggleSW1() { setMode(currentMode==='shift' ? 'normal' : 'shift'); }
+function toggleSW2() { setMode(currentMode==='sw2'   ? 'normal' : 'sw2');   }
+function updateSW1Btn(a) { document.getElementById('sw1-btn').className = 'sw-btn' + (a ? ' sw1-active' : ''); }
+function updateSW2Btn(a) {
+  const b = document.getElementById('sw2-btn');
+  b.style.background  = a ? '#4a9edd' : '';
+  b.style.borderColor = a ? '#4a9edd' : '';
+}
+
+function renderKnobs() {
+  const c = document.getElementById('knob-row');
+  c.innerHTML = '';
+  const labels = currentMode==='shift' ? KNOB_SHIFT : KNOB_NORMAL;
+  const isShift = currentMode==='shift';
+  for (let i=0; i<8; i++) {
+    const d = document.createElement('div');
+    d.className = 'knob-unit';
+    d.title = isShift ? KNOB_FULL_SHIFT[i] : KNOB_FULL_NORMAL[i];
+    d.innerHTML = `
+      <div class="knob-led" style="background:${isShift?'#e05c8a':'#f5c400'}"></div>
+      <div class="knob-body"><div class="knob-mark"></div></div>
+      <div class="knob-label ${isShift?'shifted':''}">${labels[i]}</div>
+      <div class="knob-num">K${i+1}</div>`;
+    c.appendChild(d);
+  }
+  renderKnobTable();
+}
+
+function renderKnobTable() {
+  const tb = document.getElementById('knob-tbody');
+  tb.innerHTML = '';
+  for (let i=0; i<8; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--text-secondary);font-size:10px;">K${i+1}</td>
+      <td><span class="tag tag-normal">${KNOB_FULL_NORMAL[i]}</span></td>
+      <td><span class="tag tag-shift">${KNOB_FULL_SHIFT[i]}</span></td>`;
+    tb.appendChild(tr);
+  }
+}
+
+function renderPads() {
+  const rowA = document.getElementById('pad-row-a');
+  const rowB = document.getElementById('pad-row-b');
+  const hintA = document.getElementById('row-a-hint');
+  const hintB = document.getElementById('row-b-hint');
+  rowA.innerHTML = ''; rowB.innerHTML = '';
+  const isShift = currentMode==='shift';
+  const isSW2   = currentMode==='sw2';
+
+  hintA.textContent = isShift ? '— mute / unmute track —' : '— track select (1–8) —';
+  hintB.textContent = (isShift||isSW2) ? '— steps 9–16 for selected track —' : '— steps 1–8 for selected track —';
+
+  for (let i=0; i<8; i++) {
+    const p = document.createElement('div');
+    const sel = (i===currentTrack);
+    p.className = 'pad row-a' + (sel ? ' selected' : (i%3===2 ? ' inactive' : ''));
+    const lbl   = isShift ? 'MUTE\n'+TRACKS[i] : TRACKS[i];
+    const color = isShift ? '#e05c8a' : (sel ? '#000' : 'rgba(0,0,0,0.55)');
+    p.innerHTML = `<div class="pad-led"></div><div class="pad-inner-label" style="color:${color};font-size:${isShift?'7':'8'}px;">${lbl.replace('\n','<br>')}</div><div class="pad-num">A${i+1}</div>`;
+    p.onclick = () => { if (!isShift) { currentTrack=i; renderPads(); } };
+    rowA.appendChild(p);
+  }
+
+  const steps = (isSW2||isShift) ? STEP_PATTERN_B : STEP_PATTERN;
+  for (let i=0; i<8; i++) {
+    const p = document.createElement('div');
+    const on = steps[i]===1;
+    const playing = (i===3 && !isSW2);
+    p.className = 'pad row-b' + (playing ? ' step-playing' : (on ? '' : ' step-off'));
+    const tc = playing ? '#000' : (on ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)');
+    const num = (isSW2||isShift) ? 9+i : 1+i;
+    p.innerHTML = `<div class="pad-led"></div><div class="pad-inner-label" style="color:${tc};font-size:8px;">${on?'●':'○'}</div><div class="pad-num">${num}</div>`;
+    p.onclick = () => { steps[i] = steps[i]===1 ? 0 : 1; renderPads(); };
+    rowB.appendChild(p);
+  }
+}
+
+function updateOLED() {
+  const l1 = document.getElementById('oled-l1');
+  const l2 = document.getElementById('oled-l2');
+  const l3 = document.getElementById('oled-l3');
+  const l4 = document.getElementById('oled-l4');
+  if (currentMode==='shift') {
+    l1.textContent='[SHIFT MODE]'; l2.textContent='ROW-A=MUTE';
+    l3.textContent='BPM SW  VOL LEN'; l4.textContent='FLP CLK GAT ACN';
+  } else if (currentMode==='sw2') {
+    l1.textContent='BPM:128 PG:2/2'; l2.textContent='TRK:'+TRACKS[currentTrack]+' STEPS 9-16';
+    l3.textContent='LVL PIT DEC PAN'; l4.textContent='FIL REV DLY PRB';
+  } else {
+    l1.textContent='BPM:128  SW:18%'; l2.textContent='TRK:'+TRACKS[currentTrack]+' PG:1/2';
+    l3.textContent='LVL PIT DEC PAN'; l4.textContent='FIL REV DLY PRB';
+  }
+}
+
+renderKnobs();
+renderPads();
+updateOLED();
+</script>
+</body>
+</html>

@@ -38,6 +38,13 @@ volatile float masterDrive  = 0.35f;
 
 EditLane editLane = EDIT_KICK;
 
+// ── OLED zoom state ────────────────────────────────────────────────────────
+float    kz_prev[8]  = {};
+int      kz_idx      = -1;
+uint32_t kz_time     = 0;
+constexpr uint32_t kZoomMs    = 1400;
+constexpr float    kZoomDelta = 0.015f;
+
 void InitPattern()
 {
     for(int i = 0; i < kNumSteps; i++)
@@ -129,7 +136,7 @@ void UpdateLeds()
         if(currentStep == i + 8)
             bBrightness = 1.0f;
 
-        hw.led_driver.SetLed(DaisyField::LED_KEY_A1 + i, aBrightness);
+        hw.led_driver.SetLed(DaisyField::LED_KEY_A1 - i, aBrightness); // A-row reversed: A1=15..A8=8
         hw.led_driver.SetLed(DaisyField::LED_KEY_B1 + i, bBrightness);
     }
 
@@ -144,48 +151,103 @@ void UpdateLeds()
     hw.led_driver.SwapBuffersAndTransmit();
 }
 
+static const char* kAdcKnobNames[8] = {
+    "Kick Tone", "Kick Decay", "Attack FM",
+    "Snare Tone", "Snr Decay", "Snappy",
+    "Tempo", "Drive"
+};
+
+void DrawZoom()
+{
+    char val[32];
+    float v = hw.knob[kz_idx].Value();
+    switch(kz_idx)
+    {
+        case 1: snprintf(val, 32, "%.0f ms", (0.05f + v * 0.90f) * 1000.0f); break;
+        case 4: snprintf(val, 32, "%.0f ms", (0.05f + v * 0.95f) * 1000.0f); break;
+        case 6: snprintf(val, 32, "%.0f BPM", 60.0f + v * 180.0f); break;
+        default: snprintf(val, 32, "%d%%", (int)(v * 100.0f + 0.5f)); break;
+    }
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(kAdcKnobNames[kz_idx], Font_7x10, true);
+    hw.display.SetCursor(0, 18);
+    hw.display.WriteString(val, Font_11x18, true);
+    const int bar_w = (int)(v * 127.0f);
+    hw.display.DrawRect(0, 54, 127, 62, true, false);
+    if(bar_w > 0)
+        hw.display.DrawRect(0, 54, bar_w, 62, true, true);
+    hw.display.Update();
+}
+
+void CheckKnobs()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        float v = hw.knob[i].Value();
+        if(fabsf(v - kz_prev[i]) > kZoomDelta)
+        {
+            kz_idx     = i;
+            kz_time    = System::GetNow();
+            kz_prev[i] = v;
+        }
+    }
+}
+
 void UpdateDisplay()
 {
-    hw.display.Fill(false);
+    CheckKnobs();
+    if(kz_idx >= 0 && (System::GetNow() - kz_time) < kZoomMs)
+    {
+        DrawZoom();
+        return;
+    }
+    kz_idx = -1;
 
+    hw.display.Fill(false);
     char line[32];
 
+    // Row 0: title + BPM
+    snprintf(line, sizeof(line), "DRUMCORE  BPM:%d", (int)(tempoBpm + 0.5f));
     hw.display.SetCursor(0, 0);
-    hw.display.WriteString((char*)"ANALOG DRUM CORE", Font_6x8, true);
-
-    hw.display.SetCursor(0, 10);
-    snprintf(line,
-             sizeof(line),
-             "Lane:%s  Run:%d",
-             (editLane == EDIT_KICK) ? "Kick " : "Snare",
-             seqPlaying ? 1 : 0);
     hw.display.WriteString(line, Font_6x8, true);
 
-    const int bpmInt  = (int)(tempoBpm + 0.5f);
-    const int stepInt = currentStep + 1;
-    hw.display.SetCursor(0, 20);
-    snprintf(line, sizeof(line), "BPM:%3d Step:%02d", bpmInt, stepInt);
+    // Row 1: lane + play state
+    snprintf(line, sizeof(line), "Lane:%s  Run:%d",
+             (editLane == EDIT_KICK) ? "Kick " : "Snare", seqPlaying ? 1 : 0);
+    hw.display.SetCursor(0, 8);
     hw.display.WriteString(line, Font_6x8, true);
 
-    const int kd = (int)(kickDecay * 100.0f + 0.5f);
-    const int sd = (int)(snareDecay * 100.0f + 0.5f);
-    hw.display.SetCursor(0, 30);
-    snprintf(line, sizeof(line), "KD:%02d SD:%02d Drv:%02d", kd, sd, (int)(masterDrive * 99.0f));
+    // Row 2: kick params
+    snprintf(line, sizeof(line), "KT:%d AF:%d KD:%d%%",
+             (int)(kickTone * 100.0f + 0.5f),
+             (int)(kickAttackFm * 100.0f + 0.5f),
+             (int)(kickDecay * 100.0f + 0.5f));
+    hw.display.SetCursor(0, 16);
     hw.display.WriteString(line, Font_6x8, true);
 
-    // Show active edit lane pattern as 16 tiny blocks.
-    hw.display.SetCursor(0, 42);
-    hw.display.WriteString((char*)"Pattern:", Font_6x8, true);
-    for(int i = 0; i < 16; i++)
+    // Row 3: snare params
+    snprintf(line, sizeof(line), "ST:%d SS:%d  SD:%d%%",
+             (int)(snareTone * 100.0f + 0.5f),
+             (int)(snareSnappy * 100.0f + 0.5f),
+             (int)(snareDecay * 100.0f + 0.5f));
+    hw.display.SetCursor(0, 24);
+    hw.display.WriteString(line, Font_6x8, true);
+
+    // Row 4: drive + step counter
+    snprintf(line, sizeof(line), "Drive:%d%%  Step:%02d",
+             (int)(masterDrive * 100.0f + 0.5f), currentStep + 1);
+    hw.display.SetCursor(0, 32);
+    hw.display.WriteString(line, Font_6x8, true);
+
+    // Pattern grid: 16 steps × 8px = 128px wide at y=42..50
+    const bool* pat = (editLane == EDIT_KICK) ? kickPattern : snarePattern;
+    for(int i = 0; i < kNumSteps; i++)
     {
-        const bool active = (editLane == EDIT_KICK) ? kickPattern[i] : snarePattern[i];
-        const int  x      = 40 + (i * 5);
-        const int  y0     = 44;
-        const int  y1     = 50;
-
-        hw.display.DrawRect(x, y0, x + 3, y1, active, true);
+        const int x  = i * 8;
+        hw.display.DrawRect(x, 42, x + 6, 50, pat[i], true);
         if(currentStep == i)
-            hw.display.DrawRect(x - 1, y0 - 1, x + 4, y1 + 1, true, false);
+            hw.display.DrawRect(x - 1, 41, x + 7, 51, true, false);
     }
 
     hw.display.Update();

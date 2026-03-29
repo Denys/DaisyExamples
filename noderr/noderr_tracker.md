@@ -6,9 +6,9 @@
 
 ---
 
-**Progress: 17% (4 / 23 VERIFIED)**
+**Progress: 21% (5 / 24 VERIFIED)**
 
-Breakdown: 4 Verified (libDaisy + DaisySP base) | 0 WIP | 19 TODO | 23 Total
+Breakdown: 5 Verified (libDaisy + DaisySP base + Reference Synths) | 0 WIP | 19 TODO | 24 Total
 
 ---
 
@@ -37,6 +37,7 @@ Breakdown: 4 Verified (libDaisy + DaisySP base) | 0 WIP | 19 TODO | 23 Total
 | ⚪️ `[TODO]` | | `DVPE_Compiler` | Generated C++ Module Integration | `DVPE_UI` | DVPE Runtime | [Spec](specs/DVPE_Compiler.md) | Complex | **Missing** — runtime loader for DVPE-generated code |
 | ⚪️ `[TODO]` | | `DVPE_ParamControl` | Runtime Parameter Control | `DVPE_UI` | DVPE Runtime | [Spec](specs/DVPE_ParamControl.md) | Standard | **Missing** — knob/CV-to-parameter mapping at runtime |
 | ⚪️ `[TODO]` | | `DVPE_PresetManager` | Preset Storage & Recall | `DVPE_UI` | DVPE Runtime | [Spec](specs/DVPE_PresetManager.md) | Standard | **Missing** — flash-based preset storage |
+| 🟢 `[VERIFIED]` | | `SYNTH_Pollen8` | Pollen8 VA+FM 2.0 Reference Synth | `DSP_Oscillators`, `DSP_Filters`, `DSP_Envelope`, `DSP_Modulation`, `FX_Chorus` | Reference Synths | [Spec](specs/SYNTH_Pollen8.md) | Complex | Pre-compiled binary; closed source; 8-voice VA+FM polyphonic synth for Field |
 
 ---
 
@@ -74,7 +75,8 @@ Breakdown: 4 Verified (libDaisy + DaisySP base) | 0 WIP | 19 TODO | 23 Total
 | Nimbus | 0 | 0 | 3 | 3 |
 | Examples | 0 | 0 | 2 | 2 |
 | DVPE Runtime | 0 | 0 | 4 | 4 |
-| **TOTAL** | **4** | **0** | **19** | **23** |
+| Reference Synths | 1 | 0 | 0 | 1 |
+| **TOTAL** | **5** | **0** | **19** | **24** |
 
 ---
 

@@ -13,9 +13,9 @@ DaisyField hw;
 const int kMaxSteps  = 16;
 const int kNumVoices = 8;
 
-// Keyboard indices
-const int kKeyAIndices[8] = {15, 14, 13, 12, 11, 10, 9, 8};
-const int kKeyBIndices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+// Keyboard indices: A-row = 0..7 (A1=0..A8=7), B-row = 8..15 (B1=8..B8=15)
+const int kKeyAIndices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+const int kKeyBIndices[8] = {8, 9, 10, 11, 12, 13, 14, 15};
 
 // Voice names
 const char* kVoiceNames[8]
@@ -130,11 +130,18 @@ float ProcessVoice(int v)
     return 0.0f;
 }
 
+// ── OLED zoom state ────────────────────────────────────────────────────────
+float    kz_prev[8]  = {};
+int      kz_idx      = -1;
+uint32_t kz_time     = 0;
+constexpr uint32_t kZoomMs    = 1400;
+constexpr float    kZoomDelta = 0.015f;
+
 // Sequencer state
 float    seq_sr               = 48000.0f;
 float    seq_tempo            = 120.0f;
 float    seq_swing            = 0.0f;
-bool     seq_playing          = false;
+bool     seq_playing          = true;
 uint32_t seq_step             = 0;
 uint32_t seq_samples_per_step = 6000;
 uint32_t seq_sample_count     = 0;
@@ -200,6 +207,110 @@ void AudioCallback(AudioHandle::InputBuffer  in,
     }
 }
 
+static const char* kEucKnobNames[8] = {
+    "Pulses", "Length", "Rotation",
+    "Decay", "Tone", "---",
+    "Tempo", "Swing"
+};
+
+// Knob cache for zoom detection (updated after each hw.knob[i].Process() call)
+float kvals_eu[8] = {};
+
+void DrawZoom()
+{
+    char val[32];
+    float v = kvals_eu[kz_idx];
+    switch(kz_idx)
+    {
+        case 0: snprintf(val, 32, "%d pulses", (int)(v * 16.0f + 0.5f)); break;
+        case 1: snprintf(val, 32, "%d steps", 1 + (int)(v * 15.0f)); break;
+        case 6: snprintf(val, 32, "%.0f BPM", 40.0f + v * 200.0f); break;
+        case 7: snprintf(val, 32, "%d%%", (int)(v * 50.0f + 0.5f)); break;
+        default: snprintf(val, 32, "%d%%", (int)(v * 100.0f + 0.5f)); break;
+    }
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(kEucKnobNames[kz_idx], Font_7x10, true);
+    hw.display.SetCursor(0, 18);
+    hw.display.WriteString(val, Font_11x18, true);
+    const int bar_w = (int)(v * 127.0f);
+    hw.display.DrawRect(0, 54, 127, 62, true, false);
+    if(bar_w > 0)
+        hw.display.DrawRect(0, 54, bar_w, 62, true, true);
+    hw.display.Update();
+}
+
+void CheckKnobs()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        float v = kvals_eu[i];
+        if(fabsf(v - kz_prev[i]) > kZoomDelta)
+        {
+            kz_idx     = i;
+            kz_time    = System::GetNow();
+            kz_prev[i] = v;
+        }
+    }
+}
+
+void UpdateDisplay(const VoiceData& v, char* buf)
+{
+    CheckKnobs();
+    if(kz_idx >= 0 && (System::GetNow() - kz_time) < kZoomMs)
+    {
+        DrawZoom();
+        return;
+    }
+    kz_idx = -1;
+
+    hw.display.Fill(false);
+
+    snprintf(buf, 32, "%s %d %s",
+             kVoiceNames[selected_voice],
+             selected_voice + 1,
+             seq_playing ? ">" : "||");
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(buf, Font_7x10, true);
+
+    snprintf(buf, 32, "K:%d N:%d R:%d", v.k, v.n, v.rot);
+    hw.display.SetCursor(0, 12);
+    hw.display.WriteString(buf, Font_6x8, true);
+
+    snprintf(buf, 32, "BPM:%.0f Sw:%.0f%%", seq_tempo, seq_swing * 100.0f);
+    hw.display.SetCursor(0, 22);
+    hw.display.WriteString(buf, Font_6x8, true);
+
+    const int step_disp = (v.n > 0) ? ((int)(seq_step % v.n) + 1) : 1;
+    snprintf(buf, 32, "Step:%d/%d  Dec:%d%% T:%d%%",
+             step_disp, v.n,
+             (int)(v.decay * 100.0f + 0.5f),
+             (int)(v.tone * 100.0f + 0.5f));
+    hw.display.SetCursor(0, 32);
+    hw.display.WriteString(buf, Font_6x8, true);
+
+    // Euclidean ring diagram
+    const int cx = 100, cy = 40, rad = 18;
+    if(v.n > 0)
+    {
+        for(int i = 0; i < v.n; i++)
+        {
+            float angle = (float)i / v.n * 6.28318f - 1.5708f;
+            int   px    = cx + (int)(cosf(angle) * rad);
+            int   py    = cy + (int)(sinf(angle) * rad);
+            int   cur   = (int)(seq_step % v.n);
+            if(i == cur)
+                hw.display.DrawCircle(px, py, 3, true);
+            else if(v.pattern[i])
+                hw.display.DrawCircle(px, py, 2, true);
+            else
+                hw.display.DrawPixel(px, py, true);
+        }
+    }
+
+    hw.display.Update();
+}
+
 int main(void)
 {
     hw.Init();
@@ -252,21 +363,21 @@ int main(void)
     hw.StartAdc();
     hw.StartAudio(AudioCallback);
 
-    char buf[32];
+    char buf[32] = {};
 
     while(1)
     {
         hw.ProcessAllControls();
 
-        // Read knobs
-        float k0 = hw.knob[0].Process(); // Pulses
-        float k1 = hw.knob[1].Process(); // Length
-        float k2 = hw.knob[2].Process(); // Rotation
-        float k3 = hw.knob[3].Process(); // Decay
-        float k4 = hw.knob[4].Process(); // Tone
-        float k5 = hw.knob[5].Process(); // (unused)
-        float k6 = hw.knob[6].Process(); // Tempo
-        float k7 = hw.knob[7].Process(); // Swing
+        // Read knobs — also populate kvals_eu for zoom detection
+        float k0 = hw.knob[0].Process(); kvals_eu[0] = k0; // Pulses
+        float k1 = hw.knob[1].Process(); kvals_eu[1] = k1; // Length
+        float k2 = hw.knob[2].Process(); kvals_eu[2] = k2; // Rotation
+        float k3 = hw.knob[3].Process(); kvals_eu[3] = k3; // Decay
+        float k4 = hw.knob[4].Process(); kvals_eu[4] = k4; // Tone
+        float k5 = hw.knob[5].Process(); kvals_eu[5] = k5; // (unused)
+        float k6 = hw.knob[6].Process(); kvals_eu[6] = k6; // Tempo
+        float k7 = hw.knob[7].Process(); kvals_eu[7] = k7; // Swing
 
         // Update tempo
         seq_tempo            = 40.0f + k6 * 200.0f;
@@ -346,55 +457,8 @@ int main(void)
         hw.led_driver.SetLed(DaisyField::LED_SW_1, seq_playing ? 1.0f : 0.0f);
         hw.led_driver.SwapBuffersAndTransmit();
 
-        // OLED
-        hw.display.Fill(false);
-
-        snprintf(buf,
-                 sizeof(buf),
-                 "%s %d %s",
-                 kVoiceNames[selected_voice],
-                 selected_voice + 1,
-                 seq_playing ? ">" : "||");
-        hw.display.SetCursor(0, 0);
-        hw.display.WriteString(buf, Font_7x10, true);
-
-        snprintf(buf, sizeof(buf), "K:%d N:%d R:%d", v.k, v.n, v.rot);
-        hw.display.SetCursor(0, 12);
-        hw.display.WriteString(buf, Font_6x8, true);
-
-        snprintf(buf,
-                 sizeof(buf),
-                 "BPM:%.0f Sw:%.0f%%",
-                 seq_tempo,
-                 seq_swing * 100.0f);
-        hw.display.SetCursor(0, 22);
-        hw.display.WriteString(buf, Font_6x8, true);
-
-        int step_disp = (v.n > 0) ? ((seq_step % v.n) + 1) : 1;
-        snprintf(buf, sizeof(buf), "Step:%d/%d", step_disp, v.n);
-        hw.display.SetCursor(0, 32);
-        hw.display.WriteString(buf, Font_6x8, true);
-
-        // Euclidean ring
-        int cx = 100, cy = 40, rad = 18;
-        if(v.n > 0)
-        {
-            for(int i = 0; i < v.n; i++)
-            {
-                float angle = (float)i / v.n * 6.28318f - 1.5708f;
-                int   px    = cx + (int)(cosf(angle) * rad);
-                int   py    = cy + (int)(sinf(angle) * rad);
-                int   cur   = seq_step % v.n;
-                if(i == cur)
-                    hw.display.DrawCircle(px, py, 3, true);
-                else if(v.pattern[i])
-                    hw.display.DrawCircle(px, py, 2, true);
-                else
-                    hw.display.DrawPixel(px, py, true);
-            }
-        }
-
-        hw.display.Update();
+        // OLED — zoom on knob move, else overview
+        UpdateDisplay(v, buf);
         System::Delay(10);
     }
 }

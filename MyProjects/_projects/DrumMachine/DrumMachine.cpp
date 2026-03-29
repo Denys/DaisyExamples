@@ -73,6 +73,13 @@ uint32_t lastStepTime = 0;
 // Knob values cache
 float kvals[8];
 
+// ── OLED zoom state ────────────────────────────────────────────────────────
+float    kz_prev[8]  = {};
+int      kz_idx      = -1;
+uint32_t kz_time     = 0;
+constexpr uint32_t kZoomMs    = 1400;
+constexpr float    kZoomDelta = 0.015f;
+
 // Smoothed parameters
 float kickDecay = 0.0f, kickDecayCur = 0.0f;
 float kickTone = 0.5f, kickToneCur = 0.5f;
@@ -89,11 +96,13 @@ const size_t knob_leds[8] = {
     DaisyField::LED_KNOB_7, DaisyField::LED_KNOB_8,
 };
 
+// A-row key indices 0-7 map to physical A8..A1 (reversed in HAL).
+// LED array follows the same order so the lit LED is under the pressed key.
 const size_t keyboard_leds[16] = {
-    DaisyField::LED_KEY_A1, DaisyField::LED_KEY_A2,
-    DaisyField::LED_KEY_A3, DaisyField::LED_KEY_A4,
-    DaisyField::LED_KEY_A5, DaisyField::LED_KEY_A6,
-    DaisyField::LED_KEY_A7, DaisyField::LED_KEY_A8,
+    DaisyField::LED_KEY_A8, DaisyField::LED_KEY_A7,
+    DaisyField::LED_KEY_A6, DaisyField::LED_KEY_A5,
+    DaisyField::LED_KEY_A4, DaisyField::LED_KEY_A3,
+    DaisyField::LED_KEY_A2, DaisyField::LED_KEY_A1,
     DaisyField::LED_KEY_B1, DaisyField::LED_KEY_B2,
     DaisyField::LED_KEY_B3, DaisyField::LED_KEY_B4,
     DaisyField::LED_KEY_B5, DaisyField::LED_KEY_B6,
@@ -135,20 +144,76 @@ void UpdateLeds()
     hw.led_driver.SwapBuffersAndTransmit();
 }
 
+static const char* kDmKnobNames[8] = {
+    "Tempo", "Swing",
+    "Kick Decay", "Kick Tone",
+    "Snare Decay", "Snr Snappy",
+    "HiHat Decay", "HiHat Tone"
+};
+
+void DrawZoom()
+{
+    char val[32];
+    float v = kvals[kz_idx];
+    switch(kz_idx)
+    {
+        case 0: snprintf(val, 32, "%.0f BPM", 40.0f + v * 200.0f); break;
+        case 1: snprintf(val, 32, "%d%%", (int)(v * 50.0f + 0.5f)); break;
+        case 2: snprintf(val, 32, "%.0f ms", v * 400.0f); break;
+        case 4: snprintf(val, 32, "%.0f ms", v * 1000.0f); break;
+        case 6: snprintf(val, 32, "%.0f ms", v * 1000.0f); break;
+        case 7: snprintf(val, 32, "%.0f Hz", 2000.0f + v * 6000.0f); break;
+        default: snprintf(val, 32, "%d%%", (int)(v * 100.0f + 0.5f)); break;
+    }
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(kDmKnobNames[kz_idx], Font_7x10, true);
+    hw.display.SetCursor(0, 18);
+    hw.display.WriteString(val, Font_11x18, true);
+    const int bar_w = (int)(v * 127.0f);
+    hw.display.DrawRect(0, 54, 127, 62, true, false);
+    if(bar_w > 0)
+        hw.display.DrawRect(0, 54, bar_w, 62, true, true);
+    hw.display.Update();
+}
+
+void CheckKnobs()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        float v = kvals[i];
+        if(fabsf(v - kz_prev[i]) > kZoomDelta)
+        {
+            kz_idx     = i;
+            kz_time    = System::GetNow();
+            kz_prev[i] = v;
+        }
+    }
+}
+
 void UpdateDisplay()
 {
+    CheckKnobs();
+    if(kz_idx >= 0 && (System::GetNow() - kz_time) < kZoomMs)
+    {
+        DrawZoom();
+        return;
+    }
+    kz_idx = -1;
+
     hw.display.Fill(false);
-    
+    char buf[40];
+
     hw.display.SetCursor(0, 0);
     hw.display.WriteString(playing ? "DRUM MACHINE" : "DRUMS [STOP]", Font_7x10, true);
-    
-    char buf[40];
+
+    // Line 2: voice selector, BPM
     hw.display.SetCursor(0, 12);
     sprintf(buf, "K:%s S:%s %s %dBPM",
         useSynthKick ? "S" : "A", useAnalogSnare ? "A" : "S",
         drumNames[selectedDrum], (int)tempo);
     hw.display.WriteString(buf, Font_6x8, true);
-    
+
     // Pattern boxes row 1 (steps 0-7)
     for(int s = 0; s < 8; s++)
     {
@@ -157,7 +222,7 @@ void UpdateDisplay()
         if(s == currentStep && playing)
             hw.display.DrawRect(x + 3, 26, x + 9, 32, true, !patterns[selectedDrum][s]);
     }
-    
+
     // Pattern boxes row 2 (steps 8-15)
     for(int s = 0; s < 8; s++)
     {
@@ -166,11 +231,14 @@ void UpdateDisplay()
         if((s + 8) == currentStep && playing)
             hw.display.DrawRect(x + 3, 40, x + 9, 46, true, !patterns[selectedDrum][s + 8]);
     }
-    
+
+    // Line 5: key sound params (replaces step counter — position shown in grid)
     hw.display.SetCursor(0, 54);
-    sprintf(buf, "Stp:%d/16 Sw:%d%%", currentStep + 1, (int)(swing * 100.f));
+    sprintf(buf, "K:%d S:%d H:%d Sw:%d%%",
+        (int)(kvals[2] * 100), (int)(kvals[4] * 100),
+        (int)(kvals[6] * 100), (int)(swing * 100.f));
     hw.display.WriteString(buf, Font_6x8, true);
-    
+
     hw.display.Update();
 }
 

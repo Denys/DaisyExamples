@@ -115,9 +115,16 @@ float clapDecayCur  = 0.30f;
 float masterVolCur  = 0.80f;
 
 // ============================================================================
-// Knob value cache (for LED feedback)
+// Knob value cache (for LED feedback + zoom)
 // ============================================================================
 float kvals[8];
+
+// ── OLED zoom state ────────────────────────────────────────────────────────
+float    kz_prev[8]  = {};
+int      kz_idx      = -1;
+uint32_t kz_time     = 0;
+constexpr uint32_t kZoomMs    = 1400;
+constexpr float    kZoomDelta = 0.015f;
 
 // ============================================================================
 // LED lookup tables
@@ -342,15 +349,69 @@ void UpdateLeds()
 }
 
 // ============================================================================
-// Update OLED display
+// Update OLED display (overview + knob zoom)
 // ============================================================================
+static const char* kOpKnobNames[8] = {
+    "Kick Decay", "Snare Decay", "HiHat Decay",
+    "Tom Tune", "Clap Decay", "Master Vol",
+    "Tempo", "Swing"
+};
+
+void DrawZoom()
+{
+    char val[32];
+    float v = kvals[kz_idx];
+    switch(kz_idx)
+    {
+        case 0: snprintf(val, 32, "%.0f ms", (0.1f + v * 0.9f) * 1000.0f); break;
+        case 1: snprintf(val, 32, "%.0f ms", (0.1f + v * 0.9f) * 1000.0f); break;
+        case 2: snprintf(val, 32, "%.0f ms", (0.05f + v * 0.50f) * 1000.0f); break;
+        case 3: snprintf(val, 32, "%.0f Hz", 80.0f + v * 220.0f); break;
+        case 4: snprintf(val, 32, "%.0f ms", (0.1f + v * 0.9f) * 1000.0f); break;
+        case 6: snprintf(val, 32, "%.0f BPM", 40.0f + v * 200.0f); break;
+        case 7: snprintf(val, 32, "%d%%", (int)(v * 50.0f + 0.5f)); break;
+        default: snprintf(val, 32, "%d%%", (int)(v * 100.0f + 0.5f)); break;
+    }
+    hw.display.Fill(false);
+    hw.display.SetCursor(0, 0);
+    hw.display.WriteString(kOpKnobNames[kz_idx], Font_7x10, true);
+    hw.display.SetCursor(0, 18);
+    hw.display.WriteString(val, Font_11x18, true);
+    const int bar_w = (int)(v * 127.0f);
+    hw.display.DrawRect(0, 54, 127, 62, true, false);
+    if(bar_w > 0)
+        hw.display.DrawRect(0, 54, bar_w, 62, true, true);
+    hw.display.Update();
+}
+
+void CheckKnobs()
+{
+    for(int i = 0; i < 8; i++)
+    {
+        float v = kvals[i];
+        if(fabsf(v - kz_prev[i]) > kZoomDelta)
+        {
+            kz_idx     = i;
+            kz_time    = System::GetNow();
+            kz_prev[i] = v;
+        }
+    }
+}
+
 void UpdateDisplay()
 {
-    hw.display.Fill(false);
+    CheckKnobs();
+    if(kz_idx >= 0 && (System::GetNow() - kz_time) < kZoomMs)
+    {
+        DrawZoom();
+        return;
+    }
+    kz_idx = -1;
 
-    // Line 1: Title + voice name
+    hw.display.Fill(false);
     char buf[40];
 
+    // Line 1: Title + pattern slot
     hw.display.SetCursor(0, 0);
     snprintf(buf, sizeof(buf), "DRUM PRO  P%d", currentPattern + 1);
     hw.display.WriteString(buf, Font_7x10, true);
@@ -384,11 +445,11 @@ void UpdateDisplay()
             hw.display.DrawRect(x + 3, 40, x + 9, 46, true, !active);
     }
 
-    // Line 5: Step counter + play state
+    // Line 5: Sound params (KD/SD/HD decay% + vol) — replaces step counter
     hw.display.SetCursor(0, 54);
-    snprintf(buf, sizeof(buf), "%s  Step:%d/16",
-             seqPlaying ? "PLAY" : "STOP",
-             currentStep + 1);
+    snprintf(buf, sizeof(buf), "KD:%d SD:%d HD:%d V:%d%%",
+             (int)(kvals[0] * 100), (int)(kvals[1] * 100),
+             (int)(kvals[2] * 100), (int)(masterVol * 100));
     hw.display.WriteString(buf, Font_6x8, true);
 
     hw.display.Update();

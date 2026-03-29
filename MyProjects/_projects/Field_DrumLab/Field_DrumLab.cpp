@@ -590,7 +590,7 @@ int main(void)
     perc.SetDirtiness(kDefaultTimbre[4]);
     perc.SetAccent(kDefaultAccent[4]);
 
-    hw.seed.StartLog(true);
+    hw.seed.StartLog(false);
     hw.seed.PrintLine("Field_DrumLab ready");
     hw.seed.PrintLine(
         "A1=Kick A2=Snare A3=CHat A4=OHat A5=Clap A6=Perc A7=ALL");
