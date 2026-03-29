@@ -130,4 +130,5 @@ vs/*.log
 
 .cortex-debug.registers.state.json
 .cortex-debug.peripherals.state.json
+.worktrees/
 
