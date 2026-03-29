@@ -28,7 +28,6 @@ Display-based Field projects should document the following in their README:
 When a keybed is repurposed for controls instead of notes, prefer a tri-state
 LED helper so the control state is readable at a glance. Use the LED states
 that best match the control semantics, but document the mapping explicitly.
-
 ## Quick Start
 
 ```cpp
@@ -82,6 +81,12 @@ int main(void)
 
         // Update all keyboard LEDs
         keyLeds.Update();
+
+        // Example: 3-state controls
+        triKeyLeds.SetA(0, KeyLedState::On);
+        triKeyLeds.SetA(1, KeyLedState::Blink);
+        triKeyLeds.SetA(2, KeyLedState::Off);
+        triKeyLeds.Update(System::GetNow());
         
         System::Delay(1);
     }
