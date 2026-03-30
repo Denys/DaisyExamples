@@ -23,6 +23,12 @@ class ParamZoomState
             last_values_[i] = initial_value;
     }
 
+    void SetBaseline(const float values[kInstrumentParams])
+    {
+        for(int i = 0; i < kInstrumentParams; ++i)
+            last_values_[i] = values[i];
+    }
+
     void Capture(const float values[kInstrumentParams],
                  uint32_t    now_ms,
                  float       threshold = 0.015f)
