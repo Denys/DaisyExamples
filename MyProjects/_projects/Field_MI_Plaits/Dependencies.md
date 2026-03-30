@@ -4,7 +4,7 @@ This document tracks the code dependencies for the current `Field_MI_Plaits` Dai
 
 Scope:
 - This is the dependency view for the current compiled project in `DaisyExamples/MyProjects/_projects/Field_MI_Plaits`.
-- It focuses on build inputs, runtime flow, active Plaits engine dependencies, and the resource tables that are still relevant to the reduced-engine build.
+- It focuses on build inputs, runtime flow, active Plaits engine dependencies, the banked-parameter helper layer, and the resource tables that are still relevant to the reduced-engine build.
 - It does not attempt to fully diagram every unused file still present in `PlaitsPatchInit`; disabled engines and disabled resource families are shown separately.
 
 ## 1. Build And Link Dependency Graph
@@ -15,6 +15,7 @@ flowchart TD
 
     APP[Field_MI_Plaits.cpp]
     FD[field_defaults.h]
+    PFB[field_parameter_banks.h]
     FI[field_instrument_ui.h]
     DF[daisy_field.h / libDaisy]
     DSP[daisysp.h / DaisySP]
@@ -58,6 +59,7 @@ flowchart TD
     MK --> DSPLIB
 
     APP --> FD
+    APP --> PFB
     APP --> FI
     APP --> DF
     APP --> DSP
@@ -96,7 +98,8 @@ flowchart TD
     HM[HandleMidiMessage]
     UHS[UpdateHoldState]
     RK[ReadKnobs]
-    PNK[ProcessNormalKnobs / ProcessHiddenKnobs]
+    BANK[SetActiveKnobBank]
+    PNK[ProcessBankKnobs]
     PK[ProcessKeys]
     DISP[UpdateDisplay]
     LEDS[RefreshLeds / key_leds.Update]
@@ -119,12 +122,15 @@ flowchart TD
     MAIN --> HM
     MAIN --> UHS
     MAIN --> RK
+    MAIN --> BANK
     MAIN --> PNK
     MAIN --> PK
     MAIN --> DISP
     MAIN --> LEDS
 
     HM --> MS
+    BANK --> ZS
+    BANK --> LEDS
     PNK --> PS
     UHS --> PS
     PK --> PS
@@ -159,6 +165,7 @@ flowchart LR
 
     subgraph Helpers[Field helper headers]
         FD2[field_defaults.h]
+        PFB2[field_parameter_banks.h]
         FI2[field_instrument_ui.h]
         LEDBANK[OneHotKeyLedBank]
         ZOOM[ParamZoomState]
@@ -177,6 +184,7 @@ flowchart LR
     LOOP --> DRAW
 
     MAIN2 --> FD2
+    MAIN2 --> PFB2
     MAIN2 --> FI2
     FI2 --> LEDBANK
     FI2 --> ZOOM
@@ -384,12 +392,21 @@ flowchart LR
 
 - `Field_MI_Plaits.cpp` is the orchestration layer. It owns hardware init, MIDI polling, control scanning, OLED drawing, LED refresh, and translation into `plaits::Patch` / `plaits::Modulations`.
 - `field_defaults.h` is the hardware mapping layer for key indices, LEDs, and shared Daisy Field constants.
-- `field_instrument_ui.h` provides the narrow UI helpers used by this firmware: zoom-state tracking, one-hot key LED handling, and formatting helpers.
+- `field_parameter_banks.h` stores the main and alt knob banks, active bank selection, and pickup/catch state.
+- `field_instrument_ui.h` provides the narrow UI helpers used by this firmware: zoom-state tracking, one-hot key LED handling, baseline management, and formatting helpers.
 - `voice.h` / `voice.cc` are the integration boundary between the Field wrapper and the Mutable Plaits DSP engines.
 - `resources.h` / `resources.cc` provide lookup tables shared by multiple oscillators and engines.
 - `units.cc` and `random.cc` come from `stmlib` and are linked explicitly by the project `Makefile`.
 - `libDaisy` provides the board, audio, MIDI, ADC, display, and timing APIs used by the app.
 - `DaisySP` is included at the application layer even though the current reduced Plaits wrapper is primarily driven by Plaits DSP and `stmlib`.
+
+## 11. Banked Control Notes
+
+- Main and alt knob values are stored separately in `ParamBankSet`.
+- `SW1` switches the active bank only; it does not copy values between banks.
+- Knob LEDs are rendered from stored logical values, not from raw knob positions.
+- `ParamZoomState` follows the active stored values so the zoom UI stays consistent with pickup/catch behavior.
+- The audio callback stays DSP-only; all scanning, pickup logic, and OLED work remain in the main loop.
 
 ## 10. Maintenance Checklist
 

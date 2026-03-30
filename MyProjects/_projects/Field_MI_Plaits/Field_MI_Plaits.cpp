@@ -1,6 +1,7 @@
 #include "daisy_field.h"
 #include "daisysp.h"
 #include "../../foundation_examples/field_defaults.h"
+#include "../../foundation_examples/field_parameter_banks.h"
 #include "../../foundation_examples/field_instrument_ui.h"
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/voice.h"
@@ -8,17 +9,24 @@
 using namespace daisy;
 using namespace daisysp;
 using namespace FieldDefaults;
+using namespace FieldParameterBanks;
 using namespace FieldInstrumentUI;
+
+static_assert(FieldParameterBanks::kNumKnobs == FieldDefaults::kNumKnobs,
+              "Field parameter helper knob count mismatch");
 
 namespace
 {
 constexpr bool     kEnableBootLog      = false;
 constexpr uint32_t kZoomMs             = 1400;
 constexpr float    kZoomDelta          = 0.015f;
+constexpr float    kCatchDelta         = 0.015f;
 constexpr uint32_t kHoldMs             = 300;
 constexpr int      kFullRangeIndex     = 8;
 constexpr int      kTriggerPulseBlocks = 2;
 constexpr size_t   kSharedBufferSize   = 16384;
+constexpr float    kKnobLedCapturedBrightness   = 1.0f;
+constexpr float    kKnobLedUncapturedBrightness = 0.35f;
 
 DaisyField       hw;
 OneHotKeyLedBank key_leds;
@@ -29,13 +37,8 @@ plaits::Patch       patch       = {};
 plaits::Modulations modulations = {};
 plaits::Voice::Frame audio_frames[plaits::kMaxBlockSize];
 char                shared_buffer[kSharedBufferSize] = {};
-
-const char* kEngineSlotNames[16] = {
-    "PAIR",  "SHAPE", "FM",    "FORMANT",
-    "HARM",  "WTBL",  "CHORD", "SPEECH",
-    "CLOUD", "FILT",  "PART",  "STRING",
-    "MODAL", "BD",    "SNARE", "HHAT",
-};
+ParamBankSet        param_banks;
+ParamBank           active_knob_bank = ParamBank::Main;
 
 const int kEngineSlotToEngine[16] = {
     0, -1, 1, 2,
@@ -44,32 +47,26 @@ const int kEngineSlotToEngine[16] = {
     -1, 6, 7, 8,
 };
 
-const char* kParamNames[8] = {
-    "Freq", "Harm", "Timbre", "Morph",
-    "FM Amt", "Tim Amt", "Mor Amt", "Level",
+const char* kMainParamNames[8] = {
+    "Freq", "Harm", "Timb", "Morph",
+    "FM", "TiM", "MoM", "Lvl",
 };
 
-const char* kRangeNames[9] = {
-    "C0 +/-7", "C1 +/-7", "C2 +/-7",
-    "C3 +/-7", "C4 +/-7", "C5 +/-7",
-    "C6 +/-7", "C7 +/-7", "C0-C8",
+const char* kAltParamNames[8] = {
+    "LPG", "Dec", "Rsv", "Rsv",
+    "Rsv", "Rsv", "Rsv", "Rsv",
+};
+
+constexpr float kMainBankDefaults[8] = {
+    0.50f, 0.40f, 0.50f, 0.50f, 0.50f, 0.50f, 0.50f, 0.85f,
 };
 
 struct Params
 {
-    float knob_values[8] = {0.50f, 0.40f, 0.50f, 0.50f, 0.50f, 0.50f, 0.50f, 0.85f};
-    float frequency      = 0.50f;
-    float harmonics      = 0.40f;
-    float timbre         = 0.50f;
-    float morph          = 0.50f;
-    float fm_amount      = 0.50f;
-    float timbre_amount  = 0.50f;
-    float morph_amount   = 0.50f;
-    float level          = 0.85f;
-    float lpg_colour     = 0.50f;
-    float decay          = 0.50f;
-    int   engine_slot    = 0;
-    int   freq_range     = kFullRangeIndex;
+    float lpg_colour  = 0.50f;
+    float decay       = 0.50f;
+    int   engine_slot = 0;
+    int   freq_range  = kFullRangeIndex;
 } params;
 
 struct MidiState
@@ -89,20 +86,120 @@ struct HoldState
     bool     active  = false;
 } hold_states[2];
 
-float level_current = params.level;
+float level_current = kMainBankDefaults[7];
 
 float Clamp01(float value) { return fclamp(value, 0.0f, 1.0f); }
 
 float KnobToBipolar(float value) { return value * 2.0f - 1.0f; }
 
-float CoarseNoteFromKnob()
+bool IsEditableBankKnob(ParamBank bank, int idx)
 {
-    const float normalized = Clamp01(params.frequency);
+    if(idx < 0 || idx >= 8)
+        return false;
+
+    return bank == ParamBank::Alt ? idx < 2 : true;
+}
+
+void SetActiveKnobBank(ParamBank bank)
+{
+    if(active_knob_bank == bank)
+    {
+        param_banks.SetActiveBank(bank);
+        return;
+    }
+
+    active_knob_bank = bank;
+    param_banks.SetActiveBank(bank);
+    float values[8] = {};
+    for(int i = 0; i < 8; ++i)
+        values[i] = param_banks.Read(bank, i);
+    zoom_state.SetBaseline(values);
+    zoom_state.Clear();
+}
+
+void ProcessBankKnobs(ParamBank bank, const float raw[8])
+{
+    for(int i = 0; i < 8; ++i)
+    {
+        if(!IsEditableBankKnob(bank, i))
+            continue;
+
+        if(!param_banks.IsCaptured(bank, i))
+            param_banks.CatchIfClose(bank, i, raw[i], kCatchDelta);
+
+        if(!param_banks.IsCaptured(bank, i))
+            continue;
+
+        param_banks.Write(bank, i, raw[i]);
+        if(bank == ParamBank::Alt)
+        {
+            if(i == 0)
+                params.lpg_colour = raw[i];
+            else if(i == 1)
+                params.decay = raw[i];
+        }
+    }
+
+    float active_bank_values[8] = {};
+    for(int i = 0; i < 8; ++i)
+        active_bank_values[i] = param_banks.Read(bank, i);
+    zoom_state.Capture(active_bank_values, System::GetNow(), kZoomDelta);
+}
+
+void UpdateKnobLeds(ParamBank bank)
+{
+    for(int i = 0; i < 8; ++i)
+    {
+        if(!IsEditableBankKnob(bank, i))
+        {
+            hw.led_driver.SetLed(kLedKnobs[i], 0.0f);
+            continue;
+        }
+
+        const float stored_value = Clamp01(param_banks.Read(bank, i));
+        const float brightness
+            = param_banks.IsCaptured(bank, i) ? kKnobLedCapturedBrightness
+                                              : kKnobLedUncapturedBrightness;
+        hw.led_driver.SetLed(kLedKnobs[i], stored_value * brightness);
+    }
+}
+
+void InitParamBanks()
+{
+    param_banks.Init(0.5f);
+
+    for(int i = 0; i < 8; ++i)
+        param_banks.Write(ParamBank::Main, i, kMainBankDefaults[i]);
+
+    param_banks.Write(ParamBank::Alt, 0, params.lpg_colour);
+    param_banks.Write(ParamBank::Alt, 1, params.decay);
+    for(int i = 2; i < 8; ++i)
+        param_banks.Write(ParamBank::Alt, i, 0.5f);
+
+    active_knob_bank = ParamBank::Main;
+    param_banks.SetActiveBank(ParamBank::Main);
+    float values[8] = {};
+    for(int i = 0; i < 8; ++i)
+        values[i] = param_banks.Read(ParamBank::Main, i);
+    zoom_state.SetBaseline(values);
+    zoom_state.Clear();
+}
+
+float CoarseNoteFromValue(float normalized)
+{
     if(params.freq_range == kFullRangeIndex)
         return 12.0f + normalized * 96.0f;
 
     const float center = 12.0f + static_cast<float>(params.freq_range) * 12.0f;
     return fclamp(center - 7.0f + normalized * 14.0f, 0.0f, 120.0f);
+}
+
+void FormatRangeName(char* buffer, size_t size)
+{
+    if(params.freq_range == kFullRangeIndex)
+        snprintf(buffer, size, "C0-C8");
+    else
+        snprintf(buffer, size, "C%d+/-7", params.freq_range);
 }
 
 void FormatSignedPercent(char* buffer, size_t size, float value)
@@ -113,10 +210,12 @@ void FormatSignedPercent(char* buffer, size_t size, float value)
              static_cast<int>(KnobToBipolar(Clamp01(value)) * 100.0f + (value >= 0.5f ? 0.5f : -0.5f)));
 }
 
-void FormatCoarseNote(char* buffer, size_t size)
+void FormatCoarseNote(char* buffer, size_t size, float normalized)
 {
     char note_name[8];
-    const uint8_t coarse_note = static_cast<uint8_t>(CoarseNoteFromKnob() + 0.5f);
+    const float    note_value  = Clamp01(normalized);
+    const uint8_t coarse_note
+        = static_cast<uint8_t>(CoarseNoteFromValue(note_value) + 0.5f);
     FormatMidiNoteName(note_name, sizeof(note_name), coarse_note);
     snprintf(buffer, size, "%s", note_name);
 }
@@ -151,6 +250,8 @@ void SetRangeLeds()
 
 void RefreshLeds()
 {
+    UpdateKnobLeds(active_knob_bank);
+
     if(hold_states[1].active)
         SetRangeLeds();
     else
@@ -164,7 +265,6 @@ void SelectEngine(int engine)
         return;
 
     params.engine_slot = slot;
-    RefreshLeds();
 }
 
 void PanicVoice()
@@ -274,25 +374,12 @@ void ReadKnobs(float raw[8])
 
 void ProcessNormalKnobs(const float raw[8])
 {
-    for(int i = 0; i < 8; ++i)
-        params.knob_values[i] = raw[i];
-
-    params.frequency     = raw[0];
-    params.harmonics     = raw[1];
-    params.timbre        = raw[2];
-    params.morph         = raw[3];
-    params.fm_amount     = raw[4];
-    params.timbre_amount = raw[5];
-    params.morph_amount  = raw[6];
-    params.level         = raw[7];
-
-    zoom_state.Capture(params.knob_values, System::GetNow(), kZoomDelta);
+    ProcessBankKnobs(ParamBank::Main, raw);
 }
 
 void ProcessHiddenKnobs(const float raw[8])
 {
-    params.lpg_colour = raw[0];
-    params.decay      = raw[1];
+    ProcessBankKnobs(ParamBank::Alt, raw);
 }
 
 void ProcessKeys()
@@ -304,7 +391,6 @@ void ProcessKeys()
             if(hw.KeyboardRisingEdge(kKeyAIndices[i]))
             {
                 params.freq_range = i;
-                RefreshLeds();
                 return;
             }
         }
@@ -312,7 +398,6 @@ void ProcessKeys()
         if(hw.KeyboardRisingEdge(kKeyBIndices[0]))
         {
             params.freq_range = kFullRangeIndex;
-            RefreshLeds();
         }
         return;
     }
@@ -335,16 +420,27 @@ void ProcessKeys()
 
 void UpdatePatchState()
 {
-    patch.note                        = CoarseNoteFromKnob();
-    patch.harmonics                   = Clamp01(params.harmonics);
-    patch.timbre                      = Clamp01(params.timbre);
-    patch.morph                       = Clamp01(params.morph);
-    patch.frequency_modulation_amount = KnobToBipolar(params.fm_amount);
-    patch.timbre_modulation_amount    = KnobToBipolar(params.timbre_amount);
-    patch.morph_modulation_amount     = KnobToBipolar(params.morph_amount);
+    const float frequency      = Clamp01(param_banks.Read(ParamBank::Main, 0));
+    const float harmonics      = Clamp01(param_banks.Read(ParamBank::Main, 1));
+    const float timbre         = Clamp01(param_banks.Read(ParamBank::Main, 2));
+    const float morph          = Clamp01(param_banks.Read(ParamBank::Main, 3));
+    const float fm_amount      = Clamp01(param_banks.Read(ParamBank::Main, 4));
+    const float timbre_amount  = Clamp01(param_banks.Read(ParamBank::Main, 5));
+    const float morph_amount   = Clamp01(param_banks.Read(ParamBank::Main, 6));
+    const float level          = Clamp01(param_banks.Read(ParamBank::Main, 7));
+    const float lpg_colour     = Clamp01(param_banks.Read(ParamBank::Alt, 0));
+    const float decay          = Clamp01(param_banks.Read(ParamBank::Alt, 1));
+
+    patch.note                        = CoarseNoteFromValue(frequency);
+    patch.harmonics                   = harmonics;
+    patch.timbre                      = timbre;
+    patch.morph                       = morph;
+    patch.frequency_modulation_amount = KnobToBipolar(fm_amount);
+    patch.timbre_modulation_amount    = KnobToBipolar(timbre_amount);
+    patch.morph_modulation_amount     = KnobToBipolar(morph_amount);
     patch.engine                      = kEngineSlotToEngine[params.engine_slot];
-    patch.decay                       = Clamp01(params.decay);
-    patch.lpg_colour                  = Clamp01(params.lpg_colour);
+    patch.decay                       = decay;
+    patch.lpg_colour                  = lpg_colour;
 
     modulations.engine           = 0.0f;
     modulations.note             = midi.note_held || midi.gate_open
@@ -355,7 +451,7 @@ void UpdatePatchState()
     modulations.timbre           = 0.0f;
     modulations.morph            = 0.0f;
     modulations.trigger          = midi.trigger_blocks > 0 ? 5.0f : 0.0f;
-    modulations.level            = midi.gate_open ? midi.velocity * level_current : 0.0f;
+    modulations.level            = midi.gate_open ? midi.velocity * level : 0.0f;
     modulations.frequency_patched = false;
     modulations.timbre_patched    = false;
     modulations.morph_patched     = false;
@@ -363,19 +459,33 @@ void UpdatePatchState()
     modulations.level_patched     = midi.gate_open;
 }
 
-void FormatParamValue(int idx, char* buffer, size_t size)
+void FormatParamValue(ParamBank bank, int idx, char* buffer, size_t size)
 {
+    const float value = Clamp01(param_banks.Read(bank, idx));
+
+    if(bank == ParamBank::Alt)
+    {
+        if(idx >= 2)
+        {
+            snprintf(buffer, size, "Reserved");
+            return;
+        }
+
+        FormatPercent(buffer, size, value);
+        return;
+    }
+
     switch(idx)
     {
-        case 0: FormatCoarseNote(buffer, size); break;
-        case 1: FormatPercent(buffer, size, params.knob_values[idx]); break;
-        case 2: FormatPercent(buffer, size, params.knob_values[idx]); break;
-        case 3: FormatPercent(buffer, size, params.knob_values[idx]); break;
-        case 4: FormatSignedPercent(buffer, size, params.knob_values[idx]); break;
-        case 5: FormatSignedPercent(buffer, size, params.knob_values[idx]); break;
-        case 6: FormatSignedPercent(buffer, size, params.knob_values[idx]); break;
-        case 7: FormatPercent(buffer, size, params.knob_values[idx]); break;
-        default: snprintf(buffer, size, "%.2f", params.knob_values[idx]); break;
+        case 0: FormatCoarseNote(buffer, size, value); break;
+        case 1: FormatPercent(buffer, size, value); break;
+        case 2: FormatPercent(buffer, size, value); break;
+        case 3: FormatPercent(buffer, size, value); break;
+        case 4: FormatSignedPercent(buffer, size, value); break;
+        case 5: FormatSignedPercent(buffer, size, value); break;
+        case 6: FormatSignedPercent(buffer, size, value); break;
+        case 7: FormatPercent(buffer, size, value); break;
+        default: snprintf(buffer, size, "%.2f", value); break;
     }
 }
 
@@ -386,11 +496,14 @@ void DrawZoom()
         return;
 
     char value[32];
-    FormatParamValue(idx, value, sizeof(value));
+    FormatParamValue(active_knob_bank, idx, value, sizeof(value));
 
     hw.display.Fill(false);
     hw.display.SetCursor(0, 0);
-    hw.display.WriteString(kParamNames[idx], Font_7x10, true);
+    hw.display.WriteString(active_knob_bank == ParamBank::Alt ? kAltParamNames[idx]
+                                                              : kMainParamNames[idx],
+                           Font_7x10,
+                           true);
     hw.display.SetCursor(0, 18);
     hw.display.WriteString(value, Font_11x18, true);
 
@@ -408,28 +521,28 @@ void DrawHiddenKnobPage()
 
     hw.display.Fill(false);
     hw.display.SetCursor(0, 0);
-    hw.display.WriteString("PLAITS ALT KNOBS", Font_7x10, true);
+    hw.display.WriteString("ALT BANK", Font_7x10, true);
 
     snprintf(line,
              sizeof(line),
-             "K1 LPG Col : %d%%",
-             static_cast<int>(params.lpg_colour * 100.0f + 0.5f));
+             "K1 LPG:%d%%",
+             static_cast<int>(param_banks.Read(ParamBank::Alt, 0) * 100.0f + 0.5f));
     hw.display.SetCursor(0, 14);
     hw.display.WriteString(line, Font_6x8, true);
 
     snprintf(line,
              sizeof(line),
-             "K2 Decay   : %d%%",
-             static_cast<int>(params.decay * 100.0f + 0.5f));
+             "K2 Dec:%d%%",
+             static_cast<int>(param_banks.Read(ParamBank::Alt, 1) * 100.0f + 0.5f));
     hw.display.SetCursor(0, 24);
     hw.display.WriteString(line, Font_6x8, true);
 
     hw.display.SetCursor(0, 38);
-    hw.display.WriteString("Original hidden page", Font_6x8, true);
+    hw.display.WriteString("K3-K8 Rsv", Font_6x8, true);
     hw.display.SetCursor(0, 48);
-    hw.display.WriteString("Hold SW1 to edit", Font_6x8, true);
+    hw.display.WriteString("K1/K2 store", Font_6x8, true);
     hw.display.SetCursor(0, 58);
-    hw.display.WriteString("Tap SW1 = Panic", Font_6x8, true);
+    hw.display.WriteString("Tap=panic", Font_6x8, true);
     hw.display.Update();
 }
 
@@ -437,27 +550,30 @@ void DrawRangePage()
 {
     char line[40];
     char note_name[8];
-    const uint8_t coarse_note = static_cast<uint8_t>(CoarseNoteFromKnob() + 0.5f);
+    const uint8_t coarse_note
+        = static_cast<uint8_t>(CoarseNoteFromValue(param_banks.Read(ParamBank::Main, 0)) + 0.5f);
     FormatMidiNoteName(note_name, sizeof(note_name), coarse_note);
 
     hw.display.Fill(false);
     hw.display.SetCursor(0, 0);
-    hw.display.WriteString("PLAITS FREQ RANGE", Font_7x10, true);
+    hw.display.WriteString("RANGE", Font_7x10, true);
 
-    snprintf(line, sizeof(line), "Now : %s", kRangeNames[params.freq_range]);
+    char range_name[16];
+    FormatRangeName(range_name, sizeof(range_name));
+    snprintf(line, sizeof(line), "Rng:%s", range_name);
     hw.display.SetCursor(0, 14);
     hw.display.WriteString(line, Font_6x8, true);
 
-    snprintf(line, sizeof(line), "Base: %s", note_name);
+    snprintf(line, sizeof(line), "Base %s", note_name);
     hw.display.SetCursor(0, 24);
     hw.display.WriteString(line, Font_6x8, true);
 
     hw.display.SetCursor(0, 38);
-    hw.display.WriteString("A1-A8 = C0..C7 +/-7", Font_6x8, true);
+    hw.display.WriteString("A1-8 C0-7", Font_6x8, true);
     hw.display.SetCursor(0, 48);
-    hw.display.WriteString("B1 = Full 8 oct", Font_6x8, true);
+    hw.display.WriteString("B1 full", Font_6x8, true);
     hw.display.SetCursor(0, 58);
-    hw.display.WriteString("Tap SW2 = Clr Zoom", Font_6x8, true);
+    hw.display.WriteString("Tap clr z", Font_6x8, true);
     hw.display.Update();
 }
 
@@ -467,50 +583,58 @@ void DrawOverview()
     char note_name[8];
     const bool note_active = midi.note_held || midi.gate_open;
     FormatMidiNoteName(note_name, sizeof(note_name), midi.note);
+    const float main_harmonics = param_banks.Read(ParamBank::Main, 1);
+    const float main_timbre    = param_banks.Read(ParamBank::Main, 2);
+    const float main_morph     = param_banks.Read(ParamBank::Main, 3);
+    const float main_fm_amt    = param_banks.Read(ParamBank::Main, 4);
+    const float main_timb_amt  = param_banks.Read(ParamBank::Main, 5);
+    const float main_morph_amt = param_banks.Read(ParamBank::Main, 6);
+    const float main_level     = param_banks.Read(ParamBank::Main, 7);
 
     hw.display.Fill(false);
 
     hw.display.SetCursor(0, 0);
-    hw.display.WriteString("FIELD MI PLAITS", Font_7x10, true);
+    hw.display.WriteString("MI PLAITS", Font_7x10, true);
 
     snprintf(line,
              sizeof(line),
-             "Eng:%02d %s",
-             params.engine_slot + 1,
-             kEngineSlotNames[params.engine_slot]);
+             "Eng:%02d",
+             params.engine_slot + 1);
     hw.display.SetCursor(0, 10);
     hw.display.WriteString(line, Font_6x8, true);
 
+    char range_name[16];
+    FormatRangeName(range_name, sizeof(range_name));
     snprintf(line,
              sizeof(line),
-             "Note:%s Range:%s",
+             "N:%s R:%s",
              note_active ? note_name : "--",
-             kRangeNames[params.freq_range]);
+             range_name);
     hw.display.SetCursor(0, 18);
     hw.display.WriteString(line, Font_6x8, true);
 
     snprintf(line,
              sizeof(line),
              "H:%d T:%d M:%d",
-             static_cast<int>(params.harmonics * 100.0f + 0.5f),
-             static_cast<int>(params.timbre * 100.0f + 0.5f),
-             static_cast<int>(params.morph * 100.0f + 0.5f));
+             static_cast<int>(main_harmonics * 100.0f + 0.5f),
+             static_cast<int>(main_timbre * 100.0f + 0.5f),
+             static_cast<int>(main_morph * 100.0f + 0.5f));
     hw.display.SetCursor(0, 26);
     hw.display.WriteString(line, Font_6x8, true);
 
     snprintf(line,
              sizeof(line),
              "FM:%+d Ti:%+d Mo:%+d",
-             static_cast<int>(KnobToBipolar(params.fm_amount) * 100.0f),
-             static_cast<int>(KnobToBipolar(params.timbre_amount) * 100.0f),
-             static_cast<int>(KnobToBipolar(params.morph_amount) * 100.0f));
+             static_cast<int>(KnobToBipolar(main_fm_amt) * 100.0f),
+             static_cast<int>(KnobToBipolar(main_timb_amt) * 100.0f),
+             static_cast<int>(KnobToBipolar(main_morph_amt) * 100.0f));
     hw.display.SetCursor(0, 34);
     hw.display.WriteString(line, Font_6x8, true);
 
     snprintf(line,
              sizeof(line),
-             "Lvl:%d Col:%d Dec:%d",
-             static_cast<int>(params.level * 100.0f + 0.5f),
+             "L:%d C:%d D:%d",
+             static_cast<int>(main_level * 100.0f + 0.5f),
              static_cast<int>(params.lpg_colour * 100.0f + 0.5f),
              static_cast<int>(params.decay * 100.0f + 0.5f));
     hw.display.SetCursor(0, 42);
@@ -518,24 +642,25 @@ void DrawOverview()
 
     snprintf(line,
              sizeof(line),
-             "Midi:%s Gate:%s",
+             "M:%s G:%s",
              (System::GetNow() - midi.last_event_ms) < 1200 ? "RX" : "IDLE",
              midi.gate_open ? "ON" : "OFF");
     hw.display.SetCursor(0, 50);
     hw.display.WriteString(line, Font_6x8, true);
 
     hw.display.SetCursor(0, 58);
-    hw.display.WriteString("A/B=Eng SW1/2 Hold", Font_6x8, true);
+    snprintf(line, sizeof(line), "Bank:%s", active_knob_bank == ParamBank::Alt ? "ALT" : "MAIN");
+    hw.display.WriteString(line, Font_6x8, true);
 
     hw.display.Update();
 }
 
 void UpdateDisplay()
 {
-    if(hold_states[0].active)
-        DrawHiddenKnobPage();
-    else if(hold_states[1].active)
+    if(hold_states[1].active)
         DrawRangePage();
+    else if(hold_states[0].active)
+        DrawHiddenKnobPage();
     else if(zoom_state.IsActive(System::GetNow(), kZoomMs))
         DrawZoom();
     else
@@ -546,7 +671,7 @@ void AudioCallback(AudioHandle::InputBuffer in,
                    AudioHandle::OutputBuffer out,
                    size_t size)
 {
-    fonepole(level_current, params.level, 0.0015f);
+    fonepole(level_current, Clamp01(param_banks.Read(ParamBank::Main, 7)), 0.0015f);
 
     UpdatePatchState();
     voice.Render(patch, modulations, audio_frames, size);
@@ -580,7 +705,8 @@ int main(void)
     voice.Init(&allocator);
 
     key_leds.Init(&hw);
-    zoom_state.Init(params.frequency);
+    zoom_state.Init(0.0f);
+    InitParamBanks();
     SelectEngine(params.engine_slot);
     RefreshLeds();
     key_leds.Update();
@@ -598,10 +724,13 @@ int main(void)
         hw.ProcessAllControls();
         UpdateHoldState();
 
+        const ParamBank bank = hold_states[0].active ? ParamBank::Alt : ParamBank::Main;
+        SetActiveKnobBank(bank);
+
         float raw_knobs[8] = {};
         ReadKnobs(raw_knobs);
 
-        if(hold_states[0].active)
+        if(bank == ParamBank::Alt)
             ProcessHiddenKnobs(raw_knobs);
         else
             ProcessNormalKnobs(raw_knobs);

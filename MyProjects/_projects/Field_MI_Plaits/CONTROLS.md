@@ -109,45 +109,48 @@ For the physical and percussion-style models, the manual notes that these models
 
 ## Current Field_MI_Plaits firmware
 
-## Important reality check
-
-The current Daisy Field project does not yet implement the original Plaits synthesis engine, model buttons, CV architecture, or AUX output logic.
-
-Today, `Field_MI_Plaits` is:
-
-- A mono synth voice built from `Oscillator`, `Adsr`, `Svf`, and soft drive.
-- Primarily played from external TRS MIDI.
-- Controlled from the Daisy Field knobs, keybed shortcuts, switches, and OLED.
-
-That means the original Plaits reference above is best read as the target device behavior and naming context, not as a literal description of the current firmware.
+This build now uses a banked control layer with pickup/catch semantics. The intent is to keep the physical knob positions independent from the stored parameter values so that switching pages does not jump the sound.
 
 ## Current Daisy Field control map
 
+### Main bank
+
 | Daisy control | Current behavior |
 |------|-------------------|
-| `K1` | Filter cutoff |
-| `K2` | Filter resonance |
-| `K3` | Envelope attack |
-| `K4` | Envelope decay |
-| `K5` | Envelope sustain |
-| `K6` | Envelope release |
-| `K7` | Drive amount |
-| `K8` | Output level |
+| `K1` | Frequency / pitch center |
+| `K2` | Harmonics |
+| `K3` | Timbre |
+| `K4` | Morph |
+| `K5` | FM amount |
+| `K6` | Timbre modulation amount |
+| `K7` | Morph modulation amount |
+| `K8` | Level / LPG-style voice level behavior |
 
-### Current keybed and switch shortcuts
+### Alt bank
+
+Hold `SW1` to edit the alt bank.
+
+| Daisy control | Current behavior |
+|------|-------------------|
+| `SW1 + K1` | LPG colour |
+| `SW1 + K2` | Decay |
+| `SW1 + K3-K8` | Reserved and inactive on this build |
+
+The main and alt banks are stored independently. Releasing `SW1` does not copy the alt values back into main.
+`SW1 + K3-K8` do not capture, edit, light, or enter zoom.
+
+### Keybed and switch shortcuts
 
 | Control | Current behavior |
 |------|-------------------|
-| `A1` | Select `Sine` waveform |
-| `A2` | Select `Triangle` waveform |
-| `A3` | Select `Saw` waveform |
-| `A4` | Select `Square` waveform |
-| `A5-A8` | Reserved, no action in v1 |
-| `B1-B8` | Reserved, no action in v1 |
-| `SW1` | Panic / all-notes-off, and clears sustain state |
-| `SW2` | Clears the temporary OLED zoom/focus state |
+| `A1-A8` | Select mapped engine slots when `SW2` is not held |
+| `B1-B8` | Select mapped engine slots when `SW2` is not held |
+| `SW1` tap | Panic / all-notes-off, clears sustain state |
+| `SW1` hold | Activates the alt bank |
+| `SW2` tap | Clears the temporary OLED zoom state |
+| `SW2` hold | Opens the range page and repurposes the keybed for range selection |
 
-Only one waveform shortcut is active at a time. The corresponding A-row LED is lit one-hot to show the selected waveform.
+Only the mapped engine slots are active. Unmapped slots intentionally do nothing.
 
 ## Current MIDI behavior
 
@@ -158,70 +161,63 @@ Only one waveform shortcut is active at a time. The corresponding A-row LED is l
 - `CC64` acts as sustain pedal.
 - MIDI activity is shown on the OLED as `Midi:RX` for a short time after incoming data.
 
-Unlike original Plaits, pitch is not currently driven by a coarse `FREQUENCY` knob plus `V/OCT` input. In this build, pitch comes from incoming MIDI notes.
+Pitch comes from incoming MIDI notes, not from a local `FREQUENCY` knob plus `V/OCT` input.
 
 ## Current OLED behavior
 
-The OLED has two display states:
+The OLED now reflects the banked parameter workflow:
 
-- Overview mode shows waveform, note, filter summary, envelope summary, sustain-pedal status, MIDI status, and shortcut hints.
-- Zoom mode appears after a knob move and temporarily enlarges the active parameter value before returning to the overview.
+- Overview mode shows the current engine slot, note state, range, parameter summary, MIDI/gate status, and active bank.
+- Zoom mode appears after a knob move and enlarges the stored value for the active parameter.
+- Alt bank mode appears while `SW1` is held and shows the stored alt values.
+- Range mode appears while `SW2` is held and shows the selected pitch range.
 
-The zoom display currently formats values like this:
-
-- `K1`: Hertz
-- `K2`: percent
-- `K3`: milliseconds
-- `K4`: milliseconds
-- `K5`: percent
-- `K6`: milliseconds
-- `K7`: percent
-- `K8`: percent
+The zoom display uses the stored logical value from the active bank. It does not mirror the raw physical knob position. Reserved alt slots do not enter zoom.
 
 ## Current audio behavior
 
-The present firmware uses a straightforward mono-synth signal path:
+The present firmware still uses a straightforward voice path:
 
 1. External MIDI sets oscillator pitch and gate.
-2. The selected oscillator waveform is generated.
-3. An ADSR envelope shapes the voice.
-4. A state-variable low-pass filter applies cutoff and resonance.
-5. A soft `tanh` drive stage adds saturation.
-6. Output level sets final loudness.
-
-Cutoff, resonance, drive, and output level are smoothed in the audio callback to reduce zipper noise during knob moves.
-
-## How to play the current firmware
-
-1. Connect a TRS MIDI source to the Daisy Field MIDI input.
-2. Play notes from the external controller.
-3. Use `A1-A4` to choose the core oscillator waveform.
-4. Use `K1-K8` to shape the subtractive synth voice.
-5. Use `SW1` if a stuck note or sustain condition needs to be cleared immediately.
-6. Use `SW2` if you want to dismiss the knob zoom state and return to the overview immediately.
+2. The selected engine slot is rendered.
+3. The stored main-bank parameters are translated into the active Plaits patch/modulation set.
+4. Alt-bank values feed the LPG colour and decay controls.
+5. Output level is smoothed separately so voice level changes stay stable.
 
 ## Practical translation: original Plaits vs current Field build
 
 | Original Plaits concept | Current Field_MI_Plaits equivalent |
 |------|-------------------------------------|
-| Model selection | `A1-A4` waveform selection only |
-| `FREQUENCY` knob | External MIDI note input |
-| `HARMONICS`, `TIMBRE`, `MORPH` | Replaced by filter + ADSR + drive controls |
-| Internal LPG behavior | Replaced by ADSR + low-pass filter path |
-| `TRIG` input behavior | Not implemented in the current Field build |
-| `LEVEL` CV | Not implemented in the current Field build |
-| `AUX` output | Not implemented in the current Field build |
-| CV attenuverters | Not implemented in the current Field build |
+| Model selection | Keybed engine-slot selection |
+| `FREQUENCY` knob | Main-bank `K1` frequency/pitch center |
+| `HARMONICS`, `TIMBRE`, `MORPH` | Main-bank `K2-K4` |
+| `FM`, `TIMBRE`, `MORPH` attenuverters | Main-bank `K5-K7` |
+| `LEVEL` | Main-bank `K8` as voice-level / LPG behavior |
+| Hidden LPG controls | Alt-bank `K1-K2` |
+| Hidden range control | `SW2` hold keybed range page |
+| `TRIG` input behavior | External MIDI note-on |
+| `AUX` output | Not exposed as a separate user control in this build |
+
+## Startup defaults
+
+| Item | Default |
+|---|---|
+| Main bank | `K1=50%`, `K2=40%`, `K3=50%`, `K4=50%`, `K5=50%`, `K6=50%`, `K7=50%`, `K8=85%` |
+| Alt bank | `K1=50%`, `K2=50%`, `K3-K8=50% reserved placeholders` |
+| Engine slot | First mapped slot |
+| Range | Full range |
+| Zoom | Off |
+| Sustain | Off |
+| Active bank | Main |
 
 ## Suggested next-port alignment targets
 
-If this project is pushed closer to the original Plaits device, the most important future control milestones would be:
+If this project is pushed closer to the original Plaits device, the next control milestones would be:
 
-1. Replace waveform-only selection with the original 16-model architecture.
-2. Restore true `HARMONICS`, `TIMBRE`, and `MORPH` behavior per model.
-3. Add a Plaits-style trigger and internal envelope/LPG workflow.
-4. Add a meaningful `AUX` rendering path.
-5. Decide how Daisy Field controls should expose original Plaits hidden settings without losing live-play usability.
+1. Restore the original 16-model architecture.
+2. Add a more literal Plaits-style model selection workflow.
+3. Expand the alt-bank concept into the full hidden-settings surface.
+4. Decide how much of the original CV/trigger/LPG behavior should remain exposed on Daisy Field.
 
 ## Sources
 

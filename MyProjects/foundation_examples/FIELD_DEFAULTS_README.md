@@ -5,7 +5,7 @@
 `field_defaults.h` is a comprehensive helper library for Daisy Field projects that provides:
 
 1. **LED Constants** - Pre-defined arrays for all 21 LEDs (knobs, keyboard, switches)
-2. **Keyboard Mappings** - Correct index mappings for the reversed A-row layout
+2. **Keyboard Mappings** - Correct index mappings for the natural-order A/B row layout
 3. **Toggle LED Helper** - `FieldKeyboardLEDs` class for on/off keyboard LED behavior
 4. **OLED Display Helper** - `FieldOLEDDisplay` class showing all settings with active parameter highlighting
 5. **Hardware Constants** - Standard values (8 knobs, 16 keys, block size 48, etc.)
@@ -14,6 +14,7 @@
 
 - **field_defaults.h** - Main header file with all constants and classes
 - **FIELD_DEFAULTS_USAGE.md** - Comprehensive usage guide with examples
+- **FIELD_DISPLAY_PROJECT_README_TEMPLATE.md** - Shared README template for display-based Field projects
 
 ## Quick Example
 
@@ -60,7 +61,7 @@ int main(void)
 
 ### FieldOLEDDisplay
 - Two layouts: Standard (large active param) and Compact (all 8 visible)
-- Automatic change detection and highlighting  
+- Automatic change detection and highlighting
 - Customizable labels and title
 - Shows recently modified parameter prominently
 - No manual tracking needed
@@ -82,6 +83,7 @@ int main(void)
 ## See Also
 
 - [FIELD_DEFAULTS_USAGE.md](FIELD_DEFAULTS_USAGE.md) - Full documentation
+- [FIELD_DISPLAY_PROJECT_README_TEMPLATE.md](FIELD_DISPLAY_PROJECT_README_TEMPLATE.md) - README template for display-based projects
 - Field example projects in `_projects/` folder
 
 ---

@@ -4,17 +4,48 @@
 
 `field_defaults.h` provides standard constants and helpers for Daisy Field projects to eliminate repetitive code.
 
+For banked parameters and pickup/catch control, also include `field_parameter_banks.h`.
+For 3-state key LED handling, include `field_instrument_ui.h` and use `KeyLedState`
+with `FieldTriStateKeyLEDs`.
+
+For any Field project with an OLED or other display, start from
+`FIELD_DISPLAY_PROJECT_README_TEMPLATE.md` and keep the project README aligned
+with the actual controls, LED states, OLED pages, hidden banks, startup/default
+values, and panic/reset behavior.
+
+## Documentation Standard
+
+Display-based Field projects should document the following in their README:
+
+- All live controls and their exact roles
+- LED states for knobs, keys, switches, and mode indicators
+- OLED pages, including hidden or alternate pages
+- Hidden banks, shift layers, or modifier states
+- Startup/default values for all important parameters, modes, and states
+- Panic/reset behavior and recovery from stuck notes or bad states
+- Whether keybed controls use `Off`, `Blink`, and `On` as a 3-state vocabulary
+
+When a keybed is repurposed for controls instead of notes, prefer a tri-state
+LED helper so the control state is readable at a glance. Use the LED states
+that best match the control semantics, but document the mapping explicitly.
+
 ## Quick Start
 
 ```cpp
 #include "daisy_field.h"
 #include "../../foundation_examples/field_defaults.h"
+#include "../../foundation_examples/field_parameter_banks.h"
+#include "../../foundation_examples/field_instrument_ui.h"
 
 using namespace daisy;
 using namespace FieldDefaults;
+using namespace FieldParameterBanks;
+using namespace FieldInstrumentUI;
 
 DaisyField hw;
 FieldKeyboardLEDs keyLeds;  // Toggle LED helper
+ParamBankSet paramBanks;    // Main/alt parameter storage with pickup/catch
+FieldTriStateKeyLEDs triKeyLeds; // Off / Blink / On state LEDs
 
 void AudioCallback(AudioHandle::InputBuffer in,
                    AudioHandle::OutputBuffer out,
@@ -30,6 +61,9 @@ int main(void)
     hw.Init();
     hw.SetAudioBlockSize(kRecommendedBlockSize);
     keyLeds.Init(&hw);
+    triKeyLeds.Init(&hw);
+    paramBanks.Init(0.5f);
+    paramBanks.SetActiveBank(ParamBank::Main);
     
     hw.StartAdc();
     hw.StartAudio(AudioCallback);
@@ -45,7 +79,7 @@ int main(void)
             if(hw.KeyboardRisingEdge(kKeyBIndices[i]))
                 keyLeds.ToggleB(i);  // Toggle B row LED
         }
-        
+
         // Update all keyboard LEDs
         keyLeds.Update();
         
@@ -53,6 +87,10 @@ int main(void)
     }
 }
 ```
+
+**Important:** `FieldKeyboardLEDs` and `FieldTriStateKeyLEDs` are alternative
+helpers for the same keyboard LED matrix. Use one or the other in a given loop,
+not both at once, unless you explicitly split their responsibilities.
 
 ## What's Included
 
@@ -87,7 +125,7 @@ hw.led_driver.SwapBuffersAndTransmit();
 
 ### 3. Keyboard Index Mappings
 
-**Important:** Row A indices are reversed!
+**Important:** The Field defaults map rows in natural order:
 
 ```
 Physical Layout:
@@ -95,13 +133,13 @@ Physical Layout:
   B1  B2  B3  B4  B5  B6  B7  B8   (Bottom Row)
 
 Array Indices:
-  15  14  13  12  11  10   9   8   (kKeyAIndices)
-   0   1   2   3   4   5   6   7   (kKeyBIndices)
+   0   1   2   3   4   5   6   7   (kKeyAIndices)
+   8   9  10  11  12  13  14  15   (kKeyBIndices)
 ```
 
 **Example - Check if key A4 was pressed:**
 ```cpp
-if(hw.KeyboardRisingEdge(kKeyAIndices[3]))  // A4 = index 12
+if(hw.KeyboardRisingEdge(kKeyAIndices[3]))  // A4 = index 3
 {
     // Key A4 was pressed
 }
@@ -208,6 +246,37 @@ void UpdateSwitchLEDs()
     hw.led_driver.SetLed(kLedSwitches[1], muted ? 1.0f : 0.0f);
     hw.led_driver.SwapBuffersAndTransmit();
 }
+```
+
+### Pattern 4: Banked Parameters With Pickup / Catch
+```cpp
+ParamBankSet banks;
+banks.Init(0.5f);
+banks.SetActiveBank(ParamBank::Main);
+
+// Store independent values for Main and Alt banks.
+banks.Write(ParamBank::Main, 0, 0.50f);
+banks.Write(ParamBank::Alt, 0, 0.35f);
+
+// Read the active bank without mutating anything.
+float active_value = banks.ReadActive(0);
+
+// Catch the physical control before writing after a bank change.
+if(banks.CatchIfCloseActive(0, physical_knob_value))
+{
+    banks.WriteActive(0, physical_knob_value);
+}
+```
+
+### Pattern 5: Three-State Key LEDs
+```cpp
+FieldTriStateKeyLEDs triLeds;
+triLeds.Init(&hw);
+
+triLeds.SetA(0, KeyLedState::Off);
+triLeds.SetA(1, KeyLedState::Blink);
+triLeds.SetA(2, KeyLedState::On);
+triLeds.Update(System::GetNow());
 ```
 
 ## Migration Guide
@@ -394,3 +463,4 @@ int main(void)
 - Remember to call `Update()` in every main loop iteration to push LED state to hardware
 - All arrays use 0-based indexing (0-7 for each row of 8 keys/knobs)
 - Keyboard physical layout is A1-A8 (top), B1-B8 (bottom)
+

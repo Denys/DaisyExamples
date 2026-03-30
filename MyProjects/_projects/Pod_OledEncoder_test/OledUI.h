@@ -122,6 +122,12 @@ public:
         dirty_        = true;
         display_on_   = true;
         last_input_   = daisy::System::GetNow();
+
+        // Zoom overlay (inactive by default)
+        zoom_idx_   = -1;
+        zoom_val_   = 0.f;
+        zoom_label_ = nullptr;
+        zoom_start_ = 0;
     }
 
     // ---- Navigation (call from main loop) ------------------
@@ -217,6 +223,18 @@ public:
         dirty_ = true;
     }
 
+    // Trigger a full-screen zoom popup for one parameter.
+    // Stays visible for 1.2 s after the last call.
+    // Call whenever Pot1/Pot2/PodEncoder changes.
+    void SetZoom(int idx, float val, const char* label) {
+        zoom_idx_   = idx;
+        zoom_val_   = val;
+        zoom_label_ = label;
+        zoom_start_ = daisy::System::GetNow();
+        dirty_      = true;
+        WakeDisplay();
+    }
+
     // ---- Getters for application logic ---------------------
     int  GetPatchIdx()    const { return vals_[0]; }
     int  GetMidiChannel() const { return vals_[1]; }
@@ -228,8 +246,9 @@ public:
     void Draw(const float* params, int /*patch_idx*/) {
         // Display timeout
         static const uint32_t kTimeoutMs[4] = { 0, 5000, 10000, 30000 };
-        uint32_t to = kTimeoutMs[vals_[4]];
-        if(to > 0 && (daisy::System::GetNow() - last_input_ > to)) {
+        uint32_t now = daisy::System::GetNow();
+        uint32_t to  = kTimeoutMs[vals_[4]];
+        if(to > 0 && (now - last_input_ > to)) {
             if(display_on_) {
                 display_.Fill(false);
                 display_.Update();
@@ -238,16 +257,23 @@ public:
             return;
         }
 
-        if(!dirty_) return;
+        bool zoom_active = (zoom_idx_ >= 0 && now - zoom_start_ < 1200);
+        if(!zoom_active && !dirty_) return;
         dirty_ = false;
 
         display_.Fill(false);
 
-        int menu_id = CurrentMenu();
-        if(menu_id == MENU_PARAMS)
-            DrawParamsPage(params);
-        else
-            DrawMenuPage(menu_id, params);
+        if(zoom_active) {
+            DrawZoomOverlay();
+            dirty_ = true;  // keep redrawing until zoom expires
+        } else {
+            zoom_idx_ = -1;
+            int menu_id = CurrentMenu();
+            if(menu_id == MENU_PARAMS)
+                DrawParamsPage(params);
+            else
+                DrawMenuPage(menu_id, params);
+        }
 
         display_.Update();
     }
@@ -265,12 +291,52 @@ private:
     bool     display_on_;
     uint32_t last_input_;
 
+    // Zoom overlay state
+    int          zoom_idx_;    // -1 = inactive
+    float        zoom_val_;
+    const char*  zoom_label_;
+    uint32_t     zoom_start_;
+
     int CurrentMenu() const { return nav_stack_[nav_depth_]; }
 
     void WakeDisplay() {
         last_input_ = daisy::System::GetNow();
         display_on_ = true;
         dirty_      = true;
+    }
+
+    // --------------------------------------------------------
+    // DrawZoomOverlay — full-screen single-param view
+    //
+    // 128×64 layout:
+    //   y=2    Label (Font_6x8)
+    //   y=18   Large percentage value (Font_11x18)
+    //   y=40   Raw float value (Font_6x8)
+    //   y=50   Progress bar (full width)
+    // --------------------------------------------------------
+    void DrawZoomOverlay() {
+        char buf[24];
+
+        // Param label (top-left, small)
+        display_.SetCursor(2, 2);
+        display_.WriteString(zoom_label_ ? zoom_label_ : "Param", Font_6x8, true);
+
+        // Large percentage (center)
+        int pct = static_cast<int>(zoom_val_ * 100.f);
+        snprintf(buf, sizeof(buf), "%3d%%", pct);
+        display_.SetCursor(24, 18);
+        display_.WriteString(buf, Font_11x18, true);
+
+        // Raw float (below large text)
+        snprintf(buf, sizeof(buf), "%.3f", zoom_val_);
+        display_.SetCursor(44, 40);
+        display_.WriteString(buf, Font_6x8, true);
+
+        // Progress bar
+        display_.DrawRect(0, 50, 127, 58, true, false);   // outline
+        int fill = static_cast<int>(zoom_val_ * 127.f);
+        if(fill > 0)
+            display_.DrawRect(0, 50, fill, 58, true, true);
     }
 
     // --------------------------------------------------------

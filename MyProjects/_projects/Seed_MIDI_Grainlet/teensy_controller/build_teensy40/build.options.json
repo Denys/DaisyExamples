@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "",
+  "compiler.optimization_flags": "",
+  "customBuildProperties": "build.warn_data_percentage=75",
+  "fqbn": "teensy:avr:teensy40",
+  "hardwareFolders": "C:\\Users\\denko\\AppData\\Local\\Arduino15\\packages",
+  "otherLibrariesFolders": "C:\\Users\\denko\\OneDrive\\Documents\\Arduino\\libraries",
+  "sketchLocation": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\MyProjects\\_projects\\Seed_MIDI_Grainlet\\teensy_controller\\Seed_MIDI_Grainlet_Teensy40"
+}
