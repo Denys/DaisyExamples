@@ -29,7 +29,14 @@ class ParamBankSet
         FillState(alt_, initial_value);
     }
 
-    void SetActiveBank(ParamBank bank) { active_bank_ = bank; }
+    void SetActiveBank(ParamBank bank)
+    {
+        if(active_bank_ == bank)
+            return;
+
+        active_bank_ = bank;
+        ClearCaptured(active_bank_);
+    }
     ParamBank ActiveBank() const { return active_bank_; }
 
     float Read(ParamBank bank, int knob) const
