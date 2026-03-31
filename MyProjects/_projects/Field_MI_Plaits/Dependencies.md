@@ -10,7 +10,7 @@ Scope:
 ## 1. Build And Link Dependency Graph
 
 ```mermaid
-flowchart TD
+flowchart LR
     MK[Field_MI_Plaits/Makefile]
 
     APP[Field_MI_Plaits.cpp]
@@ -157,7 +157,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph FieldApp[Field_MI_Plaits.cpp]
-        MAIN2[main()]
+        MAIN2[main]
         LOOP[main loop helpers]
         CB[AudioCallback]
         DRAW[OLED draw helpers]
@@ -202,7 +202,7 @@ flowchart LR
 ## 4. Plaits Voice Dependency Graph
 
 ```mermaid
-flowchart TD
+flowchart LR
     VH[voice.h]
     VC[voice.cc]
 
@@ -239,7 +239,7 @@ flowchart TD
 ## 5. Active Engine Dependency Graph
 
 ```mermaid
-flowchart TD
+flowchart LR
     REG2[Voice EngineRegistry]
 
     VA[VirtualAnalogEngine]
