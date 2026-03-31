@@ -42,6 +42,8 @@ make
 
 A matching `Teensy 4.0` controller sketch lives at [Seed_MIDI_Grainlet_Teensy40.ino](C:\Users\denko\Gemini\Antigravity\DVPE_Daisy-Visual-Programming-Environment\DaisyExamples\MyProjects\_projects\Seed_MIDI_Grainlet\teensy_controller\Seed_MIDI_Grainlet_Teensy40\Seed_MIDI_Grainlet_Teensy40.ino).
 
+Detailed setup and programming instructions live in [TEENSY_4_SETUP_AND_PROGRAM.md](C:\Users\denko\Gemini\Antigravity\DVPE_Daisy-Visual-Programming-Environment\DaisyExamples\MyProjects\_projects\Seed_MIDI_Grainlet\TEENSY_4_SETUP_AND_PROGRAM.md).
+
 Suggested Teensy wiring:
 
 - `A0` pot -> `CC 14` -> shape
@@ -51,4 +53,4 @@ Suggested Teensy wiring:
 - `Serial1 TX` -> Daisy `D14`
 - `GND` -> Daisy `GND`
 
-The sketch targets `Teensy 4.0` and sends raw UART MIDI at `31250` baud with no extra Arduino libraries.
+The sketch targets `Teensy 4.0`, sends raw UART MIDI at `31250` baud with no extra Arduino libraries, and now exposes USB serial debug output at `115200` baud.
