@@ -157,7 +157,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph FieldApp[Field_MI_Plaits.cpp]
-        MAIN2[main()]
+        MAIN2[main]
         LOOP[main loop helpers]
         CB[AudioCallback]
         DRAW[OLED draw helpers]
