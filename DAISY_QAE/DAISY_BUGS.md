@@ -17,6 +17,7 @@
 | [BUG-002](#bug-002-field_modalbells-b-row-key-crash) | Critical | 🟡 INVESTIGATING | Field_ModalBells | 2026-02-08 | Add serial debug checkpoints around Trig() loop |
 | [BUG-003](#bug-003-field_modalbells-midi-not-working) | Medium | 🔴 OPEN | Field_ModalBells | 2026-02-08 | Verify MIDI init sequence and handler registration |
 | [BUG-004](#bug-004-x0x-display-white-noise-controls-unresponsive) | High | 🟡 INVESTIGATING | x0x_drum_machine | 2026-02-27 | HiHat crash confirmed as root cause — replaced with WhiteNoise+ATone+AdEnv, awaiting flash |
+| [BUG-005](#bug-005-pod-encoder-and-analog-controls-latency-unresponsive) | High | ✅ RESOLVED | POD_EDGE_mono_DSP | 2026-04-12 | Issue analyzed and resolved with split ISR and deadband fix. |
 
 > **Triage rule**: Critical/High bugs should have activity within 48 hours.
 > Update "Last Activity" and "Next Action" every time you touch a bug.
@@ -347,13 +348,54 @@ User observes kick-pattern LEDs at A1, **A6**, B1, **B6** instead of A1, A5, B1,
 
 ---
 
-**Document Version**: 1.4
-**Last Updated**: 2026-02-27
+## BUG-005: Pod Encoder and Analog Controls Latency/Unresponsive
+
+**Date**: 2026-04-12
+**Project**: POD_EDGE_mono_DSP
+**Severity**: High
+**Status**: ✅ RESOLVED
+**Owner**: Daisy Expert Agent
+**Last Activity**: 2026-04-12
+
+### Problem
+Analog knobs were sluggish and eventually completely unresponsive. Display updates (OLED running I2C ~66ms per frame) were starving control polling latency. Attempts to move `pod.ProcessAllControls()` entirely to a 1kHz timer ISR or reverting `ProcessAnalogControls()` to the main loop either broke knob updates completely or made them visibly unresponsive compared to external encoders.
+
+### Expected
+Knobs and encoders should track their values instantly, and the OLED redraws shouldn't penalize responsiveness.
+
+### Analysis
+**Root cause 1 (Analog Filter Rate Flaw):** 
+`libDaisy`'s `AnalogControl::Process()` utilizes a recursive one-pole low pass filter. Crucially, the internal coefficient `coeff_` is intrinsically linked to `AudioCallbackRate()` (which is set at 1000Hz via internal init). When `ProcessAnalogControls()` was executed inside a main loop running at ~15Hz (due to polling logic stalling from OLED displays), the filter's time constant slowed down immensely. It was advancing 15 times a second instead of 1000 times a second, functionally acting like a 60-second slew limiter.
+
+**Root cause 2 (No-Hysteresis Deadband Bug):**
+The UI layer implemented a deadband filter incorrectly. `prev_knobX_` was updated unconditionally every frame, effectively becoming a fast-acting High-Pass filter on control inputs. With Root Cause 1 slowing the control drift down to ~0.001 per frame, the math `fabs(knob - prev_knob) > 0.01f` was permanently false because it evaluated the tiny per-frame slip instead of overall difference. 
+
+### Solutions Tested
+| Attempt | Change | Result |
+|---------|--------|--------|
+| 1 | Move `ProcessAllControls()` to 1kHz Timer ISR, maintain `knob.Process()` | ❌ Knobs still dead (racing Audio DMA buffer readings maybe logic). |
+| 2 | Move `ProcessAnalogControls()` to Main loop, Digital inside Timer ISR | ❌ Latency still horrendous. |
+| 3 | Replace `knob.Process()` with `.Value()` inside main loop polling | ❌ UI state's `prev_knob` unconditionally updating swallowed tiny deltas. |
+| 4 | Fix Hysteresis in UI + Place `ProcessAnalogControls()` at TOP of AudioCallback | ✅ Hardware tracks correctly with perfect matching parameter slew. |
+
+### Resolution
+1. Realize that `AnalogControl` internal coefficients demand precise calling. Therefore, `ProcessAnalogControls()` **MUST** execute strictly at the AudioCallback rate! 
+2. Correct the software UI mapping class to only snapshot parameter values when deliberately moved (`kKnobDeadband` breaks), preventing it from filtering out valid slow changes.
+
+### Lessons Learned
+- **Splitting Polling Architecture:** For heavy displays, use a 1kHz Timer ISR exclusively for fast **Digital** debouncing (buttons, encoders). Leave **Analog** controls strictly inside the **AudioCallback**.
+- **Beware the UI Value Hysteresis:** Ensure that `prev_value` arrays update *conditionally* upon threshold crosses, otherwise slow knob changes are silently dropped.
+
+---
+
+**Document Version**: 1.5
+**Last Updated**: 2026-04-12
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-04-12 | BUG-005: Pod Encoder and Analog Controls Latency Fixed (Audio ISR mapping + Hysteresis) |
 | 1.4 | 2026-02-27 | BUG-004: Fix Attempt 3 (HiHat<> root cause confirmed; replaced with WhiteNoise+ATone+AdEnv) |
 | 1.3 | 2026-02-27 | Added BUG-004 (x0x display + controls) with I2C contention and boot-noise findings |
 | 1.2 | 2026-02-08 | Added Priority Queue table, Owner/Last Activity fields to template, Lessons Learned section |

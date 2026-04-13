@@ -5,6 +5,7 @@
 #include "../../foundation_examples/field_instrument_ui.h"
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/voice.h"
+#include "on_demand_wavetable_loader.h"
 
 using namespace daisy;
 using namespace daisysp;
@@ -40,11 +41,71 @@ char                shared_buffer[kSharedBufferSize] = {};
 ParamBankSet        param_banks;
 ParamBank           active_knob_bank = ParamBank::Main;
 
+// 9 Working Plaits engines mapped to 16 slots (same as original reduced build)
+// Slot 0-4 = Bank A, Slot 5-9 = Bank B (only 5 drums per bank)
 const int kEngineSlotToEngine[16] = {
-    0, -1, 1, 2,
-    3, -1, -1, -1,
-    4, -1, 5, -1,
-    -1, 6, 7, 8,
+    // Bank 1 - Pitched engines (A keys) - 5 active
+    0,   // A1 -> 0: VirtualAnalog (Classic)
+    1,  // A2 -> 1: FM
+    2,  // A3 -> 2: Grain (Formant)
+    3,  // A4 -> 3: Additive (Harmonic)
+    -1, // A5 -> unmapped (was 4: Additive)
+    -1, // A6 -> unused
+    -1, // A7 -> unused
+    -1, // A8 -> unused
+    // Bank 2 - Drum/Effects (B keys) - 4 active
+    4,  // B1 -> 4: Swarm (Granular Cloud)
+    5,  // B2 -> 5: Particle
+    -1, // B3 -> unused (was 6: Particle)
+    -1, // B4 -> unused
+    -1, // B5 -> unused
+    6,  // B6 -> 6: BassDrum
+    7,  // B7 -> 7: SnareDrum
+    8,  // B8 -> 8: HiHat
+};
+
+const char* kEngineNames[16] = {
+    "Classic",  // 0: VirtualAnalog
+    "Waveshp",  // 1: Waveshaping
+    "FM",       // 2: FM (mapped to A4 slot)
+    "Formant",  // 3: Grain (Formant - mapped to A4)
+    "Harmnic",  // 4: Additive (Harmonic)
+    // Unmapped: A6-A8
+    "N/A",      // A6
+    "N/A",      // A7
+    "N/A",      // A8
+    // Bank 2 - Drums (B keys)
+    "Noise",    // 5: Noise (Filtered Noise)
+    "Cloud",   // 6: Swarm (Granular Cloud - mapped to B2)
+    "Particl",  // 7: Particle
+    "N/A",     // B4
+    "N/A",     // B5
+    "BassDr",  // 8: BassDrum
+    "Snare",   // 9: SnareDrum
+    "HiHat",   // 10: HiHat
+};
+
+// Parameter names per engine - simplified for working engines
+const char* kEngineParamNames[16][4] = {
+    // Bank 1 - Pitched (A keys)
+    {"Detune", "Shape", "Saw", "Sync"},      // 0: Classic
+    {"Wave", "Folder", "Asym", "Alt"},       // 1: Waveshape
+    {"Ratio", "Index", "Feedb", "Sub"},       // 2: FM
+    {"Ratio", "Formt", "Width", "Style"},   // 3: Formant (Grain)
+    {"Harm", "Index", "Width", "Subset"},  // 4: Harmonic
+    // Unmapped slots
+    {"N/A", "N/A", "N/A", "N/A"},         // 5: N/A
+    {"N/A", "N/A", "N/A", "N/A"},         // 6: N/A
+    {"N/A", "N/A", "N/A", "N/A"},         // 7: N/A
+    // Bank 2 - Drums (B keys)
+    {"Mode", "Clock", "Reso", "Dual"},      // 5: Noise
+    {"Pitch", "Dens", "Dur", "Sine"},      // 6: Cloud (Swarm)
+    {"Freq", "Dens", "Filt", "Dust"},      // 7: Particle
+    {"N/A", "N/A", "N/A", "N/A"},        // B4
+    {"N/A", "N/A", "N/A", "N/A"},        // B5
+    {"Sharp", "Bright", "Decay", "Alt"},   // 8: BassDrum
+    {"Harm", "Bal", "Decay", "Alt"},     // 9: SnareDrum
+    {"Metal", "Cut", "Decay", "Alt"},     // 10: HiHat
 };
 
 const char* kMainParamNames[8] = {

@@ -1,0 +1,17 @@
+# Plaits Engine Data Manifest
+# On-demand loading for extra engines
+# Load specific file when engine is selected
+
+# Engine requirements:
+# A2 (Waveshaping): waveshape_lut1.bin + waveshape_lut2.bin
+# A6 (Wavetable): wavetable_full.bin
+# A7 (Chord): wavetable_full.bin
+
+# File sizes:
+# wavetable_full.bin: 99840 bytes (99KB)
+# waveshape_lut1.bin: 1032 bytes (1KB)
+# waveshape_lut2.bin: 1032 bytes (1KB)
+
+# Usage:
+# Load from SD when engine key is pressed
+# Free when switching to base engine

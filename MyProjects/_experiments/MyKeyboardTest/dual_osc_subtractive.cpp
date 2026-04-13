@@ -9,8 +9,13 @@ DaisyField hw;
 // -----------------------------------------------------------------------------
 // Synth engine
 // -----------------------------------------------------------------------------
+<<<<<<< ours
 Oscillator osc1, osc2, osc3, lfo;
 Oscillator noiseosc;
+=======
+Oscillator osc1, osc2, osc3, subosc, lfo;
+WhiteNoise noiseosc;
+>>>>>>> theirs
 Svf        filter;
 Adsr       amp_env, filt_env;
 
@@ -57,6 +62,40 @@ enum ParamId
     P_LFO_AMP_DEPTH,
     P_MASTER_VOL,
 };
+<<<<<<< ours
+
+float params[kNumParams] = {
+    0.5f, 0.45f, 0.5f, 0.5f, 0.45f, 0.2f, 0.05f, 0.35f, // default
+    0.5f, 0.35f, 0.3f, 0.15f, 0.18f, 0.0f, 0.2f, 0.0f,  // sw1
+    0.35f, 0.75f, 0.0f, 0.15f, 0.5f, 0.4f, 0.0f, 0.65f  // sw2
+};
+
+const ParamId mode_param_map[kNumModes][kNumKnobs] = {
+    {P_OSC12_MIX,
+     P_OSC3_LEVEL,
+     P_OSC2_DETUNE,
+     P_OSC3_DETUNE,
+     P_FILTER_CUTOFF,
+     P_FILTER_RESONANCE,
+     P_AMP_ATTACK,
+     P_AMP_RELEASE},
+    {P_FILTER_ENV_AMT,
+     P_FILTER_DECAY,
+     P_FILTER_SUSTAIN,
+     P_DRIVE,
+     P_LFO_RATE,
+     P_LFO_PITCH_DEPTH,
+     P_LFO_FILTER_DEPTH,
+     P_GLIDE},
+    {P_AMP_DECAY,
+     P_AMP_SUSTAIN,
+     P_NOISE_LEVEL,
+     P_SUB_LEVEL,
+     P_PAN_SPREAD,
+     P_VELOCITY_AMT,
+     P_LFO_AMP_DEPTH,
+     P_MASTER_VOL},
+=======
 
 float params[kNumParams] = {
     0.5f, 0.45f, 0.5f, 0.5f, 0.45f, 0.2f, 0.05f, 0.35f, // default
@@ -138,6 +177,75 @@ enum OscWave
     OSC_TRI,
     OSC_SQUARE,
     OSC_POLYBLEP_SAW,
+>>>>>>> theirs
+};
+OscWave osc_wave = OSC_SAW;
+
+<<<<<<< ours
+const char* mode_names[kNumModes] = {"DEFAULT", "SW1", "SW2"};
+
+const char* param_names[kNumParams] = {
+    "OSC1<->OSC2 MIX", "OSC3 LEVEL",   "OSC2 DETUNE",   "OSC3 DETUNE",
+    "FILTER CUTOFF",   "FILTER RES",   "AMP ATTACK",    "AMP RELEASE",
+    "FILT ENV AMT",    "FILT DECAY",   "FILT SUSTAIN",  "DRIVE",
+    "LFO RATE",        "LFO->PITCH",   "LFO->FILTER",   "GLIDE",
+    "AMP DECAY",       "AMP SUSTAIN",  "NOISE LEVEL",   "SUB LEVEL",
+    "PAN SPREAD",      "VELOCITY AMT", "LFO->AMP",      "MASTER VOL",
+=======
+enum FilterMode
+{
+    FILT_LOW = 0,
+    FILT_BAND,
+    FILT_HIGH,
+>>>>>>> theirs
+};
+FilterMode filter_mode = FILT_LOW;
+
+int keytrack_mode   = 2; // 0, 33, 66, 100%
+int transpose_index = 1; // -12, 0, +12, +24
+int lfo_target_mode = 1; // pitch/filter/amp/all
+bool hard_sync      = false;
+bool legato_mode    = false;
+
+const int transpose_values[4] = {-12, 0, 12, 24};
+
+<<<<<<< ours
+float previous_knobs[kNumKnobs] = {0.f};
+const float kKnobChangeThreshold = 0.008f;
+
+int      active_param      = -1;
+uint32_t active_param_time = 0;
+
+uint32_t now_ms = 0;
+
+// -----------------------------------------------------------------------------
+// MIDI state (external keyboard/sequencer)
+// -----------------------------------------------------------------------------
+bool  note_held[128]      = {false};
+int   current_note        = 60;
+float current_velocity    = 0.8f;
+bool  gate                = false;
+int   midi_channel        = 0; // 0 == OMNI
+
+float smoothed_freq = 261.63f;
+
+// -----------------------------------------------------------------------------
+// LED key function selectors (tri-state: off/blink/on)
+// -----------------------------------------------------------------------------
+enum LfoWave
+{
+    LFO_SINE = 0,
+    LFO_TRI,
+    LFO_SQUARE,
+};
+LfoWave lfo_wave = LFO_SINE;
+
+enum OscWave
+{
+    OSC_SAW = 0,
+    OSC_TRI,
+    OSC_SQUARE,
+    OSC_POLYBLEP_SAW,
 };
 OscWave osc_wave = OSC_SAW;
 
@@ -159,6 +267,10 @@ const int transpose_values[4] = {-12, 0, 12, 24};
 
 float MidiToHz(float note)
 {
+=======
+float MidiToHz(float note)
+{
+>>>>>>> theirs
     return 440.f * powf(2.f, (note - 69.f) / 12.f);
 }
 
@@ -230,6 +342,7 @@ void HandleLedKeyFunctions()
             continue;
 
         if(current_mode == MODE_DEFAULT)
+<<<<<<< ours
         {
             if(i <= 2)
             {
@@ -271,6 +384,49 @@ void HandleLedKeyFunctions()
         {
             if(i >= 0 && i <= 3)
             {
+=======
+        {
+            if(i <= 2)
+            {
+                lfo_wave = static_cast<LfoWave>(i);
+            }
+            else if(i >= 3 && i <= 6)
+            {
+                osc_wave = static_cast<OscWave>(i - 3);
+            }
+            else if(i == 7)
+            {
+                hard_sync = !hard_sync;
+            }
+            else if(i == 8)
+            {
+                legato_mode = !legato_mode;
+            }
+        }
+        else if(current_mode == MODE_SW1)
+        {
+            if(i >= 0 && i <= 3)
+            {
+                keytrack_mode = static_cast<int>(i);
+            }
+            else if(i >= 4 && i <= 6)
+            {
+                filter_mode = static_cast<FilterMode>(i - 4);
+            }
+            else if(i >= 8 && i <= 11)
+            {
+                midi_channel = static_cast<int>(i - 8) + 1;
+            }
+            else if(i == 12)
+            {
+                midi_channel = 0; // omni
+            }
+        }
+        else if(current_mode == MODE_SW2)
+        {
+            if(i >= 0 && i <= 3)
+            {
+>>>>>>> theirs
                 transpose_index = static_cast<int>(i);
             }
             else if(i >= 4 && i <= 7)
@@ -356,6 +512,7 @@ void UpdateLeds()
         }
 
         hw.led_driver.SetLed(i, v);
+<<<<<<< ours
     }
 
     // Ring LEDs reflect 8 active params from current mode
@@ -382,11 +539,40 @@ void DrawModeSummary(char* line, size_t max)
     }
     else if(current_mode == MODE_SW1)
     {
+=======
+    }
+
+    // Ring LEDs reflect 8 active params from current mode
+    for(size_t k = 0; k < kNumKnobs; ++k)
+    {
+        ParamId pid = mode_param_map[current_mode][k];
+        hw.led_driver.SetLed(DaisyField::LED_KNOB_1 + k, params[pid]);
+    }
+
+    hw.led_driver.SwapBuffersAndTransmit();
+}
+
+void DrawModeSummary(char* line, size_t max)
+{
+    if(current_mode == MODE_DEFAULT)
+    {
+        const char* lfo_name = lfo_wave == LFO_SINE ? "SIN" : (lfo_wave == LFO_TRI ? "TRI" : "SQR");
+        snprintf(line,
+                 max,
+                 "LFO:%s OSC:%d F:%s",
+                 lfo_name,
+                 static_cast<int>(osc_wave),
+                 filter_mode == FILT_LOW ? "LP" : (filter_mode == FILT_BAND ? "BP" : "HP"));
+    }
+    else if(current_mode == MODE_SW1)
+    {
+>>>>>>> theirs
         snprintf(line,
                  max,
                  "KEYTRACK:%d%% MIDI:%s",
                  keytrack_mode * 33,
                  midi_channel == 0 ? "OMNI" : (midi_channel == 1 ? "CH1" : (midi_channel == 2 ? "CH2" : (midi_channel == 3 ? "CH3" : "CH4"))));
+<<<<<<< ours
     }
     else
     {
@@ -433,6 +619,54 @@ void UpdateDisplay()
             hw.display.WriteString(line, Font_6x8, true);
         }
     }
+=======
+    }
+    else
+    {
+        snprintf(line,
+                 max,
+                 "TRANS:%+d LFO-TGT:%d",
+                 transpose_values[transpose_index],
+                 lfo_target_mode);
+    }
+}
+
+void UpdateDisplay()
+{
+    hw.display.Fill(false);
+
+    char line[32];
+
+    hw.display.SetCursor(0, 0);
+    snprintf(line, sizeof(line), "3OSC SUB SYNTH | %s", mode_names[current_mode]);
+    hw.display.WriteString(line, Font_6x8, true);
+
+    DrawModeSummary(line, sizeof(line));
+    hw.display.SetCursor(0, 10);
+    hw.display.WriteString(line, Font_6x8, true);
+
+    bool zoom_active = active_param >= 0 && (now_ms - active_param_time < 1200);
+
+    if(zoom_active)
+    {
+        hw.display.SetCursor(0, 24);
+        hw.display.WriteString(param_names[active_param], Font_7x10, true);
+
+        hw.display.SetCursor(0, 40);
+        snprintf(line, sizeof(line), "%.2f", params[active_param]);
+        hw.display.WriteString(line, Font_11x18, true);
+    }
+    else
+    {
+        for(size_t i = 0; i < 3; ++i)
+        {
+            ParamId p = mode_param_map[current_mode][i];
+            snprintf(line, sizeof(line), "%s: %.2f", param_names[p], params[p]);
+            hw.display.SetCursor(0, 24 + i * 12);
+            hw.display.WriteString(line, Font_6x8, true);
+        }
+    }
+>>>>>>> theirs
 
     hw.display.Update();
 }
@@ -440,8 +674,11 @@ void UpdateDisplay()
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
     (void)in;
+<<<<<<< ours
     hw.ProcessAllControls();
 
+=======
+>>>>>>> theirs
     UpdateModeFromSwitches();
     HandleLedKeyFunctions();
     UpdateControlBanks();
@@ -542,8 +779,14 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         sig += osc3.Process() * osc3level;
         sig += noiseosc.Process() * noise_level;
 
+<<<<<<< ours
         // Optional sub oscillator from osc1 fundamental
         float sub = sinf(TWOPI_F * osc1.GetPhase() * 0.5f);
+=======
+        // Dedicated sub oscillator one octave down from osc1
+        subosc.SetFreq(f1 * 0.5f);
+        float sub = subosc.Process();
+>>>>>>> theirs
         sig += sub * sub_level;
 
         float env_amp = amp_env.Process(gate);
@@ -592,14 +835,25 @@ int main(void)
     osc1.Init(sr);
     osc2.Init(sr);
     osc3.Init(sr);
+<<<<<<< ours
     lfo.Init(sr);
     noiseosc.Init(sr);
+=======
+    subosc.Init(sr);
+    lfo.Init(sr);
+    noiseosc.Init();
+>>>>>>> theirs
 
     osc1.SetAmp(0.35f);
     osc2.SetAmp(0.35f);
     osc3.SetAmp(0.25f);
+<<<<<<< ours
     noiseosc.SetWaveform(Oscillator::WAVE_NOISE);
     noiseosc.SetAmp(1.0f);
+=======
+    subosc.SetWaveform(Oscillator::WAVE_SQUARE);
+    subosc.SetAmp(1.0f);
+>>>>>>> theirs
 
     lfo.SetAmp(1.f);
     lfo.SetWaveform(Oscillator::WAVE_SIN);
@@ -629,6 +883,10 @@ int main(void)
     while(1)
     {
         now_ms = System::GetNow();
+<<<<<<< ours
+=======
+        hw.ProcessAllControls();
+>>>>>>> theirs
 
         hw.midi.Listen();
         while(hw.midi.HasEvents())

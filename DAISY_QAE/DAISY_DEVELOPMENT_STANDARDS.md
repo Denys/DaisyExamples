@@ -158,7 +158,8 @@ int main(void) {
 
 | ❌ Don't | ✅ Do |
 |---------|-------|
-| Call `hw.ProcessAllControls()` in audio callback | Keep control processing in main loop |
+| Call `hw.ProcessAllControls()` in audio callback | **Field**: Keep control processing in main loop. **Pod (OLED)**: Split Digital into 1kHz Timer ISR, Analog into AudioCallback. |
+| Update `prev_value` unconditionally per frame | Implement proper hysteresis: only update `prev_value` when the deadband threshold is broken. |
 | Use uninitialized DSP modules | Call `module.Init(sample_rate)` for all modules |
 | Mix control and audio threads unsafely | Use atomic variables or simple flags for thread communication |
 | Skip block diagrams | Create all 3 diagrams before writing code |
@@ -190,7 +191,10 @@ using namespace daisysp;
 DaisyPod hw;
 
 void AudioCallback(float *in, float *out, size_t size) {
-    hw.ProcessAllControls();  // Pod: OK in callback (lightweight)
+    // For Pods with I2C OLEDs stalling the main loop:
+    // ONLY process analog controls here so the filter time constant matches AudioBlockRate.
+    hw.ProcessAnalogControls();  
+    
     for(size_t i = 0; i < size; i += 2) {
         float sig = 0.0f;
         // Process DSP
@@ -204,13 +208,14 @@ int main(void) {
     hw.SetAudioBlockSize(48);
     float sr = hw.AudioSampleRate();
 
-    // Pod controls: hw.knob1.Process(), hw.knob2.Process()
-    // Pod encoder: hw.encoder.Increment(), hw.encoder.RisingEdge()
-    // Pod buttons: hw.button1.RisingEdge(), hw.button2.RisingEdge()
+    // Configure 1kHz Timer ISR for digital debouncing if using heavy main-loop displays:
+    // void ControlTimerCallback(void* data) { hw.ProcessDigitalControls(); }
 
     hw.StartAdc();
     hw.StartAudio(AudioCallback);
-    while(1) { }  // Pod: main loop often empty
+    while(1) { 
+        // Read hw.knob1.Value() here (NOT Process()) and apply hysteresis.
+    }  
 }
 ```
 

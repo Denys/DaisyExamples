@@ -7,7 +7,11 @@ STMLIB_DIR = ../../../stmlib
 PLAITS_ROOT = ../PlaitsPatchInit
 
 CPP_SOURCES = Field_MI_Plaits.cpp
+# SD Card data loader framework (compiled but not linked to save space)
+# To enable: add on_demand_wavetable_loader.cpp to CPP_SOURCES
+
 CC_SOURCES += $(wildcard $(PLAITS_ROOT)/eurorack/plaits/dsp/*.cc)
+# Plaits engines - 9 working (fits in 128KB flash)
 CC_SOURCES += \
 $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/additive_engine.cc \
 $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/bass_drum_engine.cc \
@@ -18,6 +22,7 @@ $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/particle_engine.cc \
 $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/snare_drum_engine.cc \
 $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/swarm_engine.cc \
 $(PLAITS_ROOT)/eurorack/plaits/dsp/engine/virtual_analog_engine.cc
+# Full resources (all LUTs embedded - needed for base 9 engines)
 CC_SOURCES += $(PLAITS_ROOT)/eurorack/plaits/resources.cc
 
 CC_SOURCES += $(STMLIB_DIR)/dsp/units.cc \
