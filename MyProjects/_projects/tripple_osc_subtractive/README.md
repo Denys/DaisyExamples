@@ -2,6 +2,13 @@
 
 ## Overview
 
+## Project Status
+
+- **Location:** `DaisyExamples/MyProjects/_projects/tripple_osc_subtractive`
+- **Migration state:** moved from Codex-cloud iteration into a local `_projects` target folder
+- **Local assets present:** source (`tripple_osc_subtractive.cpp`), `Makefile`, `README.md`, `CONTROLS.md`, `Dependencies.md`
+- **Legacy compatibility path:** `_experiments/MyKeyboardTest/dual_osc_subtractive.cpp` is synchronized to the same source for local clarity
+
 `tripple_osc_subtractive` is a Daisy Field concept synth focused on a **3-oscillator subtractive voice** controlled from an **external MIDI keyboard or sequencer**.
 
 The project uses a banked control model to expand 8 physical knobs into **24 stored parameters**:
@@ -20,7 +27,7 @@ OLED pages are mode-aware and provide a zoomed parameter display while controls 
 
 ## Core Feature Set
 
-- 3 primary oscillators (`osc1`, `osc2`, `osc3`) + noise + derived sub component
+- 3 primary oscillators (`osc1`, `osc2`, `osc3`) + dedicated sub oscillator + white noise layer
 - Subtractive filter path with selectable LP/BP/HP response
 - Separate amplitude and filter ADSR envelopes
 - LFO with selectable waveform and routable targets
@@ -34,8 +41,9 @@ There are always 8 active knobs (`K1-K8`), but assignments depend on mode.
 ### Mode switching
 
 - Press `SW1` to switch active bank to `SW1`
+- Press `SW1` again while in `SW1` to return to `DEFAULT`
 - Press `SW2` to switch active bank to `SW2`
-- Press `SW1` while `SW2` is held to return to `DEFAULT`
+- Press `SW2` again while in `SW2` to return to `DEFAULT`
 
 ### Why this is useful
 
@@ -69,7 +77,7 @@ The same LED keys expose different controls based on active mode:
 - `SW1` (alt1): keytrack amount, filter mode, MIDI channel/OMNI
 - `SW2` (alt2): global transpose and LFO target routing
 
-This enables **direct hands-on switching** with visual tri-state feedback.
+This enables **direct hands-on switching** with visual tri-state feedback. Key-triggered changes also push a short OLED focus view showing the affected setting and current value/state.
 
 ## Build
 

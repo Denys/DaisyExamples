@@ -38,6 +38,65 @@ float MidiToFormantHz(uint8_t value)
     return 100.0f + (normalized * normalized * 3900.0f);
 }
 
+const char* MidiTypeName(MidiMessageType type)
+{
+    switch(type)
+    {
+        case NoteOff: return "NoteOff";
+        case NoteOn: return "NoteOn";
+        case PolyphonicKeyPressure: return "PolyKeyPressure";
+        case ControlChange: return "ControlChange";
+        case ProgramChange: return "ProgramChange";
+        case ChannelPressure: return "ChannelPressure";
+        case PitchBend: return "PitchBend";
+        case SystemCommon: return "SystemCommon";
+        case SystemRealTime: return "SystemRealTime";
+        case ChannelMode: return "ChannelMode";
+        default: return "Unknown";
+    }
+}
+
+void LogMidiEvent(MidiEvent msg)
+{
+    switch(msg.type)
+    {
+        case NoteOn:
+        {
+            const NoteOnEvent note = msg.AsNoteOn();
+            hw.PrintLine("[MIDI RX] NoteOn ch=%d note=%d vel=%d",
+                         note.channel,
+                         note.note,
+                         note.velocity);
+            break;
+        }
+        case NoteOff:
+        {
+            const NoteOffEvent note = msg.AsNoteOff();
+            hw.PrintLine("[MIDI RX] NoteOff ch=%d note=%d vel=%d",
+                         note.channel,
+                         note.note,
+                         note.velocity);
+            break;
+        }
+        case ControlChange:
+        {
+            const ControlChangeEvent control = msg.AsControlChange();
+            hw.PrintLine("[MIDI RX] CC ch=%d cc=%d value=%d",
+                         control.channel,
+                         control.control_number,
+                         control.value);
+            break;
+        }
+        default:
+            hw.PrintLine("[MIDI RX] %s ch=%d data0=%d data1=%d",
+                         MidiTypeName(msg.type),
+                         msg.channel,
+                         msg.data[0],
+                         msg.data[1]);
+            break;
+    }
+}
+
 void HandleMidiMessage(MidiEvent msg)
 {
     switch(msg.type)
@@ -111,7 +170,11 @@ int main(void)
 {
     hw.Configure();
     hw.Init();
+    hw.StartLog(false);
     hw.SetAudioBlockSize(4);
+
+    hw.PrintLine("[BOOT] Seed_MIDI_Grainlet USB debug active");
+    hw.PrintLine("[BOOT] Listening for UART MIDI on D14 / USART1_RX");
 
     const float sample_rate = hw.AudioSampleRate();
 
@@ -138,7 +201,9 @@ int main(void)
         midi.Listen();
         while(midi.HasEvents())
         {
-            HandleMidiMessage(midi.PopEvent());
+            const MidiEvent msg = midi.PopEvent();
+            LogMidiEvent(msg);
+            HandleMidiMessage(msg);
         }
     }
 }

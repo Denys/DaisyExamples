@@ -9,8 +9,8 @@ DaisyField hw;
 // -----------------------------------------------------------------------------
 // Synth engine
 // -----------------------------------------------------------------------------
-Oscillator osc1, osc2, osc3, lfo;
-Oscillator noiseosc;
+Oscillator osc1, osc2, osc3, subosc, lfo;
+WhiteNoise noiseosc;
 Svf        filter;
 Adsr       amp_env, filt_env;
 
@@ -18,6 +18,7 @@ constexpr size_t kNumKnobs        = 8;
 constexpr size_t kNumModes        = 3;
 constexpr size_t kNumParams       = 24;
 constexpr size_t kNumKeyboardLeds = 16;
+constexpr uint32_t kFocusHoldMs   = 1200;
 
 enum Mode
 {
@@ -102,11 +103,42 @@ const char* param_names[kNumParams] = {
     "PAN SPREAD",      "VELOCITY AMT", "LFO->AMP",      "MASTER VOL",
 };
 
+const char* param_short_names[kNumParams] = {
+    "MIX", "O3",  "D2",  "D3",
+    "CUT", "RES", "AAT", "ARL",
+    "ENV", "FDC", "FSU", "DRV",
+    "LFR", "LFP", "LFF", "GLD",
+    "ADC", "ASU", "NOI", "SUB",
+    "PAN", "VEL", "LFA", "VOL",
+};
+
+const int key_led_ids[kNumKeyboardLeds] = {
+    DaisyField::LED_KEY_A1,
+    DaisyField::LED_KEY_A2,
+    DaisyField::LED_KEY_A3,
+    DaisyField::LED_KEY_A4,
+    DaisyField::LED_KEY_A5,
+    DaisyField::LED_KEY_A6,
+    DaisyField::LED_KEY_A7,
+    DaisyField::LED_KEY_A8,
+    DaisyField::LED_KEY_B1,
+    DaisyField::LED_KEY_B2,
+    DaisyField::LED_KEY_B3,
+    DaisyField::LED_KEY_B4,
+    DaisyField::LED_KEY_B5,
+    DaisyField::LED_KEY_B6,
+    DaisyField::LED_KEY_B7,
+    DaisyField::LED_KEY_B8,
+};
+
 float previous_knobs[kNumKnobs] = {0.f};
 const float kKnobChangeThreshold = 0.008f;
 
 int      active_param      = -1;
 uint32_t active_param_time = 0;
+bool     custom_focus      = false;
+char     focus_label[24]   = "";
+char     focus_value[24]   = "";
 
 uint32_t now_ms = 0;
 
@@ -160,6 +192,32 @@ const int transpose_values[4] = {-12, 0, 12, 24};
 float MidiToHz(float note)
 {
     return 440.f * powf(2.f, (note - 69.f) / 12.f);
+}
+
+void FocusParam(ParamId param)
+{
+    active_param      = static_cast<int>(param);
+    active_param_time = now_ms;
+    custom_focus      = false;
+}
+
+void FocusCustom(const char* label, const char* value)
+{
+    snprintf(focus_label, sizeof(focus_label), "%s", label);
+    snprintf(focus_value, sizeof(focus_value), "%s", value);
+    active_param      = -1;
+    active_param_time = now_ms;
+    custom_focus      = true;
+}
+
+void FocusToggle(const char* label, bool enabled)
+{
+    FocusCustom(label, enabled ? "ON" : "OFF");
+}
+
+void FocusMode()
+{
+    FocusCustom("MODE", mode_names[current_mode]);
 }
 
 void RecomputeCurrentNote()
@@ -223,6 +281,8 @@ void HandleMidiMessage(MidiEvent m)
 
 void HandleLedKeyFunctions()
 {
+    char value[24];
+
     // Keyboard index mapping: 0-7 => A1..A8, 8-15 => B1..B8
     for(size_t i = 0; i < kNumKeyboardLeds; ++i)
     {
@@ -234,18 +294,31 @@ void HandleLedKeyFunctions()
             if(i <= 2)
             {
                 lfo_wave = static_cast<LfoWave>(i);
+                FocusCustom("LFO WAVE",
+                            lfo_wave == LFO_SINE
+                                ? "SINE"
+                                : (lfo_wave == LFO_TRI ? "TRI" : "SQUARE"));
             }
             else if(i >= 3 && i <= 6)
             {
                 osc_wave = static_cast<OscWave>(i - 3);
+                FocusCustom("OSC WAVE",
+                            osc_wave == OSC_SAW
+                                ? "SAW"
+                                : (osc_wave == OSC_TRI
+                                       ? "TRI"
+                                       : (osc_wave == OSC_SQUARE ? "SQUARE"
+                                                                 : "POLYBLEP")));
             }
             else if(i == 7)
             {
                 hard_sync = !hard_sync;
+                FocusToggle("HARD SYNC", hard_sync);
             }
             else if(i == 8)
             {
                 legato_mode = !legato_mode;
+                FocusToggle("LEGATO", legato_mode);
             }
         }
         else if(current_mode == MODE_SW1)
@@ -253,18 +326,28 @@ void HandleLedKeyFunctions()
             if(i >= 0 && i <= 3)
             {
                 keytrack_mode = static_cast<int>(i);
+                snprintf(value, sizeof(value), "%d%%", keytrack_mode * 33);
+                FocusCustom("KEYTRACK", value);
             }
             else if(i >= 4 && i <= 6)
             {
                 filter_mode = static_cast<FilterMode>(i - 4);
+                FocusCustom("FILTER MODE",
+                            filter_mode == FILT_LOW
+                                ? "LOWPASS"
+                                : (filter_mode == FILT_BAND ? "BANDPASS"
+                                                            : "HIGHPASS"));
             }
             else if(i >= 8 && i <= 11)
             {
                 midi_channel = static_cast<int>(i - 8) + 1;
+                snprintf(value, sizeof(value), "CH%d", midi_channel);
+                FocusCustom("MIDI CH", value);
             }
             else if(i == 12)
             {
                 midi_channel = 0; // omni
+                FocusCustom("MIDI CH", "OMNI");
             }
         }
         else if(current_mode == MODE_SW2)
@@ -272,10 +355,21 @@ void HandleLedKeyFunctions()
             if(i >= 0 && i <= 3)
             {
                 transpose_index = static_cast<int>(i);
+                snprintf(value,
+                         sizeof(value),
+                         "%+d ST",
+                         transpose_values[transpose_index]);
+                FocusCustom("TRANSPOSE", value);
             }
             else if(i >= 4 && i <= 7)
             {
                 lfo_target_mode = static_cast<int>(i - 4);
+                FocusCustom("LFO TARGET",
+                            lfo_target_mode == 0
+                                ? "PITCH"
+                                : (lfo_target_mode == 1
+                                       ? "FILTER"
+                                       : (lfo_target_mode == 2 ? "AMP" : "ALL")));
             }
         }
     }
@@ -283,33 +377,39 @@ void HandleLedKeyFunctions()
 
 void UpdateModeFromSwitches()
 {
-    if(hw.sw[0].RisingEdge() && hw.sw[1].Pressed())
+    const bool sw1_edge = hw.sw[0].RisingEdge();
+    const bool sw2_edge = hw.sw[1].RisingEdge();
+    const Mode prev_mode = current_mode;
+
+    if(sw1_edge && sw2_edge)
     {
         current_mode = MODE_DEFAULT;
     }
-    else if(hw.sw[0].RisingEdge())
+    else if(sw1_edge)
     {
-        current_mode = MODE_SW1;
+        current_mode = current_mode == MODE_SW1 ? MODE_DEFAULT : MODE_SW1;
     }
-    else if(hw.sw[1].RisingEdge())
+    else if(sw2_edge)
     {
-        current_mode = MODE_SW2;
+        current_mode = current_mode == MODE_SW2 ? MODE_DEFAULT : MODE_SW2;
     }
+
+    if(current_mode != prev_mode)
+        FocusMode();
 }
 
 void UpdateControlBanks()
 {
     for(size_t k = 0; k < kNumKnobs; ++k)
     {
-        float   raw = hw.knob[k].Process();
+        float   raw = hw.knob[k].Value();
         ParamId p   = mode_param_map[current_mode][k];
 
         params[p] = raw;
 
         if(fabsf(raw - previous_knobs[k]) > kKnobChangeThreshold)
         {
-            active_param      = p;
-            active_param_time = now_ms;
+            FocusParam(p);
             previous_knobs[k] = raw;
         }
     }
@@ -355,7 +455,7 @@ void UpdateLeds()
                                                                        : (blink ? 0.35f : 0.f);
         }
 
-        hw.led_driver.SetLed(i, v);
+        hw.led_driver.SetLed(key_led_ids[i], v);
     }
 
     // Ring LEDs reflect 8 active params from current mode
@@ -364,6 +464,11 @@ void UpdateLeds()
         ParamId pid = mode_param_map[current_mode][k];
         hw.led_driver.SetLed(DaisyField::LED_KNOB_1 + k, params[pid]);
     }
+
+    hw.led_driver.SetLed(DaisyField::LED_SW_1,
+                         current_mode == MODE_SW1 ? 1.0f : 0.08f);
+    hw.led_driver.SetLed(DaisyField::LED_SW_2,
+                         current_mode == MODE_SW2 ? 1.0f : 0.08f);
 
     hw.led_driver.SwapBuffersAndTransmit();
 }
@@ -402,7 +507,7 @@ void UpdateDisplay()
 {
     hw.display.Fill(false);
 
-    char line[32];
+    char line[48];
 
     hw.display.SetCursor(0, 0);
     snprintf(line, sizeof(line), "3OSC SUB SYNTH | %s", mode_names[current_mode]);
@@ -412,24 +517,40 @@ void UpdateDisplay()
     hw.display.SetCursor(0, 10);
     hw.display.WriteString(line, Font_6x8, true);
 
-    bool zoom_active = active_param >= 0 && (now_ms - active_param_time < 1200);
+    bool zoom_active = (active_param >= 0 || custom_focus)
+                       && (now_ms - active_param_time < kFocusHoldMs);
 
     if(zoom_active)
     {
         hw.display.SetCursor(0, 24);
-        hw.display.WriteString(param_names[active_param], Font_7x10, true);
+        if(custom_focus)
+            hw.display.WriteString(focus_label, Font_6x8, true);
+        else
+            hw.display.WriteString(param_names[active_param], Font_6x8, true);
 
         hw.display.SetCursor(0, 40);
-        snprintf(line, sizeof(line), "%.2f", params[active_param]);
+        if(custom_focus)
+            snprintf(line, sizeof(line), "%s", focus_value);
+        else
+            snprintf(line, sizeof(line), "%.2f", params[active_param]);
         hw.display.WriteString(line, Font_11x18, true);
     }
     else
     {
-        for(size_t i = 0; i < 3; ++i)
+        for(size_t row = 0; row < 4; ++row)
         {
-            ParamId p = mode_param_map[current_mode][i];
-            snprintf(line, sizeof(line), "%s: %.2f", param_names[p], params[p]);
-            hw.display.SetCursor(0, 24 + i * 12);
+            ParamId left  = mode_param_map[current_mode][row];
+            ParamId right = mode_param_map[current_mode][row + 4];
+            snprintf(line,
+                     sizeof(line),
+                     "%d:%s %.2f %d:%s %.2f",
+                     static_cast<int>(row + 1),
+                     param_short_names[left],
+                     params[left],
+                     static_cast<int>(row + 5),
+                     param_short_names[right],
+                     params[right]);
+            hw.display.SetCursor(0, 20 + row * 11);
             hw.display.WriteString(line, Font_6x8, true);
         }
     }
@@ -437,14 +558,17 @@ void UpdateDisplay()
     hw.display.Update();
 }
 
-void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+void UpdateControls()
 {
-    (void)in;
     hw.ProcessAllControls();
-
     UpdateModeFromSwitches();
     HandleLedKeyFunctions();
     UpdateControlBanks();
+}
+
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+{
+    (void)in;
 
     // Continuous params
     const float osc12mix  = params[P_OSC12_MIX];
@@ -542,8 +666,9 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         sig += osc3.Process() * osc3level;
         sig += noiseosc.Process() * noise_level;
 
-        // Optional sub oscillator from osc1 fundamental
-        float sub = sinf(TWOPI_F * osc1.GetPhase() * 0.5f);
+        // Dedicated sub oscillator one octave down from osc1
+        subosc.SetFreq(f1 * 0.5f);
+        float sub = subosc.Process();
         sig += sub * sub_level;
 
         float env_amp = amp_env.Process(gate);
@@ -592,13 +717,15 @@ int main(void)
     osc1.Init(sr);
     osc2.Init(sr);
     osc3.Init(sr);
+    subosc.Init(sr);
     lfo.Init(sr);
-    noiseosc.Init(sr);
+    noiseosc.Init();
 
     osc1.SetAmp(0.35f);
     osc2.SetAmp(0.35f);
     osc3.SetAmp(0.25f);
-    noiseosc.SetWaveform(Oscillator::WAVE_NOISE);
+    subosc.SetWaveform(Oscillator::WAVE_SQUARE);
+    subosc.SetAmp(1.0f);
     noiseosc.SetAmp(1.0f);
 
     lfo.SetAmp(1.f);
@@ -629,6 +756,7 @@ int main(void)
     while(1)
     {
         now_ms = System::GetNow();
+        UpdateControls();
 
         hw.midi.Listen();
         while(hw.midi.HasEvents())

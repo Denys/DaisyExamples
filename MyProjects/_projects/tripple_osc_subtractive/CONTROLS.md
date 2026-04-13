@@ -10,6 +10,11 @@
 | `A1-A8`, `B1-B8` | Tri-state function keys (mode-dependent) |
 | OLED | Active mode + parameter zoom feedback |
 
+Press the active switch again to return to `DEFAULT`:
+
+- `SW1` toggles `DEFAULT <-> SW1`
+- `SW2` toggles `DEFAULT <-> SW2`
+
 ## Knob pages
 
 Total logical controls = **24** (`3 modes × 8 knobs`).
@@ -91,6 +96,7 @@ Tri-state display for active key groups:
 - OLED top line displays current control mode (`DEFAULT`, `SW1`, `SW2`).
 - OLED middle line summarizes current key-mode selection state.
 - When a knob is moved, the display zooms to the edited parameter name and value.
+- When a mode key changes a toggle/selection, the display briefly shows that setting and its new value/state.
 - After timeout, OLED returns to compact summary lines.
 
 ## MIDI notes

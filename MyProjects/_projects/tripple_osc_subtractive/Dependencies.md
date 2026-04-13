@@ -1,79 +1,199 @@
 # tripple_osc_subtractive Dependencies
 
-This document tracks build/runtime dependencies for the Daisy Field `tripple_osc_subtractive` project.
+This document tracks the dependency structure for the current `tripple_osc_subtractive` Daisy Field project.
 
-## 1) Build dependencies
+## Project status (Codex Cloud -> Local)
 
-- `libDaisy` from `../../../libDaisy`
-- `DaisySP` from `../../../DaisySP`
-- Project-local source:
-  - `tripple_osc_subtractive.cpp`
+- **Current working status:** Local project folder is present and self-contained in:
+  - `DaisyExamples/MyProjects/_projects/tripple_osc_subtractive`
+- **Code source status:** Main runtime source is local in `tripple_osc_subtractive.cpp`.
+- **Docs status:** `README.md`, `CONTROLS.md`, and this `Dependencies.md` are local and synchronized for this project.
+- **Build environment status:** compile depends on repository-relative `libDaisy` and `DaisySP` directories being present.
 
-Makefile entry points:
+## 1) Build and link dependency graph
 
-- `TARGET = tripple_osc_subtractive`
-- `CPP_SOURCES = tripple_osc_subtractive.cpp`
-- Include core build system from `$(LIBDAISY_DIR)/core/Makefile`
+```mermaid
+flowchart LR
+    MK[tripple_osc_subtractive/Makefile]
 
-## 2) Runtime hardware dependencies
+    APP[tripple_osc_subtractive.cpp]
+    DF[daisy_field.h / libDaisy]
+    DSP[daisysp.h / DaisySP]
 
-- **Daisy Field**
-  - 8 knobs
-  - SW1 + SW2 switches
-  - Key matrix / key LEDs (`A1-A8`, `B1-B8`)
-  - OLED display
-  - Stereo audio out
-  - MIDI input transport exposed as `hw.midi`
+    LIB[libDaisy static library]
+    DSPLIB[DaisySP static library]
 
-## 3) Software component graph
+    MK --> APP
+    MK --> LIB
+    MK --> DSPLIB
+
+    APP --> DF
+    APP --> DSP
+    APP --> LIB
+    APP --> DSPLIB
+```
+
+## 2) Runtime control and audio flow
 
 ```mermaid
 flowchart TD
-    HW[Daisy Field controls + MIDI]
-    LOOP[Main loop]
-    MIDI[HandleMidiMessage]
-    UI[UpdateDisplay + UpdateLeds]
+    MIDIIN[External MIDI keyboard / sequencer]
+    CTRLS[Daisy Field hardware controls]
+
+    LOOP[main loop]
+    CTRLMGMT[UpdateControls]
+    MIDILISTEN[hw.midi.Listen + PopEvent]
+    HM[HandleMidiMessage]
+
+    UILED[UpdateLeds]
+    UIOLED[UpdateDisplay]
+
     AUDIO[AudioCallback]
 
-    PARAMS[24 params / 3 mode banks]
-    SELECT[LED-key mode selectors]
-    SYNTH[3 osc + noise + sub]
-    MOD[LFO + ADSR envs]
+    SYNTH[3 Osc + Noise + Sub]
+    MOD[LFO + AMP/FILT ADSR]
     FILT[SVF LP/BP/HP]
+    OUT[Stereo Output]
 
-    HW --> LOOP
-    LOOP --> MIDI
-    LOOP --> UI
-    LOOP --> PARAMS
+    MIDIIN --> MIDILISTEN
+    CTRLS --> LOOP
+    LOOP --> CTRLMGMT
+    LOOP --> MIDILISTEN
+    MIDILISTEN --> HM
 
-    PARAMS --> AUDIO
-    SELECT --> UI
-    MIDI --> AUDIO
+    LOOP --> UILED
+    LOOP --> UIOLED
 
+    CTRLMGMT --> AUDIO
     AUDIO --> SYNTH
     AUDIO --> MOD
     AUDIO --> FILT
+    FILT --> OUT
 ```
 
-## 4) Control architecture dependency
+## 3) File-level application dependency graph
 
-- `mode_param_map` binds 8 physical knobs to 24 logical parameters by mode.
-- `UpdateModeFromSwitches()` controls active page.
-- `HandleLedKeyFunctions()` applies mode-specific key actions.
-- `UpdateControlBanks()` writes active bank values and triggers OLED zoom context.
+```mermaid
+flowchart LR
+    subgraph AppFile[tripple_osc_subtractive.cpp]
+        MAIN[main]
+        CB[AudioCallback]
+        MIDIH[HandleMidiMessage]
+        DISP[UpdateDisplay]
+        LEDS[UpdateLeds]
+        MAP[mode_param_map + params]
+    end
 
-## 5) MIDI dependency notes
+    subgraph Hardware[Daisy Field Runtime]
+        MIDIDEV[hw.midi]
+        OLED[hw.display]
+        LEDDRV[hw.led_driver]
+        CTRLS2[knobs switches key matrix]
+    end
 
-- Voice pitch/gate state depends on incoming MIDI events.
-- Held-note table drives note-priority selection.
-- Channel filtering depends on SW1-mode key selections.
+    subgraph DSP[Voice DSP]
+        OSCS[osc1 osc2 osc3 subosc]
+        NOISE[noiseosc]
+        LFO[lfo]
+        ENV[amp_env + filt_env]
+        SVF[filter]
+    end
 
-## 6) Documentation sync policy
+    MAIN --> MIDIDEV
+    MAIN --> DISP
+    MAIN --> LEDS
+    MAIN --> CB
 
-When changing control assignments or LED-key behavior, update:
+    CB --> MAP
+    CB --> OSCS
+    CB --> NOISE
+    CB --> LFO
+    CB --> ENV
+    CB --> SVF
+
+    DISP --> OLED
+    LEDS --> LEDDRV
+    MAIN --> CTRLS2
+    MIDIH --> MIDIDEV
+```
+
+## 4) Control-bank and UI dependency graph
+
+```mermaid
+flowchart TD
+    SW[SW1/SW2]
+    K[K1-K8]
+    AK[A1-A8 B1-B8]
+
+    MODESEL[current_mode]
+    BANKMAP[mode_param_map 3x8]
+    PARAMS[params 24]
+
+    ZOOM[active_param + active_param_time]
+    OLED2[UpdateDisplay]
+    LEDS2[UpdateLeds]
+
+    SW --> MODESEL
+    K --> BANKMAP
+    MODESEL --> BANKMAP
+    BANKMAP --> PARAMS
+
+    K --> ZOOM
+    PARAMS --> OLED2
+    MODESEL --> OLED2
+    ZOOM --> OLED2
+
+    AK --> MODESEL
+    AK --> LEDS2
+    MODESEL --> LEDS2
+    PARAMS --> LEDS2
+```
+
+## 5) MIDI state and note-priority graph
+
+```mermaid
+flowchart TD
+    EVT[MidiEvent]
+    NOTEON[NoteOn]
+    NOTEOFF[NoteOff]
+
+    HELD[note_held[128]]
+    RECOMP[RecomputeCurrentNote]
+
+    NOTE[current_note]
+    VEL[current_velocity]
+    GATE[gate]
+
+    EVT --> NOTEON
+    EVT --> NOTEOFF
+
+    NOTEON --> HELD
+    NOTEON --> VEL
+    NOTEON --> NOTE
+    NOTEON --> GATE
+
+    NOTEOFF --> HELD
+    HELD --> RECOMP
+    RECOMP --> NOTE
+    RECOMP --> GATE
+```
+
+## 6) Makefile dependency notes
+
+- `TARGET = tripple_osc_subtractive`
+- `CPP_SOURCES = tripple_osc_subtractive.cpp`
+- External dirs are expected at:
+  - `../../../libDaisy`
+  - `../../../DaisySP`
+
+If these paths are missing in the local checkout, `make` will fail before compilation.
+
+## 7) Documentation synchronization policy
+
+When control routing, mode mapping, or DSP architecture changes, update all of:
 
 1. `README.md`
 2. `CONTROLS.md`
 3. `Dependencies.md`
 
-in the same commit.
+in the same commit to keep local docs consistent.
