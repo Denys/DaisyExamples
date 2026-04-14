@@ -37,8 +37,8 @@ enum HarmonyPreset
     OCTAVE,
     NUM_PRESETS
 };
-HarmonyPreset current_preset = THIRDS;
-bool          bypass         = false;
+volatile HarmonyPreset current_preset = THIRDS;
+volatile bool          bypass         = false;
 
 // Harmony intervals in semitones
 const float preset_intervals[NUM_PRESETS][2] = {
@@ -48,8 +48,8 @@ const float preset_intervals[NUM_PRESETS][2] = {
 };
 
 // === CONTROL VALUES ===
-float dry_wet      = 0.5f;
-float detune_cents = 0.0f;
+volatile float dry_wet      = 0.5f;
+volatile float detune_cents = 0.0f;
 
 // === LED COLORS (RGB floats) ===
 void SetPresetLED()
@@ -76,33 +76,14 @@ void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
                    size_t                    size)
 {
-    // Process controls
-    hw.ProcessAllControls();
+    // MUST process analog controls strictly at audio block rate for proper filtering (BUG-005)
+    hw.ProcessAnalogControls();
 
     // === KNOB INPUTS (from Block Diagram) ===
     // knob 1 -> Dry/Wet
-    dry_wet = hw.knob1.Process();
+    dry_wet = hw.knob1.Value();
     // knob 2 -> Detune (0-50 cents)
-    detune_cents = hw.knob2.Process() * 50.0f;
-
-    // === BUTTON INPUTS (from Block Diagram) ===
-    // button 1 -> Cycle Preset
-    if(hw.button1.RisingEdge())
-    {
-        current_preset
-            = static_cast<HarmonyPreset>((current_preset + 1) % NUM_PRESETS);
-        SetPresetLED();
-    }
-    // button 2 -> Bypass Toggle
-    if(hw.button2.RisingEdge())
-    {
-        bypass = !bypass;
-        // Dim LED when bypassed
-        if(bypass)
-            hw.led1.Set(0.1f, 0.1f, 0.1f);
-        else
-            SetPresetLED();
-    }
+    detune_cents = hw.knob2.Value() * 50.0f;
 
     // === UPDATE PITCH SHIFTERS (from Block Diagram control connections) ===
     // B1 --(interval)--> PS_A, PS_B
@@ -111,8 +92,9 @@ void AudioCallback(AudioHandle::InputBuffer  in,
     float interval_b = preset_intervals[current_preset][1];
 
     // Add detune offset (in semitones, cents/100)
-    ps_a.SetTransposition(interval_a + (detune_cents / 100.0f));
-    ps_b.SetTransposition(interval_b - (detune_cents / 100.0f));
+    // Cast volatile float variables to float for parameter configuration
+    ps_a.SetTransposition(interval_a + ((float)detune_cents / 100.0f));
+    ps_b.SetTransposition(interval_b - ((float)detune_cents / 100.0f));
 
     // === AUDIO PROCESSING (from Block Diagram signal flow) ===
     for(size_t i = 0; i < size; i++)
@@ -138,16 +120,13 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
             // XFADE = crossfade(dry, wet, K1)
             // K1 = 0: 100% dry, K1 = 1: 100% wet
-            float output = dry * (1.0f - dry_wet) + wet_mix * dry_wet;
+            float output = dry * (1.0f - (float)dry_wet) + wet_mix * (float)dry_wet;
 
             // Stereo output (mono-compatible)
             out[0][i] = output;
             out[1][i] = output;
         }
     }
-
-    // Update LED
-    hw.UpdateLeds();
 }
 
 int main(void)
@@ -174,5 +153,31 @@ int main(void)
     hw.StartAudio(AudioCallback);
 
     // Main loop
-    while(1) {}
+    while(1)
+    {
+        hw.ProcessDigitalControls();
+
+        // === BUTTON INPUTS (from Block Diagram) ===
+        // button 1 -> Cycle Preset
+        if(hw.button1.RisingEdge())
+        {
+            current_preset
+                = static_cast<HarmonyPreset>((current_preset + 1) % NUM_PRESETS);
+            SetPresetLED();
+        }
+        
+        // button 2 -> Bypass Toggle
+        if(hw.button2.RisingEdge())
+        {
+            bypass = !bypass;
+            // Dim LED when bypassed
+            if(bypass)
+                hw.led1.Set(0.1f, 0.1f, 0.1f);
+            else
+                SetPresetLED();
+        }
+
+        hw.UpdateLeds();
+        System::Delay(1);
+    }
 }

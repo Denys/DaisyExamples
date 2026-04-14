@@ -127,4 +127,6 @@ All blocks in the diagram exist in DVPE:
 
 ## C++ Implementation
 
-*(To be generated below)*
+The C++ module uses the DaisySP pitch shifters with dynamic preset shifting configurations and a strict split-polling latency architecture separating analog signal polling (`ProcessAnalogControls()`) and UI button actions in the primary loop.
+
+For a detailed visual map of how parameters and user controls connect directly to DSP operations, please refer to [CONTROLS.md](CONTROLS.md).

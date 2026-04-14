@@ -27,16 +27,16 @@ float sig_synth      = 0.0f;
 float sig_mixer_main = 0.0f;
 
 // --- Control Variables ---
-float pitch     = 440.0f;
-bool  gate      = false;
-float osc_blend = 0.5f; // Knob 1
-float drv_val   = 0.5f; // Knob 2
+volatile float pitch     = 440.0f;
+volatile bool  gate      = false;
+volatile float osc_blend = 0.5f; // Knob 1
+volatile float drv_val   = 0.5f; // Knob 2
 
-float del_time  = 0.4f; // Knob 1 (Shift)
-float cho_depth = 0.3f; // Knob 2 (Shift)
+volatile float del_time  = 0.4f; // Knob 1 (Shift)
+volatile float cho_depth = 0.3f; // Knob 2 (Shift)
 
-bool shift_mode = false; // Button 1
-bool fx_bypass  = false; // Button 2
+volatile bool shift_mode = false; // Button 1
+volatile bool fx_bypass  = false; // Button 2
 
 // --- Helper Functions ---
 
@@ -70,44 +70,25 @@ void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
                    size_t                    size)
 {
-    hw.ProcessAllControls();
-
-    // Button 1: Toggle Shift Mode
-    if(hw.button1.RisingEdge())
-    {
-        shift_mode = !shift_mode;
-    }
-
-    // Button 2: Toggle Global FX Bypass
-    if(hw.button2.RisingEdge())
-    {
-        fx_bypass = !fx_bypass;
-    }
+    // MUST process analog controls strictly at audio block rate for proper filtering (BUG-005)
+    hw.ProcessAnalogControls();
 
     if(!shift_mode)
     {
         // Base Mode
-        osc_blend = hw.knob1.Process();
-        drv_val   = hw.knob2.Process();
-        drive.SetDrive(drv_val);
-
-        // Visual Feedback: Blue LED for Base Mode
-        hw.led1.Set(0, 0, 1);
-        hw.led2.Set(0, 0, fx_bypass ? 0 : 1); // LED 2 indicates Bypass status
+        osc_blend = hw.knob1.Value();
+        drv_val   = hw.knob2.Value();
+        drive.SetDrive((float)drv_val);
     }
     else
     {
         // Shift Mode
-        del_time  = hw.knob1.Process();
-        cho_depth = hw.knob2.Process();
+        del_time  = hw.knob1.Value();
+        cho_depth = hw.knob2.Value();
 
         del.SetDelay(hw.AudioSampleRate()
-                     * (0.05f + del_time * 0.75f)); // 50ms to 800ms
-        cho.SetLfoDepth(cho_depth);
-
-        // Visual Feedback: Green LED for Shift Mode
-        hw.led1.Set(0, 1, 0);
-        hw.led2.Set(0, fx_bypass ? 0 : 1, 0);
+                     * (0.05f + (float)del_time * 0.75f)); // 50ms to 800ms
+        cho.SetLfoDepth((float)cho_depth);
     }
 
     for(size_t i = 0; i < size; i++)
@@ -116,15 +97,15 @@ void AudioCallback(AudioHandle::InputBuffer  in,
         float env_out = env.Process(gate);
 
         // Detune Logic: Osc 2 is 5 cents higher (subtle detune)
-        osc1.SetFreq(pitch);
-        osc2.SetFreq(pitch * 1.0029f); // ~5 cents
+        osc1.SetFreq((float)pitch);
+        osc2.SetFreq((float)pitch * 1.0029f); // ~5 cents
 
         sig_osc1 = osc1.Process();
         sig_osc2 = osc2.Process();
 
         // Mixer 1: Crossfade (0% = Osc1, 100% = Osc2)
         // Linear crossfade as requested
-        sig_synth = (sig_osc1 * (1.0f - osc_blend)) + (sig_osc2 * osc_blend);
+        sig_synth = (sig_osc1 * (1.0f - (float)osc_blend)) + (sig_osc2 * (float)osc_blend);
         sig_synth *= env_out;
 
         // 2. Main Mixer (Synth + Audio In)
@@ -222,7 +203,36 @@ int main(void)
 
     while(1)
     {
+        hw.ProcessDigitalControls();
         ProcessMidi();
+
+        // Button 1: Toggle Shift Mode
+        if(hw.button1.RisingEdge())
+        {
+            shift_mode = !shift_mode;
+        }
+
+        // Button 2: Toggle Global FX Bypass
+        if(hw.button2.RisingEdge())
+        {
+            fx_bypass = !fx_bypass;
+        }
+
+        // Handle LEDs
+        if(!shift_mode)
+        {
+            // Visual Feedback: Blue LED for Base Mode
+            hw.led1.Set(0, 0, 1);
+            hw.led2.Set(0, 0, fx_bypass ? 0 : 1); // LED 2 indicates Bypass status
+        }
+        else
+        {
+            // Visual Feedback: Green LED for Shift Mode
+            hw.led1.Set(0, 1, 0);
+            hw.led2.Set(0, fx_bypass ? 0 : 1, 0);
+        }
+
         hw.UpdateLeds();
+        System::Delay(1);
     }
 }

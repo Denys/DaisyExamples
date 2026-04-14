@@ -1,102 +1,174 @@
 /**
  * Pod_MultiFX_Chain
  *
- * 3-stage serial FX chain: Overdrive → Delay → Reverb
- * with switchable parameter control.
+ * Four-stage serial multi-effect pedal for Daisy Pod.
  *
- * Platform: Daisy Pod
- * Complexity: ★★★★★★☆☆
+ * Signal chain:
+ *   Overdrive -> Delay -> WahWah -> Reverb
+ *
+ * Edit page order:
+ *   Overdrive -> Delay -> Reverb -> WahWah
  *
  * Controls:
- * - Button 1: Cycle active FX (Overdrive/Delay/Reverb)
- * - Knob 1: Edit selected FX parameter 1
- *   - Overdrive: Drive amount
- *   - Delay: Time
- *   - Reverb: Feedback/Decay
- * - Knob 2: Edit selected FX parameter 2
- *   - Overdrive: Tone/Filter (not used - OD has no tone param)
- *   - Delay: Feedback
- *   - Reverb: LP Frequency/Damping
- * - Button 2: Bypass current FX stage
- * - LED: Color indicates active FX (Red=OD, Green=Delay, Blue=Reverb)
+ * - Encoder turn: change selected effect page
+ * - Knob 1 / Knob 2: edit the selected page with soft takeover
+ * - Button 1 (SW1): bypass the selected effect page
+ * - Button 2 (SW2): global bypass for the full chain
+ * - RGB LED: page color, dimmed when the selected page or the whole chain is bypassed
+ *
+ * Soft takeover:
+ * - each page keeps its stored settings when you leave it
+ * - switching pages does not jump to the physical knob positions
+ * - each knob must cross the stored value before it starts editing the new page
  */
 
 #include "daisy_pod.h"
 #include "daisysp.h"
+#include "effects/wahwah.h"
+#include "pod_multifx_pages.h"
 
 using namespace daisy;
 using namespace daisysp;
 
+namespace
+{
+constexpr size_t kMaxDelaySamples = 48000;
+
 DaisyPod hw;
 
-// FX Modules
-Overdrive overdrive;
-DelayLine<float, 48000> DSY_SDRAM_BSS delayLine; // 1 second max delay at 48kHz
-ReverbSc reverb;
+Overdrive                                 overdrive;
+DelayLine<float, kMaxDelaySamples> DSY_SDRAM_BSS delay_line;
+ReverbSc                                  reverb;
+WahWah                                    wah;
 
-// FX Selection
-enum FxSelect {
-    FX_OVERDRIVE = 0,
-    FX_DELAY = 1,
-    FX_REVERB = 2,
-    FX_COUNT = 3
-};
+pod_multifx::ControlState control_state = pod_multifx::MakeDefaultControlState();
 
-FxSelect currentFx = FX_OVERDRIVE;
+float sample_rate = 48000.0f;
 
-// FX Parameters
-float od_drive = 0.5f;
-float delay_time = 0.3f;      // 300ms
-float delay_feedback = 0.5f;
-float reverb_feedback = 0.85f;
-float reverb_lpfreq = 10000.0f;
+float KnobToDelayTime(float normalized)
+{
+    return 0.01f + pod_multifx::Clamp01(normalized) * 0.99f;
+}
 
-// Bypass states
-bool od_bypassed = false;
-bool delay_bypassed = false;
-bool reverb_bypassed = false;
+float KnobToDelayFeedback(float normalized)
+{
+    return pod_multifx::Clamp01(normalized) * 0.95f;
+}
 
-// Control state
-float delayBuffer = 0.0f;
+float KnobToReverbFeedback(float normalized)
+{
+    return 0.5f + pod_multifx::Clamp01(normalized) * 0.49f;
+}
 
-void UpdateControls();
-void UpdateLED();
+float KnobToReverbLpFreq(float normalized)
+{
+    return 1000.0f + pod_multifx::Clamp01(normalized) * 17000.0f;
+}
+
+float KnobToWahFreq(float normalized)
+{
+    return 200.0f + pod_multifx::Clamp01(normalized) * 1800.0f;
+}
+
+void ApplyStoredParameters()
+{
+    const pod_multifx::EffectPageState& overdrive_page
+        = control_state.pages[pod_multifx::FX_OVERDRIVE];
+    const pod_multifx::EffectPageState& delay_page
+        = control_state.pages[pod_multifx::FX_DELAY];
+    const pod_multifx::EffectPageState& reverb_page
+        = control_state.pages[pod_multifx::FX_REVERB];
+    const pod_multifx::EffectPageState& wah_page
+        = control_state.pages[pod_multifx::FX_WAHWAH];
+
+    overdrive.SetDrive(overdrive_page.knob_values[0]);
+    delay_line.SetDelay(sample_rate * KnobToDelayTime(delay_page.knob_values[0]));
+    reverb.SetFeedback(KnobToReverbFeedback(reverb_page.knob_values[0]));
+    reverb.SetLpFreq(KnobToReverbLpFreq(reverb_page.knob_values[1]));
+    wah.SetFreq(KnobToWahFreq(wah_page.knob_values[0]));
+    wah.SetDepth(wah_page.knob_values[1]);
+}
+
+void UpdateSelectedPageKnobs(float knob1, float knob2)
+{
+    const int selected_page = control_state.selected_page;
+    pod_multifx::EffectPageState& selected = control_state.pages[selected_page];
+    pod_multifx::UpdateKnobWithSoftTakeover(selected, 0, knob1);
+    pod_multifx::UpdateKnobWithSoftTakeover(selected, 1, knob2);
+}
+
+void UpdateLed()
+{
+    const int  selected_page   = control_state.selected_page;
+    const bool global_bypass   = control_state.global_bypass;
+    const bool selected_bypass = control_state.pages[selected_page].bypassed;
+    const float brightness = (global_bypass || selected_bypass) ? 0.1f : 1.0f;
+
+    switch(selected_page)
+    {
+        case pod_multifx::FX_OVERDRIVE: hw.led1.Set(brightness, 0.0f, 0.0f); break;
+        case pod_multifx::FX_DELAY: hw.led1.Set(0.0f, brightness, 0.0f); break;
+        case pod_multifx::FX_REVERB: hw.led1.Set(0.0f, 0.0f, brightness); break;
+        case pod_multifx::FX_WAHWAH: hw.led1.Set(0.0f, brightness, brightness); break;
+        default: hw.led1.Set(0.0f, 0.0f, 0.0f); break;
+    }
+
+    hw.led1.Update();
+}
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
-    UpdateControls();
+    // BUG-005 rule: analog controls must be processed at audio callback rate.
+    hw.ProcessAnalogControls();
+
+    UpdateSelectedPageKnobs(hw.knob1.Value(), hw.knob2.Value());
+    ApplyStoredParameters();
+
+    const bool  global_bypass = control_state.global_bypass;
+    const bool  overdrive_bypassed
+        = control_state.pages[pod_multifx::FX_OVERDRIVE].bypassed;
+    const bool  delay_bypassed = control_state.pages[pod_multifx::FX_DELAY].bypassed;
+    const bool  reverb_bypassed = control_state.pages[pod_multifx::FX_REVERB].bypassed;
+    const bool  wah_bypassed = control_state.pages[pod_multifx::FX_WAHWAH].bypassed;
+    const float delay_feedback
+        = KnobToDelayFeedback(control_state.pages[pod_multifx::FX_DELAY].knob_values[1]);
 
     for(size_t i = 0; i < size; i++)
     {
-        float input = in[0][i]; // Mono input
-        float signal = input;
+        const float input = in[0][i];
+        float       signal = input;
 
-        // Stage 1: Overdrive
-        if(!od_bypassed)
+        if(global_bypass)
+        {
+            out[0][i] = input;
+            out[1][i] = input;
+            continue;
+        }
+
+        if(!overdrive_bypassed)
         {
             signal = overdrive.Process(signal);
         }
 
-        // Stage 2: Delay
         if(!delay_bypassed)
         {
-            // Read delayed signal
-            delayBuffer = delayLine.Read();
-
-            // Mix dry + delayed
-            signal = signal + delayBuffer * delay_feedback;
-
-            // Write to delay line
-            delayLine.Write(signal);
+            const float delayed = delay_line.Read();
+            signal              = signal + delayed * delay_feedback;
+            delay_line.Write(signal);
         }
 
-        // Stage 3: Reverb (Stereo)
-        float wetL, wetR;
+        if(!wah_bypassed)
+        {
+            signal = wah.Process(signal);
+        }
+
         if(!reverb_bypassed)
         {
-            reverb.Process(signal, signal, &wetL, &wetR);
-            out[0][i] = wetL;
-            out[1][i] = wetR;
+            float wet_left  = 0.0f;
+            float wet_right = 0.0f;
+            reverb.Process(signal, signal, &wet_left, &wet_right);
+            out[0][i] = wet_left;
+            out[1][i] = wet_right;
         }
         else
         {
@@ -105,147 +177,48 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         }
     }
 }
-
-void UpdateControls()
-{
-    hw.ProcessAllControls();
-
-    // Button 1: Cycle through FX
-    if(hw.button1.RisingEdge())
-    {
-        currentFx = static_cast<FxSelect>((currentFx + 1) % FX_COUNT);
-    }
-
-    // Button 2: Bypass current FX
-    if(hw.button2.RisingEdge())
-    {
-        switch(currentFx)
-        {
-            case FX_OVERDRIVE:
-                od_bypassed = !od_bypassed;
-                break;
-            case FX_DELAY:
-                delay_bypassed = !delay_bypassed;
-                break;
-            case FX_REVERB:
-                reverb_bypassed = !reverb_bypassed;
-                break;
-        }
-    }
-
-    // Knob 1 & 2: Edit selected FX parameters
-    float knob1 = hw.knob1.Process();
-    float knob2 = hw.knob2.Process();
-
-    switch(currentFx)
-    {
-        case FX_OVERDRIVE:
-            // K1: Drive (0-1)
-            od_drive = knob1;
-            overdrive.SetDrive(od_drive);
-            // K2: Not used (Overdrive has no tone parameter)
-            break;
-
-        case FX_DELAY:
-            // K1: Time (10ms - 1000ms)
-            delay_time = 0.01f + knob1 * 0.99f;
-            delayLine.SetDelay(hw.AudioSampleRate() * delay_time);
-
-            // K2: Feedback (0-95%)
-            delay_feedback = knob2 * 0.95f;
-            break;
-
-        case FX_REVERB:
-            // K1: Feedback/Decay (0.5 - 0.99)
-            reverb_feedback = 0.5f + knob1 * 0.49f;
-            reverb.SetFeedback(reverb_feedback);
-
-            // K2: LP Frequency/Damping (1000Hz - 18000Hz)
-            reverb_lpfreq = 1000.0f + knob2 * 17000.0f;
-            reverb.SetLpFreq(reverb_lpfreq);
-            break;
-    }
-
-    UpdateLED();
-}
-
-void UpdateLED()
-{
-    float brightness = 1.0f;
-
-    // Dim if bypassed
-    switch(currentFx)
-    {
-        case FX_OVERDRIVE:
-            if(od_bypassed) brightness = 0.1f;
-            break;
-        case FX_DELAY:
-            if(delay_bypassed) brightness = 0.1f;
-            break;
-        case FX_REVERB:
-            if(reverb_bypassed) brightness = 0.1f;
-            break;
-    }
-
-    // Set color based on active FX
-    switch(currentFx)
-    {
-        case FX_OVERDRIVE:
-            // Red
-            hw.led1.SetRed(brightness);
-            hw.led1.SetGreen(0.0f);
-            hw.led1.SetBlue(0.0f);
-            break;
-
-        case FX_DELAY:
-            // Green
-            hw.led1.SetRed(0.0f);
-            hw.led1.SetGreen(brightness);
-            hw.led1.SetBlue(0.0f);
-            break;
-
-        case FX_REVERB:
-            // Blue
-            hw.led1.SetRed(0.0f);
-            hw.led1.SetGreen(0.0f);
-            hw.led1.SetBlue(brightness);
-            break;
-    }
-
-    hw.led1.Update();
-}
+} // namespace
 
 int main(void)
 {
-    // Initialize hardware
     hw.Init();
     hw.SetAudioBlockSize(48);
+    sample_rate = hw.AudioSampleRate();
 
-    float sampleRate = hw.AudioSampleRate();
-
-    // Initialize Overdrive
     overdrive.Init();
-    overdrive.SetDrive(od_drive);
+    delay_line.Init();
+    reverb.Init(sample_rate);
+    wah.Init(sample_rate);
+    wah.SetRes(5.0f);
 
-    // Initialize Delay
-    delayLine.Init();
-    delayLine.SetDelay(sampleRate * delay_time);
+    ApplyStoredParameters();
 
-    // Initialize Reverb
-    reverb.Init(sampleRate);
-    reverb.SetFeedback(reverb_feedback);
-    reverb.SetLpFreq(reverb_lpfreq);
-
-    // Start audio
     hw.StartAdc();
     hw.StartAudio(AudioCallback);
 
-    // Initial LED update
-    UpdateLED();
+    UpdateLed();
 
-    // Main loop
     while(1)
     {
-        // LED updates happen in AudioCallback via UpdateControls
+        hw.ProcessDigitalControls();
+
+        const int page_delta = hw.encoder.Increment();
+        if(page_delta != 0)
+        {
+            pod_multifx::SelectPageDelta(control_state, page_delta);
+        }
+
+        if(hw.button1.RisingEdge())
+        {
+            pod_multifx::ToggleCurrentPageBypass(control_state);
+        }
+
+        if(hw.button2.RisingEdge())
+        {
+            pod_multifx::ToggleGlobalBypass(control_state);
+        }
+
+        UpdateLed();
+        System::Delay(1);
     }
 }

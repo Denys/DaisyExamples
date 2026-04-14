@@ -1,299 +1,195 @@
 # Pod_MultiFX_Chain
 
-**Platform**: Daisy Pod
-**Category**: Audio Effects Processor
-**Complexity**: ★★★★★★☆☆ (Moderate-High)
+Platform: Daisy Pod
+Category: Multi-effect pedal
+Complexity: Moderate-High
 
----
+## Overview
 
-## Project Definition
+`Pod_MultiFX_Chain` is a four-stage serial effect chain for Daisy Pod:
 
-A **3-stage serial effects chain** combining Overdrive → Delay → Reverb with intelligent parameter switching. Users can select which effect to control using Button 1, then adjust its parameters with the two knobs. Each effect can be individually bypassed.
+`Input -> Overdrive -> Delay -> WahWah -> Reverb -> Output`
 
-### Signal Flow
+The encoder selects the edit page. Each page owns its own stored knob values and
+bypass state. Switching pages does not overwrite those stored values because the
+project uses soft takeover.
 
-```
-AUDIO IN ──► OVERDRIVE ──► DELAY ──► REVERB ──► STEREO OUT
-```
+Important distinction:
 
-### Features
-- Serial FX chain (Overdrive → Delay → Reverb)
-- Switchable parameter control via Button 1
-- Per-effect parameter adjustment (2 params per FX)
-- Individual bypass per effect
-- RGB LED indicates active effect with color coding
-- Stereo reverb output with mono-to-stereo expansion
+- Signal-chain order: Overdrive -> Delay -> WahWah -> Reverb
+- Edit-page order: Overdrive -> Delay -> Reverb -> WahWah
 
----
-
-## Control Mapping
+## Controls
 
 | Control | Function | Details |
 |---------|----------|---------|
-| **Button 1** | Cycle Active FX | Overdrive → Delay → Reverb → repeat |
-| **Button 2** | Bypass Current FX | Toggles bypass for selected effect |
-| **Knob 1** | Parameter 1 | Depends on selected FX (see below) |
-| **Knob 2** | Parameter 2 | Depends on selected FX (see below) |
-| **RGB LED** | FX Indicator | Red=OD, Green=Delay, Blue=Reverb |
+| Encoder turn | Change selected page | Overdrive -> Delay -> Reverb -> WahWah |
+| Button 1 / SW1 | Toggle page bypass | Bypasses the currently selected effect page |
+| Button 2 / SW2 | Toggle global bypass | Bypasses the full chain |
+| Knob 1 | Parameter 1 | Depends on selected page, uses soft takeover |
+| Knob 2 | Parameter 2 | Depends on selected page, uses soft takeover |
+| RGB LED | Page indicator | Red=OD, Green=Delay, Blue=Reverb, Cyan=Wah |
 
-### Per-FX Parameters
+### Per-page parameter map
 
-#### Overdrive (Red LED)
-- **Knob 1**: Drive Amount (0-100%)
-- **Knob 2**: *(Not used - Overdrive has no tone parameter)*
+#### Overdrive (Red)
+- Knob 1: Drive amount (`0.0 -> 1.0`)
+- Knob 2: Reserved / unused
 
-#### Delay (Green LED)
-- **Knob 1**: Delay Time (10ms - 1000ms)
-- **Knob 2**: Feedback (0-95%)
+#### Delay (Green)
+- Knob 1: Delay time (`10 ms -> 1000 ms`)
+- Knob 2: Feedback (`0.0 -> 0.95`)
 
-#### Reverb (Blue LED)
-- **Knob 1**: Feedback/Decay (0.5 - 0.99)
-- **Knob 2**: LP Frequency/Damping (1000Hz - 18000Hz)
+#### Reverb (Blue)
+- Knob 1: Feedback / decay (`0.50 -> 0.99`)
+- Knob 2: Low-pass frequency (`1000 Hz -> 18000 Hz`)
 
----
+#### WahWah (Cyan)
+- Knob 1: Center frequency (`200 Hz -> 2000 Hz`)
+- Knob 2: Depth (`0.0 -> 1.0`)
 
-## Hardware Constraints
+## Soft takeover
 
-- **Sample Rate**: 48kHz
-- **Block Size**: 48 samples
-- **Audio**: Mono In → Stereo Out (reverb creates width)
-- **Memory**:
-  - Flash: 76,888 B / 128 KB (58.66%)
-  - SRAM: 446,336 B / 512 KB (85.13%)
-  - SDRAM: 192,012 B (delay line buffer)
+This project uses soft takeover, also called pickup/catch.
 
----
+- Each page keeps its saved knob values when you leave it.
+- Switching to another page does not jump immediately to the physical knob
+  positions.
+- A knob starts editing the new page only after the physical position crosses
+  the saved page value.
 
-## Block Diagram (Mermaid)
+This prevents sudden jumps when one pair of physical knobs is reused across
+multiple pages.
 
-```mermaid
-flowchart TB
-    subgraph CONTROLS["🎛️ CONTROL INTERFACE"]
-        direction LR
-        B1["button B1\n(Cycle FX)"]
-        B2["button B2\n(Bypass)"]
-        K1["knob K1\n(Param 1)"]
-        K2["knob K2\n(Param 2)"]
-        LED["RGB LED\n(FX Indicator)"]
-    end
+## LED states
 
-    subgraph FX_SELECT["🔄 FX SELECTION STATE"]
-        direction TB
-        STATE["current_fx\n(OD/Delay/Reverb)"]
-        BYPASS["bypass_state\n(per FX)"]
-    end
+| Color | Brightness | Meaning |
+|-------|------------|---------|
+| Red | Full | Overdrive selected and active |
+| Green | Full | Delay selected and active |
+| Blue | Full | Reverb selected and active |
+| Cyan | Full | WahWah selected and active |
+| Selected page color | Dim | Selected page bypassed, or global bypass enabled |
 
-    subgraph FX_CHAIN["🎸 EFFECTS CHAIN"]
-        direction LR
-        subgraph OD["Overdrive"]
-            OD_BLOCK["overdrive\n(DaisySP)"]
-            OD_DRIVE["drive_cv"]
-        end
+## Implementation notes
 
-        subgraph DLY["Delay"]
-            DLY_BLOCK["delay_line\n(1sec max)"]
-            DLY_TIME["time_cv"]
-            DLY_FB["feedback_cv"]
-        end
+- `Overdrive`, `DelayLine`, and `ReverbSc` come from DaisySP.
+- `WahWah` is pulled from `../../DAFX_2_Daisy_lib/src/effects/wahwah.cpp`.
+- `ReverbSc` requires `USE_DAISYSP_LGPL = 1` in the project `Makefile`.
+- Delay storage uses `DelayLine<float, 48000>` in SDRAM for up to 1 second of
+  delay at 48 kHz.
+- Following `DAISY_QAE` BUG-005 guidance, analog controls are processed in the
+  audio callback with `hw.ProcessAnalogControls()`, while encoder and button
+  events are processed in the main loop with `hw.ProcessDigitalControls()`.
+- Page control state is isolated in `pod_multifx_pages.h` so it can be tested on
+  the host without Daisy hardware.
 
-        subgraph RVB["Reverb"]
-            RVB_BLOCK["reverb_sc\n(Stereo)"]
-            RVB_DECAY["decay_cv"]
-            RVB_DAMP["damping_cv"]
-        end
-    end
-
-    subgraph AUDIO["🔊 AUDIO I/O"]
-        AUDIO_IN["audio_in\n(Mono)"]
-        AUDIO_OUT["audio_out\n(Stereo)"]
-    end
-
-    %% Control Flow
-    B1 -->|"cycle"| STATE
-    B2 -->|"toggle"| BYPASS
-    K1 -.->|"param1"| FX_CHAIN
-    K2 -.->|"param2"| FX_CHAIN
-    STATE -.->|"color"| LED
-
-    %% Audio Signal Flow
-    AUDIO_IN --> OD_BLOCK
-    OD_BLOCK --> DLY_BLOCK
-    DLY_BLOCK --> RVB_BLOCK
-    RVB_BLOCK --> AUDIO_OUT
-
-    %% Parameter Routing (conditional on STATE)
-    STATE -.->|"if OD"| OD_DRIVE
-    STATE -.->|"if Delay"| DLY_TIME
-    STATE -.->|"if Delay"| DLY_FB
-    STATE -.->|"if Reverb"| RVB_DECAY
-    STATE -.->|"if Reverb"| RVB_DAMP
-
-    %% Bypass Control
-    BYPASS -.->|"gate"| OD_BLOCK
-    BYPASS -.->|"gate"| DLY_BLOCK
-    BYPASS -.->|"gate"| RVB_BLOCK
-
-    %% Color coding
-    style OD fill:#ff6b6b,stroke:#c92a2a
-    style DLY fill:#51cf66,stroke:#2f9e44
-    style RVB fill:#339af0,stroke:#1864ab
-    style CONTROLS fill:#ffd43b,stroke:#fab005
-    style FX_SELECT fill:#e599f7,stroke:#9c36b5
-    style AUDIO_OUT fill:#51cf66,stroke:#2f9e44,color:#fff
-```
-
-### Block Legend
-| Color | Meaning |
-|-------|---------|
-| 🔴 **Red** | Overdrive Effect |
-| 🟢 **Green** | Delay Effect |
-| 🔵 **Blue** | Reverb Effect |
-| 🟡 **Yellow** | Control Interface |
-| 🟣 **Purple** | State Management |
-
----
-
-## Implementation Notes
-
-### Why Hand-Coded (Not DVPE-Generated)
-
-This project requires **stateful control logic** that goes beyond simple block connections:
-
-1. **FX Selection State Machine**: Button 1 cycles through 3 FX modes, changing which parameters Knobs 1/2 control
-2. **Conditional Parameter Routing**: Knob values are routed to different FX modules based on current state
-3. **Per-FX Bypass State**: Each effect maintains independent bypass state
-4. **Dynamic LED Control**: RGB LED color and brightness depend on active FX and bypass state
-
-**DVPE Limitation**: The visual programming environment excels at signal flow but doesn't support:
-- State machines with mode switching
-- Conditional parameter routing
-- Complex control logic with multiple states
-
-This is the correct implementation approach for a **multi-mode effects pedal**.
-
----
-
-## DaisySP Modules Used
-
-| Module | Class | Purpose |
-|--------|-------|---------|
-| Overdrive | `daisysp::Overdrive` | Guitar-style distortion |
-| Delay Line | `daisysp::DelayLine<float, 48000>` | 1-second digital delay with feedback |
-| Reverb | `daisysp::ReverbSc` | Stereo Comb reverb (LGPL) |
-
----
-
-## Build Instructions
+## Build
 
 ### Prerequisites
+
 - ARM GCC toolchain installed
-- libDaisy and DaisySP libraries at `../../../`
-- Make available in PATH
+- `libDaisy` available at `../../../libDaisy`
+- `DaisySP` available at `../../../DaisySP`
+- `make` available in `PATH`
 
 ### Compile
-```bash
+
+```powershell
 cd DaisyExamples/MyProjects/_projects/Pod_MultiFX_Chain
 make clean
 make
 ```
 
-### Flash to Daisy
-```bash
+### Flash
+
+```powershell
 make program-dfu
 ```
 
----
+## Verification
 
-## Usage Guide
+### Host-side control test
 
-### Basic Operation
-1. **Power on**: LED shows Red (Overdrive selected)
-2. **Adjust effect**: Turn Knob 1/2 to adjust Overdrive parameters
-3. **Switch FX**: Press Button 1 → LED turns Green (Delay)
-4. **Bypass FX**: Press Button 2 to bypass current effect (LED dims)
-5. **Cycle through**: Press Button 1 repeatedly to cycle OD → Delay → Reverb
+Use Visual Studio Build Tools to compile the page-state test on Windows:
 
-### LED States
-| Color | Brightness | Meaning |
-|-------|-----------|---------|
-| Red Bright | Full | Overdrive active |
-| Red Dim | 10% | Overdrive bypassed |
-| Green Bright | Full | Delay active |
-| Green Dim | 10% | Delay bypassed |
-| Blue Bright | Full | Reverb active |
-| Blue Dim | 10% | Reverb bypassed |
+```powershell
+cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat" && cl /nologo /EHsc /std:c++17 /W4 tests\pod_multifx_pages_test.cpp /Fe:tests\pod_multifx_pages_test.exe'
+tests\pod_multifx_pages_test.exe
+```
 
-### Typical Settings
+### Daisy QAE lint
 
-#### Clean with Ambient Reverb
-1. Select Overdrive (Red) → Bypass (Button 2)
-2. Select Delay (Button 1) → Set short time (~100ms, Knob 1), low feedback (~20%, Knob 2)
-3. Select Reverb (Button 1) → Set long decay (Knob 1 max), bright tone (Knob 2 high)
+On Windows PowerShell, force UTF-8 console output before invoking the QAE
+validator, otherwise the script can fail while printing Unicode separators.
 
-#### Heavy Rock Tone
-1. Select Overdrive (Red) → Set drive to 70-80% (Knob 1)
-2. Select Delay (Button 1) → Set ~350ms (Knob 1), 40% feedback (Knob 2)
-3. Select Reverb (Button 1) → Set short decay (Knob 1 low), dark tone (Knob 2 low)
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+py -3 ../../../DAISY_QAE/validate_daisy_code.py .
+```
 
-#### Dub Delay
-1. Select Overdrive (Red) → Bypass or set very low drive
-2. Select Delay (Button 1) → Set 400-600ms (Knob 1), 70% feedback (Knob 2)
-3. Select Reverb (Button 1) → Set medium decay, medium damping
+Fresh verification on 2026-04-14:
 
----
+- Host-side page-control test: passed
+- Daisy QAE linter: pending fresh run after final edits
+- Clean rebuild: pending fresh run after final edits
 
-## Technical Details
+## Usage
 
-### Memory Usage
-- **Delay Buffer**: 192KB in SDRAM (1 second @ 48kHz)
-- **Reverb**: ~254KB SRAM (internal comb filters)
-- **Code**: 76.9KB Flash
+1. Power on the Daisy Pod. The project starts with Overdrive selected.
+2. Turn the encoder to choose the effect page you want to edit.
+3. Turn `Knob 1` and `Knob 2` to edit the selected page.
+4. If the knobs appear inactive right after a page change, keep turning until
+   they cross the saved page values and soft takeover reattaches them.
+5. Press `SW1` to bypass or re-enable the selected page.
+6. Press `SW2` to bypass or re-enable the whole chain.
+7. Watch the LED color for page selection and brightness for bypass state.
 
-### Audio Performance
-- **Latency**: ~1ms (48 samples @ 48kHz)
-- **Dynamic Range**: 16-bit (limited by Daisy ADC/DAC)
-- **Frequency Response**: 20Hz - 20kHz (flat)
+## Typical settings
 
-### Control Update Rate
-- **Knob Sampling**: Audio rate (48kHz)
-- **Button Debounce**: Rising edge detection
-- **LED Update**: Every audio callback
+### Ambient clean
 
----
+1. Select Overdrive and bypass it with `SW1`.
+2. Select Delay and set a short time with low feedback.
+3. Select Reverb and increase decay with a brighter LP frequency.
+4. Select WahWah and keep depth low.
 
-## Future Enhancements
+### Heavy lead
 
-Possible additions (would require memory optimization):
+1. Select Overdrive and raise drive into the `0.7 -> 0.8` range.
+2. Select Delay and set a medium repeat with moderate feedback.
+3. Select Reverb and keep decay short to medium.
+4. Select WahWah and add moderate depth for movement.
 
-- [ ] Preset save/recall (4-8 presets)
-- [ ] Effect order swapping (Reverb → Delay → OD)
-- [ ] Tap tempo for delay sync
-- [ ] Expression pedal input for parameter control
-- [ ] MIDI control for automation
-- [ ] Parallel FX routing option
-- [ ] Additional FX (Chorus, Flanger, Phaser)
+### Fast compare
 
----
+1. Dial each page once.
+2. Use the encoder to move between pages without losing those settings.
+3. Use `SW1` to compare an individual stage.
+4. Use `SW2` to compare the full processed chain against dry input.
 
 ## Troubleshooting
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| No sound output | All FX bypassed | Press Button 2 to un-bypass effects |
-| Distorted output | OD drive too high | Lower Knob 1 when Overdrive selected (Red LED) |
-| Delay runaway | Feedback >100% | Lower Knob 2 when Delay selected (Green LED) |
-| Reverb too dark | LP freq too low | Raise Knob 2 when Reverb selected (Blue LED) |
-| LED not changing | Button 1 not registering | Check hardware, reflash firmware |
+| Issue | Likely cause | Check |
+|------|--------------|-------|
+| Selected page does not respond right after switching | Soft takeover has not captured yet | Keep turning the knob until it crosses the saved page value |
+| Selected effect has no audible change | The selected stage is bypassed | Press `SW1` and confirm the LED returns to full brightness |
+| All processing disappears at once | Global bypass is enabled | Press `SW2` and confirm the LED returns to full brightness |
+| Delay runs away | Feedback is too high | Lower Delay Knob 2 |
+| Wah effect is too subtle | Depth is low | Select WahWah and raise Knob 2 |
+| Knobs feel sluggish after code changes | Analog control polling moved out of the callback | Restore `hw.ProcessAnalogControls()` in `AudioCallback` and keep ADC started before audio |
+| Build fails at link time with `ReverbSc` references | LGPL module flag missing | Confirm `USE_DAISYSP_LGPL = 1` is still present in the `Makefile` |
 
----
+## Source files
+
+- Main firmware: `Pod_MultiFX_Chain.cpp`
+- Page-control helper: `pod_multifx_pages.h`
+- Host-side test: `tests/pod_multifx_pages_test.cpp`
+- Project build config: `Makefile`
+- External Wah source: `../../DAFX_2_Daisy_lib/src/effects/wahwah.cpp`
 
 ## License
 
-**Code**: MIT License
-**DaisySP**: MIT License
-**ReverbSc Module**: LGPL (included via `USE_DAISYSP_LGPL=1`)
-
----
-
-**Generated per DAISY_EXPERT_SYSTEM_PROMPT_v5.2 guidelines**
-**Project Type**: Hand-coded C++ (state machine + conditional routing beyond DVPE scope)
+- Project code: MIT
+- DaisySP: MIT
+- `ReverbSc`: LGPL via `USE_DAISYSP_LGPL = 1`
