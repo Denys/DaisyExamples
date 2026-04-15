@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CloudSeedCore Interactive Block Diagram</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #131a23;
+      --panel2: #1a2330;
+      --text: #e6edf3;
+      --muted: #9cb0c3;
+      --accent: #6bd6ff;
+      --accent2: #a2ff8f;
+      --warn: #ffd36b;
+      --line: #2c3a4a;
+      --active: #2b8cff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    header {
+      padding: 1.1rem 1.2rem;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #0f1520, #0b0f14);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 { margin: 0; font-size: 1.25rem; }
+    .sub { margin: .2rem 0 0; color: var(--muted); font-size: .92rem; }
+
+    main {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card h2 {
+      margin: 0;
+      padding: .75rem .9rem;
+      border-bottom: 1px solid var(--line);
+      font-size: 1rem;
+      background: #101722;
+    }
+
+    .padded { padding: .8rem; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: .6rem;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      color: var(--text);
+      padding: .35rem .6rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .82rem;
+    }
+
+    .btn.active {
+      background: var(--active);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      background: #0d141e;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .node rect {
+      fill: #162233;
+      stroke: #36506a;
+      stroke-width: 1.4;
+      rx: 8;
+    }
+
+    .node text {
+      fill: #e9f2ff;
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .node:hover rect {
+      stroke: var(--accent);
+      fill: #1a2b40;
+    }
+
+    .node.active rect {
+      stroke: var(--accent2);
+      stroke-width: 2.2;
+      fill: #23402f;
+    }
+
+    .edge {
+      stroke: #6f8ca9;
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#arrow);
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: .4rem .6rem;
+      background: #101722;
+      margin-bottom: .5rem;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    ul { margin: .35rem 0 .5rem 1.1rem; }
+
+    code {
+      background: #0c1219;
+      border: 1px solid #2d3f53;
+      padding: .08rem .25rem;
+      border-radius: .3rem;
+      color: #d8e8ff;
+      font-size: .84rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .86rem;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: .35rem .25rem;
+      vertical-align: top;
+    }
+
+    th { color: var(--warn); font-weight: 700; }
+
+    @media (max-width: 1050px) {
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CloudSeedCore ↔ Daisy Interactive Block Diagram</h1>
+    <p class="sub">Click blocks in the signal flow to jump to DSP primitives and parameter ownership.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Signal Flow (Interactive)</h2>
+      <div class="padded">
+        <div class="toolbar" id="quick-nav"></div>
+
+        <svg viewBox="0 0 1040 620" role="img" aria-label="CloudSeedCore signal flow diagram">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#6f8ca9" />
+            </marker>
+          </defs>
+
+          <g class="node" data-target="input">
+            <rect x="20" y="240" width="140" height="56"></rect>
+            <text x="90" y="272" text-anchor="middle">Input L/R</text>
+          </g>
+
+          <g class="node" data-target="pre">
+            <rect x="200" y="220" width="170" height="96"></rect>
+            <text x="285" y="250" text-anchor="middle">Input Mix</text>
+            <text x="285" y="270" text-anchor="middle">+ HPF / LPF</text>
+            <text x="285" y="290" text-anchor="middle">(Global)</text>
+          </g>
+
+          <g class="node" data-target="tap">
+            <rect x="420" y="135" width="170" height="76"></rect>
+            <text x="505" y="165" text-anchor="middle">Multitap</text>
+            <text x="505" y="185" text-anchor="middle">Reflections</text>
+          </g>
+
+          <g class="node" data-target="early">
+            <rect x="420" y="280" width="170" height="76"></rect>
+            <text x="505" y="310" text-anchor="middle">Early Diffusion</text>
+            <text x="505" y="330" text-anchor="middle">Allpass Network</text>
+          </g>
+
+          <g class="node" data-target="late">
+            <rect x="650" y="210" width="190" height="110"></rect>
+            <text x="745" y="240" text-anchor="middle">Late Reverb Core</text>
+            <text x="745" y="260" text-anchor="middle">Delay Bank + Matrix</text>
+            <text x="745" y="280" text-anchor="middle">+ Mod + Decay</text>
+          </g>
+
+          <g class="node" data-target="eq">
+            <rect x="885" y="220" width="130" height="90"></rect>
+            <text x="950" y="250" text-anchor="middle">Output EQ</text>
+            <text x="950" y="270" text-anchor="middle">Shelves + LPF</text>
+          </g>
+
+          <g class="node" data-target="mix">
+            <rect x="885" y="360" width="130" height="90"></rect>
+            <text x="950" y="390" text-anchor="middle">Dry/Early/Late</text>
+            <text x="950" y="410" text-anchor="middle">Output Mix</text>
+          </g>
+
+          <g class="node" data-target="seed">
+            <rect x="650" y="380" width="190" height="70"></rect>
+            <text x="745" y="410" text-anchor="middle">Seed / Randomization</text>
+            <text x="745" y="430" text-anchor="middle">Tap/Diff/Delay/Post</text>
+          </g>
+
+          <path class="edge" d="M160 268 L200 268" />
+          <path class="edge" d="M370 248 L420 170" />
+          <path class="edge" d="M370 288 L420 318" />
+          <path class="edge" d="M590 173 L650 235" />
+          <path class="edge" d="M590 318 L650 292" />
+          <path class="edge" d="M840 265 L885 265" />
+          <path class="edge" d="M950 310 L950 360" />
+          <path class="edge" d="M840 418 L885 405" />
+          <path class="edge" d="M745 380 L745 320" />
+        </svg>
+
+        <p class="meta">Legend: blue boxes = audio path, green-highlight on click = selected block details.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Block Internals + Controls</h2>
+      <div class="padded" id="details-pane">
+
+        <details id="input" open>
+          <summary>Input Stage</summary>
+          <p><strong>Purpose:</strong> ingest stereo/mono, normalize gain staging before cloud network.</p>
+          <ul>
+            <li>Primitives: input gain, channel sum/split, soft clip (optional).</li>
+            <li>Key runtime class candidate: <code>InputRouter</code>.</li>
+          </ul>
+        </details>
+
+        <details id="pre">
+          <summary>Global Preconditioning</summary>
+          <ul>
+            <li>Primitives: one-pole/biquad HPF + LPF, interpolation mode, pre-wet gain trim.</li>
+            <li>Class candidate: <code>InputConditioner</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedGlobal</td><td><code>INTERPOLATION_PARAM</code>, <code>INPUT_MIX_PARAM</code>, <code>LOW_CUT_ENABLED_PARAM</code>, <code>LOW_CUT_PARAM</code>, <code>HIGH_CUT_ENABLED_PARAM</code>, <code>HIGH_CUT_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="tap">
+          <summary>Multitap Reflections</summary>
+          <ul>
+            <li>Primitives: parallel short delay lines, per-tap gain law, tap predelay.</li>
+            <li>Class candidate: <code>TapReflections</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedTap</td><td><code>TAP_ENABLED_PARAM</code>, <code>TAP_COUNT_PARAM</code>, <code>TAP_DECAY_PARAM</code>, <code>TAP_PREDELAY_PARAM</code>, <code>TAP_LENGTH_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="early">
+          <summary>Early Diffusion</summary>
+          <ul>
+            <li>Primitives: cascaded allpass diffusers, local feedback, modulated delay offsets.</li>
+            <li>Modulators: LFO or low-rate random walk.</li>
+            <li>Class candidate: <code>EarlyDiffuser</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedEarlyDiffusion</td><td><code>EARLY_DIFFUSE_ENABLED_PARAM</code>, <code>EARLY_DIFFUSE_COUNT_PARAM</code>, <code>EARLY_DIFFUSE_DELAY_PARAM</code>, <code>EARLY_DIFFUSE_MOD_AMOUNT_PARAM</code>, <code>EARLY_DIFFUSE_FEEDBACK_PARAM</code>, <code>EARLY_DIFFUSE_MOD_RATE_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="late">
+          <summary>Late Reverb Core</summary>
+          <ul>
+            <li>Primitives: delay-bank, feedback matrix (Hadamard/Householder style), per-line damping, decay, modulation.</li>
+            <li>Optional tail post-diffusion sub-stage for density control.</li>
+            <li>Class candidate: <code>LateReverbCore</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedLateReverb</td><td><code>LATE_MODE_PARAM</code>, <code>LATE_LINE_COUNT_PARAM</code>, <code>LATE_DIFFUSE_ENABLED_PARAM</code>, <code>LATE_DIFFUSE_COUNT_PARAM</code>, <code>LATE_LINE_SIZE_PARAM</code>, <code>LATE_LINE_MOD_AMOUNT_PARAM</code>, <code>LATE_DIFFUSE_DELAY_PARAM</code>, <code>LATE_DIFFUSE_MOD_AMOUNT_PARAM</code>, <code>LATE_LINE_DECAY_PARAM</code>, <code>LATE_LINE_MOD_RATE_PARAM</code>, <code>LATE_DIFFUSE_FEEDBACK_PARAM</code>, <code>LATE_DIFFUSE_MOD_RATE_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="eq">
+          <summary>Output EQ / Spectral Shaping</summary>
+          <ul>
+            <li>Primitives: low shelf, high shelf, low-pass post-filter.</li>
+            <li>Class candidate: <code>OutputEq</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedEq</td><td><code>EQ_LOW_SHELF_ENABLED_PARAM</code>, <code>EQ_HIGH_SHELF_ENABLED_PARAM</code>, <code>EQ_LOWPASS_ENABLED_PARAM</code>, <code>EQ_LOW_FREQ_PARAM</code>, <code>EQ_HIGH_FREQ_PARAM</code>, <code>EQ_CUTOFF_PARAM</code>, <code>EQ_LOW_GAIN_PARAM</code>, <code>EQ_HIGH_GAIN_PARAM</code>, <code>EQ_CROSS_SEED_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="mix">
+          <summary>Dry/Early/Late Mix + Output</summary>
+          <ul>
+            <li>Primitives: gain VCAs, summing mixer, output safety limiter (optional).</li>
+            <li>Class candidate: <code>OutputMixer</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedGlobal</td><td><code>DRY_OUT_PARAM</code>, <code>EARLY_OUT_PARAM</code>, <code>LATE_OUT_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="seed">
+          <summary>Seed / Randomization Layer</summary>
+          <ul>
+            <li>Primitives: deterministic RNG, parameter jitter constraints, per-stage seed dispatch.</li>
+            <li>Class candidate: <code>SeedRouter</code>.</li>
+          </ul>
+          <table>
+            <tr><th>Control Group</th><th>Parameters</th></tr>
+            <tr><td>CloudSeedSeeds</td><td><code>SEED_TAP_PARAM</code>, <code>SEED_DIFFUSION_PARAM</code>, <code>SEED_DELAY_PARAM</code>, <code>SEED_POST_DIFFUSION_PARAM</code></td></tr>
+          </table>
+        </details>
+
+        <details id="performance">
+          <summary>Daisy 8-Knob Performance Layer</summary>
+          <table>
+            <tr><th>Performance Param</th><th>Suggested Macro Mapping</th></tr>
+            <tr><td><code>MIX_PARAM</code></td><td><code>INPUT_MIX_PARAM</code> + global wet/dry mix logic</td></tr>
+            <tr><td><code>SIZE_PARAM</code></td><td><code>LATE_LINE_SIZE_PARAM</code></td></tr>
+            <tr><td><code>DECAY_PARAM</code></td><td><code>LATE_LINE_DECAY_PARAM</code></td></tr>
+            <tr><td><code>DIFFUSION_PARAM</code></td><td><code>EARLY_DIFFUSE_FEEDBACK_PARAM</code> + <code>LATE_DIFFUSE_FEEDBACK_PARAM</code></td></tr>
+            <tr><td><code>PRE_DELAY_PARAM</code></td><td><code>TAP_PREDELAY_PARAM</code></td></tr>
+            <tr><td><code>DAMPING_PARAM</code></td><td><code>HIGH_CUT_PARAM</code> + per-line damping</td></tr>
+            <tr><td><code>MODULATION_PARAM</code></td><td><code>LATE_LINE_MOD_AMOUNT_PARAM</code> + <code>EARLY_DIFFUSE_MOD_AMOUNT_PARAM</code></td></tr>
+            <tr><td><code>MODULATION_RATE_PARAM</code></td><td><code>LATE_LINE_MOD_RATE_PARAM</code> + <code>EARLY_DIFFUSE_MOD_RATE_PARAM</code></td></tr>
+          </table>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const blockIds = ["input", "pre", "tap", "early", "late", "eq", "mix", "seed", "performance"];
+    const svgNodes = Array.from(document.querySelectorAll(".node"));
+    const detailsPane = document.getElementById("details-pane");
+    const quickNav = document.getElementById("quick-nav");
+
+    function activate(id) {
+      svgNodes.forEach(node => node.classList.toggle("active", node.dataset.target === id));
+      document.querySelectorAll("#details-pane details").forEach(d => {
+        d.open = d.id === id;
+      });
+      const target = document.getElementById(id);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      document.querySelectorAll(".btn").forEach(btn => btn.classList.toggle("active", btn.dataset.target === id));
+    }
+
+    svgNodes.forEach(node => {
+      node.style.cursor = "pointer";
+      node.addEventListener("click", () => activate(node.dataset.target));
+    });
+
+    blockIds.forEach(id => {
+      const label = id.charAt(0).toUpperCase() + id.slice(1);
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.dataset.target = id;
+      btn.textContent = label;
+      btn.addEventListener("click", () => activate(id));
+      quickNav.appendChild(btn);
+    });
+
+    // Keep button state if user opens details manually.
+    detailsPane.querySelectorAll("details").forEach(d => {
+      d.addEventListener("toggle", () => {
+        if (d.open) activate(d.id);
+      });
+    });
+
+    activate("pre");
+  </script>
+</body>
+</html>
