@@ -6,7 +6,7 @@ CPP_SOURCES = Pod_MultiFX_Chain.cpp
 
 # Add DAFX_2_Daisy_lib
 C_INCLUDES += -I../../DAFX_2_Daisy_lib/src
-CPP_SOURCES += ../../DAFX_2_Daisy_lib/src/effects/wahwah.cpp
+CPP_SOURCES += ../../DAFX_2_Daisy_lib/src/effects/tube.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../../../libDaisy

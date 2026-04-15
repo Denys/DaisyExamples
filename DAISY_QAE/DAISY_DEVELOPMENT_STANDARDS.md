@@ -160,6 +160,8 @@ int main(void) {
 |---------|-------|
 | Call `hw.ProcessAllControls()` in audio callback | **Field**: Keep control processing in main loop. **Pod (OLED)**: Split Digital into 1kHz Timer ISR, Analog into AudioCallback. |
 | Update `prev_value` unconditionally per frame | Implement proper hysteresis: only update `prev_value` when the deadband threshold is broken. |
+| Switch banks/pages and bind raw knob positions immediately | For **Seed** and **Field** projects with banked or page-switched controls, avoid abrupt jumps. Prefer pickup/catch, first-move reattach with slew, or similar smoothing so stored values stay stable during transitions. |
+| Map every knob to raw algorithm min/max with a default linear curve | Choose control curve and range intentionally. See **Reasonable Controls Policy (All Targets)** below. |
 | Use uninitialized DSP modules | Call `module.Init(sample_rate)` for all modules |
 | Mix control and audio threads unsafely | Use atomic variables or simple flags for thread communication |
 | Skip block diagrams | Create all 3 diagrams before writing code |
@@ -170,6 +172,47 @@ int main(void) {
 ## 5. Platform Adaptation (Seed / Pod / Field)
 
 The code template in Section 3 targets **Daisy Field**. When targeting Pod or Seed, these differences apply:
+
+### Reasonable Controls Policy (All Targets)
+
+For **all Daisy targets** (`Pod`, `Seed`, and `Field`), QAE should review
+control design as part of overall system quality rather than treating control
+mapping as a cosmetic detail.
+
+QAE should suggest a control response curve that matches how the parameter feels
+and how the DSP behaves:
+
+- use `linear` when the control should feel directly proportional over its full
+  travel
+- use `exponential` or `log` when the user needs more resolution in a musically
+  or perceptually important region
+- prefer perceptual usefulness over implementation convenience
+
+QAE should also suggest meaningful control ranges instead of defaulting to the
+absolute minimum and maximum values exposed by the underlying algorithm.
+
+Recommended review questions:
+
+- does the chosen range spend most of the knob travel in a useful region?
+- does the control become too sensitive near one end?
+- does the full raw range invite runaway feedback, self-oscillation, clipping,
+  zipper noise, aliasing, or other unstable behavior?
+- do parameter combinations become unstable even if each individual parameter
+  is nominally valid on its own?
+
+Recommended QAE guidance:
+
+- constrain ranges around the useful operating region when the raw extremes are
+  not musically or operationally valuable
+- prefer narrower, better-resolved ranges over exposing the entire algorithmic
+  span by default
+- if a design intentionally exposes the full extreme range, ask for a brief
+  justification in the project documentation
+- suggest documenting the final mapping and chosen range in `CONTROLS.md` or
+  the project README
+
+This policy is advisory rather than absolute, but QAE should treat obviously
+unusable, unstable, or poorly distributed controls as a meaningful review issue.
 
 ### Audio Buffer Format
 
@@ -252,6 +295,28 @@ int main(void) {
     while(1) { }
 }
 ```
+
+### Seed / Field Banked Controls Promemoria
+
+For **Seed** and **Field** projects, when a physical knob is reused across
+multiple pages, banks, layers, or modifier states, treat abrupt parameter jumps
+as a design smell during QAE review.
+
+Recommended safe patterns:
+
+- pickup/catch, also called soft takeover
+- first-move reattach with a short slew
+- equivalent smoothing that keeps the stored value active during the transition
+
+Recommended behavior:
+
+- the stored value for the newly selected bank/page stays active immediately
+- switching banks/pages does not jump straight to the raw hardware position
+- the control only reattaches after an intentional movement or equivalent
+  transition guard
+
+This promemoria helps keep parameter state stable when one physical control is
+multiplexed across multiple parameter groups.
 
 ### Platform Selection Checklist
 
@@ -491,13 +556,14 @@ This document is part of an interconnected quality assurance system:
 
 ---
 
-**Document Version**: 1.2
-**Last Updated**: 2026-02-08
+**Document Version**: 1.3
+**Last Updated**: 2026-04-15
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | 2026-04-15 | Added global Reasonable Controls Policy for Pod/Seed/Field and linked it from Common Pitfalls; kept banked-control smoothing guidance advisory |
 | 1.2 | 2026-02-08 | Added Platform Adaptation (Sec 5), OLED Visualization (Sec 6), Thread Safety Patterns (Sec 7); renamed from "Field" to "Platform" scope |
 | 1.1 | 2026-02-08 | Added common pitfalls table, file organization, Makefile template |
 | 1.0 | 2026-02-08 | Initial version: workflow, DSP catalog, code template |
