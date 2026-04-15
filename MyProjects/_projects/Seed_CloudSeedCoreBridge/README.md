@@ -55,6 +55,9 @@ Recommended Field knob map:
 
 These directly map to the same `ControlModel` used by Seed.
 
+
+Detailed architecture schematic: see `CLOUDSEED_BLOCK_DIAGRAM.md` for signal flow, expandable DSP primitives/classes, and control ownership.
+
 ## Interactive parameter organization
 
 Interactive parameters are now organized per class (similar to your Plaits-style enum layout):
