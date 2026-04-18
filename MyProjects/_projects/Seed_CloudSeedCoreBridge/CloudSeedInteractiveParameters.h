@@ -3,29 +3,31 @@
 namespace cloudseedbridge
 {
 /**
- * Rack-style interactive parameter organization.
+ * BKS CloudSeed parameter breakdown.
  *
- * Mirrors the enum layout style requested by the user:
- *   - ParamIds
- *   - InputIds
- *   - OutputIds
- *   - LightIds
+ * Derived from:
+ * https://github.com/bkshepherd/DaisySeedProjects/
+ *   tree/main/Software/GuitarPedal/dependencies/CloudSeed/Parameter.h
  *
- * Grouped per CloudSeed control class.
+ * Source enum in that project is `Parameter2`.
+ * This file organizes those parameters into Rack-style per-block classes.
  */
+
 struct CloudSeedGlobal
 {
     enum ParamIds
     {
-        INTERPOLATION_PARAM,
         INPUT_MIX_PARAM,
-        LOW_CUT_ENABLED_PARAM,
-        LOW_CUT_PARAM,
-        HIGH_CUT_ENABLED_PARAM,
-        HIGH_CUT_PARAM,
+        PRE_DELAY_PARAM,
+        HIGH_PASS_PARAM,
+        LOW_PASS_PARAM,
         DRY_OUT_PARAM,
+        PREDELAY_OUT_PARAM,
         EARLY_OUT_PARAM,
-        LATE_OUT_PARAM,
+        MAIN_OUT_PARAM,
+        HIGH_PASS_ENABLED_PARAM,
+        LOW_PASS_ENABLED_PARAM,
+        INTERPOLATION_PARAM,
         NUM_PARAMS
     };
 
@@ -33,16 +35,17 @@ struct CloudSeedGlobal
     {
         GLOBAL_CV_INPUT,
         INPUT_MIX_CV_INPUT,
-        LOW_CUT_CV_INPUT,
-        HIGH_CUT_CV_INPUT,
+        PRE_DELAY_CV_INPUT,
+        FILTER_CV_INPUT,
         NUM_INPUTS
     };
 
     enum OutputIds
     {
         DRY_OUTPUT,
+        PREDELAY_OUTPUT,
         EARLY_OUTPUT,
-        LATE_OUTPUT,
+        MAIN_OUTPUT,
         NUM_OUTPUTS
     };
 
@@ -58,19 +61,19 @@ struct CloudSeedTap
 {
     enum ParamIds
     {
-        TAP_ENABLED_PARAM,
         TAP_COUNT_PARAM,
-        TAP_DECAY_PARAM,
-        TAP_PREDELAY_PARAM,
         TAP_LENGTH_PARAM,
+        TAP_GAIN_PARAM,
+        TAP_DECAY_PARAM,
         NUM_PARAMS
     };
 
     enum InputIds
     {
-        TAP_AMOUNT_INPUT,
-        TAP_DECAY_INPUT,
-        TAP_TIME_INPUT,
+        TAP_COUNT_CV_INPUT,
+        TAP_LENGTH_CV_INPUT,
+        TAP_GAIN_CV_INPUT,
+        TAP_DECAY_CV_INPUT,
         NUM_INPUTS
     };
 
@@ -82,7 +85,7 @@ struct CloudSeedTap
 
     enum LightIds
     {
-        TAP_ENABLED_LIGHT,
+        TAP_ACTIVE_LIGHT,
         NUM_LIGHTS
     };
 };
@@ -91,32 +94,32 @@ struct CloudSeedEarlyDiffusion
 {
     enum ParamIds
     {
-        EARLY_DIFFUSE_ENABLED_PARAM,
-        EARLY_DIFFUSE_COUNT_PARAM,
-        EARLY_DIFFUSE_DELAY_PARAM,
-        EARLY_DIFFUSE_MOD_AMOUNT_PARAM,
-        EARLY_DIFFUSE_FEEDBACK_PARAM,
-        EARLY_DIFFUSE_MOD_RATE_PARAM,
+        DIFFUSION_ENABLED_PARAM,
+        DIFFUSION_STAGES_PARAM,
+        DIFFUSION_DELAY_PARAM,
+        DIFFUSION_FEEDBACK_PARAM,
+        EARLY_DIFFUSION_MOD_AMOUNT_PARAM,
+        EARLY_DIFFUSION_MOD_RATE_PARAM,
         NUM_PARAMS
     };
 
     enum InputIds
     {
-        EARLY_DIFFUSE_AMOUNT_INPUT,
-        EARLY_DIFFUSE_TIME_INPUT,
-        EARLY_DIFFUSE_MOD_INPUT,
+        EARLY_DIFFUSION_AMOUNT_INPUT,
+        EARLY_DIFFUSION_TIME_INPUT,
+        EARLY_DIFFUSION_MOD_INPUT,
         NUM_INPUTS
     };
 
     enum OutputIds
     {
-        EARLY_DIFFUSE_DEBUG_OUTPUT,
+        EARLY_DIFFUSION_DEBUG_OUTPUT,
         NUM_OUTPUTS
     };
 
     enum LightIds
     {
-        EARLY_DIFFUSE_ENABLED_LIGHT,
+        EARLY_DIFFUSION_ENABLED_LIGHT,
         NUM_LIGHTS
     };
 };
@@ -125,18 +128,18 @@ struct CloudSeedLateReverb
 {
     enum ParamIds
     {
-        LATE_MODE_PARAM,
-        LATE_LINE_COUNT_PARAM,
-        LATE_DIFFUSE_ENABLED_PARAM,
-        LATE_DIFFUSE_COUNT_PARAM,
-        LATE_LINE_SIZE_PARAM,
-        LATE_LINE_MOD_AMOUNT_PARAM,
-        LATE_DIFFUSE_DELAY_PARAM,
-        LATE_DIFFUSE_MOD_AMOUNT_PARAM,
-        LATE_LINE_DECAY_PARAM,
-        LATE_LINE_MOD_RATE_PARAM,
-        LATE_DIFFUSE_FEEDBACK_PARAM,
-        LATE_DIFFUSE_MOD_RATE_PARAM,
+        LINE_COUNT_PARAM,
+        LINE_DELAY_PARAM,
+        LINE_DECAY_PARAM,
+        LATE_DIFFUSION_ENABLED_PARAM,
+        LATE_DIFFUSION_STAGES_PARAM,
+        LATE_DIFFUSION_DELAY_PARAM,
+        LATE_DIFFUSION_FEEDBACK_PARAM,
+        LINE_MOD_AMOUNT_PARAM,
+        LINE_MOD_RATE_PARAM,
+        LATE_DIFFUSION_MOD_AMOUNT_PARAM,
+        LATE_DIFFUSION_MOD_RATE_PARAM,
+        LATE_STAGE_TAP_PARAM,
         NUM_PARAMS
     };
 
@@ -157,8 +160,8 @@ struct CloudSeedLateReverb
 
     enum LightIds
     {
-        LATE_MODE_LIGHT,
-        LATE_DIFFUSE_ENABLED_LIGHT,
+        LATE_DIFFUSION_ENABLED_LIGHT,
+        LATE_STAGE_TAP_LIGHT,
         NUM_LIGHTS
     };
 };
@@ -167,15 +170,14 @@ struct CloudSeedEq
 {
     enum ParamIds
     {
-        EQ_LOW_SHELF_ENABLED_PARAM,
-        EQ_HIGH_SHELF_ENABLED_PARAM,
-        EQ_LOWPASS_ENABLED_PARAM,
-        EQ_LOW_FREQ_PARAM,
-        EQ_HIGH_FREQ_PARAM,
-        EQ_CUTOFF_PARAM,
-        EQ_LOW_GAIN_PARAM,
-        EQ_HIGH_GAIN_PARAM,
-        EQ_CROSS_SEED_PARAM,
+        POST_LOWSHELF_GAIN_PARAM,
+        POST_LOWSHELF_FREQUENCY_PARAM,
+        POST_HIGHSHELF_GAIN_PARAM,
+        POST_HIGHSHELF_FREQUENCY_PARAM,
+        POST_CUTOFF_FREQUENCY_PARAM,
+        LOWSHELF_ENABLED_PARAM,
+        HIGHSHELF_ENABLED_PARAM,
+        CUTOFF_ENABLED_PARAM,
         NUM_PARAMS
     };
 
@@ -203,10 +205,11 @@ struct CloudSeedSeeds
 {
     enum ParamIds
     {
-        SEED_TAP_PARAM,
-        SEED_DIFFUSION_PARAM,
-        SEED_DELAY_PARAM,
-        SEED_POST_DIFFUSION_PARAM,
+        TAP_SEED_PARAM,
+        DIFFUSION_SEED_PARAM,
+        DELAY_SEED_PARAM,
+        POST_DIFFUSION_SEED_PARAM,
+        CROSS_SEED_PARAM,
         NUM_PARAMS
     };
 
@@ -232,6 +235,7 @@ struct CloudSeedSeeds
 
 /**
  * Performance layer used by the current Daisy Seed 8-knob prototype.
+ * These are macro controls mapped onto the Parameter2 groups above.
  */
 struct CloudSeedPerformance
 {
