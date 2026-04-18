@@ -1,0 +1,75 @@
+# CloudSeed Parameter Breakdown (BKS `Parameter2`)
+
+This breakdown is taken from:
+
+- `Software/GuitarPedal/dependencies/CloudSeed/Parameter.h`
+- Repo: `bkshepherd/DaisySeedProjects`
+
+The source enum is `Parameter2`. In this bridge, it is grouped into per-class interactive domains:
+
+- `CloudSeedGlobal`
+- `CloudSeedTap`
+- `CloudSeedEarlyDiffusion`
+- `CloudSeedLateReverb`
+- `CloudSeedEq`
+- `CloudSeedSeeds`
+
+## Grouping used in `CloudSeedInteractiveParameters.h`
+
+### CloudSeedGlobal
+- `INPUT_MIX_PARAM`
+- `PRE_DELAY_PARAM`
+- `HIGH_PASS_PARAM`
+- `LOW_PASS_PARAM`
+- `DRY_OUT_PARAM`
+- `PREDELAY_OUT_PARAM`
+- `EARLY_OUT_PARAM`
+- `MAIN_OUT_PARAM`
+- `HIGH_PASS_ENABLED_PARAM`
+- `LOW_PASS_ENABLED_PARAM`
+- `INTERPOLATION_PARAM`
+
+### CloudSeedTap
+- `TAP_COUNT_PARAM`
+- `TAP_LENGTH_PARAM`
+- `TAP_GAIN_PARAM`
+- `TAP_DECAY_PARAM`
+
+### CloudSeedEarlyDiffusion
+- `DIFFUSION_ENABLED_PARAM`
+- `DIFFUSION_STAGES_PARAM`
+- `DIFFUSION_DELAY_PARAM`
+- `DIFFUSION_FEEDBACK_PARAM`
+- `EARLY_DIFFUSION_MOD_AMOUNT_PARAM`
+- `EARLY_DIFFUSION_MOD_RATE_PARAM`
+
+### CloudSeedLateReverb
+- `LINE_COUNT_PARAM`
+- `LINE_DELAY_PARAM`
+- `LINE_DECAY_PARAM`
+- `LATE_DIFFUSION_ENABLED_PARAM`
+- `LATE_DIFFUSION_STAGES_PARAM`
+- `LATE_DIFFUSION_DELAY_PARAM`
+- `LATE_DIFFUSION_FEEDBACK_PARAM`
+- `LINE_MOD_AMOUNT_PARAM`
+- `LINE_MOD_RATE_PARAM`
+- `LATE_DIFFUSION_MOD_AMOUNT_PARAM`
+- `LATE_DIFFUSION_MOD_RATE_PARAM`
+- `LATE_STAGE_TAP_PARAM`
+
+### CloudSeedEq
+- `POST_LOWSHELF_GAIN_PARAM`
+- `POST_LOWSHELF_FREQUENCY_PARAM`
+- `POST_HIGHSHELF_GAIN_PARAM`
+- `POST_HIGHSHELF_FREQUENCY_PARAM`
+- `POST_CUTOFF_FREQUENCY_PARAM`
+- `LOWSHELF_ENABLED_PARAM`
+- `HIGHSHELF_ENABLED_PARAM`
+- `CUTOFF_ENABLED_PARAM`
+
+### CloudSeedSeeds
+- `TAP_SEED_PARAM`
+- `DIFFUSION_SEED_PARAM`
+- `DELAY_SEED_PARAM`
+- `POST_DIFFUSION_SEED_PARAM`
+- `CROSS_SEED_PARAM`

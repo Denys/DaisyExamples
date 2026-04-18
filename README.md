@@ -56,6 +56,7 @@ graph TD
     subgraph Platforms
         SEED["seed/\nDaisy Seed examples"]
         POD["pod/\nDaisy Pod examples"]
+        PEDAL["pedal/\nDaisyPedal examples"]
         FIELD["field/\nDaisy Field examples"]
         PATCH["patch/\nDaisy Patch examples"]
     end
@@ -68,8 +69,8 @@ graph TD
     ROOT --> Platforms
     ROOT --> CUSTOM
 
-    SEED & POD & FIELD & PATCH --> LIBDAISY
-    SEED & POD & FIELD & PATCH --> DAISYSP
+    SEED & POD & PEDAL & FIELD & PATCH --> LIBDAISY
+    SEED & POD & PEDAL & FIELD & PATCH --> DAISYSP
     MYPROJECTS --> LIBDAISY
     MYPROJECTS --> DAISYSP
 ```
