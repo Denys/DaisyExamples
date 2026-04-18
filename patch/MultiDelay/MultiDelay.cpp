@@ -1,42 +1,31 @@
 #include "daisysp.h"
 #include "daisy_patch.h"
+#include "daisyhost/apps/MultiDelayCore.h"
+
+#include <array>
 #include <string>
 
-#define MAX_DELAY static_cast<size_t>(48000 * 1.f)
-
 using namespace daisy;
-using namespace daisysp;
+using namespace daisyhost;
+using namespace daisyhost::apps;
 
-DaisyPatch patch;
-
-DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delMems[3];
-
-struct delay
+namespace
 {
-    DelayLine<float, MAX_DELAY> *del;
-    float                        currentDelay;
-    float                        delayTarget;
+DaisyPatch patch;
+MultiDelayCore core("node0");
+MultiDelayCore::DelayLineType DSY_SDRAM_BSS
+    sdramDelays[MultiDelayCore::kDelayCount];
 
-    float Process(float feedback, float in)
-    {
-        //set delay times
-        fonepole(currentDelay, delayTarget, .0002f);
-        del->SetDelay(currentDelay);
-
-        float read = del->Read();
-        del->Write((feedback * read) + in);
-
-        return read;
-    }
-};
-
-delay     delays[3];
-Parameter params[4];
-
-float feedback;
-int   drywet;
+const std::array<std::string, 4> kKnobIds = {{
+    MultiDelayCore::MakeKnobControlId("node0", 1),
+    MultiDelayCore::MakeKnobControlId("node0", 2),
+    MultiDelayCore::MakeKnobControlId("node0", 3),
+    MultiDelayCore::MakeKnobControlId("node0", 4),
+}};
+} // namespace
 
 void ProcessControls();
+void UpdateOled();
 
 static void AudioCallback(AudioHandle::InputBuffer  in,
                           AudioHandle::OutputBuffer out,
@@ -44,58 +33,24 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
 {
     ProcessControls();
 
-    for(size_t i = 0; i < size; i++)
-    {
-        float mix     = 0;
-        float fdrywet = (float)drywet / 100.f;
+    const std::array<const float*, 1> inputPtrs = {{in[0]}};
+    const std::array<float*, 4> outputPtrs = {{out[0], out[1], out[2], out[3]}};
 
-        //update delayline with feedback
-        for(int d = 0; d < 3; d++)
-        {
-            float sig = delays[d].Process(feedback, in[0][i]);
-            mix += sig;
-            //out[d][i] = sig * fdrywet + (1.f - fdrywet) * in[0][i];
-            out[d][i] = sig;
-        }
-
-        //apply drywet and attenuate
-        mix       = fdrywet * mix * .3f + (1.0f - fdrywet) * in[0][i];
-        out[3][i] = mix;
-    }
+    core.Process({inputPtrs.data(), inputPtrs.size()},
+                 {outputPtrs.data(), outputPtrs.size()},
+                 size);
+    core.TickUi((1000.0 * static_cast<double>(size)) / patch.AudioSampleRate());
 }
-
-void InitDelays(float samplerate)
-{
-    for(int i = 0; i < 3; i++)
-    {
-        //Init delays
-        delMems[i].Init();
-        delays[i].del = &delMems[i];
-        //3 delay times
-        params[i].Init(patch.controls[i],
-                       samplerate * .05,
-                       MAX_DELAY,
-                       Parameter::LOGARITHMIC);
-    }
-
-    //feedback
-    params[3].Init(patch.controls[3], 0, 1, Parameter::LINEAR);
-}
-
-void UpdateOled();
 
 int main(void)
 {
-    float samplerate;
-    patch.Init(); // Initialize hardware (daisy seed, and patch)
-    samplerate = patch.AudioSampleRate();
-
-    InitDelays(samplerate);
-
-    drywet = 50;
+    patch.Init();
+    core.AttachDelayStorage(sdramDelays, MultiDelayCore::kDelayCount);
+    core.Prepare(patch.AudioSampleRate(), patch.AudioBlockSize());
 
     patch.StartAdc();
     patch.StartAudio(AudioCallback);
+
     while(1)
     {
         UpdateOled();
@@ -106,18 +61,26 @@ void UpdateOled()
 {
     patch.display.Fill(false);
 
-    patch.display.SetCursor(0, 0);
-    std::string str  = "Multi Delay";
-    char *      cstr = &str[0];
-    patch.display.WriteString(cstr, Font_7x10, true);
+    const DisplayModel& model = core.GetDisplayModel();
+    for(const auto& text : model.texts)
+    {
+        patch.display.SetCursor(text.x, text.y);
+        patch.display.WriteString(text.text.c_str(), Font_7x10, !text.inverted);
+    }
 
-    patch.display.SetCursor(0, 30);
-    str = "Dry/Wet:  ";
-    patch.display.WriteString(cstr, Font_7x10, true);
+    for(const auto& bar : model.bars)
+    {
+        const int x2 = bar.x + bar.width;
+        const int y2 = bar.y + bar.height;
+        patch.display.DrawRect(bar.x, bar.y, x2, y2, true, false);
 
-    patch.display.SetCursor(60, 30);
-    str = std::to_string(drywet);
-    patch.display.WriteString(cstr, Font_7x10, true);
+        const int fillWidth = static_cast<int>(bar.width * bar.normalized);
+        if(fillWidth > 0)
+        {
+            patch.display.DrawRect(
+                bar.x, bar.y, bar.x + fillWidth, y2, true, true);
+        }
+    }
 
     patch.display.Update();
 }
@@ -127,15 +90,12 @@ void ProcessControls()
     patch.ProcessAnalogControls();
     patch.ProcessDigitalControls();
 
-    //knobs
-    for(int i = 0; i < 3; i++)
+    for(int i = 0; i < 4; ++i)
     {
-        delays[i].delayTarget = params[i].Process();
+        core.SetControl(kKnobIds[static_cast<std::size_t>(i)],
+                        patch.controls[i].Value());
     }
-    feedback = params[3].Process();
 
-    //encoder
-    drywet += 5 * patch.encoder.Increment();
-    drywet > 100 ? drywet = 100 : drywet = drywet;
-    drywet < 0 ? drywet = 0 : drywet = drywet;
+    core.SetEncoderDelta(patch.encoder.Increment());
+    core.SetEncoderPress(patch.encoder.Pressed());
 }

@@ -3,9 +3,13 @@
 Repo-level instructions for coding agents working in `DaisyExamples/`.
 
 This file is intentionally narrow. It captures durable repo workflow, verification,
-and safety rules. For project-specific doctrine, follow the nearest local docs
-such as `README.md`, `CHECKPOINT.md`, `CONTROLS.md`, `DAISY_QAE/*`, or a dated
-plan in `docs/plans/`.
+and safety rules. For volatile current-project context, read `LATEST_PROJECTS.md`.
+For project-specific doctrine, follow the nearest local docs such as `README.md`,
+`CHECKPOINT.md`, `CONTROLS.md`, `DAISY_QAE/*`, or a dated plan in `docs/plans/`.
+
+Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
+`GEMINI.md`, `OPENCODE.md`, and `KILO.md` should defer to this file plus
+`LATEST_PROJECTS.md` rather than duplicating repo workflow.
 
 ## Scope
 
@@ -18,11 +22,16 @@ plan in `docs/plans/`.
 ## Start Here
 
 1. Identify the exact target directory before editing.
-2. Read the nearest `README.md`.
-3. If a sibling or parent `CHECKPOINT.md` exists, read it before changing code.
-4. If the target project has a matching plan in `docs/plans/`, use it as design
+2. If the target is not obvious, inspect the pinned workspace roots below and
+   optionally run `py -3 ./ci/list_recent_project_roots.py` before assuming the
+   active work lives only under `MyProjects/_projects`.
+3. Read the nearest `README.md`.
+4. If a sibling or parent `CHECKPOINT.md` exists, read it before changing code.
+5. If the target is part of the recent custom-project working set, read the
+   matching entry in `LATEST_PROJECTS.md`.
+6. If the target project has a matching plan in `docs/plans/`, use it as design
    context but do not treat it as proof that implementation is current.
-5. If the task changes control architecture, project scaffolding, or Daisy coding
+7. If the task changes control architecture, project scaffolding, or Daisy coding
    patterns, consult `DAISY_QAE/DAISY_DEVELOPMENT_STANDARDS.md` and related QAE
    docs before inventing a new workflow.
 
@@ -39,9 +48,24 @@ plan in `docs/plans/`.
   `validate_daisy_code.py`, standards, bug logs, and scaffolding references.
 - `docs/plans/`: dated implementation/design notes that often capture recent
   project intent.
-- `DaisyDAFX/` and `MyProjects/DAFX_2_Daisy_lib/`: separate library-style
-  workspaces with their own docs and host-side test/build flows. Do not assume
-  the default Make-based firmware workflow there.
+- `DaisyDAFX/`: canonical library-style workspace with its own CMake, CTest,
+  and Doxygen reference flow. Do not assume the default Make-based firmware
+  workflow there.
+- `MyProjects/DAFX_2_Daisy_lib/`: deprecated transitional copy of the old DAFX
+  library workspace. Prefer `DaisyDAFX/` when the two differ.
+
+## Pinned Workspace Roots
+
+These roots are first-party work areas and must be considered before narrowing
+attention to a smaller recent-project list:
+
+- `DaisyDAFX/`
+- `pedal/`
+- `DAISY_QAE/`
+- `MyProjects/_projects/`
+
+When refreshing `LATEST_PROJECTS.md`, do not derive "recent" from a single
+subtree. Use repo-wide candidate discovery and file-level modification times.
 
 ## Ignore By Default
 
@@ -54,6 +78,9 @@ about them:
 - `build/`
 - `__pycache__/`
 - nested `node_modules/`
+
+Also, when ranking recency, ignore generated output inside these directories so
+compiled artifacts do not overshadow source/docs activity.
 
 ## Safety Rules
 
@@ -90,6 +117,20 @@ If you edit `libDaisy/` or `DaisySP/`, rebuild the libraries first:
 ```
 
 Then rebuild at least one affected firmware target.
+
+### DaisyDAFX validation
+
+`DaisyDAFX/` is a host-side library workflow, not a board-example workflow.
+When `DaisyDAFX/` changes, prefer:
+
+```sh
+cmake -S DaisyDAFX -B DaisyDAFX/build -DBUILD_EXAMPLES=OFF
+cmake --build DaisyDAFX/build --config Release --target unit_tests
+ctest --test-dir DaisyDAFX/build -C Release --output-on-failure
+```
+
+If the task involves its generated API reference, use the local rebuild helper
+from `DaisyDAFX/util/` rather than inventing a new doc flow.
 
 ### Repo-wide example validation
 
@@ -161,5 +202,8 @@ or `docs/plans/`.
 - Verify the smallest relevant target first.
 - Treat host-side or CMake-based subprojects as exceptions; inspect their local
   docs before assuming embedded Make rules.
+- For `DaisyDAFX/`, prefer the root library copy over
+  `MyProjects/DAFX_2_Daisy_lib/`, and treat the `MyProjects` copy as archival or
+  compatibility-only unless the user explicitly asks to update it.
 - If hardware validation is needed but unavailable, state that the result is
   build-verified only.

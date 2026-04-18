@@ -2,11 +2,12 @@
 TARGET = MultiDelay
 
 # Sources
-CPP_SOURCES = MultiDelay.cpp
+CPP_SOURCES = MultiDelay.cpp ../../DaisyHost/src/apps/MultiDelayCore.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy
 DAISYSP_DIR = ../../DaisySP
+C_INCLUDES += -I../../DaisyHost/include
 
 # Core location, and generic Makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core

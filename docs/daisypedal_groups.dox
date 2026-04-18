@@ -1,0 +1,24 @@
+/** @file daisypedal_groups.dox
+ *  @brief Doxygen group declarations for the DaisyPedal reference.
+ */
+
+/** @defgroup pedal_integration DaisyPedal Integration
+ *  @brief Board-facing helpers that bind the GuitarPedal125b control surface to
+ *  `libDaisy`.
+ */
+
+/** @defgroup pedal_control DaisyPedal Control Helpers
+ *  @brief Support classes that shape pedal interaction and timing behavior.
+ */
+
+/** @defgroup pedal_dynamics DaisyPedal Dynamics
+ *  @brief Dynamics-oriented DSP modules intended for pedal signal chains.
+ */
+
+/** @defgroup pedal_pitch DaisyPedal Pitch Helpers
+ *  @brief Pitch-oriented DSP modules and low-rate conditioning helpers.
+ */
+
+/** @defgroup pedal_examples DaisyPedal Examples
+ *  @brief Example-grade firmware targets built around the `DaisyPedal` board helper.
+ */
