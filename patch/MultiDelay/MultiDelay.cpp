@@ -31,15 +31,12 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
                           AudioHandle::OutputBuffer out,
                           size_t                    size)
 {
-    ProcessControls();
-
     const std::array<const float*, 1> inputPtrs = {{in[0]}};
     const std::array<float*, 4> outputPtrs = {{out[0], out[1], out[2], out[3]}};
 
     core.Process({inputPtrs.data(), inputPtrs.size()},
                  {outputPtrs.data(), outputPtrs.size()},
                  size);
-    core.TickUi((1000.0 * static_cast<double>(size)) / patch.AudioSampleRate());
 }
 
 int main(void)
@@ -53,6 +50,8 @@ int main(void)
 
     while(1)
     {
+        ProcessControls();
+        core.TickUi(0.0);
         UpdateOled();
     }
 }

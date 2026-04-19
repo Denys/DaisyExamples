@@ -1,0 +1,235 @@
+DaisyBrain Knowledge Pack
+Generated: 2026-04-18
+
+Purpose
+- Curated high-signal briefing for a NotebookLM notebook about Daisy, DaisyExamples, DaisyHost, and the current architectural direction of this repo.
+- This is not a full dump of the repository. It is a synthesis layer plus pointers to the highest-value local docs.
+
+Companion Context Pack
+- Pair this knowledge pack with `docs/notebooklm/README.md` and the layered
+  files under `docs/notebooklm/context/`.
+- Treat those files as the durable memory structure for DaisyBrain.
+
+Repo Identity
+- Repository: DaisyExamples
+- Nature: mixed workspace containing upstream Daisy example firmware, first-party custom Daisy projects, host-side desktop tooling, library workspaces, and local quality-assurance standards.
+- Core technologies: libDaisy, DaisySP, Make-based embedded builds, JUCE/CMake host apps, C++17, Python support tooling.
+
+Primary Workspace Roots
+- DaisyHost/
+  - Host-side JUCE/CMake workspace for a virtual Daisy Patch plugin and standalone app.
+  - Current source version: 0.2.0
+  - Purpose: pre-flash testing, desktop hosting, UI and control prototyping, future training/rendering bridge.
+- DaisyDAFX/
+  - Canonical first-party DAFX library workspace with CMake/CTest/Doxygen workflow.
+- pedal/
+  - First-party DaisyPedal workspace.
+- DAISY_QAE/
+  - Local quality and engineering standards hub for Daisy work.
+- MyProjects/_projects/
+  - Active custom Daisy firmware projects.
+
+Repo Workflow Essentials
+- Repo-level instructions live in AGENTS.md.
+- Volatile active-project context lives in LATEST_PROJECTS.md.
+- Prefer the nearest local docs before editing a project:
+  - README.md
+  - CHECKPOINT.md
+  - CONTROLS.md
+  - DAISY_QAE docs
+  - docs/plans/*.md
+- Default firmware validation:
+  - from a target firmware project: make
+- DaisyHost validation:
+  - cmake -S DaisyHost -B DaisyHost/build
+  - cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+  - ctest --test-dir DaisyHost/build -C Release --output-on-failure
+- DaisyDAFX validation:
+  - cmake -S DaisyDAFX -B DaisyDAFX/build -DBUILD_EXAMPLES=OFF
+  - cmake --build DaisyDAFX/build --config Release --target unit_tests
+  - ctest --test-dir DaisyDAFX/build -C Release --output-on-failure
+
+Board And Project Landscape
+- Upstream board example roots:
+  - seed/
+  - pod/
+  - field/
+  - patch/
+  - patch_sm/
+  - pedal/
+  - petal/
+  - versio/
+  - legio/
+- Active first-party project areas include:
+  - field/CloudSeed/
+  - field/GranularSynth/
+  - DaisyHost/
+  - DaisyDAFX/
+  - pedal/
+  - MyProjects/_projects/Seed_CloudSeedCoreBridge/
+  - MyProjects/_projects/Pod_MultiFX_Chain/
+  - MyProjects/_projects/multi_fx_synth_pod/
+  - MyProjects/_projects/Pod_Harmonizer/
+  - MyProjects/_projects/Seed_MIDI_Grainlet/
+
+DaisyHost Current State
+- DaisyHost is a first-party host-side JUCE/CMake project.
+- Current role:
+  - virtual Daisy Patch plugin and standalone app
+  - shared portable app core plus Patch firmware adapter
+  - board-profile driven UI
+  - menu/display model
+  - MIDI learn and computer keyboard MIDI
+  - test input sources
+- Important current app:
+  - MultiDelay is the current test algorithm, not the final target product abstraction.
+- Important distinction:
+  - host control mapping does not need to be 1:1 with the original MultiDelay example controls
+  - the important parity is engine behavior and controlled parameter values, not exact UI gesture equivalence
+
+DaisyHost Architectural Sweet Spot
+- DaisyHost should become a deterministic parameterized engine, not just a GUI wrapper over internal snapshots.
+- The correct long-term architecture is:
+  - shared portable app core
+  - desktop host adapter
+  - Daisy firmware adapter
+- UI and board controls should be clients of a canonical parameter model, not the source of truth.
+
+MetaController And Training Insights
+- The useful MetaController idea from the book is preserved:
+  - compact semantic controls
+  - macro mappings
+  - scene control
+  - eventual learned mappings
+- The part that does not map well to Daisy should be rejected:
+  - desktop plugin hosting as a runtime dependency
+  - training by replaying menu/encoder gestures
+- Training should target:
+  - canonical internal parameters
+  - macro outputs
+  - scene controls
+- Training should not target:
+  - raw widget positions
+  - encoder turns
+  - menu navigation events
+
+Training Gate Before MetaController Training
+- Before training makes sense, DaisyHost should have:
+  - canonical parameter specs
+  - direct parameter API by stable id
+  - deterministic reset and full state serialization
+  - fixed random seeds where randomness exists
+  - effective-state readback after smoothing, clamping, morphing, and macro mapping
+  - parity tests for host vs Daisy adapter behavior
+  - headless offline rendering with no GUI dependency
+- VST/JUCE parameters are a useful bridge, not the primary abstraction.
+
+Canonical Control Contract
+- Layer 1: canonical internal parameters
+  - stable ids
+  - defaults
+  - ranges
+  - normalization
+  - metadata
+  - serialization
+  - effective-value readback
+- Layer 2: control surfaces and UX
+  - Patch knobs and CV
+  - encoder/menu
+  - MIDI learn
+  - desktop widgets
+  - scenes and macros
+- Layer 3: external automation bridges
+  - JUCE/VST parameters
+  - headless renderer
+  - dataset scripts
+  - later DAW or DawDreamer automation
+
+Book Implementation Roadmap Summary
+- The useful parts of the book are:
+  - Part 2: SuperKnob and MetaController concepts
+  - Part 3: Markov improviser and MIDI generation
+  - Part 4: Neural FX with offline training and RTNeural inference
+- The current roadmap says to implement in this order:
+  1. canonical parameter contract and deterministic core
+  2. generalize DaisyHost beyond MultiDelay
+  3. headless rendering and dataset generation
+  4. SuperKnob and training-ready MetaController
+  5. Markov host app and Daisy adapter
+  6. neural training, RTNeural wrapper, host app, Daisy adapter
+  7. multi-Daisy side activity only later
+
+What Multi-Daisy Actually Requires
+- Running multiple Daisy boards inside DaisyHost or its VST3 plugin is not just a UI expansion.
+- It requires:
+  - multiple app instances with stable node ids
+  - node-scoped parameter, control, and port ids
+  - per-node board profiles
+  - a graph scheduler for block processing
+  - typed cable routing for audio, CV, gate, and MIDI
+  - explicit feedback loop policy
+  - graph/session serialization
+  - graph-aware headless rendering
+- A VCV Rack path would require:
+  - a Rack adapter around the same shared app cores
+  - translation between Rack voltages/triggers and canonical DaisyHost ports
+  - Rack-specific module widgets and state flow
+- Recommended order:
+  - finish single-node deterministic host first
+  - then make app instancing safe
+  - then add a graph runtime
+  - then decide between DaisyHost-native rack UI and VCV Rack adapter
+
+Comparison To Existing Solutions
+- eurorack-blocks
+  - strong for Eurorack simulator plus hardware generation
+  - not the same as a Daisy board-faithful VST/standalone host
+  - stronger for modular prototyping than for DAW-style training pipelines
+- VaseProtoPlugin
+  - useful proof that DaisySP-style DSP can be placed in a VCV Rack module
+  - too small and narrow to replace DaisyHost
+- VCV Rack plugin development
+  - best existing model for cable-based modular graph UX
+  - not Daisy-specific by default
+- Daisy-Juce-Example
+  - strong proof for Daisy DSP inside a JUCE plugin
+  - not a full board-faithful host
+- DawDreamer
+  - relevant for future offline rendering and ML workflows
+  - not Daisy-aware by itself
+
+Current Strategic Conclusion
+- DaisyHost remains differentiated and worth continuing.
+- The right near-term target is not prettier UI or multi-node graphing.
+- The right near-term target is:
+  - stable parameter contract
+  - deterministic automation
+  - headless rendering
+  - parity with Daisy firmware adapters
+
+Repo Guidance And Safety
+- Expect a dirty worktree and preserve unrelated edits.
+- Do not casually reset or rewrite submodules.
+- Do not run destructive git operations.
+- Do not flash hardware unless explicitly requested.
+- For DaisyHost, read:
+  - DaisyHost/README.md
+  - DaisyHost/AGENTS.md
+  - DaisyHost/CHECKPOINT.md
+  - DaisyHost/CHANGELOG.md
+
+High-Value Local Docs To Pair With This Source
+- AGENTS.md
+- LATEST_PROJECTS.md
+- DaisyHost/README.md
+- DaisyHost/CHECKPOINT.md
+- DaisyHost/CHANGELOG.md
+- docs/plans/2026-04-18-daisyhost-book-roadmap.md
+- DAISY_QAE/DAISY_DEVELOPMENT_STANDARDS.md
+
+Intended Uses For A DaisyBrain Notebook
+- consultable architecture memory for Daisy and DaisyExamples decisions
+- quick Q&A on repo structure and project workflow
+- comparison of host-side vs firmware-side implementation approaches
+- reference notebook for future DaisyHost, DaisyDAFX, and active custom-project planning
+- support for future decisions about MetaControllers, Markov apps, Neural FX, and multi-Daisy graphing

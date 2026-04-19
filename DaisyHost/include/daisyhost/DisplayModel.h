@@ -6,6 +6,12 @@
 
 namespace daisyhost
 {
+enum class DisplayMode
+{
+    kStatus,
+    kMenu,
+};
+
 struct DisplayText
 {
     int         x        = 0;
@@ -27,6 +33,8 @@ struct DisplayModel
 {
     int                      width    = 128;
     int                      height   = 64;
+    DisplayMode              mode     = DisplayMode::kStatus;
+    std::string              title;
     std::uint64_t            revision = 0;
     std::vector<DisplayText> texts;
     std::vector<DisplayBar>  bars;

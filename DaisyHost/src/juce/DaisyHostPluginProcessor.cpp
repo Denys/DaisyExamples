@@ -7,11 +7,25 @@
 #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
 
 #include "DaisyHostPluginEditor.h"
+#include "daisyhost/AppRegistry.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
 #include "daisyhost/HostStartupPolicy.h"
+#include "daisyhost/TestInputSignal.h"
+#include "daisyhost/VersionInfo.h"
 
 namespace
 {
+daisyhost::CvInputSourceMode ClampCvMode(int mode)
+{
+    return mode <= 0 ? daisyhost::CvInputSourceMode::kManual
+                     : daisyhost::CvInputSourceMode::kGenerator;
+}
+
+std::string MakeCvHostStateId(std::size_t index, const char* suffix)
+{
+    return "node0/host/cv_" + std::to_string(index + 1) + "_" + suffix;
+}
+
 daisyhost::MidiMessageEvent ToMidiEvent(const juce::MidiMessage& message)
 {
     const auto* rawData = message.getRawData();
@@ -66,6 +80,22 @@ float PeakForChannel(const juce::AudioBuffer<float>& buffer, int channelIndex)
 
     return PeakForSamples(buffer.getReadPointer(channelIndex), buffer.getNumSamples());
 }
+
+const daisyhost::MenuItem* FindMenuItem(const daisyhost::MenuModel& menu,
+                                        const std::string&          itemId)
+{
+    for(const auto& section : menu.sections)
+    {
+        for(const auto& item : section.items)
+        {
+            if(item.id == itemId)
+            {
+                return &item;
+            }
+        }
+    }
+    return nullptr;
+}
 } // namespace
 
 DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
@@ -74,46 +104,41 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
                            .withOutput(
                                "Output", juce::AudioChannelSet::stereo(), true)),
   boardProfile_(daisyhost::MakeDaisyPatchProfile("node0")),
-  core_("node0"),
-  dryWetId_(daisyhost::apps::MultiDelayCore::MakeDryWetControlId("node0")),
-  encoderButtonId_(
-      daisyhost::apps::MultiDelayCore::MakeEncoderButtonControlId("node0")),
-  midiInputPortId_(
-      daisyhost::apps::MultiDelayCore::MakeMidiInputPortId("node0", 1))
+  core_(daisyhost::CreateHostedAppCore(
+      daisyhost::GetDefaultHostedAppId(), "node0", &activeAppId_))
 {
-    for(std::size_t i = 0; i < knobIds_.size(); ++i)
+    activeBindings_ = core_->GetPatchBindings();
+    for(std::size_t i = 0; i < topControlValues_.size(); ++i)
     {
-        knobIds_[i]
-            = daisyhost::apps::MultiDelayCore::MakeKnobControlId("node0", i + 1);
-        cvPortIds_[i]
-            = daisyhost::apps::MultiDelayCore::MakeCvInputPortId("node0", i + 1);
-        audioInputPortIds_[i] = daisyhost::apps::MultiDelayCore::MakeAudioInputPortId(
-            "node0", i + 1);
-        audioOutputPortIds_[i]
-            = daisyhost::apps::MultiDelayCore::MakeAudioOutputPortId("node0", i + 1);
-        knobValues_[i].store(0.0f);
+        topControlValues_[i].store(0.0f);
         cvValues_[i].store(0.5f);
+        cvVoltages_[i].store(2.5f);
         audioInputPeaks_[i].store(0.0f);
         audioOutputPeaks_[i].store(0.0f);
+        cvGeneratorStates_[i].manualVolts    = 2.5f;
+        cvGeneratorStates_[i].biasVolts      = 2.5f;
+        cvGeneratorStates_[i].amplitudeVolts = 2.5f;
+        cvGeneratorStates_[i].frequencyHz    = 1.0f;
     }
-
-    for(std::size_t i = 0; i < gatePortIds_.size(); ++i)
+    for(std::size_t i = 0; i < gateValues_.size(); ++i)
     {
-        gatePortIds_[i]
-            = daisyhost::apps::MultiDelayCore::MakeGateInputPortId("node0", i + 1);
         gateValues_[i].store(false);
         previousGateValues_[i] = false;
     }
-
-    dryWetValue_.store(0.5f);
     encoderPressed_.store(false);
     midiActivity_.store(0.0f);
     computerKeyboardEnabled_.store(true);
     computerKeyboardOctave_.store(4);
     testInputMode_.store(kHostInput);
-    testInputLevel_.store(0.35f);
+    testInputLevel_.store(3.5f);
+    testInputFrequencyHz_.store(220.0f);
     impulseRequested_.store(false);
-    latestDisplay_ = core_.GetDisplayModel();
+    pendingEncoderDelta_.store(0);
+    pendingEncoderPressCount_.store(0);
+    SyncHostStateFromCore();
+    latestDisplay_ = core_->GetDisplayModel();
+    latestMenu_    = core_->GetMenuModel();
+    latestParameters_ = core_->GetParameters();
 }
 
 DaisyHostPatchAudioProcessor::~DaisyHostPatchAudioProcessor() {}
@@ -121,6 +146,9 @@ DaisyHostPatchAudioProcessor::~DaisyHostPatchAudioProcessor() {}
 void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
                                                  int    samplesPerBlock)
 {
+    currentSampleRate_ = sampleRate;
+    currentBlockSize_  = static_cast<std::size_t>(std::max(1, samplesPerBlock));
+
     if(!didApplyStartupTestInputPolicy_)
     {
         SetTestInputMode(daisyhost::ResolveStartupTestInputMode(
@@ -130,16 +158,20 @@ void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
         didApplyStartupTestInputPolicy_ = true;
     }
 
-    core_.Prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+    core_->Prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+    ApplyCanonicalSessionStateToCore();
     midiNotePreview_.Prepare(sampleRate);
     RefreshMidiInputStatus();
     scratchOutput_.setSize(4, samplesPerBlock, false, false, true);
     zeroBuffer_.assign(static_cast<std::size_t>(samplesPerBlock), 0.0f);
     generatedInput_.assign(static_cast<std::size_t>(samplesPerBlock), 0.0f);
     testPhase_ = 0.0f;
+    noiseState_ = 1u;
     ApplyControlStateToCore();
+    ApplyPendingMenuInteractionsToCore();
+    UpdateCvGeneratorOutputs(static_cast<double>(currentBlockSize_) / sampleRate);
     ApplyVirtualPortStateToCore(std::vector<daisyhost::MidiMessageEvent>());
-    UpdateDisplaySnapshot();
+    UpdateCoreSnapshots();
 }
 
 void DaisyHostPatchAudioProcessor::releaseResources()
@@ -205,17 +237,13 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
                 }
             }
 
-            if(mappedControl == dryWetId_)
+            if(!mappedControl.empty())
             {
-                SetDryWetValue(normalized);
-            }
-            else if(!mappedControl.empty())
-            {
-                for(std::size_t i = 0; i < knobIds_.size(); ++i)
+                for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
                 {
-                    if(mappedControl == knobIds_[i])
+                    if(mappedControl == activeBindings_.knobControlIds[i])
                     {
-                        SetKnobValue(i, normalized);
+                        SetTopControlValue(i, normalized);
                         break;
                     }
                 }
@@ -231,6 +259,8 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     }
 
     ApplyControlStateToCore();
+    ApplyPendingMenuInteractionsToCore();
+    UpdateCvGeneratorOutputs(static_cast<double>(numSamples) / getSampleRate());
     ApplyVirtualPortStateToCore(ToMidiEvents(midiMessages));
 
     if(scratchOutput_.getNumSamples() != numSamples)
@@ -296,7 +326,7 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         midiNotePreview_.RenderAdd(
             generatedInput_.data(),
             static_cast<std::size_t>(numSamples),
-            testInputLevel_.load());
+            Clamp01(testInputLevel_.load() / 10.0f));
         inputPtrs[0] = generatedInput_.data();
         audioInputPeaks_[0].store(PeakForSamples(generatedInput_.data(), numSamples));
     }
@@ -307,10 +337,11 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
          scratchOutput_.getWritePointer(2),
          scratchOutput_.getWritePointer(3)}};
 
-    core_.Process({inputPtrs.data(), inputPtrs.size()},
-                  {outputPtrs.data(), outputPtrs.size()},
-                  static_cast<std::size_t>(numSamples));
-    core_.TickUi((1000.0 * static_cast<double>(numSamples)) / getSampleRate());
+    core_->Process({inputPtrs.data(), inputPtrs.size()},
+                   {outputPtrs.data(), outputPtrs.size()},
+                   static_cast<std::size_t>(numSamples));
+    core_->TickUi((1000.0 * static_cast<double>(numSamples)) / getSampleRate());
+    SyncHostStateFromCore();
 
     for(std::size_t i = 0; i < audioOutputPeaks_.size(); ++i)
     {
@@ -328,15 +359,18 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     }
     else if(getTotalNumOutputChannels() == 2)
     {
-        buffer.copyFrom(0, 0, scratchOutput_, 3, 0, numSamples);
-        buffer.copyFrom(1, 0, scratchOutput_, 3, 0, numSamples);
+        const int leftChannel = std::clamp(activeBindings_.mainOutputChannels[0], 0, 3);
+        const int rightChannel = std::clamp(activeBindings_.mainOutputChannels[1], 0, 3);
+        buffer.copyFrom(0, 0, scratchOutput_, leftChannel, 0, numSamples);
+        buffer.copyFrom(1, 0, scratchOutput_, rightChannel, 0, numSamples);
     }
     else if(getTotalNumOutputChannels() == 1)
     {
-        buffer.copyFrom(0, 0, scratchOutput_, 3, 0, numSamples);
+        const int monoChannel = std::clamp(activeBindings_.mainOutputChannels[0], 0, 3);
+        buffer.copyFrom(0, 0, scratchOutput_, monoChannel, 0, numSamples);
     }
 
-    UpdateDisplaySnapshot();
+    UpdateCoreSnapshots();
 }
 
 juce::AudioProcessorEditor* DaisyHostPatchAudioProcessor::createEditor()
@@ -401,18 +435,42 @@ void DaisyHostPatchAudioProcessor::changeProgramName(int,
 void DaisyHostPatchAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     daisyhost::HostSessionState state;
-    for(std::size_t i = 0; i < knobIds_.size(); ++i)
+    state.appId = activeAppId_;
+    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
     {
-        state.controlValues[knobIds_[i]] = knobValues_[i].load();
-        state.cvValues[cvPortIds_[i]]    = cvValues_[i].load();
+        if(!activeBindings_.knobControlIds[i].empty())
+        {
+            state.controlValues[activeBindings_.knobControlIds[i]]
+                = topControlValues_[i].load();
+        }
+        if(!activeBindings_.cvInputPortIds[i].empty())
+        {
+            state.cvValues[activeBindings_.cvInputPortIds[i]] = cvValues_[i].load();
+        }
+        state.controlValues[MakeCvHostStateId(i, "mode")]
+            = static_cast<float>(
+                cvGeneratorStates_[i].mode == daisyhost::CvInputSourceMode::kGenerator);
+        state.controlValues[MakeCvHostStateId(i, "waveform")]
+            = static_cast<float>(static_cast<int>(cvGeneratorStates_[i].waveform));
+        state.controlValues[MakeCvHostStateId(i, "frequency_hz")]
+            = cvGeneratorStates_[i].frequencyHz;
+        state.controlValues[MakeCvHostStateId(i, "amplitude_volts")]
+            = cvGeneratorStates_[i].amplitudeVolts;
+        state.controlValues[MakeCvHostStateId(i, "bias_volts")]
+            = cvGeneratorStates_[i].biasVolts;
+        state.controlValues[MakeCvHostStateId(i, "manual_volts")]
+            = cvGeneratorStates_[i].manualVolts;
     }
 
-    for(std::size_t i = 0; i < gatePortIds_.size(); ++i)
+    for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
     {
-        state.gateValues[gatePortIds_[i]] = gateValues_[i].load();
+        if(!activeBindings_.gateInputPortIds[i].empty())
+        {
+            state.gateValues[activeBindings_.gateInputPortIds[i]]
+                = gateValues_[i].load();
+        }
     }
 
-    state.controlValues[dryWetId_] = dryWetValue_.load();
     state.controlValues[computerKeyboardEnabledStateId_]
         = computerKeyboardEnabled_.load() ? 1.0f : 0.0f;
     state.controlValues[computerKeyboardOctaveStateId_]
@@ -420,6 +478,9 @@ void DaisyHostPatchAudioProcessor::getStateInformation(juce::MemoryBlock& destDa
     state.controlValues[testInputModeStateId_]
         = static_cast<float>(testInputMode_.load());
     state.controlValues[testInputLevelStateId_] = testInputLevel_.load();
+    state.controlValues[testInputFrequencyStateId_] = testInputFrequencyHz_.load();
+    state.parameterValues = core_->CaptureStatefulParameterValues();
+    state.randomSeed      = appRandomSeed_;
 
     {
         std::lock_guard<std::mutex> lock(midiLearnMutex_);
@@ -444,19 +505,45 @@ const daisyhost::BoardProfile& DaisyHostPatchAudioProcessor::GetBoardProfile() c
     return boardProfile_;
 }
 
-float DaisyHostPatchAudioProcessor::GetKnobValue(std::size_t index) const
+const daisyhost::HostedAppPatchBindings&
+DaisyHostPatchAudioProcessor::GetActivePatchBindings() const
 {
-    return index < knobValues_.size() ? knobValues_[index].load() : 0.0f;
+    return activeBindings_;
 }
 
-float DaisyHostPatchAudioProcessor::GetDryWetValue() const
+juce::String DaisyHostPatchAudioProcessor::GetActiveAppId() const
 {
-    return dryWetValue_.load();
+    return activeAppId_;
 }
 
-int DaisyHostPatchAudioProcessor::GetDryWetPercent() const
+juce::String DaisyHostPatchAudioProcessor::GetActiveAppDisplayName() const
 {
-    return static_cast<int>(std::round(dryWetValue_.load() * 100.0f));
+    return core_ != nullptr ? juce::String(core_->GetAppDisplayName())
+                            : juce::String();
+}
+
+float DaisyHostPatchAudioProcessor::GetTopControlValue(std::size_t index) const
+{
+    return index < topControlValues_.size() ? topControlValues_[index].load() : 0.0f;
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetTopControlLabel(std::size_t index) const
+{
+    return "CTRL " + juce::String(static_cast<int>(index + 1));
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetTopControlDetailLabel(std::size_t index) const
+{
+    return index < activeBindings_.knobDetailLabels.size()
+               ? juce::String(activeBindings_.knobDetailLabels[index])
+               : juce::String();
+}
+
+std::string DaisyHostPatchAudioProcessor::GetTopControlId(std::size_t index) const
+{
+    return index < activeBindings_.knobControlIds.size()
+               ? activeBindings_.knobControlIds[index]
+               : std::string();
 }
 
 bool DaisyHostPatchAudioProcessor::GetEncoderPressed() const
@@ -464,23 +551,22 @@ bool DaisyHostPatchAudioProcessor::GetEncoderPressed() const
     return encoderPressed_.load();
 }
 
-void DaisyHostPatchAudioProcessor::SetKnobValue(std::size_t index,
-                                                float       normalizedValue)
+void DaisyHostPatchAudioProcessor::SetTopControlValue(std::size_t index,
+                                                      float       normalizedValue)
 {
-    if(index < knobValues_.size())
+    if(index < topControlValues_.size())
     {
-        knobValues_[index].store(Clamp01(normalizedValue));
+        topControlValues_[index].store(Clamp01(normalizedValue));
     }
-}
-
-void DaisyHostPatchAudioProcessor::SetDryWetValue(float normalizedValue)
-{
-    dryWetValue_.store(Clamp01(normalizedValue));
 }
 
 void DaisyHostPatchAudioProcessor::SetEncoderPressed(bool pressed)
 {
-    encoderPressed_.store(pressed);
+    const bool previous = encoderPressed_.exchange(pressed);
+    if(pressed && !previous)
+    {
+        pendingEncoderPressCount_.fetch_add(1);
+    }
 }
 
 float DaisyHostPatchAudioProcessor::GetCvValue(std::size_t index) const
@@ -494,6 +580,113 @@ void DaisyHostPatchAudioProcessor::SetCvValue(std::size_t index,
     if(index < cvValues_.size())
     {
         cvValues_[index].store(Clamp01(normalizedValue));
+        cvVoltages_[index].store(daisyhost::NormalizedToCvVolts(normalizedValue));
+        cvGeneratorStates_[index].manualVolts
+            = daisyhost::NormalizedToCvVolts(normalizedValue);
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetCvVoltage(std::size_t index) const
+{
+    return index < cvVoltages_.size() ? cvVoltages_[index].load() : 0.0f;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvManualVoltage(std::size_t index,
+                                                      float       volts)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        const float clamped = daisyhost::ClampCvVoltage(volts);
+        cvGeneratorStates_[index].manualVolts = clamped;
+        if(cvGeneratorStates_[index].mode == daisyhost::CvInputSourceMode::kManual)
+        {
+            cvVoltages_[index].store(clamped);
+            cvValues_[index].store(daisyhost::CvVoltsToNormalized(clamped));
+        }
+    }
+}
+
+int DaisyHostPatchAudioProcessor::GetCvSourceMode(std::size_t index) const
+{
+    return index < cvGeneratorStates_.size()
+               ? static_cast<int>(
+                     cvGeneratorStates_[index].mode
+                     == daisyhost::CvInputSourceMode::kGenerator)
+               : 0;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvSourceMode(std::size_t index, int mode)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        cvGeneratorStates_[index].mode = ClampCvMode(mode);
+        if(cvGeneratorStates_[index].mode == daisyhost::CvInputSourceMode::kManual)
+        {
+            SetCvManualVoltage(index, cvGeneratorStates_[index].manualVolts);
+        }
+    }
+}
+
+int DaisyHostPatchAudioProcessor::GetCvWaveform(std::size_t index) const
+{
+    return index < cvGeneratorStates_.size()
+               ? static_cast<int>(cvGeneratorStates_[index].waveform)
+               : 0;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvWaveform(std::size_t index, int waveform)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        cvGeneratorStates_[index].waveform
+            = static_cast<daisyhost::BasicWaveform>(
+                daisyhost::ClampBasicWaveform(waveform));
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetCvFrequencyHz(std::size_t index) const
+{
+    return index < cvGeneratorStates_.size() ? cvGeneratorStates_[index].frequencyHz
+                                             : 1.0f;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvFrequencyHz(std::size_t index,
+                                                    float       frequencyHz)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        cvGeneratorStates_[index].frequencyHz = std::clamp(frequencyHz, 0.01f, 20.0f);
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetCvAmplitudeVolts(std::size_t index) const
+{
+    return index < cvGeneratorStates_.size()
+               ? cvGeneratorStates_[index].amplitudeVolts
+               : 0.0f;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvAmplitudeVolts(std::size_t index,
+                                                       float       volts)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        cvGeneratorStates_[index].amplitudeVolts
+            = daisyhost::ClampCvVoltage(volts);
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetCvBiasVolts(std::size_t index) const
+{
+    return index < cvGeneratorStates_.size() ? cvGeneratorStates_[index].biasVolts
+                                             : 0.0f;
+}
+
+void DaisyHostPatchAudioProcessor::SetCvBiasVolts(std::size_t index, float volts)
+{
+    if(index < cvGeneratorStates_.size())
+    {
+        cvGeneratorStates_[index].biasVolts = daisyhost::ClampCvVoltage(volts);
     }
 }
 
@@ -561,6 +754,19 @@ daisyhost::DisplayModel DaisyHostPatchAudioProcessor::GetDisplayModelSnapshot() 
     return latestDisplay_;
 }
 
+daisyhost::MenuModel DaisyHostPatchAudioProcessor::GetMenuModelSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
+    return latestMenu_;
+}
+
+std::vector<daisyhost::ParameterDescriptor>
+DaisyHostPatchAudioProcessor::GetParameterSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
+    return latestParameters_;
+}
+
 juce::MidiKeyboardState& DaisyHostPatchAudioProcessor::GetVirtualKeyboardState()
 {
     return virtualKeyboardState_;
@@ -574,6 +780,10 @@ bool DaisyHostPatchAudioProcessor::GetComputerKeyboardEnabled() const
 void DaisyHostPatchAudioProcessor::SetComputerKeyboardEnabled(bool enabled)
 {
     computerKeyboardEnabled_.store(enabled);
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_["node0/menu/midi/computer_keys"] = enabled ? 1.0f : 0.0f;
+    }
     if(!enabled)
     {
         AllVirtualKeyboardNotesOff();
@@ -587,8 +797,13 @@ int DaisyHostPatchAudioProcessor::GetComputerKeyboardOctave() const
 
 void DaisyHostPatchAudioProcessor::SetComputerKeyboardOctave(int octave)
 {
-    computerKeyboardOctave_.store(
-        daisyhost::ComputerKeyboardMidi::ClampOctave(octave));
+    const int clamped = daisyhost::ComputerKeyboardMidi::ClampOctave(octave);
+    computerKeyboardOctave_.store(clamped);
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_["node0/menu/midi/octave"]
+            = static_cast<float>(std::clamp(clamped - 1, 0, 4)) / 4.0f;
+    }
 }
 
 void DaisyHostPatchAudioProcessor::SetVirtualKeyboardNote(int midiNote,
@@ -625,15 +840,13 @@ int DaisyHostPatchAudioProcessor::GetTestInputMode() const
 
 void DaisyHostPatchAudioProcessor::SetTestInputMode(int mode)
 {
-    if(mode < 0)
+    const int clamped = daisyhost::ClampTestInputSignalMode(mode);
+    testInputMode_.store(clamped);
     {
-        mode = 0;
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_["node0/menu/input/source"]
+            = daisyhost::TestInputSignalModeToNormalized(clamped);
     }
-    if(mode >= kNumTestInputModes)
-    {
-        mode = kNumTestInputModes - 1;
-    }
-    testInputMode_.store(mode);
 }
 
 float DaisyHostPatchAudioProcessor::GetTestInputLevel() const
@@ -643,24 +856,80 @@ float DaisyHostPatchAudioProcessor::GetTestInputLevel() const
 
 void DaisyHostPatchAudioProcessor::SetTestInputLevel(float level)
 {
-    testInputLevel_.store(Clamp01(level));
+    const float clamped = std::clamp(level, 0.0f, 10.0f);
+    testInputLevel_.store(clamped);
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_["node0/menu/input/level"] = Clamp01(clamped / 10.0f);
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetTestInputFrequencyHz() const
+{
+    return testInputFrequencyHz_.load();
+}
+
+void DaisyHostPatchAudioProcessor::SetTestInputFrequencyHz(float frequencyHz)
+{
+    testInputFrequencyHz_.store(std::clamp(frequencyHz, 20.0f, 5000.0f));
 }
 
 void DaisyHostPatchAudioProcessor::TriggerImpulse()
 {
     impulseRequested_.store(true);
+    std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+    pendingMenuValues_["node0/menu/input/fire_impulse"] = 1.0f;
 }
 
 juce::String DaisyHostPatchAudioProcessor::GetTestInputModeName(int mode) const
 {
-    switch(mode)
+    return daisyhost::GetTestInputSignalModeName(mode);
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetVersionText() const
+{
+    return daisyhost::GetVersionInfo().version;
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetBuildIdentityText() const
+{
+    return daisyhost::GetVersionInfo().buildIdentity;
+}
+
+juce::StringArray DaisyHostPatchAudioProcessor::GetReleaseHighlightLines() const
+{
+    juce::StringArray lines;
+    for(const auto& line : daisyhost::GetVersionInfo().releaseHighlights)
     {
-        case kHostInput: return "Host In";
-        case kSineInput: return "Sine";
-        case kNoiseInput: return "Noise";
-        case kImpulseInput: return "Impulse";
-        default: return "Unknown";
+        lines.add(line);
     }
+    return lines;
+}
+
+bool DaisyHostPatchAudioProcessor::IsStandaloneWrapper() const
+{
+    return wrapperType == juce::AudioProcessor::wrapperType_Standalone;
+}
+
+void DaisyHostPatchAudioProcessor::RotateEncoder(int delta)
+{
+    if(delta != 0)
+    {
+        pendingEncoderDelta_.fetch_add(delta);
+    }
+}
+
+void DaisyHostPatchAudioProcessor::PulseEncoderPress()
+{
+    pendingEncoderPressCount_.fetch_add(1);
+    encoderPressed_.store(true);
+}
+
+void DaisyHostPatchAudioProcessor::SetMenuItemValue(const std::string& itemId,
+                                                    float normalizedValue)
+{
+    std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+    pendingMenuValues_[itemId] = Clamp01(normalizedValue);
 }
 
 void DaisyHostPatchAudioProcessor::BeginMidiLearn(const std::string& controlId)
@@ -711,35 +980,73 @@ float DaisyHostPatchAudioProcessor::Clamp01(float value) const
 
 void DaisyHostPatchAudioProcessor::ApplyControlStateToCore()
 {
-    for(std::size_t i = 0; i < knobIds_.size(); ++i)
+    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
     {
-        const float effectiveValue
-            = Clamp01(knobValues_[i].load() + (cvValues_[i].load() - 0.5f));
-        core_.SetControl(knobIds_[i], effectiveValue);
+        if(!activeBindings_.knobControlIds[i].empty())
+        {
+            core_->SetControl(activeBindings_.knobControlIds[i],
+                              Clamp01(topControlValues_[i].load()));
+        }
     }
-    core_.SetControl(dryWetId_, dryWetValue_.load());
-    core_.SetControl(encoderButtonId_, encoderPressed_.load() ? 1.0f : 0.0f);
+}
+
+void DaisyHostPatchAudioProcessor::ApplyPendingMenuInteractionsToCore()
+{
+    const int encoderDelta = pendingEncoderDelta_.exchange(0);
+    if(encoderDelta != 0)
+    {
+        core_->MenuRotate(encoderDelta);
+    }
+
+    int pressCount = pendingEncoderPressCount_.exchange(0);
+    while(pressCount-- > 0)
+    {
+        core_->MenuPress();
+    }
+    if(encoderPressed_.load())
+    {
+        encoderPressed_.store(false);
+    }
+
+    std::unordered_map<std::string, float> pendingValues;
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingValues.swap(pendingMenuValues_);
+    }
+
+    for(const auto& entry : pendingValues)
+    {
+        core_->SetMenuItemValue(entry.first, entry.second);
+    }
 }
 
 void DaisyHostPatchAudioProcessor::ApplyVirtualPortStateToCore(
     const std::vector<daisyhost::MidiMessageEvent>& midiEvents)
 {
-    for(std::size_t i = 0; i < cvPortIds_.size(); ++i)
+    for(std::size_t i = 0; i < activeBindings_.cvInputPortIds.size(); ++i)
     {
+        if(activeBindings_.cvInputPortIds[i].empty())
+        {
+            continue;
+        }
         daisyhost::PortValue value;
         value.type   = daisyhost::VirtualPortType::kCv;
         value.scalar = cvValues_[i].load();
-        core_.SetPortInput(cvPortIds_[i], value);
+        core_->SetPortInput(activeBindings_.cvInputPortIds[i], value);
     }
 
-    for(std::size_t i = 0; i < gatePortIds_.size(); ++i)
+    for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
     {
+        if(activeBindings_.gateInputPortIds[i].empty())
+        {
+            continue;
+        }
         const bool gateState = gateValues_[i].load();
 
         daisyhost::PortValue value;
         value.type = daisyhost::VirtualPortType::kGate;
         value.gate = gateState;
-        core_.SetPortInput(gatePortIds_[i], value);
+        core_->SetPortInput(activeBindings_.gateInputPortIds[i], value);
 
         if(i == 0 && gateState && !previousGateValues_[i])
         {
@@ -751,7 +1058,10 @@ void DaisyHostPatchAudioProcessor::ApplyVirtualPortStateToCore(
     daisyhost::PortValue midiValue;
     midiValue.type       = daisyhost::VirtualPortType::kMidi;
     midiValue.midiEvents = midiEvents;
-    core_.SetPortInput(midiInputPortId_, midiValue);
+    if(!activeBindings_.midiInputPortId.empty())
+    {
+        core_->SetPortInput(activeBindings_.midiInputPortId, midiValue);
+    }
 
     if(!midiEvents.empty())
     {
@@ -759,43 +1069,153 @@ void DaisyHostPatchAudioProcessor::ApplyVirtualPortStateToCore(
     }
 }
 
+void DaisyHostPatchAudioProcessor::UpdateCvGeneratorOutputs(
+    double blockDurationSeconds)
+{
+    for(std::size_t i = 0; i < cvGeneratorStates_.size(); ++i)
+    {
+        const float volts
+            = daisyhost::StepCvInputGenerator(&cvGeneratorStates_[i],
+                                              blockDurationSeconds);
+        cvVoltages_[i].store(volts);
+        cvValues_[i].store(daisyhost::CvVoltsToNormalized(volts));
+    }
+}
+
 void DaisyHostPatchAudioProcessor::UpdateDisplaySnapshot()
 {
     std::lock_guard<std::mutex> lock(displayMutex_);
-    latestDisplay_ = core_.GetDisplayModel();
+    latestDisplay_ = core_->GetDisplayModel();
+}
+
+void DaisyHostPatchAudioProcessor::ApplyCanonicalSessionStateToCore()
+{
+    core_->ResetToDefaultState(appRandomSeed_);
+    if(!restoredParameterValues_.empty())
+    {
+        core_->RestoreStatefulParameterValues(restoredParameterValues_);
+    }
+    SyncHostStateFromCore();
+    UpdateCoreSnapshots();
+}
+
+void DaisyHostPatchAudioProcessor::SyncHostStateFromCore()
+{
+    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
+    {
+        if(activeBindings_.knobControlIds[i].empty())
+        {
+            continue;
+        }
+        const auto value = core_->GetControlValue(activeBindings_.knobControlIds[i]);
+        if(value.hasValue)
+        {
+            topControlValues_[i].store(Clamp01(value.value));
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessor::UpdateCoreSnapshots()
+{
+    UpdateDisplaySnapshot();
+
+    {
+        std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
+        latestMenu_       = core_->GetMenuModel();
+        latestParameters_ = core_->GetParameters();
+    }
 }
 
 void DaisyHostPatchAudioProcessor::LoadSession(
     const daisyhost::HostSessionState& state)
 {
-    for(std::size_t i = 0; i < knobIds_.size(); ++i)
+    const std::string requestedAppId = state.appId.empty()
+                                           ? daisyhost::GetDefaultHostedAppId()
+                                           : state.appId;
+    RecreateHostedApp(requestedAppId);
+    appRandomSeed_          = state.randomSeed;
+    restoredParameterValues_ = state.parameterValues;
+    ApplyCanonicalSessionStateToCore();
+
+    const bool hasCanonicalParameterState = !state.parameterValues.empty();
+
+    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
     {
-        const auto controlIt = state.controlValues.find(knobIds_[i]);
-        if(controlIt != state.controlValues.end())
+        if(!hasCanonicalParameterState)
         {
-            knobValues_[i].store(Clamp01(controlIt->second));
+            const auto controlIt
+                = state.controlValues.find(activeBindings_.knobControlIds[i]);
+            if(!activeBindings_.knobControlIds[i].empty()
+               && controlIt != state.controlValues.end())
+            {
+                topControlValues_[i].store(Clamp01(controlIt->second));
+            }
         }
 
-        const auto cvIt = state.cvValues.find(cvPortIds_[i]);
-        if(cvIt != state.cvValues.end())
+        const auto cvIt = state.cvValues.find(activeBindings_.cvInputPortIds[i]);
+        if(!activeBindings_.cvInputPortIds[i].empty()
+           && cvIt != state.cvValues.end())
         {
             cvValues_[i].store(Clamp01(cvIt->second));
+            cvVoltages_[i].store(daisyhost::NormalizedToCvVolts(cvIt->second));
+            cvGeneratorStates_[i].manualVolts
+                = daisyhost::NormalizedToCvVolts(cvIt->second);
+        }
+
+        if(const auto it = state.controlValues.find(MakeCvHostStateId(i, "mode"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].mode
+                = ClampCvMode(static_cast<int>(std::round(it->second)));
+        }
+        if(const auto it
+           = state.controlValues.find(MakeCvHostStateId(i, "waveform"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].waveform
+                = static_cast<daisyhost::BasicWaveform>(
+                    daisyhost::ClampBasicWaveform(
+                        static_cast<int>(std::round(it->second))));
+        }
+        if(const auto it
+           = state.controlValues.find(MakeCvHostStateId(i, "frequency_hz"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].frequencyHz
+                = std::clamp(it->second, 0.01f, 20.0f);
+        }
+        if(const auto it
+           = state.controlValues.find(MakeCvHostStateId(i, "amplitude_volts"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].amplitudeVolts
+                = daisyhost::ClampCvVoltage(it->second);
+        }
+        if(const auto it
+           = state.controlValues.find(MakeCvHostStateId(i, "bias_volts"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].biasVolts
+                = daisyhost::ClampCvVoltage(it->second);
+        }
+        if(const auto it
+           = state.controlValues.find(MakeCvHostStateId(i, "manual_volts"));
+           it != state.controlValues.end())
+        {
+            cvGeneratorStates_[i].manualVolts
+                = daisyhost::ClampCvVoltage(it->second);
         }
     }
 
-    for(std::size_t i = 0; i < gatePortIds_.size(); ++i)
+    for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
     {
-        const auto gateIt = state.gateValues.find(gatePortIds_[i]);
-        if(gateIt != state.gateValues.end())
+        const auto gateIt
+            = state.gateValues.find(activeBindings_.gateInputPortIds[i]);
+        if(!activeBindings_.gateInputPortIds[i].empty()
+           && gateIt != state.gateValues.end())
         {
             gateValues_[i].store(gateIt->second);
         }
-    }
-
-    const auto dryWetIt = state.controlValues.find(dryWetId_);
-    if(dryWetIt != state.controlValues.end())
-    {
-        dryWetValue_.store(Clamp01(dryWetIt->second));
     }
 
     const auto keyboardEnabledIt
@@ -823,7 +1243,15 @@ void DaisyHostPatchAudioProcessor::LoadSession(
     const auto testLevelIt = state.controlValues.find(testInputLevelStateId_);
     if(testLevelIt != state.controlValues.end())
     {
-        SetTestInputLevel(testLevelIt->second);
+        SetTestInputLevel(testLevelIt->second <= 1.0f ? testLevelIt->second * 10.0f
+                                                      : testLevelIt->second);
+    }
+
+    const auto testFrequencyIt
+        = state.controlValues.find(testInputFrequencyStateId_);
+    if(testFrequencyIt != state.controlValues.end())
+    {
+        SetTestInputFrequencyHz(testFrequencyIt->second);
     }
 
     {
@@ -831,52 +1259,70 @@ void DaisyHostPatchAudioProcessor::LoadSession(
         midiLearnMap_ = state.midiLearn;
         learningTargetId_.clear();
     }
+
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_.clear();
+    }
+
+    UpdateCvGeneratorOutputs(0.0);
+
+    if(!hasCanonicalParameterState)
+    {
+        ApplyControlStateToCore();
+        UpdateCoreSnapshots();
+    }
+}
+
+bool DaisyHostPatchAudioProcessor::RecreateHostedApp(
+    const std::string& requestedAppId)
+{
+    std::string resolvedAppId;
+    auto newCore = daisyhost::CreateHostedAppCore(
+        requestedAppId, boardProfile_.nodeId, &resolvedAppId);
+    if(newCore == nullptr)
+    {
+        return false;
+    }
+
+    core_         = std::move(newCore);
+    activeAppId_  = resolvedAppId;
+    activeBindings_ = core_->GetPatchBindings();
+
+    if(currentSampleRate_ > 1.0 && currentBlockSize_ > 0)
+    {
+        core_->Prepare(currentSampleRate_, currentBlockSize_);
+    }
+
+    return true;
+}
+
+bool DaisyHostPatchAudioProcessor::SetActiveAppId(const std::string& requestedAppId)
+{
+    if(!RecreateHostedApp(requestedAppId))
+    {
+        return false;
+    }
+
+    restoredParameterValues_.clear();
+    appRandomSeed_ = 0;
+    ApplyCanonicalSessionStateToCore();
+    return true;
 }
 
 void DaisyHostPatchAudioProcessor::GenerateTestInput(float* destination,
                                                      int    numSamples)
 {
-    std::fill(destination, destination + numSamples, 0.0f);
-
-    const float level = testInputLevel_.load();
-    switch(testInputMode_.load())
-    {
-        case kHostInput: break;
-
-        case kSineInput:
-        {
-            const float phaseIncrement
-                = static_cast<float>((juce::MathConstants<double>::twoPi * 220.0)
-                                     / getSampleRate());
-            for(int sample = 0; sample < numSamples; ++sample)
-            {
-                destination[sample] = std::sin(testPhase_) * level;
-                testPhase_ += phaseIncrement;
-                if(testPhase_ > juce::MathConstants<float>::twoPi)
-                {
-                    testPhase_ -= juce::MathConstants<float>::twoPi;
-                }
-            }
-            break;
-        }
-
-        case kNoiseInput:
-            for(int sample = 0; sample < numSamples; ++sample)
-            {
-                destination[sample]
-                    = (noise_.nextFloat() * 2.0f - 1.0f) * level;
-            }
-            break;
-
-        case kImpulseInput:
-            if(impulseRequested_.exchange(false))
-            {
-                destination[0] = level;
-            }
-            break;
-
-        default: break;
-    }
+    bool impulseState = impulseRequested_.exchange(false);
+    daisyhost::GenerateSyntheticTestInput(testInputMode_.load(),
+                                          Clamp01(testInputLevel_.load() / 10.0f),
+                                          testInputFrequencyHz_.load(),
+                                          getSampleRate(),
+                                          &testPhase_,
+                                          &noiseState_,
+                                          &impulseState,
+                                          destination,
+                                          numSamples);
 }
 
 void DaisyHostPatchAudioProcessor::RefreshMidiInputStatus()

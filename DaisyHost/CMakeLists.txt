@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(DaisyHost VERSION 0.1.0 LANGUAGES CXX)
+project(DaisyHost VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,6 +30,7 @@ FetchContent_MakeAvailable(juce googletest)
 enable_testing()
 
 add_library(daisyhost_core STATIC
+    src/AppRegistry.cpp
     src/BoardProfile.cpp
     src/ComputerKeyboardMidi.cpp
     src/HostSessionState.cpp
@@ -37,7 +38,12 @@ add_library(daisyhost_core STATIC
     src/MidiEventTracker.cpp
     src/MidiNotePreview.cpp
     src/MidiLearnMap.cpp
+    src/SignalGenerator.cpp
+    src/StandaloneUiPolicy.cpp
+    src/TestInputSignal.cpp
+    src/VersionInfo.cpp
     src/apps/MultiDelayCore.cpp
+    src/apps/TorusCore.cpp
 )
 
 target_include_directories(daisyhost_core
@@ -48,9 +54,16 @@ target_include_directories(daisyhost_core
 
 target_compile_features(daisyhost_core PUBLIC cxx_std_17)
 
+target_compile_definitions(daisyhost_core
+    PUBLIC
+        DAISYHOST_VERSION="${PROJECT_VERSION}"
+        DAISYHOST_BUILD_IDENTITY="DaisyHost ${PROJECT_VERSION}"
+)
+
 juce_add_plugin(DaisyHostPatch
     COMPANY_NAME Antigravity
     BUNDLE_ID com.antigravity.daisyhost.patch
+    ICON_SMALL "${PROJECT_SOURCE_DIR}/assets/daisyhost-icon-compact.png"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
@@ -88,6 +101,7 @@ target_link_libraries(DaisyHostPatch
 )
 
 add_executable(unit_tests
+    tests/test_app_registry.cpp
     tests/test_board_profile.cpp
     tests/test_computer_keyboard_midi.cpp
     tests/test_midi_event_tracker.cpp
@@ -95,6 +109,12 @@ add_executable(unit_tests
     tests/test_host_startup_policy.cpp
     tests/test_midi_note_preview.cpp
     tests/test_multidelay_core.cpp
+    tests/test_parameter_parity.cpp
+    tests/test_signal_generator.cpp
+    tests/test_standalone_ui_policy.cpp
+    tests/test_test_input_signal.cpp
+    tests/test_torus_core.cpp
+    tests/test_version_info.cpp
 )
 
 target_link_libraries(unit_tests

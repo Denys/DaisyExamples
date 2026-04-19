@@ -34,6 +34,11 @@ Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
 7. If the task changes control architecture, project scaffolding, or Daisy coding
    patterns, consult `DAISY_QAE/DAISY_DEVELOPMENT_STANDARDS.md` and related QAE
    docs before inventing a new workflow.
+8. If current repo state, cross-project strategy, or recent architecture context
+   is still unclear after local docs, consult DaisyBrain using
+   `docs/notebooklm/README.md` and the layered context pack under
+   `docs/notebooklm/context/`. Treat DaisyBrain as a strategic memory edge, not
+   a substitute for local source-of-truth docs.
 
 ## Repo Map
 
@@ -48,6 +53,9 @@ Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
   `validate_daisy_code.py`, standards, bug logs, and scaffolding references.
 - `docs/plans/`: dated implementation/design notes that often capture recent
   project intent.
+- `DaisyHost/`: host-side JUCE/CMake workspace for the virtual Daisy Patch
+  plugin and standalone app. Treat it as a first-party project with its own
+  local `README.md`, `AGENTS.md`, `CHECKPOINT.md`, and `CHANGELOG.md`.
 - `DaisyDAFX/`: canonical library-style workspace with its own CMake, CTest,
   and Doxygen reference flow. Do not assume the default Make-based firmware
   workflow there.
@@ -60,6 +68,7 @@ These roots are first-party work areas and must be considered before narrowing
 attention to a smaller recent-project list:
 
 - `DaisyDAFX/`
+- `DaisyHost/`
 - `pedal/`
 - `DAISY_QAE/`
 - `MyProjects/_projects/`
@@ -132,6 +141,25 @@ ctest --test-dir DaisyDAFX/build -C Release --output-on-failure
 If the task involves its generated API reference, use the local rebuild helper
 from `DaisyDAFX/util/` rather than inventing a new doc flow.
 
+### DaisyHost validation
+
+`DaisyHost/` is a host-side JUCE/CMake workflow. When `DaisyHost/` changes,
+prefer:
+
+```sh
+cmake -S DaisyHost -B DaisyHost/build
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+ctest --test-dir DaisyHost/build -C Release --output-on-failure
+```
+
+When the Patch firmware adapter changes, also rebuild:
+
+```sh
+make
+```
+
+from `patch/MultiDelay/`.
+
 ### Repo-wide example validation
 
 For broad validation of upstream board examples only:
@@ -202,8 +230,14 @@ or `docs/plans/`.
 - Verify the smallest relevant target first.
 - Treat host-side or CMake-based subprojects as exceptions; inspect their local
   docs before assuming embedded Make rules.
+- For `DaisyHost/`, read the local `README.md`, `AGENTS.md`, `CHECKPOINT.md`,
+  and `CHANGELOG.md` before editing. The workspace is parallelized; respect the
+  local ownership slices when multiple agents are active.
 - For `DaisyDAFX/`, prefer the root library copy over
   `MyProjects/DAFX_2_Daisy_lib/`, and treat the `MyProjects` copy as archival or
   compatibility-only unless the user explicitly asks to update it.
+- Use DaisyBrain when you need repo-wide memory, strategy recall, or a quick
+  synthesis across multiple workspaces, but always confirm actionable details
+  against the nearest repo/local docs before editing.
 - If hardware validation is needed but unavailable, state that the result is
   build-verified only.

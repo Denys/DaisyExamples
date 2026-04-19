@@ -6,16 +6,8 @@ int ResolveStartupTestInputMode(bool isStandalone,
                                 bool hasSavedTestInputMode,
                                 int  currentMode)
 {
+    (void) isStandalone;
     (void) hasSavedTestInputMode;
-
-    constexpr int kHostInput = 0;
-    constexpr int kSineInput = 1;
-
-    if(isStandalone && currentMode == kHostInput)
-    {
-        return kSineInput;
-    }
-
     return currentMode;
 }
 } // namespace daisyhost

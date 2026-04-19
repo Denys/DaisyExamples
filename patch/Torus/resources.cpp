@@ -33,6 +33,8 @@
 #define PI_F 3.1415927410125732421875f
 #define TWOPI_F (2.0f * PI_F)
 
+#include <cmath>
+
 #include "resources.h"
 
 namespace torus
@@ -43,14 +45,14 @@ void InitResources()
     for(int i = 0; i < LUT_SINE_SIZE; i++)
     {
         float t     = (float)i / 4096.f * TWOPI_F;
-        lut_sine[i] = sin(t);
+        lut_sine[i] = std::sin(t);
     }
 }
 
-const int16_t* lookup_table_int16_table[] = {};
+const int16_t* lookup_table_int16_table[1] = {nullptr};
 
 
-const uint32_t* lookup_table_uint32_table[] = {};
+const uint32_t* lookup_table_uint32_table[1] = {nullptr};
 
 float lut_sine[LUT_SINE_SIZE];
 

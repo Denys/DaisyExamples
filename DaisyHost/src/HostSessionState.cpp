@@ -25,12 +25,23 @@ std::vector<typename MapType::key_type> SortedKeys(const MapType& map)
 std::string HostSessionState::Serialize() const
 {
     std::ostringstream stream;
-    stream << "version 1\n";
+    stream << "version 3\n";
+
+    if(!appId.empty())
+    {
+        stream << "app " << appId << '\n';
+    }
 
     const auto controlKeys = SortedKeys(controlValues);
     for(const auto& key : controlKeys)
     {
         stream << "control " << key << ' ' << controlValues.at(key) << '\n';
+    }
+
+    const auto parameterKeys = SortedKeys(parameterValues);
+    for(const auto& key : parameterKeys)
+    {
+        stream << "param " << key << ' ' << parameterValues.at(key) << '\n';
     }
 
     const auto cvKeys = SortedKeys(cvValues);
@@ -45,6 +56,7 @@ std::string HostSessionState::Serialize() const
         stream << "gate " << key << ' ' << (gateValues.at(key) ? 1 : 0) << '\n';
     }
 
+    stream << "seed " << randomSeed << '\n';
     stream << midiLearn.Serialize();
     return stream.str();
 }
@@ -75,6 +87,27 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
             continue;
         }
 
+        if(tag == "app")
+        {
+            std::string id;
+            if(stream >> id)
+            {
+                state.appId = id;
+            }
+            continue;
+        }
+
+        if(tag == "param")
+        {
+            std::string id;
+            float       value = 0.0f;
+            if(stream >> id >> value)
+            {
+                state.parameterValues[id] = value;
+            }
+            continue;
+        }
+
         if(tag == "cv")
         {
             std::string id;
@@ -93,6 +126,16 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
             if(stream >> id >> value)
             {
                 state.gateValues[id] = value != 0;
+            }
+            continue;
+        }
+
+        if(tag == "seed")
+        {
+            std::uint32_t value = 0;
+            if(stream >> value)
+            {
+                state.randomSeed = value;
             }
             continue;
         }

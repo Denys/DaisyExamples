@@ -19,8 +19,8 @@ recent project's verification/documentation status changes materially.
 
 ## Refresh Policy
 
-- Always consider pinned workspace roots first: `DaisyDAFX/`, `pedal/`,
-  `DAISY_QAE/`, `MyProjects/DAFX_2_Daisy_lib/`, and `MyProjects/_projects/`.
+- Always consider pinned workspace roots first: `DaisyDAFX/`, `DaisyHost/`,
+  `pedal/`, `DAISY_QAE/`, and `MyProjects/_projects/`.
 - Do not infer "recent" from one subtree only.
 - Rank recency from file-level changes, not directory mtimes.
 - Ignore generated trees such as `build/`, `dist/`, `.worktrees/`, `.tmp/`, and
@@ -34,6 +34,7 @@ recent project's verification/documentation status changes materially.
 |---------|-------|-----------------|----------------|-------------|
 | `field/CloudSeed/` | Field | 2026-04-18 | `README.md` | New Field-first CloudSeed example using the real imported `third_party/CloudSeedCore` engine instead of the earlier Seed fallback bridge. Build-verified with the controller object placed in SDRAM; current memory headroom is tight on SDRAM but links cleanly. |
 | `field/GranularSynth/` | Field | 2026-04-18 | `README.md` | New Field granular-style synth voice built on `GrainletOscillator`. Build-verified after enabling the DaisySP LGPL path required by its `ReverbSc` layer. |
+| `DaisyHost/` | Host-side Daisy Patch workspace | 2026-04-18 | `README.md`, `AGENTS.md`, `CHECKPOINT.md`, `CHANGELOG.md` | First-party JUCE/CMake workspace for the DaisyHost Patch plugin and standalone app. Current source version is `0.2.0`; host validation passed with `23/23` tests, both `DaisyHost Patch.vst3` and `DaisyHost Patch.exe` rebuilt successfully, and `patch/MultiDelay` clean-rebuilt against the shared `MultiDelayCore`. Remaining manual gap is a DAW-side VST3 load pass; use the local docs before editing because this workspace is intended for parallel agent work. |
 | `pedal/` | DaisyPedal workspace | 2026-04-18 | `README.md`, child project `README.md` files under `PassthruBypass/`, `NoiseGate/`, `PitchDrop/`, `PolyOctave/` | Fundamental first-party workspace. Phase-1 native integration now includes a `DaisyPedal` board helper in `libDaisy`, a `DaisyPedal` sublibrary in `DaisySP`, helper scaffolding via `py -3 helper.py create --board pedal`, build-verified `pedal/` examples, and a checked-in Doxygen pipeline targeting `docs/daisypedal_reference.pdf`. |
 | `DaisyDAFX/` | Library workspace | 2026-04-18 | `README.md`, `CHECKPOINT.md`, `docs/verification_matrix.md`, `docs/candidate_review.md`, `docs/daisydafx_reference.pdf`, `AGENTS.md` | Fundamental first-party workspace. Canonical DAFX library root beside `DaisySP` and `libDaisy`; prefer it over `MyProjects/DAFX_2_Daisy_lib`. Latest completed pass canonicalized naming, corrected `WahWah` manual-wah semantics, strengthened host-side regressions to `244/244` passing tests, and generated `docs/daisydafx_reference.pdf`. The latest verified state currently lives in the isolated worktree branch `codex/daisydafx-canonicalization` under `C:\\Users\\denko\\.codex\\worktrees\\dafxcanon` until merged back into the main checkout. Ignore `build/` when judging recency. |
 | `MyProjects/_projects/Seed_CloudSeedCoreBridge/` | Seed | 2026-04-18 | `README.md`, `CLOUDSEED_BLOCK_DIAGRAM.md`, `CLOUDSEED_BLOCK_DIAGRAM.html`, `CLOUDSEED_PARAMETER_BREAKDOWN_BKS.md`, `CLOUDSEED_SOURCE_TAXONOMY_BKS.md` | Bridge/scaffolding state for future CloudSeedCore integration. External CloudSeedCore import is still pending. No local `CHECKPOINT.md` was found. The README currently contains unresolved merge markers near the diagram-reference section, so cross-check the companion docs directly. |

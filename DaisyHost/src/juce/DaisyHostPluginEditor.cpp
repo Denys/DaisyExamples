@@ -1,34 +1,67 @@
 #include "DaisyHostPluginEditor.h"
 
 #include <algorithm>
+#include <cmath>
 
+#include "daisyhost/AppRegistry.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
+#include "daisyhost/StandaloneUiPolicy.h"
 
 namespace
 {
 juce::Colour BackgroundColour()
 {
-    return juce::Colour::fromRGB(25, 27, 30);
+    return juce::Colour::fromRGB(20, 23, 27);
 }
 
-juce::Colour PanelColour()
+juce::Colour PatchPanelColour()
 {
-    return juce::Colour::fromRGB(68, 72, 78);
+    return juce::Colour::fromRGB(108, 116, 128);
 }
 
-juce::Colour HostToolsColour()
+juce::Colour PatchPanelShadow()
 {
-    return juce::Colour::fromRGB(40, 43, 48);
+    return juce::Colour::fromRGB(63, 69, 77);
+}
+
+juce::Colour DrawerColour()
+{
+    return juce::Colour::fromRGB(49, 55, 62);
+}
+
+juce::Colour DrawerInsetColour()
+{
+    return juce::Colour::fromRGB(36, 40, 45);
 }
 
 juce::Colour AccentColour()
 {
-    return juce::Colour::fromRGB(236, 146, 37);
+    return juce::Colour::fromRGB(235, 154, 56);
+}
+
+juce::Colour CreamColour()
+{
+    return juce::Colour::fromRGB(243, 242, 236);
+}
+
+juce::Colour InkColour()
+{
+    return juce::Colour::fromRGB(25, 28, 34);
+}
+
+juce::Colour TraceColour()
+{
+    return juce::Colour::fromRGB(224, 229, 234);
 }
 
 juce::Colour TextColour()
 {
-    return juce::Colour::fromRGB(245, 245, 245);
+    return juce::Colour::fromRGB(249, 249, 246);
+}
+
+juce::Colour MutedTextColour()
+{
+    return juce::Colour::fromRGB(214, 218, 222);
 }
 
 juce::Colour PortColour(daisyhost::VirtualPortType type)
@@ -36,15 +69,34 @@ juce::Colour PortColour(daisyhost::VirtualPortType type)
     switch(type)
     {
         case daisyhost::VirtualPortType::kAudio:
-            return juce::Colour::fromRGB(83, 193, 201);
+            return juce::Colour::fromRGB(92, 208, 218);
         case daisyhost::VirtualPortType::kCv:
-            return juce::Colour::fromRGB(90, 173, 255);
+            return juce::Colour::fromRGB(104, 182, 255);
         case daisyhost::VirtualPortType::kGate:
-            return juce::Colour::fromRGB(234, 220, 124);
+            return juce::Colour::fromRGB(239, 226, 128);
         case daisyhost::VirtualPortType::kMidi:
-            return juce::Colour::fromRGB(236, 146, 37);
+            return AccentColour();
         default: return AccentColour();
     }
+}
+
+juce::Font TitleFont(float size)
+{
+    return juce::Font(juce::FontOptions(size, juce::Font::bold));
+}
+
+juce::Font BodyFont(float size)
+{
+    return juce::Font(juce::FontOptions(size));
+}
+
+juce::Rectangle<float> SquareInside(const juce::Rectangle<float>& area, float scale = 1.0f)
+{
+    const float side = std::min(area.getWidth(), area.getHeight()) * scale;
+    return {area.getCentreX() - side * 0.5f,
+            area.getCentreY() - side * 0.5f,
+            side,
+            side};
 }
 
 int OneBasedIndexFromLabel(const std::string& label)
@@ -59,14 +111,53 @@ int OneBasedIndexFromLabel(const std::string& label)
     return 0;
 }
 
-juce::Font TitleFont(float size)
+daisyhost::UiRect ToUiRect(const juce::Rectangle<int>& rect)
 {
-    return juce::Font(juce::FontOptions(size, juce::Font::bold));
+    return {rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight()};
 }
 
-juce::Font BodyFont(float size)
+juce::Rectangle<int> ToJuceRect(const daisyhost::UiRect& rect)
 {
-    return juce::Font(juce::FontOptions(size));
+    return {rect.x, rect.y, rect.width, rect.height};
+}
+
+void DrawDaisyHostBadge(juce::Graphics& g,
+                        const juce::Rectangle<float>& area,
+                        bool compact)
+{
+    const auto center = area.getCentre();
+    const float petalRadius = compact ? 7.0f : 9.0f;
+    const float orbit       = compact ? 12.0f : 15.0f;
+
+    g.setColour(CreamColour().withAlpha(0.95f));
+    for(int i = 0; i < 8; ++i)
+    {
+        const float angle = juce::MathConstants<float>::twoPi
+                            * static_cast<float>(i) / 8.0f;
+        g.fillEllipse(center.x + std::cos(angle) * orbit - petalRadius,
+                      center.y + std::sin(angle) * orbit - petalRadius,
+                      petalRadius * 2.0f,
+                      petalRadius * 2.0f);
+    }
+
+    g.setColour(AccentColour());
+    g.fillEllipse(center.x - (compact ? 8.0f : 10.0f),
+                  center.y - (compact ? 8.0f : 10.0f),
+                  compact ? 16.0f : 20.0f,
+                  compact ? 16.0f : 20.0f);
+
+    auto iconArea     = area;
+    const auto module = iconArea.removeFromBottom(compact ? 18.0f : 28.0f)
+                            .reduced(compact ? 12.0f : 20.0f, 0.0f);
+    g.setColour(InkColour().withAlpha(0.90f));
+    g.fillRoundedRectangle(module, 6.0f);
+    g.setColour(CreamColour().withAlpha(0.75f));
+    g.drawRoundedRectangle(module, 6.0f, 1.2f);
+    g.drawLine(module.getX() + 10.0f,
+               module.getCentreY(),
+               module.getRight() - 10.0f,
+               module.getCentreY(),
+               1.2f);
 }
 } // namespace
 
@@ -79,24 +170,12 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
 {
     setOpaque(true);
     setWantsKeyboardFocus(true);
-    setSize(1220, 760);
+    setSize(1360, 860);
     addKeyListener(this);
 
-    for(std::size_t i = 0; i < knobs_.size(); ++i)
-    {
-        ConfigureControl(knobs_[i],
-                         "CTRL " + juce::String(static_cast<int>(i + 1)),
-                         processor_.GetBoardProfile().controls[i].id);
-        ConfigureMouseFriendlySlider(knobs_[i].slider, 0.0);
-        addAndMakeVisible(knobs_[i].slider);
-        addAndMakeVisible(knobs_[i].label);
-        addAndMakeVisible(knobs_[i].learnButton);
-        RegisterKeyboardSource(knobs_[i].slider);
-        RegisterKeyboardSource(knobs_[i].learnButton);
-    }
-
-    ConfigureControl(dryWet_, "DRY/WET", processor_.GetBoardProfile().controls[4].id);
-    dryWet_.controlId = daisyhost::apps::MultiDelayCore::MakeDryWetControlId("node0");
+    ConfigureControl(dryWet_,
+                     processor_.GetTopControlLabel(0),
+                     processor_.GetTopControlId(0));
     ConfigureMouseFriendlySlider(dryWet_.slider, 0.5);
     addAndMakeVisible(dryWet_.slider);
     addAndMakeVisible(dryWet_.label);
@@ -104,9 +183,41 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     RegisterKeyboardSource(dryWet_.slider);
     RegisterKeyboardSource(dryWet_.learnButton);
 
-    encoderPressButton_.setButtonText("Push");
-    encoderPressButton_.setClickingTogglesState(true);
+    ConfigureControl(knobs_[0],
+                     processor_.GetTopControlLabel(1),
+                     processor_.GetTopControlId(1));
+    ConfigureControl(knobs_[1],
+                     processor_.GetTopControlLabel(2),
+                     processor_.GetTopControlId(2));
+    ConfigureControl(knobs_[2],
+                     processor_.GetTopControlLabel(3),
+                     processor_.GetTopControlId(3));
+    ConfigureControl(knobs_[3],
+                     "UNUSED",
+                     "");
+
+    for(auto& control : knobs_)
+    {
+        ConfigureMouseFriendlySlider(control.slider, 0.0);
+        addAndMakeVisible(control.slider);
+        addAndMakeVisible(control.label);
+        addAndMakeVisible(control.learnButton);
+        RegisterKeyboardSource(control.slider);
+        RegisterKeyboardSource(control.learnButton);
+    }
+
+    knobs_[3].slider.setVisible(false);
+    knobs_[3].label.setVisible(false);
+    knobs_[3].learnButton.setVisible(false);
+
+    encoderPressButton_.setButtonText("PUSH");
+    encoderPressButton_.setClickingTogglesState(false);
     encoderPressButton_.addListener(this);
+    encoderPressButton_.setColour(juce::TextButton::buttonColourId,
+                                  InkColour().withAlpha(0.82f));
+    encoderPressButton_.setColour(juce::TextButton::textColourOffId, CreamColour());
+    encoderPressButton_.setColour(juce::TextButton::buttonOnColourId,
+                                  AccentColour().darker(0.25f));
     addAndMakeVisible(encoderPressButton_);
     RegisterKeyboardSource(encoderPressButton_);
 
@@ -115,10 +226,14 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         cvSliders_[i].setSliderStyle(juce::Slider::LinearVertical);
         cvSliders_[i].setTextBoxStyle(
             juce::Slider::TextBoxBelow, false, 48, 18);
-        cvSliders_[i].setRange(0.0, 1.0, 0.001);
-        cvSliders_[i].setValue(0.5);
+        cvSliders_[i].setRange(0.0, 5.0, 0.01);
+        cvSliders_[i].setValue(2.5);
         cvSliders_[i].addListener(this);
-        ConfigureMouseFriendlySlider(cvSliders_[i], 0.5);
+        ConfigureMouseFriendlySlider(cvSliders_[i], 2.5);
+        cvSliders_[i].setColour(juce::Slider::thumbColourId,
+                                PortColour(daisyhost::VirtualPortType::kCv));
+        cvSliders_[i].setColour(juce::Slider::trackColourId,
+                                PortColour(daisyhost::VirtualPortType::kCv).withAlpha(0.55f));
         cvLabels_[i].setText("CV " + juce::String(static_cast<int>(i + 1)),
                              juce::dontSendNotification);
         cvLabels_[i].setJustificationType(juce::Justification::centred);
@@ -134,16 +249,55 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
             "Gate " + juce::String(static_cast<int>(i + 1)));
         gateButtons_[i].setClickingTogglesState(true);
         gateButtons_[i].addListener(this);
-        addAndMakeVisible(gateButtons_[i]);
-        RegisterKeyboardSource(gateButtons_[i]);
+        gateButtons_[i].setColour(juce::ToggleButton::textColourId, TextColour());
+    addAndMakeVisible(gateButtons_[i]);
+    RegisterKeyboardSource(gateButtons_[i]);
     }
 
-    testInputModeLabel_.setText("Test Input", juce::dontSendNotification);
+    appSelectorLabel_.setText("Hosted App", juce::dontSendNotification);
+    appSelectorLabel_.setJustificationType(juce::Justification::centredLeft);
+    appSelectorLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(appSelectorLabel_);
+
+    {
+        int itemId = 1;
+        for(const auto& registration : daisyhost::GetHostedAppRegistrations())
+        {
+            appSelectorBox_.addItem(registration.displayName, itemId++);
+            availableAppIds_.push_back(registration.appId);
+        }
+    }
+    appSelectorBox_.onChange = [this]() {
+        const int selected = appSelectorBox_.getSelectedId();
+        if(selected <= 0
+           || static_cast<std::size_t>(selected - 1) >= availableAppIds_.size())
+        {
+            return;
+        }
+
+        if(processor_.SetActiveAppId(availableAppIds_[static_cast<std::size_t>(selected - 1)]))
+        {
+            UpdateTopControlUi();
+            resized();
+        }
+    };
+    addAndMakeVisible(appSelectorBox_);
+    RegisterKeyboardSource(appSelectorBox_);
+
+    testInputModeLabel_.setText("Audio In 1 Source", juce::dontSendNotification);
     testInputModeLabel_.setJustificationType(juce::Justification::centredLeft);
     testInputModeLabel_.setColour(juce::Label::textColourId, TextColour());
     addAndMakeVisible(testInputModeLabel_);
 
-    for(int mode = 0; mode < DaisyHostPatchAudioProcessor::kNumTestInputModes; ++mode)
+    const std::array<int, 7> audioInputModeOrder = {
+        {DaisyHostPatchAudioProcessor::kHostInput,
+         DaisyHostPatchAudioProcessor::kSineInput,
+         DaisyHostPatchAudioProcessor::kTriangleInput,
+         DaisyHostPatchAudioProcessor::kSquareInput,
+         DaisyHostPatchAudioProcessor::kSawInput,
+         DaisyHostPatchAudioProcessor::kNoiseInput,
+         DaisyHostPatchAudioProcessor::kImpulseInput}};
+    for(const int mode : audioInputModeOrder)
     {
         testInputModeBox_.addItem(processor_.GetTestInputModeName(mode), mode + 1);
     }
@@ -153,43 +307,177 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     addAndMakeVisible(testInputModeBox_);
     RegisterKeyboardSource(testInputModeBox_);
 
-    testInputLevelLabel_.setText("Level", juce::dontSendNotification);
+    testInputLevelLabel_.setText("Audio In 1 Level (+/-10V)",
+                                 juce::dontSendNotification);
     testInputLevelLabel_.setJustificationType(juce::Justification::centredLeft);
     testInputLevelLabel_.setColour(juce::Label::textColourId, TextColour());
     addAndMakeVisible(testInputLevelLabel_);
 
     testInputLevelSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
     testInputLevelSlider_.setTextBoxStyle(
-        juce::Slider::TextBoxRight, false, 52, 18);
-    testInputLevelSlider_.setRange(0.0, 1.0, 0.001);
+        juce::Slider::TextBoxRight, false, 54, 18);
+    testInputLevelSlider_.setRange(0.0, 10.0, 0.01);
     testInputLevelSlider_.addListener(this);
-    ConfigureMouseFriendlySlider(testInputLevelSlider_, 0.35);
+    ConfigureMouseFriendlySlider(testInputLevelSlider_, 3.5);
+    testInputLevelSlider_.setColour(juce::Slider::thumbColourId, AccentColour());
     addAndMakeVisible(testInputLevelSlider_);
     RegisterKeyboardSource(testInputLevelSlider_);
 
+    testInputFrequencyLabel_.setText("Audio In 1 Freq (Hz)",
+                                     juce::dontSendNotification);
+    testInputFrequencyLabel_.setJustificationType(
+        juce::Justification::centredLeft);
+    testInputFrequencyLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(testInputFrequencyLabel_);
+
+    testInputFrequencySlider_.setSliderStyle(juce::Slider::LinearHorizontal);
+    testInputFrequencySlider_.setTextBoxStyle(
+        juce::Slider::TextBoxRight, false, 62, 18);
+    testInputFrequencySlider_.setRange(20.0, 5000.0, 1.0);
+    testInputFrequencySlider_.setSkewFactorFromMidPoint(440.0);
+    testInputFrequencySlider_.addListener(this);
+    ConfigureMouseFriendlySlider(testInputFrequencySlider_, 220.0);
+    testInputFrequencySlider_.setColour(juce::Slider::thumbColourId,
+                                        AccentColour());
+    addAndMakeVisible(testInputFrequencySlider_);
+    RegisterKeyboardSource(testInputFrequencySlider_);
+
     triggerImpulseButton_.setButtonText("Fire Impulse");
     triggerImpulseButton_.addListener(this);
+    triggerImpulseButton_.setColour(juce::TextButton::buttonColourId,
+                                    InkColour().withAlpha(0.70f));
     addAndMakeVisible(triggerImpulseButton_);
     RegisterKeyboardSource(triggerImpulseButton_);
 
-    computerKeyboardLabel_.setText("Virtual MIDI Keys",
-                                   juce::dontSendNotification);
+    cvGeneratorLabel_.setText("CV Generator", juce::dontSendNotification);
+    cvGeneratorLabel_.setJustificationType(juce::Justification::centredLeft);
+    cvGeneratorLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(cvGeneratorLabel_);
+
+    for(int cvIndex = 0; cvIndex < 4; ++cvIndex)
+    {
+        cvGeneratorTargetBox_.addItem("CV " + juce::String(cvIndex + 1), cvIndex + 1);
+    }
+    cvGeneratorTargetBox_.onChange = [this]() { UpdateCvGeneratorEditorUi(); };
+    addAndMakeVisible(cvGeneratorTargetBox_);
+    RegisterKeyboardSource(cvGeneratorTargetBox_);
+
+    cvGeneratorModeLabel_.setText("Mode", juce::dontSendNotification);
+    cvGeneratorModeLabel_.setJustificationType(juce::Justification::centredLeft);
+    cvGeneratorModeLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(cvGeneratorModeLabel_);
+
+    cvGeneratorModeBox_.addItem("Manual", 1);
+    cvGeneratorModeBox_.addItem("Generator", 2);
+    cvGeneratorModeBox_.onChange = [this]() {
+        const int index = GetSelectedCvGeneratorIndex();
+        if(index >= 0)
+        {
+            processor_.SetCvSourceMode(static_cast<std::size_t>(index),
+                                       cvGeneratorModeBox_.getSelectedId() - 1);
+            UpdateCvGeneratorEditorUi();
+        }
+    };
+    addAndMakeVisible(cvGeneratorModeBox_);
+    RegisterKeyboardSource(cvGeneratorModeBox_);
+
+    cvGeneratorWaveformLabel_.setText("Waveform", juce::dontSendNotification);
+    cvGeneratorWaveformLabel_.setJustificationType(
+        juce::Justification::centredLeft);
+    cvGeneratorWaveformLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(cvGeneratorWaveformLabel_);
+
+    for(int waveform = 0; waveform <= static_cast<int>(daisyhost::BasicWaveform::kSaw);
+        ++waveform)
+    {
+        cvGeneratorWaveformBox_.addItem(
+            daisyhost::GetBasicWaveformName(waveform), waveform + 1);
+    }
+    cvGeneratorWaveformBox_.onChange = [this]() {
+        const int index = GetSelectedCvGeneratorIndex();
+        if(index >= 0)
+        {
+            processor_.SetCvWaveform(static_cast<std::size_t>(index),
+                                     cvGeneratorWaveformBox_.getSelectedId() - 1);
+        }
+    };
+    addAndMakeVisible(cvGeneratorWaveformBox_);
+    RegisterKeyboardSource(cvGeneratorWaveformBox_);
+
+    cvGeneratorFrequencyLabel_.setText("Freq (Hz)",
+                                       juce::dontSendNotification);
+    cvGeneratorFrequencyLabel_.setJustificationType(
+        juce::Justification::centredLeft);
+    cvGeneratorFrequencyLabel_.setColour(juce::Label::textColourId,
+                                         TextColour());
+    addAndMakeVisible(cvGeneratorFrequencyLabel_);
+
+    cvGeneratorFrequencySlider_.setSliderStyle(juce::Slider::LinearHorizontal);
+    cvGeneratorFrequencySlider_.setTextBoxStyle(
+        juce::Slider::TextBoxRight, false, 54, 18);
+    cvGeneratorFrequencySlider_.setRange(0.01, 20.0, 0.01);
+    cvGeneratorFrequencySlider_.setSkewFactorFromMidPoint(1.0);
+    cvGeneratorFrequencySlider_.addListener(this);
+    ConfigureMouseFriendlySlider(cvGeneratorFrequencySlider_, 1.0);
+    cvGeneratorFrequencySlider_.setColour(juce::Slider::thumbColourId,
+                                          PortColour(daisyhost::VirtualPortType::kCv));
+    addAndMakeVisible(cvGeneratorFrequencySlider_);
+    RegisterKeyboardSource(cvGeneratorFrequencySlider_);
+
+    cvGeneratorAmplitudeLabel_.setText("Depth (V)",
+                                       juce::dontSendNotification);
+    cvGeneratorAmplitudeLabel_.setJustificationType(
+        juce::Justification::centredLeft);
+    cvGeneratorAmplitudeLabel_.setColour(juce::Label::textColourId,
+                                         TextColour());
+    addAndMakeVisible(cvGeneratorAmplitudeLabel_);
+
+    cvGeneratorAmplitudeSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
+    cvGeneratorAmplitudeSlider_.setTextBoxStyle(
+        juce::Slider::TextBoxRight, false, 54, 18);
+    cvGeneratorAmplitudeSlider_.setRange(0.0, 5.0, 0.01);
+    cvGeneratorAmplitudeSlider_.addListener(this);
+    ConfigureMouseFriendlySlider(cvGeneratorAmplitudeSlider_, 2.5);
+    cvGeneratorAmplitudeSlider_.setColour(
+        juce::Slider::thumbColourId,
+        PortColour(daisyhost::VirtualPortType::kCv));
+    addAndMakeVisible(cvGeneratorAmplitudeSlider_);
+    RegisterKeyboardSource(cvGeneratorAmplitudeSlider_);
+
+    cvGeneratorBiasLabel_.setText("DC Bias (V)",
+                                  juce::dontSendNotification);
+    cvGeneratorBiasLabel_.setJustificationType(
+        juce::Justification::centredLeft);
+    cvGeneratorBiasLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(cvGeneratorBiasLabel_);
+
+    cvGeneratorBiasSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
+    cvGeneratorBiasSlider_.setTextBoxStyle(
+        juce::Slider::TextBoxRight, false, 54, 18);
+    cvGeneratorBiasSlider_.setRange(0.0, 5.0, 0.01);
+    cvGeneratorBiasSlider_.addListener(this);
+    ConfigureMouseFriendlySlider(cvGeneratorBiasSlider_, 2.5);
+    cvGeneratorBiasSlider_.setColour(juce::Slider::thumbColourId,
+                                     PortColour(daisyhost::VirtualPortType::kCv));
+    addAndMakeVisible(cvGeneratorBiasSlider_);
+    RegisterKeyboardSource(cvGeneratorBiasSlider_);
+
+    computerKeyboardLabel_.setText("Keyboard MIDI", juce::dontSendNotification);
     computerKeyboardLabel_.setJustificationType(juce::Justification::centredLeft);
     computerKeyboardLabel_.setColour(juce::Label::textColourId, TextColour());
     addAndMakeVisible(computerKeyboardLabel_);
 
-    computerKeyboardToggle_.setButtonText("A/W/S/E Enabled");
+    computerKeyboardToggle_.setButtonText("Enable A/W/S/E");
     computerKeyboardToggle_.setClickingTogglesState(true);
     computerKeyboardToggle_.addListener(this);
+    computerKeyboardToggle_.setColour(juce::ToggleButton::textColourId, TextColour());
     addAndMakeVisible(computerKeyboardToggle_);
     RegisterKeyboardSource(computerKeyboardToggle_);
 
-    computerKeyboardOctaveLabel_.setText("Octave",
-                                         juce::dontSendNotification);
+    computerKeyboardOctaveLabel_.setText("Octave", juce::dontSendNotification);
     computerKeyboardOctaveLabel_.setJustificationType(
         juce::Justification::centredLeft);
-    computerKeyboardOctaveLabel_.setColour(juce::Label::textColourId,
-                                           TextColour());
+    computerKeyboardOctaveLabel_.setColour(juce::Label::textColourId, TextColour());
     addAndMakeVisible(computerKeyboardOctaveLabel_);
 
     for(int octave = daisyhost::ComputerKeyboardMidi::kMinOctave;
@@ -208,7 +496,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     RegisterKeyboardSource(computerKeyboardOctaveBox_);
 
     midiKeyboard_.setAvailableRange(24, 96);
-    midiKeyboard_.setKeyWidth(16.0f);
+    midiKeyboard_.setKeyWidth(14.0f);
     midiKeyboard_.setScrollButtonsVisible(false);
     addAndMakeVisible(midiKeyboard_);
     RegisterKeyboardSource(midiKeyboard_);
@@ -222,7 +510,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     midiTrackerStatusLabel_.setJustificationType(
         juce::Justification::centredLeft);
     midiTrackerStatusLabel_.setColour(juce::Label::textColourId,
-                                      juce::Colours::white.withAlpha(0.75f));
+                                      TextColour().withAlpha(0.75f));
     addAndMakeVisible(midiTrackerStatusLabel_);
 
     midiTrackerText_.setMultiLine(true);
@@ -230,14 +518,16 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     midiTrackerText_.setScrollbarsShown(true);
     midiTrackerText_.setCaretVisible(false);
     midiTrackerText_.setColour(juce::TextEditor::backgroundColourId,
-                               juce::Colour::fromRGB(22, 24, 27));
+                               DrawerInsetColour());
     midiTrackerText_.setColour(juce::TextEditor::outlineColourId,
-                               juce::Colours::white.withAlpha(0.14f));
+                               juce::Colours::white.withAlpha(0.10f));
     midiTrackerText_.setColour(juce::TextEditor::textColourId, TextColour());
     addAndMakeVisible(midiTrackerText_);
 
+    UpdateTopControlUi();
     UpdateComputerKeyboardUi();
-
+    cvGeneratorTargetBox_.setSelectedId(1, juce::dontSendNotification);
+    UpdateCvGeneratorEditorUi();
     startTimerHz(30);
 }
 
@@ -266,6 +556,10 @@ DaisyHostPatchAudioProcessorEditor::~DaisyHostPatchAudioProcessorEditor()
     }
 
     testInputLevelSlider_.removeListener(this);
+    testInputFrequencySlider_.removeListener(this);
+    cvGeneratorFrequencySlider_.removeListener(this);
+    cvGeneratorAmplitudeSlider_.removeListener(this);
+    cvGeneratorBiasSlider_.removeListener(this);
     triggerImpulseButton_.removeListener(this);
     computerKeyboardToggle_.removeListener(this);
 }
@@ -274,122 +568,182 @@ void DaisyHostPatchAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(BackgroundColour());
 
-    const auto editorBounds = GetEditorBounds().toFloat();
-    const auto patchPanel   = GetPatchPanelBounds().toFloat();
-    const auto hostTools    = GetHostToolsBounds().toFloat();
+    const auto patchPanel = GetPatchPanelBounds().toFloat();
+    const auto hostTools  = GetHostToolsBounds().toFloat();
 
-    g.setColour(PanelColour());
-    g.fillRoundedRectangle(patchPanel, 18.0f);
+    juce::ColourGradient panelGradient(PatchPanelColour(),
+                                       patchPanel.getTopLeft(),
+                                       PatchPanelShadow(),
+                                       patchPanel.getBottomRight(),
+                                       false);
+    g.setGradientFill(panelGradient);
+    g.fillRoundedRectangle(patchPanel, 26.0f);
     g.setColour(juce::Colours::white.withAlpha(0.14f));
-    g.drawRoundedRectangle(patchPanel.reduced(1.0f), 18.0f, 2.0f);
+    g.drawRoundedRectangle(patchPanel.reduced(1.0f), 26.0f, 1.6f);
 
-    g.setColour(HostToolsColour());
-    g.fillRoundedRectangle(hostTools, 18.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.10f));
-    g.drawRoundedRectangle(hostTools.reduced(1.0f), 18.0f, 1.5f);
+    juce::ColourGradient drawerGradient(DrawerColour(),
+                                        hostTools.getTopLeft(),
+                                        DrawerInsetColour(),
+                                        hostTools.getBottomRight(),
+                                        false);
+    g.setGradientFill(drawerGradient);
+    g.fillRoundedRectangle(hostTools, 22.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.08f));
+    g.drawRoundedRectangle(hostTools.reduced(1.0f), 22.0f, 1.2f);
 
-    g.setColour(TextColour());
-    g.setFont(TitleFont(30.0f));
-    g.drawText("DaisyHost Patch",
-               juce::Rectangle<int>(patchPanel.getX() + 24.0f,
-                                    patchPanel.getY() + 16.0f,
-                                    340,
-                                    36),
-               juce::Justification::centredLeft);
-
-    g.setFont(BodyFont(13.0f));
-    g.setColour(juce::Colours::white.withAlpha(0.78f));
-    g.drawText("MultiDelay core running against a virtual Daisy Patch panel",
-               juce::Rectangle<int>(patchPanel.getX() + 26.0f,
-                                    patchPanel.getY() + 52.0f,
-                                    420,
-                                    18),
-               juce::Justification::centredLeft);
-
+    DrawPanelDecorations(g);
+    DrawPatchTraces(g);
     DrawDisplay(g, RectFromPanel(processor_.GetBoardProfile().display.panelBounds));
     DrawPorts(g);
+    DrawPanelTexts(g);
     DrawHostTools(g);
 
-    g.setColour(juce::Colours::white.withAlpha(0.55f));
-    g.setFont(BodyFont(12.0f));
-    g.drawText("Standalone note: if JUCE mutes live input to avoid a feedback loop, use the test input tools.",
-               juce::Rectangle<int>(editorBounds.getX(),
-                                    editorBounds.getBottom() - 18.0f,
-                                    static_cast<int>(editorBounds.getWidth()),
-                                    16),
-               juce::Justification::centred);
+    g.setColour(TextColour().withAlpha(0.55f));
+    g.setFont(BodyFont(11.5f));
+    g.drawText(
+        "Standalone note: if JUCE mutes live input to avoid feedback, switch the input source in the mirrored host drawer.",
+        juce::Rectangle<int>(GetEditorBounds().getX(),
+                             GetEditorBounds().getBottom() - 18,
+                             GetEditorBounds().getWidth(),
+                             16),
+        juce::Justification::centred,
+        true);
 }
 
 void DaisyHostPatchAudioProcessorEditor::resized()
 {
-    const auto patchPanel = GetPatchPanelBounds();
-    const auto hostTools  = GetHostToolsBounds();
+    const auto& profile = processor_.GetBoardProfile();
+    const auto* ctrl1   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl1_mix");
+    const auto* ctrl2   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl2_primary");
+    const auto* ctrl3   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl3_secondary");
+    const auto* ctrl4   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl4_feedback");
+    const auto* push    = FindSurfaceControlById(profile.nodeId + "/surface/enc1_push");
 
-    for(std::size_t i = 0; i < 4; ++i)
+    if(ctrl1 != nullptr)
     {
-        const auto& spec = processor_.GetBoardProfile().controls[i];
-        auto        area = RectFromPanel(spec.panelBounds).toNearestInt();
-        knobs_[i].slider.setBounds(area);
-        knobs_[i].label.setBounds(area.withY(area.getBottom() + 4).withHeight(18));
-        knobs_[i].learnButton.setBounds(
-            area.withY(area.getBottom() + 24).withHeight(22));
+        LayoutRotaryControl(dryWet_, *ctrl1);
+    }
+    if(ctrl2 != nullptr)
+    {
+        LayoutRotaryControl(knobs_[0], *ctrl2);
+    }
+    if(ctrl3 != nullptr)
+    {
+        LayoutRotaryControl(knobs_[1], *ctrl3);
+    }
+    if(ctrl4 != nullptr)
+    {
+        LayoutRotaryControl(knobs_[2], *ctrl4);
+    }
+    if(push != nullptr)
+    {
+        LayoutButtonControl(encoderPressButton_, *push);
     }
 
-    const auto encoderArea
-        = RectFromPanel(processor_.GetBoardProfile().controls[4].panelBounds)
-              .toNearestInt();
-    dryWet_.slider.setBounds(encoderArea);
-    dryWet_.label.setBounds(
-        encoderArea.withY(encoderArea.getBottom() + 4).withHeight(18));
-    dryWet_.learnButton.setBounds(
-        encoderArea.withY(encoderArea.getBottom() + 24).withHeight(22));
-    encoderPressButton_.setBounds(
-        encoderArea.withY(encoderArea.getBottom() + 52).withHeight(26));
+    auto drawer = GetHostToolsBounds().reduced(18);
 
-    auto section = hostTools.reduced(18);
-    testInputModeLabel_.setBounds(section.removeFromTop(18));
-    testInputModeBox_.setBounds(section.removeFromTop(28));
-    section.removeFromTop(12);
-    testInputLevelLabel_.setBounds(section.removeFromTop(18));
-    testInputLevelSlider_.setBounds(section.removeFromTop(28));
-    section.removeFromTop(12);
-    triggerImpulseButton_.setBounds(section.removeFromTop(28));
-    section.removeFromTop(16);
+    appSelectorLabel_.setBounds(drawer.removeFromTop(18));
+    appSelectorBox_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(10);
 
-    computerKeyboardLabel_.setBounds(section.removeFromTop(18));
-    computerKeyboardToggle_.setBounds(section.removeFromTop(26));
-    section.removeFromTop(8);
-    computerKeyboardOctaveLabel_.setBounds(section.removeFromTop(18));
-    computerKeyboardOctaveBox_.setBounds(section.removeFromTop(28));
-    section.removeFromTop(8);
-    midiKeyboard_.setBounds(section.removeFromTop(82));
-    section.removeFromTop(10);
+    drawer.removeFromTop(88);
+    knobs_[3].slider.setBounds({});
+    knobs_[3].label.setBounds({});
+    knobs_[3].learnButton.setBounds({});
 
-    midiTrackerLabel_.setBounds(section.removeFromTop(18));
-    midiTrackerStatusLabel_.setBounds(section.removeFromTop(18));
-    midiTrackerText_.setBounds(section.removeFromTop(96));
-    section.removeFromTop(12);
+    testInputModeLabel_.setBounds(drawer.removeFromTop(18));
+    testInputModeBox_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(6);
+    testInputLevelLabel_.setBounds(drawer.removeFromTop(18));
+    testInputLevelSlider_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(6);
+    testInputFrequencyLabel_.setBounds(drawer.removeFromTop(18));
+    testInputFrequencySlider_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(6);
+    triggerImpulseButton_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(10);
 
-    auto cvArea = section.removeFromTop(122);
+    computerKeyboardLabel_.setBounds(drawer.removeFromTop(18));
+    computerKeyboardToggle_.setBounds(drawer.removeFromTop(24));
+    drawer.removeFromTop(4);
+    computerKeyboardOctaveLabel_.setBounds(drawer.removeFromTop(18));
+    computerKeyboardOctaveBox_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(6);
+    midiKeyboard_.setBounds(drawer.removeFromTop(70));
+    drawer.removeFromTop(8);
+
+    midiTrackerLabel_.setBounds(drawer.removeFromTop(18));
+    midiTrackerStatusLabel_.setBounds(drawer.removeFromTop(18));
+    midiTrackerText_.setBounds(drawer.removeFromTop(78));
+    drawer.removeFromTop(10);
+
+    cvGeneratorLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorTargetBox_.setBounds(drawer.removeFromTop(28));
+    drawer.removeFromTop(4);
+    cvGeneratorModeLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorModeBox_.setBounds(drawer.removeFromTop(26));
+    drawer.removeFromTop(4);
+    cvGeneratorWaveformLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorWaveformBox_.setBounds(drawer.removeFromTop(26));
+    drawer.removeFromTop(4);
+    cvGeneratorFrequencyLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorFrequencySlider_.setBounds(drawer.removeFromTop(24));
+    drawer.removeFromTop(4);
+    cvGeneratorAmplitudeLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorAmplitudeSlider_.setBounds(drawer.removeFromTop(24));
+    drawer.removeFromTop(4);
+    cvGeneratorBiasLabel_.setBounds(drawer.removeFromTop(18));
+    cvGeneratorBiasSlider_.setBounds(drawer.removeFromTop(24));
+    drawer.removeFromTop(8);
+
+    auto cvArea = drawer.removeFromTop(118);
     const int cvWidth = (cvArea.getWidth() - 18) / 4;
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)
     {
         auto column = cvArea.removeFromLeft(cvWidth);
         cvLabels_[i].setBounds(column.removeFromTop(18));
-        cvSliders_[i].setBounds(column.withTrimmedTop(6));
+        cvSliders_[i].setBounds(column.withTrimmedTop(4));
         cvArea.removeFromLeft(6);
     }
 
-    section.removeFromTop(12);
-    auto gateArea = section.removeFromTop(28);
+    drawer.removeFromTop(8);
+    auto gateArea = drawer.removeFromTop(28);
     gateButtons_[0].setBounds(gateArea.removeFromLeft(gateArea.getWidth() / 2 - 6));
     gateArea.removeFromLeft(12);
     gateButtons_[1].setBounds(gateArea);
 }
 
-void DaisyHostPatchAudioProcessorEditor::mouseDown(const juce::MouseEvent&)
+void DaisyHostPatchAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 {
     grabKeyboardFocus();
+
+    const auto& profile = processor_.GetBoardProfile();
+    if(const auto* encoder = FindSurfaceControlById(profile.nodeId + "/surface/enc1"))
+    {
+        if(RectFromPanel(encoder->panelBounds).contains(event.position))
+        {
+            processor_.PulseEncoderPress();
+            encoderPressButton_.setToggleState(true, juce::dontSendNotification);
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::mouseWheelMove(
+    const juce::MouseEvent&        event,
+    const juce::MouseWheelDetails& wheel)
+{
+    const auto& profile = processor_.GetBoardProfile();
+    if(const auto* encoder = FindSurfaceControlById(profile.nodeId + "/surface/enc1"))
+    {
+        if(RectFromPanel(encoder->panelBounds).contains(event.position))
+        {
+            const float deltaY = wheel.deltaY != 0.0f ? wheel.deltaY : wheel.deltaX;
+            if(std::abs(deltaY) > 0.0f)
+            {
+                processor_.RotateEncoder(deltaY > 0.0f ? -1 : 1);
+            }
+        }
+    }
 }
 
 juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetEditorBounds() const
@@ -400,14 +754,19 @@ juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetEditorBounds() const
 juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetPatchPanelBounds() const
 {
     auto bounds = GetEditorBounds();
-    auto left   = bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.76f));
-    return left;
+    auto left = bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.60f));
+    return left.reduced(8, 30);
+}
+
+juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetPatchPanelContentBounds() const
+{
+    return GetPatchPanelBounds().reduced(26);
 }
 
 juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetHostToolsBounds() const
 {
     auto bounds = GetEditorBounds();
-    bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.76f) + 12);
+    bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.60f) + 12);
     return bounds;
 }
 
@@ -421,13 +780,273 @@ juce::Rectangle<float> DaisyHostPatchAudioProcessorEditor::RectFromPanel(
             rect.height * panel.getHeight()};
 }
 
-void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
+const daisyhost::PanelControlSlotSpec*
+DaisyHostPatchAudioProcessorEditor::FindSurfaceControlByTarget(
+    const std::string& targetId) const
+{
+    const auto& controls = processor_.GetBoardProfile().surfaceControls;
+    for(const auto& control : controls)
+    {
+        if(control.targetId == targetId)
+        {
+            return &control;
+        }
+    }
+    return nullptr;
+}
+
+const daisyhost::PanelControlSlotSpec*
+DaisyHostPatchAudioProcessorEditor::FindSurfaceControlById(
+    const std::string& id) const
+{
+    const auto& controls = processor_.GetBoardProfile().surfaceControls;
+    for(const auto& control : controls)
+    {
+        if(control.id == id)
+        {
+            return &control;
+        }
+    }
+    return nullptr;
+}
+
+juce::Justification DaisyHostPatchAudioProcessorEditor::ToJustification(
+    daisyhost::TextAlignment alignment) const
+{
+    switch(alignment)
+    {
+        case daisyhost::TextAlignment::kCenter:
+            return juce::Justification::centred;
+        case daisyhost::TextAlignment::kRight:
+            return juce::Justification::centredRight;
+        case daisyhost::TextAlignment::kLeft:
+        default: return juce::Justification::centredLeft;
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawPanelDecorations(juce::Graphics& g) const
+{
+    const auto& profile = processor_.GetBoardProfile();
+    for(const auto& decoration : profile.decorations)
+    {
+        const auto area = RectFromPanel(decoration.panelBounds);
+        switch(decoration.kind)
+        {
+            case daisyhost::PanelDecorationKind::kSeedModule:
+                DrawSeedModule(g, area);
+                break;
+
+            case daisyhost::PanelDecorationKind::kDisplayFrame:
+                g.setColour(juce::Colours::black.withAlpha(0.20f));
+                g.fillRoundedRectangle(area, 14.0f);
+                g.setColour(juce::Colours::white.withAlpha(0.16f));
+                g.drawRoundedRectangle(area, 14.0f, 1.4f);
+                break;
+
+            default:
+                g.setColour(juce::Colours::white.withAlpha(
+                    decoration.emphasized ? 0.22f : 0.13f));
+                g.drawRoundedRectangle(area,
+                                       area.getHeight() * decoration.cornerRadius,
+                                       decoration.emphasized ? 1.8f : 1.2f);
+                break;
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawPanelTexts(juce::Graphics& g) const
+{
+    const auto& profile = processor_.GetBoardProfile();
+
+    for(const auto& text : profile.texts)
+    {
+        g.setColour(TextColour().withAlpha(text.bold ? 0.98f : 0.88f));
+        g.setFont(text.bold ? TitleFont(text.pointSize) : BodyFont(text.pointSize));
+        g.drawText(text.text,
+                   RectFromPanel(text.panelBounds).toNearestInt(),
+                   ToJustification(text.alignment),
+                   false);
+    }
+
+    for(const auto& control : profile.surfaceControls)
+    {
+        if(control.detailLabel.empty())
+        {
+            continue;
+        }
+
+        const auto slot = RectFromPanel(control.panelBounds);
+        juce::Rectangle<float> detailArea(slot.getX() - 8.0f,
+                                          slot.getBottom() + 34.0f,
+                                          slot.getWidth() + 16.0f,
+                                          13.0f);
+        if(control.kind == daisyhost::ControlKind::kButton)
+        {
+            detailArea = detailArea.translated(0.0f, 12.0f);
+        }
+
+        juce::String detailText = control.detailLabel;
+        if(control.id == profile.nodeId + "/surface/ctrl1_mix")
+        {
+            detailText = processor_.GetTopControlDetailLabel(0);
+        }
+        else if(control.id == profile.nodeId + "/surface/ctrl2_primary")
+        {
+            detailText = processor_.GetTopControlDetailLabel(1);
+        }
+        else if(control.id == profile.nodeId + "/surface/ctrl3_secondary")
+        {
+            detailText = processor_.GetTopControlDetailLabel(2);
+        }
+        else if(control.id == profile.nodeId + "/surface/ctrl4_feedback")
+        {
+            detailText = processor_.GetTopControlDetailLabel(3);
+        }
+
+        g.setColour(CreamColour().withAlpha(0.68f));
+        g.setFont(BodyFont(10.5f));
+        g.drawText(detailText,
+                   detailArea.toNearestInt(),
+                   juce::Justification::centred,
+                   false);
+    }
+
+    g.setColour(TextColour().withAlpha(0.86f));
+    g.setFont(TitleFont(13.0f));
+    g.drawText(processor_.GetActiveAppDisplayName(),
+               RectFromPanel({0.47f, 0.045f, 0.20f, 0.03f}).toNearestInt(),
+               juce::Justification::centred,
+               false);
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawPatchTraces(juce::Graphics& g) const
+{
+    const auto& profile = processor_.GetBoardProfile();
+    const auto* ctrl1   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl1_mix");
+    const auto* ctrl2   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl2_primary");
+    const auto* ctrl3   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl3_secondary");
+    const auto* ctrl4   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl4_feedback");
+
+    const daisyhost::PanelControlSlotSpec* topSlots[] = {ctrl1, ctrl2, ctrl3, ctrl4};
+    std::size_t topIndex = 0;
+    for(const auto& port : profile.ports)
+    {
+        if(port.type != daisyhost::VirtualPortType::kCv
+           || port.direction != daisyhost::PortDirection::kInput
+           || topIndex >= std::size(topSlots)
+           || topSlots[topIndex] == nullptr)
+        {
+            continue;
+        }
+
+        const auto jack = RectFromPanel(port.panelBounds);
+        const auto knob = RectFromPanel(topSlots[topIndex]->panelBounds);
+        juce::Path trace;
+        trace.startNewSubPath(jack.getCentreX(), jack.getBottom());
+        trace.cubicTo(jack.getCentreX(),
+                      jack.getBottom() + 34.0f,
+                      knob.getCentreX(),
+                      knob.getY() - 28.0f,
+                      knob.getCentreX(),
+                      knob.getY());
+        g.setColour(TraceColour().withAlpha(0.55f));
+        g.strokePath(trace, juce::PathStrokeType(1.4f));
+        ++topIndex;
+    }
+
+    const auto displayArea = RectFromPanel(profile.display.panelBounds);
+    const auto audioFrame = [&]() -> juce::Rectangle<float> {
+        for(const auto& decoration : profile.decorations)
+        {
+            if(decoration.kind == daisyhost::PanelDecorationKind::kAudioSection)
+            {
+                return RectFromPanel(decoration.panelBounds);
+            }
+        }
+        return {};
+    }();
+
+    if(!audioFrame.isEmpty())
+    {
+        for(int i = 0; i < 5; ++i)
+        {
+            const float offset = static_cast<float>(i) * 9.0f;
+            juce::Path trace;
+            trace.startNewSubPath(displayArea.getX() + 30.0f + offset,
+                                  displayArea.getBottom() - 2.0f);
+            trace.cubicTo(displayArea.getX() + 48.0f + offset,
+                          displayArea.getBottom() + 20.0f,
+                          audioFrame.getX() + 40.0f + offset * 3.0f,
+                          audioFrame.getY() - 20.0f,
+                          audioFrame.getX() + 60.0f + offset * 4.0f,
+                          audioFrame.getY() + 4.0f);
+            g.setColour(TraceColour().withAlpha(0.42f));
+            g.strokePath(trace, juce::PathStrokeType(1.2f));
+        }
+    }
+
+    if(const auto* encoder = FindSurfaceControlById(profile.nodeId + "/surface/enc1"))
+    {
+        const auto area = RectFromPanel(encoder->panelBounds);
+        g.setColour(juce::Colours::black.withAlpha(0.36f));
+        g.fillEllipse(SquareInside(area, 0.92f));
+        g.setColour(CreamColour().withAlpha(0.75f));
+        g.drawEllipse(SquareInside(area, 0.92f), 2.0f);
+        g.setColour(InkColour());
+        g.fillEllipse(SquareInside(area, 0.72f));
+        g.setColour(AccentColour());
+        g.fillEllipse(area.getCentreX() - 5.0f, area.getY() + 10.0f, 10.0f, 10.0f);
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawSeedModule(
     juce::Graphics&              g,
     const juce::Rectangle<float>& area) const
 {
-    g.setColour(juce::Colour::fromRGB(18, 20, 22));
+    g.setColour(juce::Colour::fromRGB(179, 105, 28));
+    g.fillRoundedRectangle(area, 12.0f);
+    g.setColour(juce::Colour::fromRGB(233, 192, 132));
+    g.drawRoundedRectangle(area.reduced(1.0f), 12.0f, 1.5f);
+
+    auto inner = area.reduced(10.0f);
+    g.setColour(juce::Colour::fromRGB(88, 44, 10));
+    g.fillRoundedRectangle(inner.removeFromTop(area.getHeight() * 0.58f), 6.0f);
+
+    auto pins = area.reduced(5.0f);
+    const float pinWidth  = 6.0f;
+    const float pinHeight = 12.0f;
+    for(int i = 0; i < 10; ++i)
+    {
+        const float y = pins.getY() + 10.0f + static_cast<float>(i) * 12.0f;
+        g.setColour(CreamColour().withAlpha(0.85f));
+        g.fillRoundedRectangle(area.getX() + 4.0f, y, pinWidth, pinHeight, 2.0f);
+        g.fillRoundedRectangle(area.getRight() - 10.0f, y, pinWidth, pinHeight, 2.0f);
+    }
+
+    g.setColour(CreamColour().withAlpha(0.86f));
+    g.setFont(TitleFont(11.0f));
+    g.drawText("Seed",
+               juce::Rectangle<int>(static_cast<int>(area.getX()),
+                                    static_cast<int>(area.getBottom() - 28.0f),
+                                    static_cast<int>(area.getWidth()),
+                                    16),
+               juce::Justification::centred);
+    g.setFont(BodyFont(8.0f));
+    g.drawText("DaisyHost",
+               juce::Rectangle<int>(static_cast<int>(area.getX()),
+                                    static_cast<int>(area.getY() + 6.0f),
+                                    static_cast<int>(area.getWidth()),
+                                    12),
+               juce::Justification::centred);
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
+    juce::Graphics&               g,
+    const juce::Rectangle<float>& area) const
+{
+    g.setColour(juce::Colour::fromRGB(13, 15, 18));
     g.fillRoundedRectangle(area, 8.0f);
-    g.setColour(AccentColour().withAlpha(0.85f));
+    g.setColour(CreamColour().withAlpha(0.65f));
     g.drawRoundedRectangle(area, 8.0f, 1.5f);
 
     const auto display = processor_.GetDisplayModelSnapshot();
@@ -439,7 +1058,7 @@ void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
                                        origin.getY() + static_cast<float>(bar.y),
                                        static_cast<float>(bar.width),
                                        static_cast<float>(bar.height));
-        g.setColour(juce::Colours::white.withAlpha(0.18f));
+        g.setColour(CreamColour().withAlpha(0.18f));
         g.drawRect(barRect);
         g.setColour(AccentColour());
         g.fillRect(barRect.withWidth(barRect.getWidth() * bar.normalized));
@@ -447,12 +1066,12 @@ void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
 
     for(const auto& text : display.texts)
     {
-        g.setColour(text.inverted ? juce::Colours::black : TextColour());
-        g.setFont(text.y <= 4 ? TitleFont(16.0f) : BodyFont(14.0f));
+        g.setColour(text.inverted ? InkColour() : CreamColour());
+        g.setFont(text.y <= 4 ? TitleFont(16.0f) : BodyFont(13.0f));
         g.drawText(text.text,
                    juce::Rectangle<float>(origin.getX() + static_cast<float>(text.x),
                                           origin.getY() + static_cast<float>(text.y),
-                                          area.getWidth() - 16.0f,
+                                          area.getWidth() - 20.0f,
                                           18.0f),
                    juce::Justification::centredLeft,
                    false);
@@ -466,13 +1085,8 @@ void DaisyHostPatchAudioProcessorEditor::DrawPorts(juce::Graphics& g) const
 
     for(const auto& port : profile.ports)
     {
-        const auto bounds = RectFromPanel(port.panelBounds);
-        const float diameter
-            = std::min(bounds.getWidth(), bounds.getHeight() * 0.95f);
-        juce::Rectangle<float> jackArea(bounds.getCentreX() - diameter * 0.5f,
-                                        bounds.getCentreY() - diameter * 0.5f + 4.0f,
-                                        diameter,
-                                        diameter);
+        const auto bounds    = RectFromPanel(port.panelBounds);
+        const auto socketBox = SquareInside(bounds, 0.92f);
 
         float activity = 0.0f;
         if(port.type == daisyhost::VirtualPortType::kAudio)
@@ -498,26 +1112,39 @@ void DaisyHostPatchAudioProcessorEditor::DrawPorts(juce::Graphics& g) const
         }
 
         const auto colour = PortColour(port.type);
-        g.setColour(juce::Colours::white.withAlpha(0.18f));
-        g.fillEllipse(jackArea.expanded(5.0f));
-        g.setColour(colour.withAlpha(0.25f + activity * 0.65f));
-        g.fillEllipse(jackArea.reduced(3.5f));
-        g.setColour(juce::Colours::black.withAlpha(0.7f));
-        g.fillEllipse(jackArea.reduced(diameter * 0.18f));
-        g.setColour(juce::Colours::white.withAlpha(0.30f));
-        g.drawEllipse(jackArea.expanded(5.0f), 1.5f);
+        g.setColour(juce::Colours::black.withAlpha(0.26f));
+        g.fillEllipse(socketBox.expanded(6.0f));
+        g.setColour(juce::Colour::fromRGB(178, 177, 176));
+        g.fillEllipse(socketBox.expanded(4.0f));
+        g.setColour(colour.withAlpha(0.18f + activity * 0.62f));
+        g.fillEllipse(socketBox.reduced(2.0f));
+        g.setColour(juce::Colour::fromRGB(58, 47, 34));
+        g.fillEllipse(socketBox.reduced(socketBox.getWidth() * 0.18f));
+        g.setColour(juce::Colours::white.withAlpha(0.32f));
+        g.drawEllipse(socketBox.expanded(4.0f), 1.3f);
 
-        juce::Rectangle<float> labelArea(bounds.getX() - 16.0f,
-                                         bounds.getY() - 18.0f,
-                                         bounds.getWidth() + 32.0f,
-                                         14.0f);
-        if(bounds.getBottom() > patch.getBottom() - 70.0f)
+        juce::Rectangle<float> labelArea(bounds.getX() - 12.0f,
+                                         bounds.getBottom() + 2.0f,
+                                         bounds.getWidth() + 24.0f,
+                                         15.0f);
+        if(bounds.getY() < patch.getY() + patch.getHeight() * 0.20f)
         {
-            labelArea = labelArea.translated(0.0f, -8.0f);
+            labelArea = {bounds.getX() - 12.0f,
+                         bounds.getBottom() + 4.0f,
+                         bounds.getWidth() + 24.0f,
+                         14.0f};
+        }
+        else if(bounds.getX() > patch.getRight() - 180.0f
+                && bounds.getY() < patch.getY() + patch.getHeight() * 0.45f)
+        {
+            labelArea = {bounds.getX() - 32.0f,
+                         bounds.getY() - 18.0f,
+                         bounds.getWidth() + 64.0f,
+                         14.0f};
         }
 
         g.setColour(TextColour());
-        g.setFont(BodyFont(11.0f));
+        g.setFont(BodyFont(10.5f));
         g.drawText(port.label,
                    labelArea.toNearestInt(),
                    juce::Justification::centred,
@@ -527,44 +1154,134 @@ void DaisyHostPatchAudioProcessorEditor::DrawPorts(juce::Graphics& g) const
 
 void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 {
-    const auto panel = GetHostToolsBounds().toFloat();
-    const auto inner = panel.reduced(18.0f);
+    auto panel = GetHostToolsBounds().toFloat().reduced(16.0f);
+    auto top   = panel.removeFromTop(148.0f);
+    const auto menuModel = processor_.GetMenuModelSnapshot();
+
+    DrawDaisyHostBadge(g,
+                       {panel.getRight() - 68.0f, top.getY() - 2.0f, 54.0f, 54.0f},
+                       true);
 
     g.setColour(TextColour());
-    g.setFont(TitleFont(22.0f));
-    g.drawText("Host Tools",
-               juce::Rectangle<int>(inner.getX(),
-                                    inner.getY(),
-                                    static_cast<int>(inner.getWidth()),
-                                    24),
-               juce::Justification::centredLeft);
+    g.setFont(TitleFont(20.0f));
+    g.drawText("Mirror / Host",
+               top.removeFromTop(22.0f).toNearestInt(),
+               juce::Justification::centredLeft,
+               false);
 
-    g.setFont(BodyFont(12.0f));
-    g.setColour(juce::Colours::white.withAlpha(0.70f));
-    g.drawText("Use these for standalone testing when no hardware or safe live input is available.",
-               juce::Rectangle<int>(inner.getX(),
-                                    inner.getY() + 28.0f,
-                                    static_cast<int>(inner.getWidth()),
-                                    30),
+    g.setFont(BodyFont(11.5f));
+    g.setColour(TextColour().withAlpha(0.72f));
+    g.drawText("Mouse-first mirror for Patch testing, input routing, and shared OLED menu state.",
+               top.removeFromTop(30.0f).toNearestInt(),
                juce::Justification::topLeft,
                true);
 
-    g.drawText("Mouse-play the keyboard below, or use A/W/S/E... and Z/X for octave shift.",
-               juce::Rectangle<int>(inner.getX(),
-                                    inner.getY() + 58.0f,
-                                    static_cast<int>(inner.getWidth()),
-                                    32),
-               juce::Justification::topLeft,
-               true);
+    const auto menuBox = top.removeFromTop(92.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.18f));
+    g.fillRoundedRectangle(menuBox, 14.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.10f));
+    g.drawRoundedRectangle(menuBox, 14.0f, 1.0f);
 
-    g.drawText(
-        "MIDI learn listens for controller CC messages. Note input drives the preview tone.",
-        juce::Rectangle<int>(inner.getX(),
-                             inner.getY() + 92.0f,
-                             static_cast<int>(inner.getWidth()),
-                             30),
-        juce::Justification::topLeft,
-        true);
+    auto menuTextArea = menuBox.reduced(12.0f, 10.0f);
+    const auto* currentSection = [&]() -> const daisyhost::MenuSection* {
+        for(const auto& section : menuModel.sections)
+        {
+            if(section.id == menuModel.currentSectionId)
+            {
+                return &section;
+            }
+        }
+        return nullptr;
+    }();
+    g.setColour(TextColour());
+    g.setFont(TitleFont(14.0f));
+    const juce::String menuTitle
+        = menuModel.isOpen
+              ? juce::String("Menu: ")
+                    + (currentSection != nullptr ? currentSection->title.c_str()
+                                                 : menuModel.currentSectionId.c_str())
+                           : "Menu Closed";
+    g.drawText(menuTitle,
+               menuTextArea.removeFromTop(18.0f).toNearestInt(),
+               juce::Justification::centredLeft,
+               false);
+
+    g.setFont(BodyFont(10.5f));
+    g.setColour(TextColour().withAlpha(0.72f));
+    g.drawText("Click ENC 1 / PUSH, or wheel over ENC 1 to browse.",
+               menuTextArea.removeFromTop(16.0f).toNearestInt(),
+               juce::Justification::centredLeft,
+               false);
+
+    if(currentSection != nullptr)
+    {
+        g.setColour(TextColour().withAlpha(0.92f));
+        for(int row = 0; row < 4; ++row)
+        {
+            const int itemIndex = row + std::max(0, menuModel.currentSelection - 1);
+            if(itemIndex >= static_cast<int>(currentSection->items.size()))
+            {
+                break;
+            }
+
+            const auto& item = currentSection->items[static_cast<std::size_t>(itemIndex)];
+            juce::String line
+                = (itemIndex == menuModel.currentSelection ? "> " : "  ");
+            line += juce::String(item.label);
+            if(!item.valueText.empty())
+            {
+                line += ": " + juce::String(item.valueText);
+            }
+            g.drawText(line,
+                       menuTextArea.removeFromTop(14.0f).toNearestInt(),
+                       juce::Justification::centredLeft,
+                       false);
+        }
+    }
+
+    g.setColour(TextColour().withAlpha(0.58f));
+    g.drawText(processor_.GetBuildIdentityText(),
+               top.removeFromTop(14.0f).toNearestInt(),
+               juce::Justification::centredLeft,
+               false);
+    const auto highlights = processor_.GetReleaseHighlightLines();
+    if(highlights.size() > 0)
+    {
+        g.drawText(highlights[0],
+                   top.removeFromTop(14.0f).toNearestInt(),
+                   juce::Justification::centredLeft,
+                   false);
+    }
+    if(highlights.size() > 1)
+    {
+        g.drawText(highlights[1],
+                   top.removeFromTop(14.0f).toNearestInt(),
+                   juce::Justification::centredLeft,
+                   false);
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::LayoutRotaryControl(
+    ControlUi&                             control,
+    const daisyhost::PanelControlSlotSpec& slot,
+    bool                                  showLearnButton)
+{
+    const auto area = RectFromPanel(slot.panelBounds).toNearestInt();
+    control.slider.setBounds(area);
+    control.label.setBounds(area.withY(area.getBottom() + 2).withHeight(18));
+    control.learnButton.setVisible(showLearnButton);
+    if(showLearnButton)
+    {
+        control.learnButton.setBounds(
+            area.withY(area.getBottom() + 20).withHeight(20));
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::LayoutButtonControl(
+    juce::Button&                           button,
+    const daisyhost::PanelControlSlotSpec& slot)
+{
+    button.setBounds(RectFromPanel(slot.panelBounds).toNearestInt());
 }
 
 void DaisyHostPatchAudioProcessorEditor::ConfigureControl(
@@ -575,15 +1292,27 @@ void DaisyHostPatchAudioProcessorEditor::ConfigureControl(
     control.controlId = controlId;
     control.slider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     control.slider.setTextBoxStyle(
-        juce::Slider::TextBoxBelow, false, 56, 18);
+        juce::Slider::TextBoxBelow, false, 58, 18);
     control.slider.setRange(0.0, 1.0, 0.001);
     control.slider.addListener(this);
+    control.slider.setColour(juce::Slider::rotarySliderFillColourId, CreamColour());
+    control.slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                             InkColour().withAlpha(0.86f));
+    control.slider.setColour(juce::Slider::thumbColourId, AccentColour());
+    control.slider.setColour(juce::Slider::textBoxTextColourId, TextColour());
+    control.slider.setColour(juce::Slider::textBoxBackgroundColourId,
+                             InkColour().withAlpha(0.35f));
+    control.slider.setColour(juce::Slider::textBoxOutlineColourId,
+                             juce::Colours::white.withAlpha(0.16f));
     control.label.setText(labelText, juce::dontSendNotification);
     control.label.setJustificationType(juce::Justification::centred);
     control.label.setColour(juce::Label::textColourId, TextColour());
     control.learnButton.addListener(this);
     control.learnButton.setColour(juce::TextButton::buttonColourId,
-                                  AccentColour().darker(0.6f));
+                                  InkColour().withAlpha(0.72f));
+    control.learnButton.setColour(juce::TextButton::buttonOnColourId,
+                                  AccentColour().darker(0.35f));
+    control.learnButton.setColour(juce::TextButton::textColourOffId, CreamColour());
 }
 
 void DaisyHostPatchAudioProcessorEditor::ConfigureMouseFriendlySlider(
@@ -602,6 +1331,42 @@ void DaisyHostPatchAudioProcessorEditor::RegisterKeyboardSource(
     component.addKeyListener(this);
 }
 
+int DaisyHostPatchAudioProcessorEditor::GetSelectedCvGeneratorIndex() const
+{
+    const int selectedId = cvGeneratorTargetBox_.getSelectedId();
+    if(selectedId <= 0 || selectedId > 4)
+    {
+        return 0;
+    }
+    return selectedId - 1;
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateCvGeneratorEditorUi()
+{
+    if(cvGeneratorTargetBox_.getSelectedId() == 0)
+    {
+        cvGeneratorTargetBox_.setSelectedId(1, juce::dontSendNotification);
+    }
+
+    const int index = GetSelectedCvGeneratorIndex();
+    cvGeneratorModeBox_.setSelectedId(processor_.GetCvSourceMode(index) + 1,
+                                      juce::dontSendNotification);
+    cvGeneratorWaveformBox_.setSelectedId(processor_.GetCvWaveform(index) + 1,
+                                          juce::dontSendNotification);
+    cvGeneratorFrequencySlider_.setValue(processor_.GetCvFrequencyHz(index),
+                                         juce::dontSendNotification);
+    cvGeneratorAmplitudeSlider_.setValue(processor_.GetCvAmplitudeVolts(index),
+                                         juce::dontSendNotification);
+    cvGeneratorBiasSlider_.setValue(processor_.GetCvBiasVolts(index),
+                                    juce::dontSendNotification);
+
+    const bool generatorEnabled = processor_.GetCvSourceMode(index) != 0;
+    cvGeneratorWaveformBox_.setEnabled(generatorEnabled);
+    cvGeneratorFrequencySlider_.setEnabled(generatorEnabled);
+    cvGeneratorAmplitudeSlider_.setEnabled(generatorEnabled);
+    cvGeneratorBiasSlider_.setEnabled(generatorEnabled);
+}
+
 void DaisyHostPatchAudioProcessorEditor::UpdateLearnButton(ControlUi& control)
 {
     if(processor_.IsLearning(control.controlId))
@@ -612,6 +1377,43 @@ void DaisyHostPatchAudioProcessorEditor::UpdateLearnButton(ControlUi& control)
     {
         control.learnButton.setButtonText(
             processor_.GetMidiBindingLabel(control.controlId));
+    }
+}
+
+DaisyHostPatchAudioProcessorEditor::ControlUi&
+DaisyHostPatchAudioProcessorEditor::GetTopControlUi(std::size_t slotIndex)
+{
+    switch(slotIndex)
+    {
+        case 0: return dryWet_;
+        case 1: return knobs_[0];
+        case 2: return knobs_[1];
+        case 3: return knobs_[2];
+        default: return knobs_[3];
+    }
+}
+
+const DaisyHostPatchAudioProcessorEditor::ControlUi&
+DaisyHostPatchAudioProcessorEditor::GetTopControlUi(std::size_t slotIndex) const
+{
+    switch(slotIndex)
+    {
+        case 0: return dryWet_;
+        case 1: return knobs_[0];
+        case 2: return knobs_[1];
+        case 3: return knobs_[2];
+        default: return knobs_[3];
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateTopControlUi()
+{
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        auto& control = GetTopControlUi(i);
+        control.controlId = processor_.GetTopControlId(i);
+        control.label.setText(processor_.GetTopControlLabel(i),
+                              juce::dontSendNotification);
     }
 }
 
@@ -640,21 +1442,85 @@ void DaisyHostPatchAudioProcessorEditor::UpdateComputerKeyboardUi()
         juce::jlimit(24, 72, processor_.GetComputerKeyboardOctave() * 12));
 }
 
-void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
+void DaisyHostPatchAudioProcessorEditor::ApplyWindowIconIfNeeded()
 {
-    for(std::size_t i = 0; i < knobs_.size(); ++i)
+    if(windowIconApplied_)
     {
-        if(slider == &knobs_[i].slider)
+        return;
+    }
+
+    auto* documentWindow = findParentComponentOfClass<juce::DocumentWindow>();
+    if(documentWindow == nullptr)
+    {
+        return;
+    }
+
+    juce::Image iconImage(juce::Image::ARGB, 128, 128, true);
+    juce::Graphics iconGraphics(iconImage);
+    DrawDaisyHostBadge(iconGraphics, {0.0f, 0.0f, 128.0f, 128.0f}, false);
+    documentWindow->setIcon(iconImage);
+    windowIconApplied_ = true;
+}
+
+void DaisyHostPatchAudioProcessorEditor::HideStandaloneMuteBannerIfNeeded()
+{
+    if(!processor_.IsStandaloneWrapper() || standaloneMuteBannerHidden_)
+    {
+        return;
+    }
+
+    auto* parent = getParentComponent();
+    if(parent == nullptr)
+    {
+        return;
+    }
+
+    const auto editorBounds = ToUiRect(getBounds());
+    juce::Component* banner = nullptr;
+
+    for(int i = 0; i < parent->getNumChildComponents(); ++i)
+    {
+        auto* child = parent->getChildComponent(i);
+        if(child == this || !child->isVisible())
         {
-            processor_.SetKnobValue(i, static_cast<float>(slider->getValue()));
-            return;
+            continue;
+        }
+
+        if(daisyhost::IsStandaloneMuteBannerCandidate(editorBounds,
+                                                      ToUiRect(child->getBounds())))
+        {
+            banner = child;
+            break;
         }
     }
 
-    if(slider == &dryWet_.slider)
+    if(banner == nullptr)
     {
-        processor_.SetDryWetValue(static_cast<float>(slider->getValue()));
         return;
+    }
+
+    const auto adjustedBounds = ToJuceRect(
+        daisyhost::AdjustEditorBoundsForHiddenMuteBanner(editorBounds,
+                                                         ToUiRect(banner->getBounds())));
+
+    banner->setVisible(false);
+    if(getBounds() != adjustedBounds)
+    {
+        setBounds(adjustedBounds);
+    }
+    toFront(false);
+    standaloneMuteBannerHidden_ = true;
+}
+
+void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
+{
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        if(slider == &GetTopControlUi(i).slider)
+        {
+            processor_.SetTopControlValue(i, static_cast<float>(slider->getValue()));
+            return;
+        }
     }
 
     if(slider == &testInputLevelSlider_)
@@ -663,11 +1529,38 @@ void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider
         return;
     }
 
+    if(slider == &testInputFrequencySlider_)
+    {
+        processor_.SetTestInputFrequencyHz(static_cast<float>(slider->getValue()));
+        return;
+    }
+
+    if(slider == &cvGeneratorFrequencySlider_)
+    {
+        processor_.SetCvFrequencyHz(GetSelectedCvGeneratorIndex(),
+                                    static_cast<float>(slider->getValue()));
+        return;
+    }
+
+    if(slider == &cvGeneratorAmplitudeSlider_)
+    {
+        processor_.SetCvAmplitudeVolts(GetSelectedCvGeneratorIndex(),
+                                       static_cast<float>(slider->getValue()));
+        return;
+    }
+
+    if(slider == &cvGeneratorBiasSlider_)
+    {
+        processor_.SetCvBiasVolts(GetSelectedCvGeneratorIndex(),
+                                  static_cast<float>(slider->getValue()));
+        return;
+    }
+
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)
     {
         if(slider == &cvSliders_[i])
         {
-            processor_.SetCvValue(i, static_cast<float>(slider->getValue()));
+            processor_.SetCvManualVoltage(i, static_cast<float>(slider->getValue()));
             return;
         }
     }
@@ -675,8 +1568,9 @@ void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider
 
 void DaisyHostPatchAudioProcessorEditor::buttonClicked(juce::Button* button)
 {
-    for(auto& control : knobs_)
+    for(std::size_t i = 0; i < 4; ++i)
     {
+        auto& control = GetTopControlUi(i);
         if(button == &control.learnButton)
         {
             if(processor_.IsLearning(control.controlId))
@@ -691,22 +1585,10 @@ void DaisyHostPatchAudioProcessorEditor::buttonClicked(juce::Button* button)
         }
     }
 
-    if(button == &dryWet_.learnButton)
-    {
-        if(processor_.IsLearning(dryWet_.controlId))
-        {
-            processor_.CancelMidiLearn();
-        }
-        else
-        {
-            processor_.BeginMidiLearn(dryWet_.controlId);
-        }
-        return;
-    }
-
     if(button == &encoderPressButton_)
     {
-        processor_.SetEncoderPressed(encoderPressButton_.getToggleState());
+        processor_.PulseEncoderPress();
+        encoderPressButton_.setToggleState(false, juce::dontSendNotification);
         return;
     }
 
@@ -838,21 +1720,21 @@ bool DaisyHostPatchAudioProcessorEditor::keyStateChanged(
 
 void DaisyHostPatchAudioProcessorEditor::timerCallback()
 {
-    for(std::size_t i = 0; i < knobs_.size(); ++i)
+    UpdateTopControlUi();
+    for(std::size_t i = 0; i < 4; ++i)
     {
-        knobs_[i].slider.setValue(processor_.GetKnobValue(i),
-                                  juce::dontSendNotification);
-        UpdateLearnButton(knobs_[i]);
+        auto& control = GetTopControlUi(i);
+        control.slider.setValue(processor_.GetTopControlValue(i),
+                                juce::dontSendNotification);
+        UpdateLearnButton(control);
     }
 
-    dryWet_.slider.setValue(processor_.GetDryWetValue(), juce::dontSendNotification);
-    UpdateLearnButton(dryWet_);
-    encoderPressButton_.setToggleState(processor_.GetEncoderPressed(),
-                                       juce::dontSendNotification);
+    encoderPressButton_.setToggleState(false, juce::dontSendNotification);
 
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)
     {
-        cvSliders_[i].setValue(processor_.GetCvValue(i), juce::dontSendNotification);
+        cvSliders_[i].setValue(processor_.GetCvVoltage(i),
+                               juce::dontSendNotification);
     }
 
     for(std::size_t i = 0; i < gateButtons_.size(); ++i)
@@ -863,8 +1745,20 @@ void DaisyHostPatchAudioProcessorEditor::timerCallback()
 
     testInputModeBox_.setSelectedId(processor_.GetTestInputMode() + 1,
                                     juce::dontSendNotification);
+    const auto activeAppId = processor_.GetActiveAppId().toStdString();
+    for(std::size_t i = 0; i < availableAppIds_.size(); ++i)
+    {
+        if(availableAppIds_[i] == activeAppId)
+        {
+            appSelectorBox_.setSelectedId(static_cast<int>(i + 1),
+                                          juce::dontSendNotification);
+            break;
+        }
+    }
     testInputLevelSlider_.setValue(processor_.GetTestInputLevel(),
                                    juce::dontSendNotification);
+    testInputFrequencySlider_.setValue(processor_.GetTestInputFrequencyHz(),
+                                       juce::dontSendNotification);
     UpdateComputerKeyboardUi();
     processor_.RefreshMidiInputStatus();
     midiTrackerStatusLabel_.setText(processor_.GetMidiInputStatusText(),
@@ -873,5 +1767,8 @@ void DaisyHostPatchAudioProcessorEditor::timerCallback()
         processor_.GetRecentMidiEventLines().joinIntoString("\n"),
         false);
 
+    UpdateCvGeneratorEditorUi();
+    ApplyWindowIconIfNeeded();
+    HideStandaloneMuteBannerIfNeeded();
     repaint();
 }
