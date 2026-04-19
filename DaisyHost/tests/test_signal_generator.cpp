@@ -33,4 +33,19 @@ TEST(SignalGeneratorTest, GeneratorCvUsesBiasAndDepthWithinZeroToFiveVolts)
     EXPECT_NEAR(secondVolts, 5.0f, 0.0001f);
     EXPECT_NEAR(state.phase, 0.5f, 0.0001f);
 }
+
+TEST(SignalGeneratorTest, GeneratorAmplitudeIsClampedToHalfRange)
+{
+    daisyhost::CvInputGeneratorState state;
+    state.mode           = daisyhost::CvInputSourceMode::kGenerator;
+    state.waveform       = daisyhost::BasicWaveform::kSine;
+    state.frequencyHz    = 1.0f;
+    state.amplitudeVolts = 5.0f;
+    state.biasVolts      = 2.5f;
+    state.phase          = 0.25f;
+
+    const float volts = daisyhost::StepCvInputGenerator(&state, 0.0);
+
+    EXPECT_NEAR(volts, 5.0f, 0.0001f);
+}
 } // namespace

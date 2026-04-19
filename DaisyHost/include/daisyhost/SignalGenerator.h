@@ -34,6 +34,7 @@ struct CvInputGeneratorState
 };
 
 float ClampCvVoltage(float volts);
+float ClampCvAmplitudeVolts(float volts);
 float CvVoltsToNormalized(float volts);
 float NormalizedToCvVolts(float normalizedValue);
 float StepCvInputGenerator(CvInputGeneratorState* state, double elapsedSeconds);

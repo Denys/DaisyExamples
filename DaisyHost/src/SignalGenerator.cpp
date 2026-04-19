@@ -59,6 +59,11 @@ float ClampCvVoltage(float volts)
     return std::clamp(volts, 0.0f, 5.0f);
 }
 
+float ClampCvAmplitudeVolts(float volts)
+{
+    return std::clamp(volts, 0.0f, 2.5f);
+}
+
 float CvVoltsToNormalized(float volts)
 {
     return ClampCvVoltage(volts) / 5.0f;
@@ -81,7 +86,7 @@ float StepCvInputGenerator(CvInputGeneratorState* state, double elapsedSeconds)
     {
         outputVolts = ClampCvVoltage(
             state->biasVolts
-            + state->amplitudeVolts
+            + ClampCvAmplitudeVolts(state->amplitudeVolts)
                   * GenerateBasicWaveformSample(state->waveform, state->phase));
 
         if(elapsedSeconds > 0.0)

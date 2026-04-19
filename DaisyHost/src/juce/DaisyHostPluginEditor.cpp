@@ -170,7 +170,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
 {
     setOpaque(true);
     setWantsKeyboardFocus(true);
-    setSize(1360, 860);
+    setSize(1280, 840);
     addKeyListener(this);
 
     ConfigureControl(dryWet_,
@@ -349,118 +349,67 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     addAndMakeVisible(triggerImpulseButton_);
     RegisterKeyboardSource(triggerImpulseButton_);
 
-    cvGeneratorLabel_.setText("CV Generator", juce::dontSendNotification);
+    cvGeneratorLabel_.setText("CV Generators", juce::dontSendNotification);
     cvGeneratorLabel_.setJustificationType(juce::Justification::centredLeft);
     cvGeneratorLabel_.setColour(juce::Label::textColourId, TextColour());
     addAndMakeVisible(cvGeneratorLabel_);
 
-    for(int cvIndex = 0; cvIndex < 4; ++cvIndex)
+    for(std::size_t i = 0; i < cvGeneratorTitles_.size(); ++i)
     {
-        cvGeneratorTargetBox_.addItem("CV " + juce::String(cvIndex + 1), cvIndex + 1);
-    }
-    cvGeneratorTargetBox_.onChange = [this]() { UpdateCvGeneratorEditorUi(); };
-    addAndMakeVisible(cvGeneratorTargetBox_);
-    RegisterKeyboardSource(cvGeneratorTargetBox_);
+        cvGeneratorTitles_[i].setText("CV " + juce::String(static_cast<int>(i + 1)),
+                                      juce::dontSendNotification);
+        cvGeneratorTitles_[i].setJustificationType(
+            juce::Justification::centredLeft);
+        cvGeneratorTitles_[i].setColour(juce::Label::textColourId, TextColour());
+        addAndMakeVisible(cvGeneratorTitles_[i]);
 
-    cvGeneratorModeLabel_.setText("Mode", juce::dontSendNotification);
-    cvGeneratorModeLabel_.setJustificationType(juce::Justification::centredLeft);
-    cvGeneratorModeLabel_.setColour(juce::Label::textColourId, TextColour());
-    addAndMakeVisible(cvGeneratorModeLabel_);
-
-    cvGeneratorModeBox_.addItem("Manual", 1);
-    cvGeneratorModeBox_.addItem("Generator", 2);
-    cvGeneratorModeBox_.onChange = [this]() {
-        const int index = GetSelectedCvGeneratorIndex();
-        if(index >= 0)
-        {
-            processor_.SetCvSourceMode(static_cast<std::size_t>(index),
-                                       cvGeneratorModeBox_.getSelectedId() - 1);
+        cvGeneratorModeBoxes_[i].addItem("Manual", 1);
+        cvGeneratorModeBoxes_[i].addItem("Generator", 2);
+        cvGeneratorModeBoxes_[i].onChange = [this, i]() {
+            processor_.SetCvSourceMode(i, cvGeneratorModeBoxes_[i].getSelectedId() - 1);
             UpdateCvGeneratorEditorUi();
-        }
-    };
-    addAndMakeVisible(cvGeneratorModeBox_);
-    RegisterKeyboardSource(cvGeneratorModeBox_);
+        };
+        addAndMakeVisible(cvGeneratorModeBoxes_[i]);
+        RegisterKeyboardSource(cvGeneratorModeBoxes_[i]);
 
-    cvGeneratorWaveformLabel_.setText("Waveform", juce::dontSendNotification);
-    cvGeneratorWaveformLabel_.setJustificationType(
-        juce::Justification::centredLeft);
-    cvGeneratorWaveformLabel_.setColour(juce::Label::textColourId, TextColour());
-    addAndMakeVisible(cvGeneratorWaveformLabel_);
-
-    for(int waveform = 0; waveform <= static_cast<int>(daisyhost::BasicWaveform::kSaw);
-        ++waveform)
-    {
-        cvGeneratorWaveformBox_.addItem(
-            daisyhost::GetBasicWaveformName(waveform), waveform + 1);
-    }
-    cvGeneratorWaveformBox_.onChange = [this]() {
-        const int index = GetSelectedCvGeneratorIndex();
-        if(index >= 0)
+        for(int waveform = 0;
+            waveform <= static_cast<int>(daisyhost::BasicWaveform::kSaw);
+            ++waveform)
         {
-            processor_.SetCvWaveform(static_cast<std::size_t>(index),
-                                     cvGeneratorWaveformBox_.getSelectedId() - 1);
+            cvGeneratorWaveformBoxes_[i].addItem(
+                daisyhost::GetBasicWaveformName(waveform), waveform + 1);
         }
-    };
-    addAndMakeVisible(cvGeneratorWaveformBox_);
-    RegisterKeyboardSource(cvGeneratorWaveformBox_);
+        cvGeneratorWaveformBoxes_[i].onChange = [this, i]() {
+            processor_.SetCvWaveform(
+                i, cvGeneratorWaveformBoxes_[i].getSelectedId() - 1);
+        };
+        addAndMakeVisible(cvGeneratorWaveformBoxes_[i]);
+        RegisterKeyboardSource(cvGeneratorWaveformBoxes_[i]);
 
-    cvGeneratorFrequencyLabel_.setText("Freq (Hz)",
-                                       juce::dontSendNotification);
-    cvGeneratorFrequencyLabel_.setJustificationType(
-        juce::Justification::centredLeft);
-    cvGeneratorFrequencyLabel_.setColour(juce::Label::textColourId,
-                                         TextColour());
-    addAndMakeVisible(cvGeneratorFrequencyLabel_);
+        auto configureCvSlider = [this](juce::Slider& slider, double defaultValue) {
+            slider.setSliderStyle(juce::Slider::LinearHorizontal);
+            slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 18);
+            slider.addListener(this);
+            ConfigureMouseFriendlySlider(slider, defaultValue);
+            slider.setColour(juce::Slider::thumbColourId,
+                             PortColour(daisyhost::VirtualPortType::kCv));
+            addAndMakeVisible(slider);
+            RegisterKeyboardSource(slider);
+        };
 
-    cvGeneratorFrequencySlider_.setSliderStyle(juce::Slider::LinearHorizontal);
-    cvGeneratorFrequencySlider_.setTextBoxStyle(
-        juce::Slider::TextBoxRight, false, 54, 18);
-    cvGeneratorFrequencySlider_.setRange(0.01, 20.0, 0.01);
-    cvGeneratorFrequencySlider_.setSkewFactorFromMidPoint(1.0);
-    cvGeneratorFrequencySlider_.addListener(this);
-    ConfigureMouseFriendlySlider(cvGeneratorFrequencySlider_, 1.0);
-    cvGeneratorFrequencySlider_.setColour(juce::Slider::thumbColourId,
-                                          PortColour(daisyhost::VirtualPortType::kCv));
-    addAndMakeVisible(cvGeneratorFrequencySlider_);
-    RegisterKeyboardSource(cvGeneratorFrequencySlider_);
+        cvGeneratorFrequencySliders_[i].setRange(0.01, 20.0, 0.01);
+        cvGeneratorFrequencySliders_[i].setSkewFactorFromMidPoint(1.0);
+        cvGeneratorFrequencySliders_[i].setTextValueSuffix(" Hz");
+        configureCvSlider(cvGeneratorFrequencySliders_[i], 1.0);
 
-    cvGeneratorAmplitudeLabel_.setText("Depth (V)",
-                                       juce::dontSendNotification);
-    cvGeneratorAmplitudeLabel_.setJustificationType(
-        juce::Justification::centredLeft);
-    cvGeneratorAmplitudeLabel_.setColour(juce::Label::textColourId,
-                                         TextColour());
-    addAndMakeVisible(cvGeneratorAmplitudeLabel_);
+        cvGeneratorAmplitudeSliders_[i].setRange(0.0, 2.5, 0.01);
+        cvGeneratorAmplitudeSliders_[i].setTextValueSuffix(" V");
+        configureCvSlider(cvGeneratorAmplitudeSliders_[i], 2.5);
 
-    cvGeneratorAmplitudeSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
-    cvGeneratorAmplitudeSlider_.setTextBoxStyle(
-        juce::Slider::TextBoxRight, false, 54, 18);
-    cvGeneratorAmplitudeSlider_.setRange(0.0, 5.0, 0.01);
-    cvGeneratorAmplitudeSlider_.addListener(this);
-    ConfigureMouseFriendlySlider(cvGeneratorAmplitudeSlider_, 2.5);
-    cvGeneratorAmplitudeSlider_.setColour(
-        juce::Slider::thumbColourId,
-        PortColour(daisyhost::VirtualPortType::kCv));
-    addAndMakeVisible(cvGeneratorAmplitudeSlider_);
-    RegisterKeyboardSource(cvGeneratorAmplitudeSlider_);
-
-    cvGeneratorBiasLabel_.setText("DC Bias (V)",
-                                  juce::dontSendNotification);
-    cvGeneratorBiasLabel_.setJustificationType(
-        juce::Justification::centredLeft);
-    cvGeneratorBiasLabel_.setColour(juce::Label::textColourId, TextColour());
-    addAndMakeVisible(cvGeneratorBiasLabel_);
-
-    cvGeneratorBiasSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
-    cvGeneratorBiasSlider_.setTextBoxStyle(
-        juce::Slider::TextBoxRight, false, 54, 18);
-    cvGeneratorBiasSlider_.setRange(0.0, 5.0, 0.01);
-    cvGeneratorBiasSlider_.addListener(this);
-    ConfigureMouseFriendlySlider(cvGeneratorBiasSlider_, 2.5);
-    cvGeneratorBiasSlider_.setColour(juce::Slider::thumbColourId,
-                                     PortColour(daisyhost::VirtualPortType::kCv));
-    addAndMakeVisible(cvGeneratorBiasSlider_);
-    RegisterKeyboardSource(cvGeneratorBiasSlider_);
+        cvGeneratorBiasSliders_[i].setRange(0.0, 5.0, 0.01);
+        cvGeneratorBiasSliders_[i].setTextValueSuffix(" V");
+        configureCvSlider(cvGeneratorBiasSliders_[i], 2.5);
+    }
 
     computerKeyboardLabel_.setText("Keyboard MIDI", juce::dontSendNotification);
     computerKeyboardLabel_.setJustificationType(juce::Justification::centredLeft);
@@ -526,7 +475,6 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
 
     UpdateTopControlUi();
     UpdateComputerKeyboardUi();
-    cvGeneratorTargetBox_.setSelectedId(1, juce::dontSendNotification);
     UpdateCvGeneratorEditorUi();
     startTimerHz(30);
 }
@@ -557,9 +505,12 @@ DaisyHostPatchAudioProcessorEditor::~DaisyHostPatchAudioProcessorEditor()
 
     testInputLevelSlider_.removeListener(this);
     testInputFrequencySlider_.removeListener(this);
-    cvGeneratorFrequencySlider_.removeListener(this);
-    cvGeneratorAmplitudeSlider_.removeListener(this);
-    cvGeneratorBiasSlider_.removeListener(this);
+    for(std::size_t i = 0; i < cvGeneratorFrequencySliders_.size(); ++i)
+    {
+        cvGeneratorFrequencySliders_[i].removeListener(this);
+        cvGeneratorAmplitudeSliders_[i].removeListener(this);
+        cvGeneratorBiasSliders_[i].removeListener(this);
+    }
     triggerImpulseButton_.removeListener(this);
     computerKeyboardToggle_.removeListener(this);
 }
@@ -663,40 +614,55 @@ void DaisyHostPatchAudioProcessorEditor::resized()
     triggerImpulseButton_.setBounds(drawer.removeFromTop(28));
     drawer.removeFromTop(10);
 
-    computerKeyboardLabel_.setBounds(drawer.removeFromTop(18));
-    computerKeyboardToggle_.setBounds(drawer.removeFromTop(24));
-    drawer.removeFromTop(4);
-    computerKeyboardOctaveLabel_.setBounds(drawer.removeFromTop(18));
-    computerKeyboardOctaveBox_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(6);
-    midiKeyboard_.setBounds(drawer.removeFromTop(70));
-    drawer.removeFromTop(8);
+    auto lowerArea = drawer;
+    auto leftColumn
+        = lowerArea.removeFromLeft((lowerArea.getWidth() - 10) / 2);
+    lowerArea.removeFromLeft(10);
+    auto rightColumn = lowerArea;
 
-    midiTrackerLabel_.setBounds(drawer.removeFromTop(18));
-    midiTrackerStatusLabel_.setBounds(drawer.removeFromTop(18));
-    midiTrackerText_.setBounds(drawer.removeFromTop(78));
-    drawer.removeFromTop(10);
+    computerKeyboardLabel_.setBounds(leftColumn.removeFromTop(18));
+    computerKeyboardToggle_.setBounds(leftColumn.removeFromTop(24));
+    leftColumn.removeFromTop(4);
+    computerKeyboardOctaveLabel_.setBounds(leftColumn.removeFromTop(18));
+    computerKeyboardOctaveBox_.setBounds(leftColumn.removeFromTop(28));
+    leftColumn.removeFromTop(6);
+    midiKeyboard_.setBounds(leftColumn.removeFromTop(72));
+    leftColumn.removeFromTop(10);
 
-    cvGeneratorLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorTargetBox_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(4);
-    cvGeneratorModeLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorModeBox_.setBounds(drawer.removeFromTop(26));
-    drawer.removeFromTop(4);
-    cvGeneratorWaveformLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorWaveformBox_.setBounds(drawer.removeFromTop(26));
-    drawer.removeFromTop(4);
-    cvGeneratorFrequencyLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorFrequencySlider_.setBounds(drawer.removeFromTop(24));
-    drawer.removeFromTop(4);
-    cvGeneratorAmplitudeLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorAmplitudeSlider_.setBounds(drawer.removeFromTop(24));
-    drawer.removeFromTop(4);
-    cvGeneratorBiasLabel_.setBounds(drawer.removeFromTop(18));
-    cvGeneratorBiasSlider_.setBounds(drawer.removeFromTop(24));
-    drawer.removeFromTop(8);
+    midiTrackerLabel_.setBounds(leftColumn.removeFromTop(18));
+    midiTrackerStatusLabel_.setBounds(leftColumn.removeFromTop(18));
+    midiTrackerText_.setBounds(leftColumn.removeFromTop(110));
 
-    auto cvArea = drawer.removeFromTop(118);
+    cvGeneratorLabel_.setBounds(rightColumn.removeFromTop(18));
+    rightColumn.removeFromTop(4);
+
+    auto generatorGrid = rightColumn.removeFromTop(314);
+    const int cardGap = 8;
+    const int cardWidth = (generatorGrid.getWidth() - cardGap) / 2;
+    const int cardHeight = (generatorGrid.getHeight() - cardGap) / 2;
+    for(std::size_t i = 0; i < cvGeneratorTitles_.size(); ++i)
+    {
+        const int row = static_cast<int>(i / 2);
+        const int col = static_cast<int>(i % 2);
+        auto card = juce::Rectangle<int>(generatorGrid.getX() + col * (cardWidth + cardGap),
+                                         generatorGrid.getY() + row * (cardHeight + cardGap),
+                                         cardWidth,
+                                         cardHeight);
+
+        cvGeneratorTitles_[i].setBounds(card.removeFromTop(18));
+        cvGeneratorModeBoxes_[i].setBounds(card.removeFromTop(24));
+        card.removeFromTop(4);
+        cvGeneratorWaveformBoxes_[i].setBounds(card.removeFromTop(24));
+        card.removeFromTop(4);
+        cvGeneratorFrequencySliders_[i].setBounds(card.removeFromTop(22));
+        card.removeFromTop(2);
+        cvGeneratorAmplitudeSliders_[i].setBounds(card.removeFromTop(22));
+        card.removeFromTop(2);
+        cvGeneratorBiasSliders_[i].setBounds(card.removeFromTop(22));
+    }
+
+    rightColumn.removeFromTop(8);
+    auto cvArea = rightColumn.removeFromTop(118);
     const int cvWidth = (cvArea.getWidth() - 18) / 4;
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)
     {
@@ -706,8 +672,8 @@ void DaisyHostPatchAudioProcessorEditor::resized()
         cvArea.removeFromLeft(6);
     }
 
-    drawer.removeFromTop(8);
-    auto gateArea = drawer.removeFromTop(28);
+    rightColumn.removeFromTop(8);
+    auto gateArea = rightColumn.removeFromTop(28);
     gateButtons_[0].setBounds(gateArea.removeFromLeft(gateArea.getWidth() / 2 - 6));
     gateArea.removeFromLeft(12);
     gateButtons_[1].setBounds(gateArea);
@@ -754,7 +720,7 @@ juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetEditorBounds() const
 juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetPatchPanelBounds() const
 {
     auto bounds = GetEditorBounds();
-    auto left = bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.60f));
+    auto left = bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.64f));
     return left.reduced(8, 30);
 }
 
@@ -766,7 +732,7 @@ juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetPatchPanelContentBou
 juce::Rectangle<int> DaisyHostPatchAudioProcessorEditor::GetHostToolsBounds() const
 {
     auto bounds = GetEditorBounds();
-    bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.60f) + 12);
+    bounds.removeFromLeft(static_cast<int>(bounds.getWidth() * 0.64f) + 12);
     return bounds;
 }
 
@@ -1331,40 +1297,27 @@ void DaisyHostPatchAudioProcessorEditor::RegisterKeyboardSource(
     component.addKeyListener(this);
 }
 
-int DaisyHostPatchAudioProcessorEditor::GetSelectedCvGeneratorIndex() const
-{
-    const int selectedId = cvGeneratorTargetBox_.getSelectedId();
-    if(selectedId <= 0 || selectedId > 4)
-    {
-        return 0;
-    }
-    return selectedId - 1;
-}
-
 void DaisyHostPatchAudioProcessorEditor::UpdateCvGeneratorEditorUi()
 {
-    if(cvGeneratorTargetBox_.getSelectedId() == 0)
+    for(std::size_t i = 0; i < cvGeneratorTitles_.size(); ++i)
     {
-        cvGeneratorTargetBox_.setSelectedId(1, juce::dontSendNotification);
+        cvGeneratorModeBoxes_[i].setSelectedId(processor_.GetCvSourceMode(i) + 1,
+                                               juce::dontSendNotification);
+        cvGeneratorWaveformBoxes_[i].setSelectedId(processor_.GetCvWaveform(i) + 1,
+                                                   juce::dontSendNotification);
+        cvGeneratorFrequencySliders_[i].setValue(processor_.GetCvFrequencyHz(i),
+                                                 juce::dontSendNotification);
+        cvGeneratorAmplitudeSliders_[i].setValue(processor_.GetCvAmplitudeVolts(i),
+                                                 juce::dontSendNotification);
+        cvGeneratorBiasSliders_[i].setValue(processor_.GetCvBiasVolts(i),
+                                            juce::dontSendNotification);
+
+        const bool generatorEnabled = processor_.GetCvSourceMode(i) != 0;
+        cvGeneratorWaveformBoxes_[i].setEnabled(generatorEnabled);
+        cvGeneratorFrequencySliders_[i].setEnabled(generatorEnabled);
+        cvGeneratorAmplitudeSliders_[i].setEnabled(generatorEnabled);
+        cvGeneratorBiasSliders_[i].setEnabled(generatorEnabled);
     }
-
-    const int index = GetSelectedCvGeneratorIndex();
-    cvGeneratorModeBox_.setSelectedId(processor_.GetCvSourceMode(index) + 1,
-                                      juce::dontSendNotification);
-    cvGeneratorWaveformBox_.setSelectedId(processor_.GetCvWaveform(index) + 1,
-                                          juce::dontSendNotification);
-    cvGeneratorFrequencySlider_.setValue(processor_.GetCvFrequencyHz(index),
-                                         juce::dontSendNotification);
-    cvGeneratorAmplitudeSlider_.setValue(processor_.GetCvAmplitudeVolts(index),
-                                         juce::dontSendNotification);
-    cvGeneratorBiasSlider_.setValue(processor_.GetCvBiasVolts(index),
-                                    juce::dontSendNotification);
-
-    const bool generatorEnabled = processor_.GetCvSourceMode(index) != 0;
-    cvGeneratorWaveformBox_.setEnabled(generatorEnabled);
-    cvGeneratorFrequencySlider_.setEnabled(generatorEnabled);
-    cvGeneratorAmplitudeSlider_.setEnabled(generatorEnabled);
-    cvGeneratorBiasSlider_.setEnabled(generatorEnabled);
 }
 
 void DaisyHostPatchAudioProcessorEditor::UpdateLearnButton(ControlUi& control)
@@ -1535,25 +1488,25 @@ void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider
         return;
     }
 
-    if(slider == &cvGeneratorFrequencySlider_)
+    for(std::size_t i = 0; i < cvGeneratorFrequencySliders_.size(); ++i)
     {
-        processor_.SetCvFrequencyHz(GetSelectedCvGeneratorIndex(),
-                                    static_cast<float>(slider->getValue()));
-        return;
-    }
+        if(slider == &cvGeneratorFrequencySliders_[i])
+        {
+            processor_.SetCvFrequencyHz(i, static_cast<float>(slider->getValue()));
+            return;
+        }
 
-    if(slider == &cvGeneratorAmplitudeSlider_)
-    {
-        processor_.SetCvAmplitudeVolts(GetSelectedCvGeneratorIndex(),
-                                       static_cast<float>(slider->getValue()));
-        return;
-    }
+        if(slider == &cvGeneratorAmplitudeSliders_[i])
+        {
+            processor_.SetCvAmplitudeVolts(i, static_cast<float>(slider->getValue()));
+            return;
+        }
 
-    if(slider == &cvGeneratorBiasSlider_)
-    {
-        processor_.SetCvBiasVolts(GetSelectedCvGeneratorIndex(),
-                                  static_cast<float>(slider->getValue()));
-        return;
+        if(slider == &cvGeneratorBiasSliders_[i])
+        {
+            processor_.SetCvBiasVolts(i, static_cast<float>(slider->getValue()));
+            return;
+        }
     }
 
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)

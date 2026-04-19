@@ -67,6 +67,22 @@ TEST(TorusCoreTest, ExposesStableMetadataParametersAndMenu)
     const auto& menu = core.GetMenuModel();
     ASSERT_FALSE(menu.sections.empty());
     EXPECT_EQ(menu.sections.front().id, "node0/menu/root");
+
+    const auto* polyModelSection = [&]() -> const daisyhost::MenuSection* {
+        for(const auto& section : menu.sections)
+        {
+            if(section.id == "node0/menu/poly_model")
+            {
+                return &section;
+            }
+        }
+        return nullptr;
+    }();
+    ASSERT_NE(polyModelSection, nullptr);
+    ASSERT_GE(polyModelSection->items.size(), 3u);
+    EXPECT_EQ(polyModelSection->items[0].valueText, "One");
+    EXPECT_EQ(polyModelSection->items[1].valueText, "Modal");
+    EXPECT_EQ(polyModelSection->items[2].valueText, "Formant");
 }
 
 TEST(TorusCoreTest, SupportsDeterministicResetAndRender)
@@ -96,5 +112,60 @@ TEST(TorusCoreTest, StartsSilentWithoutInputOrGateByDefault)
     core.ResetToDefaultState(0u);
 
     EXPECT_LT(RenderAbsoluteSumWithZeroInput(core), 0.0001f);
+}
+
+TEST(TorusCoreTest, DisplayUsesNamedModelAndEffectLabels)
+{
+    daisyhost::apps::TorusCore core("node0");
+    core.Prepare(48000.0, daisyhost::apps::TorusCore::kPreferredBlockSize);
+    core.ResetToDefaultState(0u);
+    ASSERT_TRUE(core.SetParameterValue("node0/param/model", 1.0f));
+    ASSERT_TRUE(core.SetParameterValue("node0/param/easter_fx", 0.4f));
+    ASSERT_TRUE(core.SetParameterValue("node0/param/easter_egg", 1.0f));
+    core.TickUi(16.0);
+
+    const auto& display = core.GetDisplayModel();
+    ASSERT_GE(display.texts.size(), 3u);
+    EXPECT_NE(display.texts[1].text.find("Str+Reverb"), std::string::npos);
+    EXPECT_NE(display.texts[2].text.find("Reverb"), std::string::npos);
+    EXPECT_NE(display.texts[2].text.find("On"), std::string::npos);
+}
+
+TEST(TorusCoreTest, MenuModelKeepsFullNamesWhileDisplayCompactsThem)
+{
+    daisyhost::apps::TorusCore core("node0");
+    core.Prepare(48000.0, daisyhost::apps::TorusCore::kPreferredBlockSize);
+    core.ResetToDefaultState(0u);
+    ASSERT_TRUE(core.SetParameterValue("node0/param/model", 1.0f));
+    core.MenuPress();
+    core.MenuRotate(1);
+    core.MenuPress();
+    core.TickUi(16.0);
+
+    const auto& menu = core.GetMenuModel();
+    const auto* polyModelSection = [&]() -> const daisyhost::MenuSection* {
+        for(const auto& section : menu.sections)
+        {
+            if(section.id == "node0/menu/poly_model")
+            {
+                return &section;
+            }
+        }
+        return nullptr;
+    }();
+    ASSERT_NE(polyModelSection, nullptr);
+    EXPECT_EQ(polyModelSection->items[1].valueText, "String and Reverb");
+
+    const auto& display = core.GetDisplayModel();
+    bool foundCompactModel = false;
+    for(const auto& text : display.texts)
+    {
+        if(text.text.find("Str+Reverb") != std::string::npos)
+        {
+            foundCompactModel = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundCompactModel);
 }
 } // namespace

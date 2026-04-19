@@ -672,7 +672,7 @@ void DaisyHostPatchAudioProcessor::SetCvAmplitudeVolts(std::size_t index,
     if(index < cvGeneratorStates_.size())
     {
         cvGeneratorStates_[index].amplitudeVolts
-            = daisyhost::ClampCvVoltage(volts);
+            = daisyhost::ClampCvAmplitudeVolts(volts);
     }
 }
 
@@ -1189,7 +1189,7 @@ void DaisyHostPatchAudioProcessor::LoadSession(
            it != state.controlValues.end())
         {
             cvGeneratorStates_[i].amplitudeVolts
-                = daisyhost::ClampCvVoltage(it->second);
+                = daisyhost::ClampCvAmplitudeVolts(it->second);
         }
         if(const auto it
            = state.controlValues.find(MakeCvHostStateId(i, "bias_volts"));

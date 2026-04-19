@@ -220,6 +220,41 @@ using ParameterSource = TorusCore::Impl::ParameterSource;
 std::array<const char*, 5> kSemanticNames = {
     "Frequency", "Structure", "Brightness", "Damping", "Position"};
 
+constexpr std::array<const char*, 3> kPolyphonyNames = {
+    "One", "Two", "Four"};
+
+constexpr std::array<const char*, 6> kModelNames = {
+    "Modal",
+    "Sympathetic Strings",
+    "Inharmonic Strings",
+    "FM Voice",
+    "Western Chords",
+    "String and Reverb"};
+
+constexpr std::array<const char*, 6> kModelDisplayNames = {
+    "Modal",
+    "Sym Strings",
+    "Inharm Str",
+    "FM Voice",
+    "W. Chords",
+    "Str+Reverb"};
+
+constexpr std::array<const char*, 6> kEasterFxNames = {
+    "Formant",
+    "Chorus",
+    "Reverb",
+    "Formant 2",
+    "Ensemble",
+    "Reverb 2"};
+
+constexpr std::array<const char*, 6> kEasterFxDisplayNames = {
+    "Formant",
+    "Chorus",
+    "Reverb",
+    "Formant2",
+    "Ensemble",
+    "Reverb2"};
+
 ParameterIndex AssignmentToParameterIndex(int assignment)
 {
     switch(assignment)
@@ -237,6 +272,37 @@ std::string ControlNameFromAssignment(int assignment)
 {
     const std::size_t index = static_cast<std::size_t>(std::clamp(assignment, 0, 4));
     return kSemanticNames[index];
+}
+
+template <std::size_t N>
+std::string ChoiceName(int index, const std::array<const char*, N>& names)
+{
+    const std::size_t clamped
+        = static_cast<std::size_t>(std::clamp(index, 0, static_cast<int>(names.size() - 1)));
+    return names[clamped];
+}
+
+std::string CompactMenuDisplayValue(const MenuItem& item)
+{
+    if(item.id.find("/poly_model/model") != std::string::npos)
+    {
+        const auto it = std::find(kModelNames.begin(), kModelNames.end(), item.valueText);
+        if(it != kModelNames.end())
+        {
+            return kModelDisplayNames[static_cast<std::size_t>(std::distance(kModelNames.begin(), it))];
+        }
+    }
+
+    if(item.id.find("/poly_model/easter_fx") != std::string::npos)
+    {
+        const auto it = std::find(kEasterFxNames.begin(), kEasterFxNames.end(), item.valueText);
+        if(it != kEasterFxNames.end())
+        {
+            return kEasterFxDisplayNames[static_cast<std::size_t>(std::distance(kEasterFxNames.begin(), it))];
+        }
+    }
+
+    return item.valueText;
 }
 
 int AssignmentForControl(const TorusCore::Impl& impl, std::size_t controlIndex)
@@ -889,21 +955,36 @@ void TorusCore::MenuRotate(int delta)
              true,
              MenuItemActionKind::kValue,
              impl_->parameters[static_cast<std::size_t>(ParameterIndex::kPolyphony)].normalizedValue,
-             std::to_string(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kPolyphony)].normalizedValue, 3) == 0 ? 1 : (QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kPolyphony)].normalizedValue, 3) == 1 ? 2 : 4)),
+             ChoiceName(
+                 QuantizeChoice(
+                     impl_->parameters[static_cast<std::size_t>(ParameterIndex::kPolyphony)]
+                         .normalizedValue,
+                     3),
+                 kPolyphonyNames),
              ""},
             {MakeMenuItemId(nodeId_, "poly_model", "model"),
              "Model",
              true,
              MenuItemActionKind::kValue,
              impl_->parameters[static_cast<std::size_t>(ParameterIndex::kModel)].normalizedValue,
-             std::to_string(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kModel)].normalizedValue, 6)),
+             ChoiceName(
+                 QuantizeChoice(
+                     impl_->parameters[static_cast<std::size_t>(ParameterIndex::kModel)]
+                         .normalizedValue,
+                     6),
+                 kModelNames),
              ""},
             {MakeMenuItemId(nodeId_, "poly_model", "easter_fx"),
              "Easter FX",
              true,
              MenuItemActionKind::kValue,
              impl_->parameters[static_cast<std::size_t>(ParameterIndex::kEasterFx)].normalizedValue,
-             std::to_string(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kEasterFx)].normalizedValue, 6)),
+             ChoiceName(
+                 QuantizeChoice(
+                     impl_->parameters[static_cast<std::size_t>(ParameterIndex::kEasterFx)]
+                         .normalizedValue,
+                     6),
+                 kEasterFxNames),
              ""},
             {MakeMenuItemId(nodeId_, "poly_model", "back"), "Back", false, MenuItemActionKind::kBack, 0.0f, "", ""},
         };
@@ -973,7 +1054,7 @@ void TorusCore::MenuRotate(int delta)
                     std::string text = (itemIndex == section.selectedIndex ? "> " : "  ") + item.label;
                     if(!item.valueText.empty())
                     {
-                        text += " " + item.valueText;
+                        text += " " + CompactMenuDisplayValue(item);
                     }
                     impl_->display.texts.push_back({0, 16 + row * 14, text, false});
                 }
@@ -982,9 +1063,34 @@ void TorusCore::MenuRotate(int delta)
         }
 
         impl_->display.texts.push_back({0, 0, "Torus", false});
-        impl_->display.texts.push_back({0, 16, "Model " + std::to_string(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kModel)].normalizedValue, 6)), false});
-        impl_->display.texts.push_back({0, 30, "CTRL1 " + ControlNameFromAssignment(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl1Assignment)].normalizedValue, 5)), false});
-        impl_->display.texts.push_back({0, 44, "CTRL2 " + ControlNameFromAssignment(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl2Assignment)].normalizedValue, 5)), false});
+        impl_->display.texts.push_back(
+            {0,
+             16,
+             "Model " + ChoiceName(
+                              QuantizeChoice(
+                                  impl_->parameters[static_cast<std::size_t>(ParameterIndex::kModel)]
+                                      .normalizedValue,
+                                  6),
+                              kModelDisplayNames),
+             false});
+        impl_->display.texts.push_back(
+            {0,
+             30,
+             "FX "
+                 + ChoiceName(
+                     QuantizeChoice(
+                         impl_->parameters[static_cast<std::size_t>(ParameterIndex::kEasterFx)]
+                             .normalizedValue,
+                         6),
+                     kEasterFxDisplayNames)
+                 + (impl_->parameters[static_cast<std::size_t>(ParameterIndex::kEasterEgg)]
+                                .normalizedValue
+                            >= 0.5f
+                        ? " On"
+                        : " Off"),
+             false});
+        impl_->display.texts.push_back({0, 44, "CTRL1 " + ControlNameFromAssignment(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl1Assignment)].normalizedValue, 5)), false});
+        impl_->display.texts.push_back({0, 58, "CTRL2 " + ControlNameFromAssignment(QuantizeChoice(impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl2Assignment)].normalizedValue, 5)), false});
     };
 
     rebuildMenu();
