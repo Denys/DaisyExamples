@@ -10,6 +10,9 @@ For project-specific doctrine, follow the nearest local docs such as `README.md`
 Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
 `GEMINI.md`, `OPENCODE.md`, and `KILO.md` should defer to this file plus
 `LATEST_PROJECTS.md` rather than duplicating repo workflow.
+Keep wrapper files thin: they may add tool-specific invocation details, but
+they should not restate repo workflow that already lives here or in
+`LATEST_PROJECTS.md`.
 
 ## Scope
 
@@ -18,6 +21,22 @@ Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
   and auxiliary tooling.
 - Prefer the smallest possible change set. Do not normalize unrelated examples
   or "clean up" the workspace unless the task explicitly asks for it.
+- If a task spans more than one pinned workspace root, name the primary root
+  and dependent roots before editing, then validate the smallest relevant
+  target in each affected surface.
+
+## Instruction Priority
+
+When instructions conflict, resolve by descending priority:
+
+1. Explicit user instruction in the current session
+2. Nearest local `AGENTS.md` for the target subproject
+3. This root `AGENTS.md`
+4. Nearest local docs such as `README.md`, `CHECKPOINT.md`, and `CONTROLS.md`
+5. `LATEST_PROJECTS.md` as volatile orientation, not authority
+6. `docs/plans/` as design context, not implementation proof
+7. DaisyBrain as strategic memory only; it does not override local source of
+   truth
 
 ## Start Here
 
@@ -27,8 +46,12 @@ Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
    active work lives only under `MyProjects/_projects`.
 3. Read the nearest `README.md`.
 4. If a sibling or parent `CHECKPOINT.md` exists, read it before changing code.
+   If no `CHECKPOINT.md` exists, proceed and note the missing milestone context.
 5. If the target is part of the recent custom-project working set, read the
    matching entry in `LATEST_PROJECTS.md`.
+   If `LATEST_PROJECTS.md` is missing or clearly stale for the target, treat it
+   as orientation only and fall back to local docs plus
+   `py -3 ./ci/list_recent_project_roots.py`.
 6. If the target project has a matching plan in `docs/plans/`, use it as design
    context but do not treat it as proof that implementation is current.
 7. If the task changes control architecture, project scaffolding, or Daisy coding
@@ -39,6 +62,9 @@ Thin tool-specific wrappers such as `CODEX.md`, `CLAUDE.md`, `CHATGPT.md`,
    `docs/notebooklm/README.md` and the layered context pack under
    `docs/notebooklm/context/`. Treat DaisyBrain as a strategic memory edge, not
    a substitute for local source-of-truth docs.
+9. If DaisyBrain or its local CLI path is unavailable, continue with the
+   nearest local docs plus `AGENTS.md` and `LATEST_PROJECTS.md`, and state that
+   the strategic-memory path could not be used.
 
 ## Repo Map
 
@@ -180,7 +206,11 @@ reachable from that project, run:
 py -3 ../../../DAISY_QAE/validate_daisy_code.py .
 ```
 
-Adjust the relative path as needed. If you cannot run the validator, say so.
+Adjust the relative path as needed.
+Treat any validator `ERROR` output or non-zero exit as failed validation.
+Surface `WARN` output if present; warnings are advisory unless the user says
+otherwise.
+If you cannot run the validator, say so.
 
 ### Style
 
@@ -240,4 +270,4 @@ or `docs/plans/`.
   synthesis across multiple workspaces, but always confirm actionable details
   against the nearest repo/local docs before editing.
 - If hardware validation is needed but unavailable, state that the result is
-  build-verified only.
+  `build-verified only - hardware validation not performed`.

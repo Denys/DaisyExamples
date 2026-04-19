@@ -30,6 +30,14 @@ Implemented refresh:
   - stereo output on Patch outputs 1/2
   - gate-triggered strum and audio-input exciter semantics
 - rebind the processor and editor to active app metadata and patch bindings instead of hardcoded `MultiDelay` ids
+- add Phase 3 headless render support with:
+  - `DaisyHostRender` CLI target
+  - scenario JSON loading and validation
+  - deterministic offline `WAV + JSON manifest` output
+  - timeline support for parameter, CV, gate, MIDI, audio-input, impulse, and
+    compatibility menu events
+- add `training/render_dataset.py`, dataset job examples, and render workflow
+  docs under `training/`
 
 ## [0.1.0] - Existing Workspace Baseline
 

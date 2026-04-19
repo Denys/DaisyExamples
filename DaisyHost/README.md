@@ -17,6 +17,10 @@ Current source version is `0.2.0`. This README describes the refreshed
 workspace at a high level and points to the local docs that track verification
 status and current follow-ups.
 
+For Phase 3 offline rendering and dataset generation, also read:
+
+- [training/README.md](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/training/README.md)
+
 ## Scope
 
 The current workspace intentionally models board semantics instead of firmware
@@ -50,6 +54,13 @@ internals:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings
   - only one app runs at a time in this phase; there is still no multi-node rack
+- Headless rendering:
+  - `DaisyHostRender.exe` loads a scenario JSON, renders offline, and writes
+    `audio.wav` plus `manifest.json`
+  - scenarios drive apps through canonical parameter ids, typed Patch ports,
+    and optional compatibility menu actions
+  - `training/render_dataset.py` expands sweep jobs into multiple run folders
+    and writes a `dataset_index.json`
 
 ## 0.2.0 Control Model
 
@@ -81,6 +92,14 @@ Implemented `0.2.0` additions:
 - multi-app host plumbing with `multidelay` as the default app and `torus` as
   app #2
 - app-aware top-panel control labels and persisted app selection
+- app-generic headless render runtime with:
+  - scenario JSON loading
+  - deterministic offline rendering
+  - `WAV + JSON manifest` output
+  - timeline support for parameter, CV, gate, MIDI, audio-input, impulse, and
+    compatibility menu events
+- `DaisyHostRender` CLI target and Python dataset sweep orchestration under
+  `training/`
 
 Non-goals for v1:
 
@@ -97,12 +116,13 @@ The host uses CMake with `FetchContent` for JUCE and GoogleTest.
 
 ```sh
 cmake -S DaisyHost -B DaisyHost/build
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir DaisyHost/build -C Release --output-on-failure
 ```
 
 Outputs:
 
+- `DaisyHostRender.exe`
 - `DaisyHost Patch.vst3`
 - `DaisyHost Patch.exe`
 - `unit_tests`
@@ -113,7 +133,11 @@ Outputs:
 - `src/apps/MultiDelayCore.cpp`: portable extracted app core
 - `src/apps/TorusCore.cpp`: DaisyHost-native Torus pilot app core
 - `src/AppRegistry.cpp`: app registry and factory layer
+- `src/RenderRuntime.cpp`: headless render runtime, scenario loading, manifest
+  emission, and WAV writing
 - `src/juce/`: JUCE plugin and standalone wrapper
+- `tools/render_app.cpp`: command-line render entrypoint
+- `training/`: dataset orchestration, schema notes, and example scenarios
 - `tests/`: unit tests for the abstractions and the extracted core
 - `AGENTS.md`, `CHECKPOINT.md`, `CHANGELOG.md`: local project guidance and
   version tracking

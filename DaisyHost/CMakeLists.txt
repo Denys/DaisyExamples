@@ -60,6 +60,33 @@ target_compile_definitions(daisyhost_core
         DAISYHOST_BUILD_IDENTITY="DaisyHost ${PROJECT_VERSION}"
 )
 
+add_library(daisyhost_render STATIC
+    src/RenderRuntime.cpp
+)
+
+target_include_directories(daisyhost_render
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+)
+
+target_compile_features(daisyhost_render PUBLIC cxx_std_17)
+
+target_link_libraries(daisyhost_render
+    PUBLIC
+        daisyhost_core
+        juce::juce_audio_formats
+        juce::juce_core
+)
+
+add_executable(DaisyHostRender
+    tools/render_app.cpp
+)
+
+target_link_libraries(DaisyHostRender
+    PRIVATE
+        daisyhost_render
+)
+
 juce_add_plugin(DaisyHostPatch
     COMPANY_NAME Antigravity
     BUNDLE_ID com.antigravity.daisyhost.patch
@@ -113,13 +140,14 @@ add_executable(unit_tests
     tests/test_signal_generator.cpp
     tests/test_standalone_ui_policy.cpp
     tests/test_test_input_signal.cpp
+    tests/test_render_runtime.cpp
     tests/test_torus_core.cpp
     tests/test_version_info.cpp
 )
 
 target_link_libraries(unit_tests
     PRIVATE
-        daisyhost_core
+        daisyhost_render
         GTest::gtest
         GTest::gtest_main
 )

@@ -1,0 +1,46 @@
+{
+  "appId": "torus",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 1.0,
+    "outputChannelCount": 2
+  },
+  "seed": 321,
+  "initialParameterValues": {
+    "node0/param/frequency": 0.42,
+    "node0/param/structure": 0.58,
+    "node0/param/brightness": 0.63
+  },
+  "audioInput": {
+    "mode": "sine",
+    "level": 8.0,
+    "frequencyHz": 110.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.1,
+      "type": "gate_set",
+      "portId": "node0/port/gate_in_1",
+      "gate": true
+    },
+    {
+      "timeSeconds": 0.2,
+      "type": "gate_set",
+      "portId": "node0/port/gate_in_1",
+      "gate": false
+    },
+    {
+      "timeSeconds": 0.35,
+      "type": "parameter_set",
+      "parameterId": "node0/param/model",
+      "normalizedValue": 0.6
+    },
+    {
+      "timeSeconds": 0.6,
+      "type": "audio_input_config",
+      "mode": "triangle",
+      "frequencyHz": 165.0
+    }
+  ]
+}

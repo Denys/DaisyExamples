@@ -1,0 +1,16 @@
+{
+  "jobName": "multidelay_frequency_sweep",
+  "baseScenarioPath": "multidelay_smoke.json",
+  "outputDir": "../out/multidelay_frequency_sweep",
+  "sweeps": [
+    {
+      "kind": "audio_input_frequency",
+      "values": [110.0, 220.0, 440.0]
+    },
+    {
+      "kind": "parameter",
+      "parameterId": "node0/param/dry_wet",
+      "values": [0.25, 0.75]
+    }
+  ]
+}

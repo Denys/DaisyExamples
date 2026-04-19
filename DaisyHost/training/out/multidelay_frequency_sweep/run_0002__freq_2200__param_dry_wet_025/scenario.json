@@ -1,0 +1,38 @@
+{
+  "appId": "multidelay",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 1.0,
+    "outputChannelCount": 2
+  },
+  "seed": 123,
+  "initialParameterValues": {
+    "node0/param/dry_wet": 0.25,
+    "node0/param/feedback": 0.35
+  },
+  "audioInput": {
+    "mode": "sine",
+    "level": 6.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.25,
+      "type": "parameter_set",
+      "parameterId": "node0/param/delay_primary",
+      "normalizedValue": 0.65
+    },
+    {
+      "timeSeconds": 0.5,
+      "type": "audio_input_config",
+      "frequencyHz": 440.0
+    },
+    {
+      "timeSeconds": 0.75,
+      "type": "cv_set",
+      "portId": "node0/port/cv_in_1",
+      "normalizedValue": 0.8
+    }
+  ]
+}

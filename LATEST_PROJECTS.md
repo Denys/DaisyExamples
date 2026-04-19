@@ -21,12 +21,17 @@ recent project's verification/documentation status changes materially.
 
 - Always consider pinned workspace roots first: `DaisyDAFX/`, `DaisyHost/`,
   `pedal/`, `DAISY_QAE/`, and `MyProjects/_projects/`.
+- Keep the pinned workspace roots in sync with `AGENTS.md`; if that list
+  changes, update both files in the same change.
 - Do not infer "recent" from one subtree only.
 - Rank recency from file-level changes, not directory mtimes.
 - Ignore generated trees such as `build/`, `dist/`, `.worktrees/`, `.tmp/`, and
   `node_modules/` when scoring activity.
 - Use `py -3 ./ci/list_recent_project_roots.py` to refresh the candidate list
   before editing this file.
+- If this file is stale relative to the current task or the target is not
+  listed here, treat it as a hint and fall back to `AGENTS.md`, the nearest
+  local docs, and `py -3 ./ci/list_recent_project_roots.py`.
 
 ## Recent Custom Project Entries
 
