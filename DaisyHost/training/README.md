@@ -3,6 +3,10 @@
 Phase 3 adds a headless renderer and a small Python orchestration layer for
 offline sweeps.
 
+`DaisyHost Hub.exe` can also dispatch render and dataset jobs through these same
+entrypoints. The hub does not replace this workflow; it just prepares or selects
+the JSON input and launches the commands below.
+
 ## Renderer
 
 Build the CLI:

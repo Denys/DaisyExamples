@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cmath>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/HostSessionState.h"
+#include "daisyhost/HubSupport.h"
 #include "daisyhost/MidiEventTracker.h"
 #include "daisyhost/MidiNotePreview.h"
 #include "daisyhost/SignalGenerator.h"
@@ -135,6 +137,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     void  ApplyControlStateToCore();
     void  ApplyPendingMenuInteractionsToCore();
     void  ApplyVirtualPortStateToCore(const std::vector<daisyhost::MidiMessageEvent>& midiEvents);
+    void  ApplyHubStartupRequestIfNeeded();
     void  UpdateCvGeneratorOutputs(double blockDurationSeconds);
     void  SyncHostStateFromCore();
     void  UpdateCoreSnapshots();
@@ -202,6 +205,8 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
         = "node0/host/computer_keyboard_octave";
     std::uint32_t appRandomSeed_ = 0;
     std::unordered_map<std::string, float> restoredParameterValues_;
+    std::optional<daisyhost::HubStartupRequest> pendingHubStartupRequest_;
+    bool                                        hubStartupRequestApplied_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DaisyHostPatchAudioProcessor)
 };

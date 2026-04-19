@@ -107,6 +107,13 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
   core_(daisyhost::CreateHostedAppCore(
       daisyhost::GetDefaultHostedAppId(), "node0", &activeAppId_))
 {
+    pendingHubStartupRequest_
+        = daisyhost::LoadHubStartupRequest(daisyhost::GetDefaultHubLaunchRequestFile());
+    if(pendingHubStartupRequest_.has_value()
+       && !pendingHubStartupRequest_->appId.empty())
+    {
+        RecreateHostedApp(pendingHubStartupRequest_->appId);
+    }
     activeBindings_ = core_->GetPatchBindings();
     for(std::size_t i = 0; i < topControlValues_.size(); ++i)
     {
@@ -158,6 +165,7 @@ void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
         didApplyStartupTestInputPolicy_ = true;
     }
 
+    ApplyHubStartupRequestIfNeeded();
     core_->Prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
     ApplyCanonicalSessionStateToCore();
     midiNotePreview_.Prepare(sampleRate);
@@ -497,7 +505,14 @@ void DaisyHostPatchAudioProcessor::setStateInformation(const void* data,
 {
     const std::string text(static_cast<const char*>(data),
                            static_cast<std::size_t>(sizeInBytes));
-    LoadSession(daisyhost::HostSessionState::Deserialize(text));
+    auto state = daisyhost::HostSessionState::Deserialize(text);
+    if(pendingHubStartupRequest_.has_value()
+       && !pendingHubStartupRequest_->appId.empty())
+    {
+        state.appId = pendingHubStartupRequest_->appId;
+    }
+    LoadSession(state);
+    ApplyHubStartupRequestIfNeeded();
 }
 
 const daisyhost::BoardProfile& DaisyHostPatchAudioProcessor::GetBoardProfile() const
@@ -1097,6 +1112,23 @@ void DaisyHostPatchAudioProcessor::ApplyCanonicalSessionStateToCore()
     }
     SyncHostStateFromCore();
     UpdateCoreSnapshots();
+}
+
+void DaisyHostPatchAudioProcessor::ApplyHubStartupRequestIfNeeded()
+{
+    if(hubStartupRequestApplied_ || !pendingHubStartupRequest_.has_value())
+    {
+        return;
+    }
+
+    if(!pendingHubStartupRequest_->appId.empty())
+    {
+        RecreateHostedApp(pendingHubStartupRequest_->appId);
+    }
+
+    daisyhost::ClearHubStartupRequest(daisyhost::GetDefaultHubLaunchRequestFile());
+    pendingHubStartupRequest_.reset();
+    hubStartupRequestApplied_ = true;
 }
 
 void DaisyHostPatchAudioProcessor::SyncHostStateFromCore()

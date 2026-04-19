@@ -2,7 +2,7 @@
 
 `DaisyHost` is a Windows-first desktop host for Daisy apps. The current target
 is a single virtual `Daisy Patch` node that can host multiple DaisyHost app
-cores inside the same `VST3` and standalone shell.
+cores inside the same `VST3` and standalone shell, plus a small launcher hub.
 
 ## Read Local Docs First
 
@@ -61,6 +61,11 @@ internals:
     and optional compatibility menu actions
   - `training/render_dataset.py` expands sweep jobs into multiple run folders
     and writes a `dataset_index.json`
+- Launcher hub:
+  - `DaisyHost Hub.exe` selects board, app, and activity
+  - `Play / Test` dispatches to the standalone host
+  - `Render` dispatches to `DaisyHostRender.exe`
+  - `Train` dispatches to `training/render_dataset.py`
 
 ## 0.2.0 Control Model
 
@@ -116,12 +121,13 @@ The host uses CMake with `FetchContent` for JUCE and GoogleTest.
 
 ```sh
 cmake -S DaisyHost -B DaisyHost/build
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir DaisyHost/build -C Release --output-on-failure
 ```
 
 Outputs:
 
+- `DaisyHost Hub.exe`
 - `DaisyHostRender.exe`
 - `DaisyHost Patch.vst3`
 - `DaisyHost Patch.exe`
@@ -133,8 +139,10 @@ Outputs:
 - `src/apps/MultiDelayCore.cpp`: portable extracted app core
 - `src/apps/TorusCore.cpp`: DaisyHost-native Torus pilot app core
 - `src/AppRegistry.cpp`: app registry and factory layer
+- `src/HubSupport.cpp`: launcher hub registries, profiles, launch planning, and startup requests
 - `src/RenderRuntime.cpp`: headless render runtime, scenario loading, manifest
   emission, and WAV writing
+- `src/hub/`: JUCE launcher hub
 - `src/juce/`: JUCE plugin and standalone wrapper
 - `tools/render_app.cpp`: command-line render entrypoint
 - `training/`: dataset orchestration, schema notes, and example scenarios

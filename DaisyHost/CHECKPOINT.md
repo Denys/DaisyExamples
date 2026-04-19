@@ -55,7 +55,7 @@ Configure and build the host workspace:
 
 ```sh
 cmake -S DaisyHost -B DaisyHost/build
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir DaisyHost/build -C Release --output-on-failure
 ```
 
@@ -80,6 +80,8 @@ from `patch/Torus/`.
 
 These names and paths were confirmed from the current `DaisyHost/build` tree:
 
+- Launcher hub:
+  - `DaisyHost/build/DaisyHostHub_artefacts/Release/DaisyHost Hub.exe`
 - Render CLI:
   - `DaisyHost/build/Release/DaisyHostRender.exe`
 - VST3 bundle:
@@ -112,6 +114,18 @@ Current Phase 3 render behavior:
 - each run writes `audio.wav` plus `manifest.json`
 - `training/render_dataset.py` expands sweep jobs into multiple run folders and
   writes `dataset_index.json`
+
+Current hub behavior:
+
+- `DaisyHost Hub` is a small front door for:
+  - `Play / Test`
+  - `Render`
+  - `Train`
+- v1 board selection currently exposes `daisy_patch`
+- the hub persists its own launcher profile separately from plugin/session
+  state
+- `Play / Test` writes a small startup request so the standalone host opens the
+  selected app directly
 
 ## Final Control Map For The Active Refresh
 
@@ -167,8 +181,9 @@ Version/change tracking target behavior:
 
 ## Current Notes
 
-- `unit_tests` currently passes `55/55`.
+- `unit_tests` currently passes `61/61`.
 - Host outputs build at:
+  - [DaisyHost Hub.exe](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/build/DaisyHostHub_artefacts/Release/DaisyHost%20Hub.exe)
   - [DaisyHostRender.exe](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/build/Release/DaisyHostRender.exe)
   - [DaisyHost Patch.vst3](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/build/DaisyHostPatch_artefacts/Release/VST3/DaisyHost%20Patch.vst3)
   - [DaisyHost Patch.exe](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/build/DaisyHostPatch_artefacts/Release/Standalone/DaisyHost%20Patch.exe)
@@ -193,7 +208,7 @@ Version/change tracking target behavior:
 Recorded automated commands:
 
 ```sh
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir DaisyHost/build -C Release --output-on-failure
 ```
 
@@ -222,6 +237,9 @@ Recorded manual checks:
   - `torus` scenario: rendered successfully
   - repeated `multidelay` scenario: checksum matched on rerun
   - dataset sweep job: expanded and rendered successfully
+- hub:
+  - `DaisyHost Hub.exe`: built successfully
+  - manual GUI click-through not run in this session
 - mouse access to every visible control: editor wiring implemented; not
   exhaustively re-clicked after the final build
 - computer keyboard MIDI: previously verified in-session

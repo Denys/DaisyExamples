@@ -38,6 +38,10 @@ Implemented refresh:
     compatibility menu events
 - add `training/render_dataset.py`, dataset job examples, and render workflow
   docs under `training/`
+- add `DaisyHost Hub` as a small GUI launcher for board/app/activity selection
+- add hub-local profile persistence separate from plugin/session state
+- add a startup-request handoff so `Play / Test` opens the standalone host with
+  the selected app
 
 ## [0.1.0] - Existing Workspace Baseline
 

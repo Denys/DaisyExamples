@@ -60,6 +60,28 @@ target_compile_definitions(daisyhost_core
         DAISYHOST_BUILD_IDENTITY="DaisyHost ${PROJECT_VERSION}"
 )
 
+add_library(daisyhost_hub_core STATIC
+    src/HubSupport.cpp
+)
+
+target_include_directories(daisyhost_hub_core
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+)
+
+target_compile_features(daisyhost_hub_core PUBLIC cxx_std_17)
+
+target_compile_definitions(daisyhost_hub_core
+    PUBLIC
+        DAISYHOST_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+)
+
+target_link_libraries(daisyhost_hub_core
+    PUBLIC
+        daisyhost_core
+        juce::juce_core
+)
+
 add_library(daisyhost_render STATIC
     src/RenderRuntime.cpp
 )
@@ -85,6 +107,35 @@ add_executable(DaisyHostRender
 target_link_libraries(DaisyHostRender
     PRIVATE
         daisyhost_render
+)
+
+juce_add_gui_app(DaisyHostHub
+    COMPANY_NAME Antigravity
+    PRODUCT_NAME "DaisyHost Hub"
+)
+
+target_sources(DaisyHostHub
+    PRIVATE
+        src/hub/DaisyHostHubMain.cpp
+        src/hub/DaisyHostHubWindow.cpp
+)
+
+target_include_directories(DaisyHostHub PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+target_compile_definitions(DaisyHostHub
+    PRIVATE
+        DAISYHOST_VERSION="${PROJECT_VERSION}"
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+)
+
+target_link_libraries(DaisyHostHub
+    PRIVATE
+        daisyhost_hub_core
+        juce::juce_gui_extra
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
 )
 
 juce_add_plugin(DaisyHostPatch
@@ -120,6 +171,7 @@ target_compile_definitions(DaisyHostPatch
 target_link_libraries(DaisyHostPatch
     PRIVATE
         daisyhost_core
+        daisyhost_hub_core
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_recommended_config_flags
@@ -132,6 +184,7 @@ add_executable(unit_tests
     tests/test_board_profile.cpp
     tests/test_computer_keyboard_midi.cpp
     tests/test_midi_event_tracker.cpp
+    tests/test_hub_support.cpp
     tests/test_host_session_state.cpp
     tests/test_host_startup_policy.cpp
     tests/test_midi_note_preview.cpp
@@ -147,6 +200,7 @@ add_executable(unit_tests
 
 target_link_libraries(unit_tests
     PRIVATE
+        daisyhost_hub_core
         daisyhost_render
         GTest::gtest
         GTest::gtest_main
