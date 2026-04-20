@@ -63,6 +63,7 @@ struct HubLaunchPlan
     HubLaunchMode               launchMode = HubLaunchMode::kExecutable;
     std::string                 executable;
     std::vector<std::string>    arguments;
+    std::vector<juce::File>     cleanupFiles;
     std::vector<HubGeneratedFile> generatedFiles;
 };
 
@@ -107,6 +108,9 @@ bool SaveHubStartupRequest(const juce::File&    file,
                            const HubStartupRequest& request,
                            std::string*         errorMessage = nullptr);
 std::optional<HubStartupRequest> LoadHubStartupRequest(
+    const juce::File& file,
+    std::string*      errorMessage = nullptr);
+std::optional<HubStartupRequest> LoadAndConsumeHubStartupRequest(
     const juce::File& file,
     std::string*      errorMessage = nullptr);
 bool ClearHubStartupRequest(const juce::File& file,

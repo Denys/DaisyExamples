@@ -430,6 +430,28 @@ std::optional<HubStartupRequest> LoadHubStartupRequest(
                                   errorMessage);
 }
 
+std::optional<HubStartupRequest> LoadAndConsumeHubStartupRequest(
+    const juce::File& file,
+    std::string*      errorMessage)
+{
+    if(!file.existsAsFile())
+    {
+        return std::nullopt;
+    }
+
+    const auto text = file.loadFileAsString().toStdString();
+    auto       request = ParseHubStartupRequest(text, errorMessage);
+
+    std::string clearError;
+    if(!ClearHubStartupRequest(file, &clearError) && errorMessage != nullptr
+       && errorMessage->empty())
+    {
+        *errorMessage = clearError;
+    }
+
+    return request;
+}
+
 bool ClearHubStartupRequest(const juce::File& file, std::string* errorMessage)
 {
     if(!file.exists())
@@ -524,9 +546,12 @@ bool BuildHubLaunchPlan(const HubLaunchSelection& selection,
     {
         builtPlan.executable
             = paths.standaloneExecutable.getFullPathName().toStdString();
-        builtPlan.generatedFiles.push_back(
-            {paths.supportDirectory.getChildFile("hub_launch_request.json"),
-             SerializeHubStartupRequest({boardId, appId})});
+        builtPlan.arguments.push_back("--board");
+        builtPlan.arguments.push_back(boardId);
+        builtPlan.arguments.push_back("--app");
+        builtPlan.arguments.push_back(appId);
+        builtPlan.cleanupFiles.push_back(
+            paths.supportDirectory.getChildFile("hub_launch_request.json"));
     }
     else if(activityId == "render")
     {
@@ -616,6 +641,14 @@ bool ExecuteHubLaunchPlan(const HubLaunchPlan& plan, std::string* errorMessage)
     if(!WriteGeneratedFiles(plan, errorMessage))
     {
         return false;
+    }
+
+    for(const auto& file : plan.cleanupFiles)
+    {
+        if(file.exists())
+        {
+            file.deleteFile();
+        }
     }
 
     std::string parameterString;

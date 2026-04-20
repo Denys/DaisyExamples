@@ -94,7 +94,7 @@ TEST(HubSupportTest, RejectsUnknownOrUnavailableBoardSelection)
     EXPECT_NE(errorMessage.find("board"), std::string::npos);
 }
 
-TEST(HubSupportTest, BuildsPlayLaunchPlanWithStartupRequest)
+TEST(HubSupportTest, BuildsPlayLaunchPlanWithCommandLineArgs)
 {
     ScopedTempDir tempDir;
 
@@ -118,14 +118,34 @@ TEST(HubSupportTest, BuildsPlayLaunchPlanWithStartupRequest)
 
     EXPECT_EQ(plan.executable,
               paths.standaloneExecutable.getFullPathName().toStdString());
-    EXPECT_TRUE(plan.arguments.empty());
-    ASSERT_EQ(plan.generatedFiles.size(), 1u);
-    EXPECT_EQ(plan.generatedFiles.front().file.getFileName().toStdString(),
+    ASSERT_EQ(plan.arguments.size(), 4u);
+    EXPECT_EQ(plan.arguments[0], "--board");
+    EXPECT_EQ(plan.arguments[1], "daisy_patch");
+    EXPECT_EQ(plan.arguments[2], "--app");
+    EXPECT_EQ(plan.arguments[3], "torus");
+    ASSERT_EQ(plan.cleanupFiles.size(), 1u);
+    EXPECT_EQ(plan.cleanupFiles.front().getFileName().toStdString(),
               "hub_launch_request.json");
-    EXPECT_NE(plan.generatedFiles.front().contents.find("\"boardId\":\"daisy_patch\""),
-              std::string::npos);
-    EXPECT_NE(plan.generatedFiles.front().contents.find("\"appId\":\"torus\""),
-              std::string::npos);
+    EXPECT_TRUE(plan.generatedFiles.empty());
+}
+
+TEST(HubSupportTest, LoadAndConsumeStartupRequestClearsRequestFile)
+{
+    ScopedTempDir tempDir;
+    const auto    requestFile = tempDir.directory.getChildFile("hub_launch_request.json");
+
+    std::string errorMessage;
+    ASSERT_TRUE(daisyhost::SaveHubStartupRequest(
+        requestFile, {"daisy_patch", "torus"}, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(requestFile.existsAsFile());
+
+    const auto request
+        = daisyhost::LoadAndConsumeHubStartupRequest(requestFile, &errorMessage);
+    ASSERT_TRUE(request.has_value()) << errorMessage;
+    EXPECT_EQ(request->boardId, "daisy_patch");
+    EXPECT_EQ(request->appId, "torus");
+    EXPECT_FALSE(requestFile.existsAsFile());
 }
 
 TEST(HubSupportTest, BuildsRenderLaunchPlanUsingExistingScenario)

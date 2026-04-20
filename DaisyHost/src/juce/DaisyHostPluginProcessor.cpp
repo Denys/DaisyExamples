@@ -96,6 +96,31 @@ const daisyhost::MenuItem* FindMenuItem(const daisyhost::MenuModel& menu,
     }
     return nullptr;
 }
+
+std::optional<daisyhost::HubStartupRequest> LoadHubStartupRequestFromCommandLine()
+{
+    daisyhost::HubStartupRequest request;
+    const auto arguments = juce::JUCEApplicationBase::getCommandLineParameterArray();
+    for(int index = 0; index < arguments.size(); ++index)
+    {
+        const auto argument = arguments[index];
+        if(argument == "--app" && index + 1 < arguments.size())
+        {
+            request.appId = arguments[++index].toStdString();
+        }
+        else if(argument == "--board" && index + 1 < arguments.size())
+        {
+            request.boardId = arguments[++index].toStdString();
+        }
+    }
+
+    if(request.appId.empty() && request.boardId.empty())
+    {
+        return std::nullopt;
+    }
+
+    return request;
+}
 } // namespace
 
 DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
@@ -107,8 +132,13 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
   core_(daisyhost::CreateHostedAppCore(
       daisyhost::GetDefaultHostedAppId(), "node0", &activeAppId_))
 {
-    pendingHubStartupRequest_
-        = daisyhost::LoadHubStartupRequest(daisyhost::GetDefaultHubLaunchRequestFile());
+    pendingHubStartupRequest_ = LoadHubStartupRequestFromCommandLine();
+    if(!pendingHubStartupRequest_.has_value())
+    {
+        pendingHubStartupRequest_
+            = daisyhost::LoadAndConsumeHubStartupRequest(
+                daisyhost::GetDefaultHubLaunchRequestFile());
+    }
     if(pendingHubStartupRequest_.has_value()
        && !pendingHubStartupRequest_->appId.empty())
     {
@@ -1123,10 +1153,12 @@ void DaisyHostPatchAudioProcessor::ApplyHubStartupRequestIfNeeded()
 
     if(!pendingHubStartupRequest_->appId.empty())
     {
-        RecreateHostedApp(pendingHubStartupRequest_->appId);
+        if(pendingHubStartupRequest_->appId != activeAppId_)
+        {
+            RecreateHostedApp(pendingHubStartupRequest_->appId);
+        }
     }
 
-    daisyhost::ClearHubStartupRequest(daisyhost::GetDefaultHubLaunchRequestFile());
     pendingHubStartupRequest_.reset();
     hubStartupRequestApplied_ = true;
 }
