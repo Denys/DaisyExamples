@@ -312,6 +312,72 @@ TEST(RenderRuntimeTest, RendersTorusSmokeScenario)
     EXPECT_GT(result.manifest.channelSummaries[0].peak, 0.0f);
 }
 
+TEST(RenderRuntimeTest, ProducesDeterministicCloudSeedRenderWithMenuActions)
+{
+    auto scenario = MakeBaseScenario("cloudseed");
+    scenario.audioInput.level = 7.0f;
+    scenario.audioInput.frequencyHz = 196.0f;
+    scenario.initialParameterValues["node0/param/mix"] = 0.42f;
+    scenario.initialParameterValues["node0/param/size"] = 0.65f;
+
+    daisyhost::RenderTimelineEvent pageEvent;
+    pageEvent.timeSeconds = 0.0;
+    pageEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    pageEvent.menuItemId  = "node0/menu/pages/page";
+    pageEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(pageEvent);
+
+    daisyhost::RenderTimelineEvent preDelayEvent;
+    preDelayEvent.timeSeconds = 0.05;
+    preDelayEvent.type        = daisyhost::RenderTimelineEventType::kParameterSet;
+    preDelayEvent.parameterId = "node0/param/pre_delay";
+    preDelayEvent.normalizedValue = 0.68f;
+    scenario.timeline.push_back(preDelayEvent);
+
+    daisyhost::RenderTimelineEvent interpolationEvent;
+    interpolationEvent.timeSeconds = 0.10;
+    interpolationEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    interpolationEvent.menuItemId  = "node0/menu/utilities/interpolation";
+    interpolationEvent.normalizedValue = 0.0f;
+    scenario.timeline.push_back(interpolationEvent);
+
+    daisyhost::RenderTimelineEvent randomizeEvent;
+    randomizeEvent.timeSeconds = 0.15;
+    randomizeEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    randomizeEvent.menuItemId  = "node0/menu/utilities/randomize_seeds";
+    randomizeEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(randomizeEvent);
+
+    daisyhost::RenderTimelineEvent clearEvent;
+    clearEvent.timeSeconds = 0.20;
+    clearEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    clearEvent.menuItemId  = "node0/menu/utilities/clear_tails";
+    clearEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(clearEvent);
+
+    daisyhost::RenderResult firstResult;
+    daisyhost::RenderResult secondResult;
+    std::string             errorMessage;
+
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &firstResult, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &secondResult, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(firstResult.manifest.appId, "cloudseed");
+    EXPECT_EQ(firstResult.manifest.audioChecksum, secondResult.manifest.audioChecksum);
+    ASSERT_EQ(firstResult.audioChannels.size(), 2u);
+    EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
+    EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
+    EXPECT_TRUE(firstResult.manifest.finalParameterValues.count("node0/param/mix") > 0);
+    EXPECT_TRUE(firstResult.manifest.finalEffectiveParameterValues.count(
+                    "node0/param/late_line_size")
+                > 0);
+    ASSERT_GE(firstResult.manifest.executedTimeline.size(), 5u);
+    EXPECT_EQ(firstResult.manifest.executedTimeline[0].type,
+              daisyhost::RenderTimelineEventType::kMenuSetItem);
+}
+
 TEST(RenderRuntimeTest, WritesAudioAndManifestOutputs)
 {
     auto scenario = MakeBaseScenario("multidelay");

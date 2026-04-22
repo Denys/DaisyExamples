@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "daisyhost/apps/CloudSeedCore.h"
 #include "daisyhost/apps/MultiDelayCore.h"
 #include "daisyhost/apps/TorusCore.h"
 
@@ -19,6 +20,11 @@ const std::vector<HostedAppRegistration> kRegistrations = {
      "Torus",
      [](const std::string& nodeId) {
          return std::make_unique<apps::TorusCore>(nodeId);
+     }},
+    {"cloudseed",
+     "CloudSeed",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::CloudSeedCore>(nodeId);
      }},
 };
 } // namespace

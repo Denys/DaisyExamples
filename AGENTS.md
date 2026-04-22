@@ -59,7 +59,8 @@ When instructions conflict, resolve by descending priority:
    docs before inventing a new workflow.
 8. If current repo state, cross-project strategy, or recent architecture context
    is still unclear after local docs, consult DaisyBrain using
-   `docs/notebooklm/README.md` and the layered context pack under
+   `docs/notebooklm/README.md`, the repo-local
+   `docs/notebooklm/daisybrain.ps1` bridge, and the layered context pack under
    `docs/notebooklm/context/`. Treat DaisyBrain as a strategic memory edge, not
    a substitute for local source-of-truth docs.
 9. If DaisyBrain or its local CLI path is unavailable, continue with the

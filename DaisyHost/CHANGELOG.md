@@ -2,6 +2,67 @@
 
 Canonical change tracker for `DaisyHost`.
 
+## [Unreleased]
+
+- add `tests/run_smoke.py` as a direct-entrypoint smoke harness for
+  `DaisyHost Patch.exe` and `DaisyHostRender.exe`
+- wire `DaisyHostStandaloneSmoke` and `DaisyHostRenderSmoke` into CTest so the
+  normal host gate now covers standalone startup stability plus render-output
+  smoke and `multidelay` checksum determinism
+- add a fixed five-slot DAW automation bridge with stable ids
+  `daisyhost.slot1` .. `daisyhost.slot5`, mapped onto the active app's
+  top-ranked automatable canonical parameters
+- add processor-side effective-state snapshot/readback for canonical
+  parameters, mapped automation slots, CV state, gate state, and current
+  audio-input configuration
+- add `DaisyCloudSeedCore` as a portable shared wrapper around the imported
+  `third_party/CloudSeedCore` with canonical performance/expert state,
+  deterministic seed handling, bypass/clear/randomize utilities, and effective
+  raw-parameter readback
+- add `cloudseed` as the first Workstream-6 hosted-app pilot with:
+  - stereo host input/output on Patch channels 1/2
+  - `Space` / `Motion` performance pages that remap the four Patch knobs
+  - encoder/menu sections for `Pages`, `Program`, `Utilities`, and `Info`
+  - utility actions for `Bypass`, `Clear Tails`, `Randomize Seeds`, and
+    `Interpolation`
+  - fixed DAW automation priority for `mix`, `size`, `decay`, `diffusion`, and
+    `pre_delay`
+- refresh the JUCE processor's active patch bindings during core snapshot
+  updates so page-based control remaps change live DaisyHost knob labels and
+  control ids instead of staying cached from app creation
+- add `training/examples/cloudseed_smoke.json`, extend render/runtime coverage
+  for `cloudseed`, and include the new scenario in `DaisyHostRenderSmoke`
+- apply a local MSVC portability fix to
+  `third_party/CloudSeedCore/DSP/RandomBuffer.cpp` by replacing the upstream
+  VLA scratch buffers with `std::vector`
+- add helper-layer unit coverage for the automation bridge and effective-state
+  snapshot contract, then extend the rerun host gate to `79/79` on 2026-04-22
+- add `build_host.ps1` plus `build_host.cmd` as the standard local host-gate
+  entrypoint, encapsulating the shell-specific `Path` / `PATH` normalization
+  needed by MSBuild-backed commands in this checkout
+- route Windows VST3 manifest generation through
+  `tools/write_vst3_manifest.ps1` so `juce_vst3_helper.exe` is invoked through
+  PowerShell instead of the failing direct MSBuild / `cmd` launch path
+- document the smoke harness commands and update local verification docs to
+  reflect automated standalone/render smoke coverage
+- document that external DAW/VST3 load validation is intentionally deferred
+  until a post-Workstream-7 manual pass
+- promote `PROJECT_TRACKER.md` to a first-class DaisyHost tracking document and
+  per-iteration testing ledger
+- require mandatory per-iteration testing evidence for docs and code work, with
+  targeted test expectations before handoff and the full host gate before
+  milestone or merge handoff
+- define the concurrent-thread protocol: `AGENTS.md` stays authoritative for
+  ownership slices and contracts, while `PROJECT_TRACKER.md` stays authoritative
+  for active work order, testing entries, and handoffs
+- add `ROADMAP.d2` plus a compiled `ROADMAP.svg` for the current governance,
+  workstream, and parallelization roadmap
+- add `SKILL_PLAYBOOK.md` as the dedicated DaisyHost file for skill-related
+  activities and split skill ratings into `Expected UF` vs evidence-based
+  `Observed UF`
+- relabel stale verification counts and artifact assertions in local docs so
+  unrerun runtime claims stay dated instead of implied-current
+
 ## [0.2.0] - 2026-04-18
 
 Implemented refresh:

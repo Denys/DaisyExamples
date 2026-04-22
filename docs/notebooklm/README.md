@@ -19,12 +19,33 @@ Do **not** use it as a replacement for local source-of-truth docs. The order is:
 
 - Notebook title: `DaisyBrain`
 - Notebook id: `8084395c-2d50-464c-967b-7569926fe771`
-- Preferred local CLI home: `C:\Users\denko\.notebooklm-daisybrain`
+- Preferred local CLI home: `C:\Users\denko\.notebooklm`
+- Repo-local bridge:
+  - [daisybrain.config.json](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/docs/notebooklm/daisybrain.config.json)
+  - [daisybrain.ps1](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/docs/notebooklm/daisybrain.ps1)
 
-## CLI Usage
+## Direct Repo Bridge
+
+Prefer the repo-local wrapper when talking to DaisyBrain directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\docs\notebooklm\daisybrain.ps1 info
+powershell -ExecutionPolicy Bypass -File .\docs\notebooklm\daisybrain.ps1 ask --json "What changed in DaisyHost?"
+powershell -ExecutionPolicy Bypass -File .\docs\notebooklm\daisybrain.ps1 source-list
+powershell -ExecutionPolicy Bypass -File .\docs\notebooklm\daisybrain.ps1 source-add .\docs\notebooklm\context\05-current-state-2026-04.md
+```
+
+The wrapper:
+
+- pins the checked-in DaisyBrain notebook id
+- sets `NOTEBOOKLM_HOME` to the standard local NotebookLM home
+- resolves the local `notebooklm.exe`
+- removes the need to repeat `-n <notebook-id>` manually
+
+## Raw CLI Usage
 
 ```sh
-$env:NOTEBOOKLM_HOME = "$HOME\.notebooklm-daisybrain"
+$env:NOTEBOOKLM_HOME = "$HOME\.notebooklm"
 & "$HOME\AppData\Local\Programs\Python\Python314\Scripts\notebooklm.exe" ask -n 8084395c-2d50-464c-967b-7569926fe771 "question"
 & "$HOME\AppData\Local\Programs\Python\Python314\Scripts\notebooklm.exe" source list -n 8084395c-2d50-464c-967b-7569926fe771 --json
 ```

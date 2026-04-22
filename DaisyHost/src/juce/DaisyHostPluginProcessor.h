@@ -13,6 +13,7 @@
 
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/BoardProfile.h"
+#include "daisyhost/EffectiveHostStateSnapshot.h"
 #include "daisyhost/HostSessionState.h"
 #include "daisyhost/HubSupport.h"
 #include "daisyhost/MidiEventTracker.h"
@@ -22,6 +23,7 @@
 #include "daisyhost/VersionInfo.h"
 
 class DaisyHostPatchAudioProcessorEditor;
+class DaisyHostAutomationParameter;
 
 class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
 {
@@ -104,6 +106,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     daisyhost::DisplayModel GetDisplayModelSnapshot() const;
     daisyhost::MenuModel GetMenuModelSnapshot() const;
     std::vector<daisyhost::ParameterDescriptor> GetParameterSnapshot() const;
+    daisyhost::EffectiveHostStateSnapshot GetEffectiveHostStateSnapshot() const;
     juce::MidiKeyboardState& GetVirtualKeyboardState();
     bool  GetComputerKeyboardEnabled() const;
     void  SetComputerKeyboardEnabled(bool enabled);
@@ -133,11 +136,19 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::string GetMidiBindingLabel(const std::string& controlId) const;
 
   private:
+    friend class DaisyHostAutomationParameter;
+
     float Clamp01(float value) const;
     void  ApplyControlStateToCore();
+    void  ApplyPendingAutomationParametersToCore();
     void  ApplyPendingMenuInteractionsToCore();
     void  ApplyVirtualPortStateToCore(const std::vector<daisyhost::MidiMessageEvent>& midiEvents);
     void  ApplyHubStartupRequestIfNeeded();
+    void  ClearPendingAutomationParameterState();
+    void  HandleAutomationParameterValueChanged(std::size_t slotIndex,
+                                                float       normalizedValue);
+    void  RefreshCoreStateFromIdleHostChange();
+    void  SyncAutomationParametersFromCore();
     void  UpdateCvGeneratorOutputs(double blockDurationSeconds);
     void  SyncHostStateFromCore();
     void  UpdateCoreSnapshots();
@@ -153,6 +164,14 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     daisyhost::HostedAppPatchBindings activeBindings_;
 
     std::array<std::atomic<float>, 4> topControlValues_;
+    std::array<juce::AudioParameterFloat*, daisyhost::kHostAutomationSlotCount>
+        automationParameters_{};
+    std::array<std::atomic<float>, daisyhost::kHostAutomationSlotCount>
+        pendingAutomationParameterValues_{};
+    std::array<std::atomic<bool>, daisyhost::kHostAutomationSlotCount>
+        pendingAutomationParameterDirty_{};
+    std::atomic<bool> isProcessingBlock_{false};
+    std::atomic<bool> isSyncingAutomationParameters_{false};
     std::atomic<bool>                 encoderPressed_;
     std::array<std::atomic<float>, 4> cvValues_;
     std::array<std::atomic<float>, 4> cvVoltages_;
@@ -185,6 +204,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     mutable std::mutex       menuSnapshotMutex_;
     daisyhost::MenuModel     latestMenu_;
     std::vector<daisyhost::ParameterDescriptor> latestParameters_;
+    daisyhost::HostAutomationSlotBindings automationSlotBindings_{};
     mutable std::mutex       midiLearnMutex_;
     daisyhost::MidiLearnMap  midiLearnMap_;
     std::string              learningTargetId_;

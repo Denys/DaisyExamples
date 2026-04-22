@@ -4,15 +4,16 @@
 
 namespace
 {
-TEST(AppRegistryTest, RegistersMultiDelayAndTorusApps)
+TEST(AppRegistryTest, RegistersMultiDelayTorusAndCloudSeedApps)
 {
     const auto& registrations = daisyhost::GetHostedAppRegistrations();
 
-    ASSERT_GE(registrations.size(), 2u);
+    ASSERT_GE(registrations.size(), 3u);
     EXPECT_EQ(registrations.front().appId, "multidelay");
 
     bool sawMultiDelay = false;
     bool sawTorus      = false;
+    bool sawCloudSeed  = false;
     for(const auto& registration : registrations)
     {
         if(registration.appId == "multidelay")
@@ -23,10 +24,15 @@ TEST(AppRegistryTest, RegistersMultiDelayAndTorusApps)
         {
             sawTorus = true;
         }
+        if(registration.appId == "cloudseed")
+        {
+            sawCloudSeed = true;
+        }
     }
 
     EXPECT_TRUE(sawMultiDelay);
     EXPECT_TRUE(sawTorus);
+    EXPECT_TRUE(sawCloudSeed);
 }
 
 TEST(AppRegistryTest, FallsBackToDefaultAppForUnknownId)

@@ -9,9 +9,19 @@ cores inside the same `VST3` and standalone shell, plus a small launcher hub.
 If you are editing this workspace, use the local docs before relying on older
 thread context:
 
-- [AGENTS.md](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/AGENTS.md)
-- [CHECKPOINT.md](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/CHECKPOINT.md)
-- [CHANGELOG.md](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/CHANGELOG.md)
+- [AGENTS.md](AGENTS.md)
+- [PROJECT_TRACKER.md](PROJECT_TRACKER.md)
+- [CHECKPOINT.md](CHECKPOINT.md)
+- [CHANGELOG.md](CHANGELOG.md)
+
+Review these high-priority tracking files on every implementation iteration.
+`PROJECT_TRACKER.md` is the current roadmap, recommended work order, and
+per-iteration testing ledger; always update it at the end of each iteration,
+and update the other tracking files when their truth changed.
+
+If the task depends on skill selection, reusable workflow choice, or
+`Expected UF` / `Observed UF` updates, also read
+[SKILL_PLAYBOOK.md](SKILL_PLAYBOOK.md).
 
 Current source version is `0.2.0`. This README describes the refreshed
 workspace at a high level and points to the local docs that track verification
@@ -19,7 +29,7 @@ status and current follow-ups.
 
 For Phase 3 offline rendering and dataset generation, also read:
 
-- [training/README.md](/C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/training/README.md)
+- [training/README.md](training/README.md)
 
 ## Scope
 
@@ -50,9 +60,18 @@ internals:
     to back the firmware adapter in [patch/MultiDelay](../patch/MultiDelay/README.md)
   - `TorusCore` is the first nontrivial second hosted app, using a DaisyHost-native
     Patch wrapper with Torus-style semantics and menu/control assignment
+  - `CloudSeedCore` is the first Workstream-6 app pilot, built on top of a
+    portable `DaisyCloudSeedCore` wrapper around the imported
+    `third_party/CloudSeedCore` with a performance-first Patch control model
 - Multi-app host:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings
+  - the processor now exposes a fixed five-slot DAW automation bank with stable
+    ids `daisyhost.slot1` .. `daisyhost.slot5`
+  - those slots rebind to the active app's top-ranked automatable canonical
+    parameters while session persistence remains canonical by app parameter id
+  - the processor also exposes an in-process effective-state snapshot for live
+    parameter, mapped-slot, CV, gate, and audio-input inspection
   - only one app runs at a time in this phase; there is still no multi-node rack
 - Headless rendering:
   - `DaisyHostRender.exe` loads a scenario JSON, renders offline, and writes
@@ -96,7 +115,17 @@ Implemented `0.2.0` additions:
 - standalone default test input restored to `Host In`
 - multi-app host plumbing with `multidelay` as the default app and `torus` as
   app #2
+- `cloudseed` added as the first Workstream-6 hosted-app pilot with:
+  - a portable `DaisyCloudSeedCore` shared wrapper
+  - `Space` and `Motion` performance pages that remap the four Patch knobs
+  - utility actions for `Bypass`, `Clear Tails`, `Randomize Seeds`, and
+    `Interpolation`
+  - checked-in `cloudseed_smoke.json` render coverage
 - app-aware top-panel control labels and persisted app selection
+- fixed five-slot DAW automation bridge with stable ids
+  `daisyhost.slot1` .. `daisyhost.slot5`
+- processor-side effective-state snapshot/readback for canonical parameters,
+  mapped automation slots, CV, gate, and audio-input state
 - app-generic headless render runtime with:
   - scenario JSON loading
   - deterministic offline rendering
@@ -119,11 +148,40 @@ single host without redesigning IDs or state formats.
 
 The host uses CMake with `FetchContent` for JUCE and GoogleTest.
 
+From `DaisyHost/`, prefer the checked-in wrapper:
+
 ```sh
-cmake -S DaisyHost -B DaisyHost/build
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
-ctest --test-dir DaisyHost/build -C Release --output-on-failure
+.\build_host.cmd
 ```
+
+It runs the full host gate from the local workspace root, normalizes the
+problematic `Path` / `PATH` split for MSBuild-backed commands in this Codex
+shell, and bypasses local PowerShell execution-policy friction by launching
+`build_host.ps1` through `build_host.cmd`.
+
+The underlying raw commands are still:
+
+```sh
+cmake -S . -B build
+cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+ctest --test-dir build -C Release --output-on-failure
+```
+
+`ctest` now includes the normal host unit coverage plus the direct-entrypoint
+smoke tests:
+
+- `DaisyHostStandaloneSmoke`
+- `DaisyHostRenderSmoke`
+
+The smoke harness lives at `tests/run_smoke.py`. If you run the raw
+MSBuild-backed commands directly instead of the wrapper, sanitize `Path` /
+`PATH` first.
+
+Checked-in render smoke scenarios now include:
+
+- `training/examples/multidelay_smoke.json`
+- `training/examples/torus_smoke.json`
+- `training/examples/cloudseed_smoke.json`
 
 Outputs:
 
@@ -138,16 +196,24 @@ Outputs:
 - `include/daisyhost/`: stable host-side abstractions
 - `src/apps/MultiDelayCore.cpp`: portable extracted app core
 - `src/apps/TorusCore.cpp`: DaisyHost-native Torus pilot app core
+- `include/daisyhost/DaisyCloudSeedCore.h` / `src/DaisyCloudSeedCore.cpp`:
+  portable CloudSeed wrapper and canonical state mapper
+- `src/apps/CloudSeedCore.cpp`: DaisyHost-native CloudSeed pilot app core
 - `src/AppRegistry.cpp`: app registry and factory layer
 - `src/HubSupport.cpp`: launcher hub registries, profiles, launch planning, and startup requests
+- `src/HostAutomationBridge.cpp`: stable five-slot DAW automation mapping
+- `src/EffectiveHostStateSnapshot.cpp`: processor-side live-state snapshot model
 - `src/RenderRuntime.cpp`: headless render runtime, scenario loading, manifest
   emission, and WAV writing
+- `tools/write_vst3_manifest.ps1`: PowerShell-backed VST3 manifest helper shim
+  used by the Windows CMake build
 - `src/hub/`: JUCE launcher hub
 - `src/juce/`: JUCE plugin and standalone wrapper
 - `tools/render_app.cpp`: command-line render entrypoint
 - `training/`: dataset orchestration, schema notes, and example scenarios
 - `tests/`: unit tests for the abstractions and the extracted core
-- `AGENTS.md`, `CHECKPOINT.md`, `CHANGELOG.md`: local project guidance and
-  version tracking
+- `AGENTS.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, `CHECKPOINT.md`,
+  `CHANGELOG.md`: local project guidance, roadmap/order tracking, skill
+  validation, and verification history
 
 The firmware adapter remains in [patch/MultiDelay/MultiDelay.cpp](../patch/MultiDelay/MultiDelay.cpp).

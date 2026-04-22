@@ -33,6 +33,26 @@ Each run writes:
 - `audio.wav`
 - `manifest.json`
 
+## Automated Smoke Harness
+
+The host gate now includes a direct-entrypoint smoke harness for the standalone
+and render binaries. Run it manually with:
+
+```sh
+py -3 DaisyHost/tests/run_smoke.py --mode all --build-dir DaisyHost/build --source-dir DaisyHost --config Release
+```
+
+Or run the render-only path with:
+
+```sh
+py -3 DaisyHost/tests/run_smoke.py --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release
+```
+
+The render smoke uses the checked-in `multidelay` and `torus` scenario JSON
+files, writes fresh harness-owned output directories under `DaisyHost/build/smoke/`,
+verifies `audio.wav` plus `manifest.json`, and checks repeated `multidelay`
+render determinism via `audioChecksum`.
+
 ## Scenario Schema
 
 Top-level fields:

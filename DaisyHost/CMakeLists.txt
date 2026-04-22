@@ -33,8 +33,11 @@ add_library(daisyhost_core STATIC
     src/AppRegistry.cpp
     src/BoardProfile.cpp
     src/ComputerKeyboardMidi.cpp
+    src/DaisyCloudSeedCore.cpp
+    src/EffectiveHostStateSnapshot.cpp
     src/HostSessionState.cpp
     src/HostStartupPolicy.cpp
+    src/HostAutomationBridge.cpp
     src/MidiEventTracker.cpp
     src/MidiNotePreview.cpp
     src/MidiLearnMap.cpp
@@ -42,14 +45,20 @@ add_library(daisyhost_core STATIC
     src/StandaloneUiPolicy.cpp
     src/TestInputSignal.cpp
     src/VersionInfo.cpp
+    src/apps/CloudSeedCore.cpp
     src/apps/MultiDelayCore.cpp
     src/apps/TorusCore.cpp
+    ../third_party/CloudSeedCore/DSP/Biquad.cpp
+    ../third_party/CloudSeedCore/DSP/RandomBuffer.cpp
+    ../third_party/CloudSeedCore/Parameters.cpp
 )
 
 target_include_directories(daisyhost_core
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/../DaisySP/Source
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/../third_party/CloudSeedCore
 )
 
 target_compile_features(daisyhost_core PUBLIC cxx_std_17)
@@ -58,6 +67,9 @@ target_compile_definitions(daisyhost_core
     PUBLIC
         DAISYHOST_VERSION="${PROJECT_VERSION}"
         DAISYHOST_BUILD_IDENTITY="DaisyHost ${PROJECT_VERSION}"
+    PRIVATE
+        BUFFER_SIZE=1024
+        MAX_STR_SIZE=32
 )
 
 add_library(daisyhost_hub_core STATIC
@@ -151,6 +163,7 @@ juce_add_plugin(DaisyHostPatch
     PLUGIN_CODE DhP1
     FORMATS VST3 Standalone
     PRODUCT_NAME "DaisyHost Patch"
+    VST3_AUTO_MANIFEST FALSE
     VST3_CATEGORIES Fx
 )
 
@@ -179,12 +192,39 @@ target_link_libraries(DaisyHostPatch
         juce::juce_recommended_warning_flags
 )
 
+# The JUCE-generated MSBuild post-build step invokes the VST3 manifest helper
+# from the build tree and currently fails in this checkout. Run the same helper
+# from the source root instead so the VST3 target stays reproducible.
+_juce_add_vst3_manifest_helper_target()
+add_dependencies(DaisyHostPatch_VST3 juce_vst3_helper)
+
+get_target_property(DAISYHOST_VST3_ARTEFACT DaisyHostPatch_VST3 JUCE_PLUGIN_ARTEFACT_FILE)
+set(DAISYHOST_VST3_MANIFEST_SCRIPT "${PROJECT_SOURCE_DIR}/tools/write_vst3_manifest.ps1")
+find_program(DAISYHOST_POWERSHELL powershell REQUIRED)
+
+if(DAISYHOST_VST3_ARTEFACT)
+    add_custom_command(TARGET DaisyHostPatch_VST3 POST_BUILD
+        COMMAND ${DAISYHOST_POWERSHELL}
+            -ExecutionPolicy Bypass
+            -File "${DAISYHOST_VST3_MANIFEST_SCRIPT}"
+            -HelperPath "$<TARGET_FILE:juce_vst3_helper>"
+            -PluginPath "${DAISYHOST_VST3_ARTEFACT}"
+            -OutputPath "${DAISYHOST_VST3_ARTEFACT}/Contents/Resources/moduleinfo.json"
+            -Version "${PROJECT_VERSION}"
+        VERBATIM
+    )
+endif()
+
 add_executable(unit_tests
     tests/test_app_registry.cpp
     tests/test_board_profile.cpp
+    tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp
+    tests/test_daisy_cloudseed_core.cpp
+    tests/test_effective_host_state_snapshot.cpp
     tests/test_midi_event_tracker.cpp
     tests/test_hub_support.cpp
+    tests/test_host_automation_bridge.cpp
     tests/test_host_session_state.cpp
     tests/test_host_startup_policy.cpp
     tests/test_midi_note_preview.cpp
@@ -208,3 +248,38 @@ target_link_libraries(unit_tests
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
+
+set(DAISYHOST_SMOKE_SCRIPT "${PROJECT_SOURCE_DIR}/tests/run_smoke.py")
+
+add_test(
+    NAME DaisyHostStandaloneSmoke
+    COMMAND
+        ${DAISYHOST_PYTHON_LAUNCHER} -3
+        ${DAISYHOST_SMOKE_SCRIPT}
+        --mode standalone
+        --build-dir ${PROJECT_BINARY_DIR}
+        --source-dir ${PROJECT_SOURCE_DIR}
+        --config $<CONFIG>
+)
+
+add_test(
+    NAME DaisyHostRenderSmoke
+    COMMAND
+        ${DAISYHOST_PYTHON_LAUNCHER} -3
+        ${DAISYHOST_SMOKE_SCRIPT}
+        --mode render
+        --build-dir ${PROJECT_BINARY_DIR}
+        --source-dir ${PROJECT_SOURCE_DIR}
+        --config $<CONFIG>
+)
+
+set_tests_properties(
+    DaisyHostStandaloneSmoke
+    DaisyHostRenderSmoke
+    PROPERTIES
+        LABELS "smoke"
+        RUN_SERIAL TRUE
+        TIMEOUT 120
+)

@@ -1,0 +1,141 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    pad: 48
+  }
+}
+
+direction: down
+
+docs: {
+  label: "Governance + source of truth"
+  direction: right
+  style: {
+    fill: "#F7F9FF"
+    stroke: "#6B82C4"
+    stroke-width: 2
+  }
+
+  README: "README.md\nworkspace entrypoint"
+  AGENTS: "AGENTS.md\nownership + contracts"
+  TRACKER: "PROJECT_TRACKER.md\nwork order + iteration ledger"
+  CHECKPOINT: "CHECKPOINT.md\nlast verified runtime state"
+  CHANGELOG: "CHANGELOG.md\ndurable policy + release history"
+  LATEST: "LATEST_PROJECTS.md\nrepo-wide DaisyHost pointer"
+}
+
+roadmap: {
+  label: "Roadmap workstreams"
+  direction: right
+  style: {
+    fill: "#F7F9FF"
+    stroke: "#6B82C4"
+    stroke-width: 2
+  }
+
+  foundation: {
+    label: "Foundation"
+    direction: down
+    style: {
+      fill: "#EEF3FF"
+      stroke: "#7A8FCA"
+      stroke-width: 2
+    }
+
+    W1: "1. Toolchain + verification baseline restoration"
+    W2: "2. Documentation + verification-truth reconciliation"
+  }
+
+  bridge: {
+    label: "Automation + host bridge"
+    direction: down
+    style: {
+      fill: "#EEF3FF"
+      stroke: "#7A8FCA"
+      stroke-width: 2
+    }
+
+    W3: "3. Automated standalone / render smoke harness"
+    W4: "4. JUCE / DAW canonical parameter bridge"
+    W5: "5. Effective-state inspection / readback API"
+  }
+
+  scaleup: {
+    label: "Scale-up"
+    direction: down
+    style: {
+      fill: "#EEF3FF"
+      stroke: "#7A8FCA"
+      stroke-width: 2
+    }
+
+    W6: "6. Additional hosted apps + macro layer"
+    W7: "7. Multi-instance rack direction"
+  }
+
+  foundation.W1 -> foundation.W2
+  bridge.W4 -> bridge.W5
+  scaleup.W6 -> scaleup.W7
+}
+
+iteration: {
+  label: "Per-iteration execution loop"
+  direction: right
+  style: {
+    fill: "#F7F9FF"
+    stroke: "#6B82C4"
+    stroke-width: 2
+  }
+
+  claim: "Claim slice / workstream"
+  test: "Write failing test\nor doc consistency check"
+  run: "Run targeted check"
+  implement: "Implement minimal change"
+  rerun: "Rerun targeted check"
+  update: "Update tracker + docs"
+  gate: "Milestone gate\nhost build + ctest\nfirmware make as needed"
+  handoff: "Review / handoff"
+
+  claim -> test -> run -> implement -> rerun -> update -> gate -> handoff
+}
+
+ownership: {
+  label: "Parallel-safe ownership slices"
+  direction: right
+  style: {
+    fill: "#F7F9FF"
+    stroke: "#6B82C4"
+    stroke-width: 2
+  }
+
+  worker1: "Worker 1\nCore / params / firmware"
+  worker2: "Worker 2\nPatch UI / board / visual fidelity"
+  worker3: "Worker 3\nDocs / repo awareness / tracking"
+  integrator: "Main Integrator\nHost plumbing / session / inputs"
+  join: "Milestone integration\nshared verification"
+
+  worker1 -> join
+  worker2 -> join
+  worker3 -> join
+  integrator -> join
+}
+
+docs.LATEST -> docs.README: "repo entry"
+docs.AGENTS -> ownership.worker3: "defines slices"
+docs.TRACKER -> roadmap.foundation.W1: "recommended order"
+docs.TRACKER -> iteration.claim: "claim + log"
+docs.CHECKPOINT -> iteration.gate: "last verified state"
+docs.CHANGELOG -> iteration.handoff: "durable policy updates"
+
+ownership.worker3 -> docs.TRACKER: "always update"
+ownership.join -> iteration.gate
+
+iteration.update -> docs.TRACKER
+iteration.update -> docs.CHECKPOINT: "if verification truth changed"
+iteration.update -> docs.CHANGELOG: "if durable policy changed"
+
+roadmap.foundation.W1 -> roadmap.bridge.W3: "enables"
+roadmap.foundation.W2 -> roadmap.bridge.W3: "keeps docs aligned"
+roadmap.bridge.W3 -> roadmap.bridge.W4: "automation baseline"
+roadmap.bridge.W4 -> roadmap.scaleup.W6: "shared parameter contract"
+roadmap.bridge.W5 -> roadmap.scaleup.W6: "readback contract"
