@@ -161,10 +161,31 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
       "Input", juce::AudioChannelSet::stereo(), true)
                            .withOutput(
                                "Output", juce::AudioChannelSet::stereo(), true)),
-  boardProfile_(daisyhost::MakeDaisyPatchProfile("node0")),
-  core_(daisyhost::CreateHostedAppCore(
-      daisyhost::GetDefaultHostedAppId(), "node0", &activeAppId_))
+  boardProfile_(daisyhost::CreateBoardProfile("daisy_patch", "node0"))
 {
+    auto initializeRackNode = [this](RackNodeState& node, const std::string& nodeId) {
+        node.nodeId = nodeId;
+        for(std::size_t i = 0; i < node.topControlValues.size(); ++i)
+        {
+            node.topControlValues[i] = 0.0f;
+            node.cvValues[i]         = 0.5f;
+            node.cvVoltages[i]       = 2.5f;
+            node.audioInputPeaks[i]  = 0.0f;
+            node.audioOutputPeaks[i] = 0.0f;
+            node.cvGeneratorStates[i].manualVolts    = 2.5f;
+            node.cvGeneratorStates[i].biasVolts      = 2.5f;
+            node.cvGeneratorStates[i].amplitudeVolts = 2.5f;
+            node.cvGeneratorStates[i].frequencyHz    = 1.0f;
+        }
+        for(std::size_t i = 0; i < node.gateValues.size(); ++i)
+        {
+            node.gateValues[i]         = false;
+            node.previousGateValues[i] = false;
+        }
+    };
+    initializeRackNode(rackNodes_[0], "node0");
+    initializeRackNode(rackNodes_[1], "node1");
+
     for(std::size_t slotIndex = 0; slotIndex < automationParameters_.size();
         ++slotIndex)
     {
@@ -176,6 +197,10 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
         addParameter(parameter);
     }
 
+    RecreateRackNode(0, daisyhost::GetDefaultHostedAppId());
+    RecreateRackNode(1, daisyhost::GetDefaultHostedAppId());
+    selectedRackNodeIndex_ = 0;
+
     pendingHubStartupRequest_ = LoadHubStartupRequestFromCommandLine();
     if(!pendingHubStartupRequest_.has_value())
     {
@@ -183,49 +208,263 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
             = daisyhost::LoadAndConsumeHubStartupRequest(
                 daisyhost::GetDefaultHubLaunchRequestFile());
     }
-    if(pendingHubStartupRequest_.has_value()
-       && !pendingHubStartupRequest_->appId.empty())
+    if(pendingHubStartupRequest_.has_value())
     {
-        RecreateHostedApp(pendingHubStartupRequest_->appId);
+        if(!pendingHubStartupRequest_->boardId.empty())
+        {
+            boardId_ = pendingHubStartupRequest_->boardId;
+        }
+        if(!pendingHubStartupRequest_->appId.empty())
+        {
+            RecreateRackNode(selectedRackNodeIndex_, pendingHubStartupRequest_->appId);
+        }
     }
-    activeBindings_ = core_->GetPatchBindings();
-    for(std::size_t i = 0; i < topControlValues_.size(); ++i)
-    {
-        topControlValues_[i].store(0.0f);
-        cvValues_[i].store(0.5f);
-        cvVoltages_[i].store(2.5f);
-        audioInputPeaks_[i].store(0.0f);
-        audioOutputPeaks_[i].store(0.0f);
-        cvGeneratorStates_[i].manualVolts    = 2.5f;
-        cvGeneratorStates_[i].biasVolts      = 2.5f;
-        cvGeneratorStates_[i].amplitudeVolts = 2.5f;
-        cvGeneratorStates_[i].frequencyHz    = 1.0f;
-    }
-    for(std::size_t i = 0; i < gateValues_.size(); ++i)
-    {
-        gateValues_[i].store(false);
-        previousGateValues_[i] = false;
-    }
+
     encoderPressed_.store(false);
     midiActivity_.store(0.0f);
-    computerKeyboardEnabled_.store(true);
-    computerKeyboardOctave_.store(4);
-    testInputMode_.store(kHostInput);
-    testInputLevel_.store(3.5f);
-    testInputFrequencyHz_.store(220.0f);
     impulseRequested_.store(false);
     pendingEncoderDelta_.store(0);
     pendingEncoderPressCount_.store(0);
-    SyncHostStateFromCore();
-    latestDisplay_ = core_->GetDisplayModel();
-    latestMenu_    = core_->GetMenuModel();
-    latestParameters_ = core_->GetParameters();
-    automationSlotBindings_
-        = daisyhost::BuildHostAutomationSlotBindings(latestParameters_);
-    SyncAutomationParametersFromCore();
+    SyncSelectedNodeStateFromRack();
 }
 
 DaisyHostPatchAudioProcessor::~DaisyHostPatchAudioProcessor() {}
+
+DaisyHostPatchAudioProcessor::RackNodeState&
+DaisyHostPatchAudioProcessor::GetSelectedRackNode()
+{
+    return rackNodes_[selectedRackNodeIndex_];
+}
+
+const DaisyHostPatchAudioProcessor::RackNodeState&
+DaisyHostPatchAudioProcessor::GetSelectedRackNode() const
+{
+    return rackNodes_[selectedRackNodeIndex_];
+}
+
+DaisyHostPatchAudioProcessor::RackNodeState*
+DaisyHostPatchAudioProcessor::GetRackNodeById(const std::string& nodeId)
+{
+    for(auto& node : rackNodes_)
+    {
+        if(node.nodeId == nodeId)
+        {
+            return &node;
+        }
+    }
+    return nullptr;
+}
+
+const DaisyHostPatchAudioProcessor::RackNodeState*
+DaisyHostPatchAudioProcessor::GetRackNodeById(const std::string& nodeId) const
+{
+    for(const auto& node : rackNodes_)
+    {
+        if(node.nodeId == nodeId)
+        {
+            return &node;
+        }
+    }
+    return nullptr;
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeCvHostStateId(const std::string& nodeId,
+                                                            std::size_t index,
+                                                            const char* suffix) const
+{
+    return nodeId + "/host/cv_" + std::to_string(index + 1) + "_" + suffix;
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeTestInputModeStateId(
+    const std::string& nodeId) const
+{
+    return nodeId + "/host/test_input_mode";
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeTestInputLevelStateId(
+    const std::string& nodeId) const
+{
+    return nodeId + "/host/test_input_level";
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeTestInputFrequencyStateId(
+    const std::string& nodeId) const
+{
+    return nodeId + "/host/test_input_frequency_hz";
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeComputerKeyboardEnabledStateId(
+    const std::string& nodeId) const
+{
+    return nodeId + "/host/computer_keyboard_enabled";
+}
+
+std::string DaisyHostPatchAudioProcessor::MakeComputerKeyboardOctaveStateId(
+    const std::string& nodeId) const
+{
+    return nodeId + "/host/computer_keyboard_octave";
+}
+
+void DaisyHostPatchAudioProcessor::UpdateSelectedBoardProfile()
+{
+    boardProfile_ = daisyhost::CreateBoardProfile(boardId_, GetSelectedRackNode().nodeId);
+}
+
+void DaisyHostPatchAudioProcessor::UpdateRackNodeSnapshots(RackNodeState& node)
+{
+    if(node.core == nullptr)
+    {
+        return;
+    }
+
+    node.bindings           = node.core->GetPatchBindings();
+    node.latestDisplay      = node.core->GetDisplayModel();
+    node.latestMenu         = node.core->GetMenuModel();
+    node.latestParameters   = node.core->GetParameters();
+    node.latestMetaControllers = node.core->GetMetaControllers();
+    node.automationSlotBindings
+        = daisyhost::BuildHostAutomationSlotBindings(node.latestParameters);
+}
+
+void DaisyHostPatchAudioProcessor::FlushSelectedNodeStateToRack()
+{
+    auto& node = GetSelectedRackNode();
+    node.appId                  = activeAppId_;
+    node.bindings               = activeBindings_;
+    node.randomSeed             = appRandomSeed_;
+    node.restoredParameterValues = restoredParameterValues_;
+    node.latestDisplay          = latestDisplay_;
+    node.latestMenu             = latestMenu_;
+    node.latestParameters       = latestParameters_;
+    node.latestMetaControllers  = latestMetaControllers_;
+    node.automationSlotBindings = automationSlotBindings_;
+    for(std::size_t i = 0; i < node.topControlValues.size(); ++i)
+    {
+        node.topControlValues[i] = topControlValues_[i].load();
+        node.cvValues[i]         = cvValues_[i].load();
+        node.cvVoltages[i]       = cvVoltages_[i].load();
+        node.audioInputPeaks[i]  = audioInputPeaks_[i].load();
+        node.audioOutputPeaks[i] = audioOutputPeaks_[i].load();
+        node.cvGeneratorStates[i] = cvGeneratorStates_[i];
+    }
+    for(std::size_t i = 0; i < node.gateValues.size(); ++i)
+    {
+        node.gateValues[i]         = gateValues_[i].load();
+        node.previousGateValues[i] = previousGateValues_[i];
+    }
+    node.computerKeyboardEnabled = computerKeyboardEnabled_.load();
+    node.computerKeyboardOctave  = computerKeyboardOctave_.load();
+    node.testInputMode           = testInputMode_.load();
+    node.testInputLevel          = testInputLevel_.load();
+    node.testInputFrequencyHz    = testInputFrequencyHz_.load();
+    node.impulseRequested        = impulseRequested_.load();
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        node.pendingMenuValues = pendingMenuValues_;
+    }
+}
+
+void DaisyHostPatchAudioProcessor::SyncSelectedNodeStateFromRack()
+{
+    auto& node = GetSelectedRackNode();
+    core_             = node.core.get();
+    activeAppId_      = node.appId;
+    activeBindings_   = node.bindings;
+    appRandomSeed_    = node.randomSeed;
+    restoredParameterValues_ = node.restoredParameterValues;
+    latestDisplay_    = node.latestDisplay;
+    latestMenu_       = node.latestMenu;
+    latestParameters_ = node.latestParameters;
+    latestMetaControllers_ = node.latestMetaControllers;
+    automationSlotBindings_ = node.automationSlotBindings;
+    for(std::size_t i = 0; i < node.topControlValues.size(); ++i)
+    {
+        topControlValues_[i].store(node.topControlValues[i]);
+        cvValues_[i].store(node.cvValues[i]);
+        cvVoltages_[i].store(node.cvVoltages[i]);
+        audioInputPeaks_[i].store(node.audioInputPeaks[i]);
+        audioOutputPeaks_[i].store(node.audioOutputPeaks[i]);
+        cvGeneratorStates_[i] = node.cvGeneratorStates[i];
+    }
+    for(std::size_t i = 0; i < node.gateValues.size(); ++i)
+    {
+        gateValues_[i].store(node.gateValues[i]);
+        previousGateValues_[i] = node.previousGateValues[i];
+    }
+    computerKeyboardEnabled_.store(node.computerKeyboardEnabled);
+    computerKeyboardOctave_.store(node.computerKeyboardOctave);
+    testInputMode_.store(node.testInputMode);
+    testInputLevel_.store(node.testInputLevel);
+    testInputFrequencyHz_.store(node.testInputFrequencyHz);
+    impulseRequested_.store(node.impulseRequested);
+    {
+        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
+        pendingMenuValues_ = node.pendingMenuValues;
+    }
+    UpdateSelectedBoardProfile();
+}
+
+void DaisyHostPatchAudioProcessor::StepRackNodeCvGenerators(
+    RackNodeState& node,
+    double         blockDurationSeconds)
+{
+    for(std::size_t i = 0; i < node.cvGeneratorStates.size(); ++i)
+    {
+        const float volts = daisyhost::StepCvInputGenerator(&node.cvGeneratorStates[i],
+                                                            blockDurationSeconds);
+        node.cvVoltages[i] = volts;
+        node.cvValues[i]   = daisyhost::CvVoltsToNormalized(volts);
+    }
+}
+
+void DaisyHostPatchAudioProcessor::ApplyRackNodeVirtualPortStateToCore(
+    RackNodeState&                               node,
+    const std::vector<daisyhost::MidiMessageEvent>& midiEvents)
+{
+    if(node.core == nullptr)
+    {
+        return;
+    }
+
+    for(std::size_t i = 0; i < node.bindings.cvInputPortIds.size(); ++i)
+    {
+        if(node.bindings.cvInputPortIds[i].empty())
+        {
+            continue;
+        }
+
+        daisyhost::PortValue value;
+        value.type   = daisyhost::VirtualPortType::kCv;
+        value.scalar = node.cvValues[i];
+        node.core->SetPortInput(node.bindings.cvInputPortIds[i], value);
+    }
+
+    for(std::size_t i = 0; i < node.bindings.gateInputPortIds.size(); ++i)
+    {
+        if(node.bindings.gateInputPortIds[i].empty())
+        {
+            continue;
+        }
+
+        daisyhost::PortValue value;
+        value.type = daisyhost::VirtualPortType::kGate;
+        value.gate = node.gateValues[i];
+        node.core->SetPortInput(node.bindings.gateInputPortIds[i], value);
+        if(i == 0 && node.gateValues[i] && !node.previousGateValues[i])
+        {
+            node.impulseRequested = true;
+        }
+        node.previousGateValues[i] = node.gateValues[i];
+    }
+
+    if(!node.bindings.midiInputPortId.empty())
+    {
+        daisyhost::PortValue midiValue;
+        midiValue.type       = daisyhost::VirtualPortType::kMidi;
+        midiValue.midiEvents = midiEvents;
+        node.core->SetPortInput(node.bindings.midiInputPortId, midiValue);
+    }
+}
 
 void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
                                                  int    samplesPerBlock)
@@ -243,8 +482,24 @@ void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
     }
 
     ApplyHubStartupRequestIfNeeded();
-    core_->Prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
-    ApplyCanonicalSessionStateToCore();
+    FlushSelectedNodeStateToRack();
+    for(auto& node : rackNodes_)
+    {
+        if(node.core == nullptr)
+        {
+            continue;
+        }
+        node.core->Prepare(sampleRate, static_cast<std::size_t>(samplesPerBlock));
+        node.core->ResetToDefaultState(node.randomSeed);
+        if(!node.restoredParameterValues.empty())
+        {
+            node.core->RestoreStatefulParameterValues(node.restoredParameterValues);
+        }
+        node.testPhase  = 0.0f;
+        node.noiseState = node.randomSeed == 0 ? 1u : node.randomSeed;
+        UpdateRackNodeSnapshots(node);
+    }
+    SyncSelectedNodeStateFromRack();
     midiNotePreview_.Prepare(sampleRate);
     RefreshMidiInputStatus();
     scratchOutput_.setSize(4, samplesPerBlock, false, false, true);
@@ -257,6 +512,7 @@ void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
     UpdateCvGeneratorOutputs(static_cast<double>(currentBlockSize_) / sampleRate);
     ApplyVirtualPortStateToCore(std::vector<daisyhost::MidiMessageEvent>());
     UpdateCoreSnapshots();
+    FlushSelectedNodeStateToRack();
 }
 
 void DaisyHostPatchAudioProcessor::releaseResources()
@@ -349,12 +605,34 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     ApplyPendingMenuInteractionsToCore();
     UpdateCvGeneratorOutputs(static_cast<double>(numSamples) / getSampleRate());
     ApplyVirtualPortStateToCore(ToMidiEvents(midiMessages));
+    UpdateCoreSnapshots();
+    SyncHostStateFromCore();
+    FlushSelectedNodeStateToRack();
 
-    if(scratchOutput_.getNumSamples() != numSamples)
+    const double blockDurationSeconds = static_cast<double>(numSamples) / getSampleRate();
+    const auto topologyConfig = daisyhost::BuildLiveRackTopologyConfig(rackTopologyPreset_);
+    auto findNodeIndex = [this](const std::string& nodeId) -> std::size_t {
+        for(std::size_t index = 0; index < rackNodes_.size(); ++index)
+        {
+            if(rackNodes_[index].nodeId == nodeId)
+            {
+                return index;
+            }
+        }
+        return rackNodes_.size();
+    };
+    const std::size_t entryNodeIndex  = findNodeIndex(topologyConfig.entryNodeId);
+    const std::size_t outputNodeIndex = findNodeIndex(topologyConfig.outputNodeId);
+
+    for(std::size_t index = 0; index < rackNodes_.size(); ++index)
     {
-        scratchOutput_.setSize(4, numSamples, false, false, true);
+        if(index == selectedRackNodeIndex_)
+        {
+            continue;
+        }
+        StepRackNodeCvGenerators(rackNodes_[index], blockDurationSeconds);
+        ApplyRackNodeVirtualPortStateToCore(rackNodes_[index], {});
     }
-    scratchOutput_.clear();
 
     if(static_cast<int>(zeroBuffer_.size()) < numSamples)
     {
@@ -365,97 +643,175 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         generatedInput_.assign(static_cast<std::size_t>(numSamples), 0.0f);
     }
 
-    std::array<const float*, 4> inputPtrs = {
-        {zeroBuffer_.data(), zeroBuffer_.data(), zeroBuffer_.data(), zeroBuffer_.data()}};
-
-    if(testInputMode_.load() == kHostInput)
+    std::array<juce::AudioBuffer<float>, 2> rackOutputs;
+    for(auto& outputBuffer : rackOutputs)
     {
-        for(int channel = 0;
-            channel < std::min(buffer.getNumChannels(), getTotalNumInputChannels())
-            && channel < static_cast<int>(inputPtrs.size());
-            ++channel)
-        {
-            inputPtrs[static_cast<std::size_t>(channel)] = buffer.getReadPointer(channel);
-        }
-
-        for(std::size_t i = 0; i < audioInputPeaks_.size(); ++i)
-        {
-            audioInputPeaks_[i].store(PeakForChannel(buffer, static_cast<int>(i)));
-        }
-    }
-    else
-    {
-        GenerateTestInput(generatedInput_.data(), numSamples);
-        inputPtrs[0] = generatedInput_.data();
-
-        audioInputPeaks_[0].store(PeakForSamples(generatedInput_.data(), numSamples));
-        for(std::size_t i = 1; i < audioInputPeaks_.size(); ++i)
-        {
-            audioInputPeaks_[i].store(0.0f);
-        }
+        outputBuffer.setSize(4, numSamples, false, false, true);
+        outputBuffer.clear();
     }
 
-    if(wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+    std::array<std::vector<float>, 2> syntheticInputs;
+    for(auto& input : syntheticInputs)
     {
-        if(testInputMode_.load() == kHostInput)
+        input.assign(static_cast<std::size_t>(numSamples), 0.0f);
+    }
+
+    auto processNode = [&](std::size_t nodeIndex,
+                           const std::vector<daisyhost::MidiMessageEvent>& midiEvents) {
+        auto& node = rackNodes_[nodeIndex];
+        if(node.core == nullptr)
         {
-            std::fill(generatedInput_.begin(),
-                      generatedInput_.begin() + numSamples,
-                      0.0f);
-            if(getTotalNumInputChannels() > 0 && buffer.getNumChannels() > 0)
+            return;
+        }
+
+        ApplyRackNodeVirtualPortStateToCore(node, midiEvents);
+
+        std::array<const float*, 4> inputPtrs = {
+            {zeroBuffer_.data(), zeroBuffer_.data(), zeroBuffer_.data(), zeroBuffer_.data()}};
+
+        if(nodeIndex == entryNodeIndex)
+        {
+            if(node.testInputMode == kHostInput)
             {
-                std::copy(buffer.getReadPointer(0),
-                          buffer.getReadPointer(0) + numSamples,
-                          generatedInput_.begin());
+                for(int channel = 0;
+                    channel < std::min(buffer.getNumChannels(), getTotalNumInputChannels())
+                    && channel < 4;
+                    ++channel)
+                {
+                    inputPtrs[static_cast<std::size_t>(channel)] = buffer.getReadPointer(channel);
+                }
+
+                if(wrapperType == juce::AudioProcessor::wrapperType_Standalone
+                   && nodeIndex == selectedRackNodeIndex_)
+                {
+                    std::fill(generatedInput_.begin(),
+                              generatedInput_.begin() + numSamples,
+                              0.0f);
+                    if(getTotalNumInputChannels() > 0 && buffer.getNumChannels() > 0)
+                    {
+                        std::copy(buffer.getReadPointer(0),
+                                  buffer.getReadPointer(0) + numSamples,
+                                  generatedInput_.begin());
+                    }
+                    midiNotePreview_.RenderAdd(
+                        generatedInput_.data(),
+                        static_cast<std::size_t>(numSamples),
+                        Clamp01(node.testInputLevel / 10.0f));
+                    inputPtrs[0] = generatedInput_.data();
+                }
+            }
+            else
+            {
+                bool impulseState = node.impulseRequested;
+                daisyhost::GenerateSyntheticTestInput(
+                    node.testInputMode,
+                    Clamp01(node.testInputLevel / 10.0f),
+                    node.testInputFrequencyHz,
+                    getSampleRate(),
+                    &node.testPhase,
+                    &node.noiseState,
+                    &impulseState,
+                    syntheticInputs[nodeIndex].data(),
+                    numSamples);
+                node.impulseRequested = impulseState;
+                inputPtrs[0]          = syntheticInputs[nodeIndex].data();
+            }
+        }
+        else
+        {
+            for(const auto& route : topologyConfig.routes)
+            {
+                const bool targetsNode = route.destPortId.rfind(node.nodeId + "/", 0) == 0;
+                if(!targetsNode)
+                {
+                    continue;
+                }
+
+                const std::size_t sourceNodeIndex
+                    = route.sourcePortId.rfind("node1/", 0) == 0 ? 1u : 0u;
+                const std::size_t sourceChannel
+                    = route.sourcePortId.find("audio_out_2") != std::string::npos ? 1u : 0u;
+                const std::size_t destChannel
+                    = route.destPortId.find("audio_in_2") != std::string::npos ? 1u : 0u;
+                inputPtrs[destChannel]
+                    = rackOutputs[sourceNodeIndex].getReadPointer(static_cast<int>(sourceChannel));
             }
         }
 
-        midiNotePreview_.RenderAdd(
-            generatedInput_.data(),
-            static_cast<std::size_t>(numSamples),
-            Clamp01(testInputLevel_.load() / 10.0f));
-        inputPtrs[0] = generatedInput_.data();
-        audioInputPeaks_[0].store(PeakForSamples(generatedInput_.data(), numSamples));
-    }
+        for(std::size_t channel = 0; channel < node.audioInputPeaks.size(); ++channel)
+        {
+            node.audioInputPeaks[channel]
+                = (channel < inputPtrs.size() && inputPtrs[channel] != nullptr)
+                      ? PeakForSamples(inputPtrs[channel], numSamples)
+                      : 0.0f;
+        }
 
-    std::array<float*, 4> outputPtrs = {
-        {scratchOutput_.getWritePointer(0),
-         scratchOutput_.getWritePointer(1),
-         scratchOutput_.getWritePointer(2),
-         scratchOutput_.getWritePointer(3)}};
+        std::array<float*, 4> outputPtrs = {
+            {rackOutputs[nodeIndex].getWritePointer(0),
+             rackOutputs[nodeIndex].getWritePointer(1),
+             rackOutputs[nodeIndex].getWritePointer(2),
+             rackOutputs[nodeIndex].getWritePointer(3)}};
+        node.core->Process({inputPtrs.data(), inputPtrs.size()},
+                           {outputPtrs.data(), outputPtrs.size()},
+                           static_cast<std::size_t>(numSamples));
+        node.core->TickUi((1000.0 * static_cast<double>(numSamples)) / getSampleRate());
+        for(std::size_t channel = 0; channel < node.audioOutputPeaks.size(); ++channel)
+        {
+            node.audioOutputPeaks[channel]
+                = PeakForChannel(rackOutputs[nodeIndex], static_cast<int>(channel));
+        }
+        UpdateRackNodeSnapshots(node);
+    };
 
-    core_->Process({inputPtrs.data(), inputPtrs.size()},
-                   {outputPtrs.data(), outputPtrs.size()},
-                   static_cast<std::size_t>(numSamples));
-    core_->TickUi((1000.0 * static_cast<double>(numSamples)) / getSampleRate());
-    UpdateCoreSnapshots();
-    SyncHostStateFromCore();
-
-    for(std::size_t i = 0; i < audioOutputPeaks_.size(); ++i)
+    std::vector<daisyhost::MidiMessageEvent> selectedMidiEvents = ToMidiEvents(midiMessages);
+    switch(rackTopologyPreset_)
     {
-        audioOutputPeaks_[i].store(
-            PeakForChannel(scratchOutput_, static_cast<int>(i)));
+        case daisyhost::LiveRackTopologyPreset::kNode0Only:
+            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            break;
+        case daisyhost::LiveRackTopologyPreset::kNode1Only:
+            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            break;
+        case daisyhost::LiveRackTopologyPreset::kNode0ToNode1:
+            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            break;
+        case daisyhost::LiveRackTopologyPreset::kNode1ToNode0:
+            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
+                                                        : std::vector<daisyhost::MidiMessageEvent>{});
+            break;
     }
+
+    SyncSelectedNodeStateFromRack();
+    SyncHostStateFromCore();
+    UpdateCoreSnapshots();
 
     buffer.clear();
+    const auto& outputBindings = rackNodes_[outputNodeIndex].bindings;
     if(getTotalNumOutputChannels() >= 4)
     {
         for(int channel = 0; channel < 4; ++channel)
         {
-            buffer.copyFrom(channel, 0, scratchOutput_, channel, 0, numSamples);
+            buffer.copyFrom(channel, 0, rackOutputs[outputNodeIndex], channel, 0, numSamples);
         }
     }
     else if(getTotalNumOutputChannels() == 2)
     {
-        const int leftChannel = std::clamp(activeBindings_.mainOutputChannels[0], 0, 3);
-        const int rightChannel = std::clamp(activeBindings_.mainOutputChannels[1], 0, 3);
-        buffer.copyFrom(0, 0, scratchOutput_, leftChannel, 0, numSamples);
-        buffer.copyFrom(1, 0, scratchOutput_, rightChannel, 0, numSamples);
+        const int leftChannel  = std::clamp(outputBindings.mainOutputChannels[0], 0, 3);
+        const int rightChannel = std::clamp(outputBindings.mainOutputChannels[1], 0, 3);
+        buffer.copyFrom(0, 0, rackOutputs[outputNodeIndex], leftChannel, 0, numSamples);
+        buffer.copyFrom(1, 0, rackOutputs[outputNodeIndex], rightChannel, 0, numSamples);
     }
     else if(getTotalNumOutputChannels() == 1)
     {
-        const int monoChannel = std::clamp(activeBindings_.mainOutputChannels[0], 0, 3);
-        buffer.copyFrom(0, 0, scratchOutput_, monoChannel, 0, numSamples);
+        const int monoChannel = std::clamp(outputBindings.mainOutputChannels[0], 0, 3);
+        buffer.copyFrom(0, 0, rackOutputs[outputNodeIndex], monoChannel, 0, numSamples);
     }
 
     isProcessingBlock_.store(false);
@@ -522,53 +878,77 @@ void DaisyHostPatchAudioProcessor::changeProgramName(int,
 
 void DaisyHostPatchAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
+    FlushSelectedNodeStateToRack();
+
     daisyhost::HostSessionState state;
-    state.appId = activeAppId_;
-    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
+    state.boardId        = boardId_;
+    state.selectedNodeId = rackNodes_[selectedRackNodeIndex_].nodeId;
+    const auto topologyConfig
+        = daisyhost::BuildLiveRackTopologyConfig(rackTopologyPreset_);
+    state.entryNodeId  = topologyConfig.entryNodeId;
+    state.outputNodeId = topologyConfig.outputNodeId;
+    state.appId        = rackNodes_[0].appId;
+    state.randomSeed   = rackNodes_[0].randomSeed;
+    for(const auto& node : rackNodes_)
     {
-        if(!activeBindings_.knobControlIds[i].empty())
+        state.nodes.push_back({node.nodeId, node.appId, node.randomSeed});
+        for(std::size_t i = 0; i < node.bindings.knobControlIds.size(); ++i)
         {
-            state.controlValues[activeBindings_.knobControlIds[i]]
-                = topControlValues_[i].load();
+            if(!node.bindings.knobControlIds[i].empty())
+            {
+                state.controlValues[node.bindings.knobControlIds[i]]
+                    = node.topControlValues[i];
+            }
+            if(!node.bindings.cvInputPortIds[i].empty())
+            {
+                state.cvValues[node.bindings.cvInputPortIds[i]] = node.cvValues[i];
+            }
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "mode")]
+                = static_cast<float>(
+                    node.cvGeneratorStates[i].mode
+                    == daisyhost::CvInputSourceMode::kGenerator);
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "waveform")]
+                = static_cast<float>(
+                    static_cast<int>(node.cvGeneratorStates[i].waveform));
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "frequency_hz")]
+                = node.cvGeneratorStates[i].frequencyHz;
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "amplitude_volts")]
+                = node.cvGeneratorStates[i].amplitudeVolts;
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "bias_volts")]
+                = node.cvGeneratorStates[i].biasVolts;
+            state.controlValues[MakeCvHostStateId(node.nodeId, i, "manual_volts")]
+                = node.cvGeneratorStates[i].manualVolts;
         }
-        if(!activeBindings_.cvInputPortIds[i].empty())
+        for(std::size_t i = 0; i < node.bindings.gateInputPortIds.size(); ++i)
         {
-            state.cvValues[activeBindings_.cvInputPortIds[i]] = cvValues_[i].load();
+            if(!node.bindings.gateInputPortIds[i].empty())
+            {
+                state.gateValues[node.bindings.gateInputPortIds[i]]
+                    = node.gateValues[i];
+            }
         }
-        state.controlValues[MakeCvHostStateId(i, "mode")]
-            = static_cast<float>(
-                cvGeneratorStates_[i].mode == daisyhost::CvInputSourceMode::kGenerator);
-        state.controlValues[MakeCvHostStateId(i, "waveform")]
-            = static_cast<float>(static_cast<int>(cvGeneratorStates_[i].waveform));
-        state.controlValues[MakeCvHostStateId(i, "frequency_hz")]
-            = cvGeneratorStates_[i].frequencyHz;
-        state.controlValues[MakeCvHostStateId(i, "amplitude_volts")]
-            = cvGeneratorStates_[i].amplitudeVolts;
-        state.controlValues[MakeCvHostStateId(i, "bias_volts")]
-            = cvGeneratorStates_[i].biasVolts;
-        state.controlValues[MakeCvHostStateId(i, "manual_volts")]
-            = cvGeneratorStates_[i].manualVolts;
+        state.controlValues[MakeComputerKeyboardEnabledStateId(node.nodeId)]
+            = node.computerKeyboardEnabled ? 1.0f : 0.0f;
+        state.controlValues[MakeComputerKeyboardOctaveStateId(node.nodeId)]
+            = static_cast<float>(node.computerKeyboardOctave);
+        state.controlValues[MakeTestInputModeStateId(node.nodeId)]
+            = static_cast<float>(node.testInputMode);
+        state.controlValues[MakeTestInputLevelStateId(node.nodeId)]
+            = node.testInputLevel;
+        state.controlValues[MakeTestInputFrequencyStateId(node.nodeId)]
+            = node.testInputFrequencyHz;
+
+        if(node.core != nullptr)
+        {
+            const auto parameters = node.core->CaptureStatefulParameterValues();
+            state.parameterValues.insert(parameters.begin(), parameters.end());
+        }
     }
 
-    for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
+    for(const auto& route : topologyConfig.routes)
     {
-        if(!activeBindings_.gateInputPortIds[i].empty())
-        {
-            state.gateValues[activeBindings_.gateInputPortIds[i]]
-                = gateValues_[i].load();
-        }
+        state.routes.push_back({route.sourcePortId, route.destPortId});
     }
-
-    state.controlValues[computerKeyboardEnabledStateId_]
-        = computerKeyboardEnabled_.load() ? 1.0f : 0.0f;
-    state.controlValues[computerKeyboardOctaveStateId_]
-        = static_cast<float>(computerKeyboardOctave_.load());
-    state.controlValues[testInputModeStateId_]
-        = static_cast<float>(testInputMode_.load());
-    state.controlValues[testInputLevelStateId_] = testInputLevel_.load();
-    state.controlValues[testInputFrequencyStateId_] = testInputFrequencyHz_.load();
-    state.parameterValues = core_->CaptureStatefulParameterValues();
-    state.randomSeed      = appRandomSeed_;
 
     {
         std::lock_guard<std::mutex> lock(midiLearnMutex_);
@@ -587,9 +967,22 @@ void DaisyHostPatchAudioProcessor::setStateInformation(const void* data,
                            static_cast<std::size_t>(sizeInBytes));
     auto state = daisyhost::HostSessionState::Deserialize(text);
     if(pendingHubStartupRequest_.has_value()
+       && !pendingHubStartupRequest_->boardId.empty())
+    {
+        state.boardId = pendingHubStartupRequest_->boardId;
+    }
+    if(pendingHubStartupRequest_.has_value()
        && !pendingHubStartupRequest_->appId.empty())
     {
         state.appId = pendingHubStartupRequest_->appId;
+        for(auto& node : state.nodes)
+        {
+            if(node.nodeId == "node0")
+            {
+                node.appId = pendingHubStartupRequest_->appId;
+                break;
+            }
+        }
     }
     LoadSession(state);
     ApplyHubStartupRequestIfNeeded();
@@ -615,6 +1008,142 @@ juce::String DaisyHostPatchAudioProcessor::GetActiveAppDisplayName() const
 {
     return core_ != nullptr ? juce::String(core_->GetAppDisplayName())
                             : juce::String();
+}
+
+std::size_t DaisyHostPatchAudioProcessor::GetRackNodeCount() const
+{
+    return rackNodes_.size();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetSelectedRackNodeId() const
+{
+    return rackNodes_[selectedRackNodeIndex_].nodeId;
+}
+
+bool DaisyHostPatchAudioProcessor::SetSelectedRackNodeId(const std::string& nodeId)
+{
+    for(std::size_t index = 0; index < rackNodes_.size(); ++index)
+    {
+        if(rackNodes_[index].nodeId != nodeId)
+        {
+            continue;
+        }
+
+        FlushSelectedNodeStateToRack();
+        selectedRackNodeIndex_ = index;
+        SyncSelectedNodeStateFromRack();
+        SyncAutomationParametersFromCore();
+        return true;
+    }
+
+    return false;
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetRackNodeId(std::size_t index) const
+{
+    return index < rackNodes_.size() ? juce::String(rackNodes_[index].nodeId) : juce::String();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetRackNodeAppId(std::size_t index) const
+{
+    return index < rackNodes_.size() ? juce::String(rackNodes_[index].appId) : juce::String();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetRackNodeAppDisplayName(
+    std::size_t index) const
+{
+    if(index >= rackNodes_.size() || rackNodes_[index].core == nullptr)
+    {
+        return {};
+    }
+    return rackNodes_[index].core->GetAppDisplayName();
+}
+
+bool DaisyHostPatchAudioProcessor::SetRackNodeAppId(std::size_t index,
+                                                    const std::string& requestedAppId)
+{
+    if(index >= rackNodes_.size())
+    {
+        return false;
+    }
+
+    if(index == selectedRackNodeIndex_)
+    {
+        FlushSelectedNodeStateToRack();
+    }
+
+    if(!RecreateRackNode(index, requestedAppId))
+    {
+        return false;
+    }
+
+    auto& node                 = rackNodes_[index];
+    node.randomSeed            = 0u;
+    node.restoredParameterValues.clear();
+    node.pendingMenuValues.clear();
+    node.impulseRequested = false;
+    node.testPhase        = 0.0f;
+    node.noiseState       = 1u;
+    if(node.core != nullptr)
+    {
+        node.core->ResetToDefaultState(node.randomSeed);
+        UpdateRackNodeSnapshots(node);
+    }
+
+    if(index == selectedRackNodeIndex_)
+    {
+        SyncSelectedNodeStateFromRack();
+        ApplyCanonicalSessionStateToCore();
+    }
+    return true;
+}
+
+int DaisyHostPatchAudioProcessor::GetRackTopologyPreset() const
+{
+    switch(rackTopologyPreset_)
+    {
+        case daisyhost::LiveRackTopologyPreset::kNode0Only: return 0;
+        case daisyhost::LiveRackTopologyPreset::kNode1Only: return 1;
+        case daisyhost::LiveRackTopologyPreset::kNode0ToNode1: return 2;
+        case daisyhost::LiveRackTopologyPreset::kNode1ToNode0: return 3;
+    }
+
+    return 0;
+}
+
+void DaisyHostPatchAudioProcessor::SetRackTopologyPreset(int preset)
+{
+    switch(preset)
+    {
+        case 1: rackTopologyPreset_ = daisyhost::LiveRackTopologyPreset::kNode1Only; break;
+        case 2: rackTopologyPreset_ = daisyhost::LiveRackTopologyPreset::kNode0ToNode1; break;
+        case 3: rackTopologyPreset_ = daisyhost::LiveRackTopologyPreset::kNode1ToNode0; break;
+        default: rackTopologyPreset_ = daisyhost::LiveRackTopologyPreset::kNode0Only; break;
+    }
+    RefreshCoreStateFromIdleHostChange();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetRackNodeRoleLabel(std::size_t index) const
+{
+    if(index >= rackNodes_.size())
+    {
+        return {};
+    }
+
+    const auto nodeId = rackNodes_[index].nodeId;
+    switch(rackTopologyPreset_)
+    {
+        case daisyhost::LiveRackTopologyPreset::kNode0Only:
+            return nodeId == "node0" ? "Entry" : "Inactive";
+        case daisyhost::LiveRackTopologyPreset::kNode1Only:
+            return nodeId == "node1" ? "Entry" : "Inactive";
+        case daisyhost::LiveRackTopologyPreset::kNode0ToNode1:
+            return nodeId == "node0" ? "Entry" : "Output";
+        case daisyhost::LiveRackTopologyPreset::kNode1ToNode0:
+            return nodeId == "node1" ? "Entry" : "Output";
+    }
+
+    return {};
 }
 
 float DaisyHostPatchAudioProcessor::GetTopControlValue(std::size_t index) const
@@ -879,10 +1408,12 @@ daisyhost::EffectiveHostStateSnapshot
 DaisyHostPatchAudioProcessor::GetEffectiveHostStateSnapshot() const
 {
     std::vector<daisyhost::ParameterDescriptor> parameters;
+    std::vector<daisyhost::MetaControllerDescriptor> metaControllers;
     daisyhost::HostAutomationSlotBindings       automationSlots;
     {
         std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
         parameters      = latestParameters_;
+        metaControllers = latestMetaControllers_;
         automationSlots = automationSlotBindings_;
     }
 
@@ -912,15 +1443,47 @@ DaisyHostPatchAudioProcessor::GetEffectiveHostStateSnapshot() const
     audioInput.level       = testInputLevel_.load();
     audioInput.frequencyHz = testInputFrequencyHz_.load();
 
+    const auto topologyConfig
+        = daisyhost::BuildLiveRackTopologyConfig(rackTopologyPreset_);
+    std::vector<daisyhost::EffectiveHostNodeSummary> nodeSummaries;
+    nodeSummaries.reserve(rackNodes_.size());
+    for(const auto& node : rackNodes_)
+    {
+        daisyhost::EffectiveHostNodeSummary summary;
+        summary.nodeId         = node.nodeId;
+        summary.appId          = node.appId;
+        summary.appDisplayName = node.core != nullptr ? node.core->GetAppDisplayName()
+                                                      : std::string();
+        summary.selected       = node.nodeId == rackNodes_[selectedRackNodeIndex_].nodeId;
+        summary.entryNode      = node.nodeId == topologyConfig.entryNodeId;
+        summary.outputNode     = node.nodeId == topologyConfig.outputNodeId;
+        nodeSummaries.push_back(std::move(summary));
+    }
+
+    std::vector<daisyhost::EffectiveHostRouteSnapshot> routes;
+    routes.reserve(topologyConfig.routes.size());
+    for(const auto& route : topologyConfig.routes)
+    {
+        routes.push_back({route.sourcePortId, route.destPortId});
+    }
+
     return daisyhost::BuildEffectiveHostStateSnapshot(
+        boardId_,
+        rackNodes_[selectedRackNodeIndex_].nodeId,
+        rackNodes_.size(),
+        topologyConfig.entryNodeId,
+        topologyConfig.outputNodeId,
         activeAppId_,
         core_ != nullptr ? core_->GetAppDisplayName() : std::string(),
+        nodeSummaries,
+        routes,
         activeBindings_,
         parameters,
         automationSlots,
         cvInputs,
         gateInputs,
-        audioInput);
+        audioInput,
+        metaControllers);
 }
 
 juce::MidiKeyboardState& DaisyHostPatchAudioProcessor::GetVirtualKeyboardState()
@@ -936,9 +1499,10 @@ bool DaisyHostPatchAudioProcessor::GetComputerKeyboardEnabled() const
 void DaisyHostPatchAudioProcessor::SetComputerKeyboardEnabled(bool enabled)
 {
     computerKeyboardEnabled_.store(enabled);
+    const auto nodeId = GetSelectedRackNode().nodeId;
     {
         std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_["node0/menu/midi/computer_keys"] = enabled ? 1.0f : 0.0f;
+        pendingMenuValues_[nodeId + "/menu/midi/computer_keys"] = enabled ? 1.0f : 0.0f;
     }
     if(!enabled)
     {
@@ -955,9 +1519,10 @@ void DaisyHostPatchAudioProcessor::SetComputerKeyboardOctave(int octave)
 {
     const int clamped = daisyhost::ComputerKeyboardMidi::ClampOctave(octave);
     computerKeyboardOctave_.store(clamped);
+    const auto nodeId = GetSelectedRackNode().nodeId;
     {
         std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_["node0/menu/midi/octave"]
+        pendingMenuValues_[nodeId + "/menu/midi/octave"]
             = static_cast<float>(std::clamp(clamped - 1, 0, 4)) / 4.0f;
     }
 }
@@ -998,9 +1563,10 @@ void DaisyHostPatchAudioProcessor::SetTestInputMode(int mode)
 {
     const int clamped = daisyhost::ClampTestInputSignalMode(mode);
     testInputMode_.store(clamped);
+    const auto nodeId = GetSelectedRackNode().nodeId;
     {
         std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_["node0/menu/input/source"]
+        pendingMenuValues_[nodeId + "/menu/input/source"]
             = daisyhost::TestInputSignalModeToNormalized(clamped);
     }
     RefreshCoreStateFromIdleHostChange();
@@ -1015,9 +1581,10 @@ void DaisyHostPatchAudioProcessor::SetTestInputLevel(float level)
 {
     const float clamped = std::clamp(level, 0.0f, 10.0f);
     testInputLevel_.store(clamped);
+    const auto nodeId = GetSelectedRackNode().nodeId;
     {
         std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_["node0/menu/input/level"] = Clamp01(clamped / 10.0f);
+        pendingMenuValues_[nodeId + "/menu/input/level"] = Clamp01(clamped / 10.0f);
     }
     RefreshCoreStateFromIdleHostChange();
 }
@@ -1036,9 +1603,10 @@ void DaisyHostPatchAudioProcessor::SetTestInputFrequencyHz(float frequencyHz)
 void DaisyHostPatchAudioProcessor::TriggerImpulse()
 {
     impulseRequested_.store(true);
+    const auto nodeId = GetSelectedRackNode().nodeId;
     {
         std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_["node0/menu/input/fire_impulse"] = 1.0f;
+        pendingMenuValues_[nodeId + "/menu/input/fire_impulse"] = 1.0f;
     }
     RefreshCoreStateFromIdleHostChange();
 }
@@ -1292,6 +1860,7 @@ void DaisyHostPatchAudioProcessor::ApplyCanonicalSessionStateToCore()
     }
     UpdateCoreSnapshots();
     SyncHostStateFromCore();
+    FlushSelectedNodeStateToRack();
     SyncAutomationParametersFromCore();
 }
 
@@ -1300,6 +1869,12 @@ void DaisyHostPatchAudioProcessor::ApplyHubStartupRequestIfNeeded()
     if(hubStartupRequestApplied_ || !pendingHubStartupRequest_.has_value())
     {
         return;
+    }
+
+    if(!pendingHubStartupRequest_->boardId.empty())
+    {
+        boardId_ = pendingHubStartupRequest_->boardId;
+        UpdateSelectedBoardProfile();
     }
 
     if(!pendingHubStartupRequest_->appId.empty())
@@ -1339,137 +1914,200 @@ void DaisyHostPatchAudioProcessor::UpdateCoreSnapshots()
         std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
         latestMenu_            = core_->GetMenuModel();
         latestParameters_      = core_->GetParameters();
+        latestMetaControllers_ = core_->GetMetaControllers();
         automationSlotBindings_
             = daisyhost::BuildHostAutomationSlotBindings(latestParameters_);
     }
+
+    FlushSelectedNodeStateToRack();
 }
 
 void DaisyHostPatchAudioProcessor::LoadSession(
     const daisyhost::HostSessionState& state)
 {
-    const std::string requestedAppId = state.appId.empty()
-                                           ? daisyhost::GetDefaultHostedAppId()
-                                           : state.appId;
-    RecreateHostedApp(requestedAppId);
-    appRandomSeed_          = state.randomSeed;
-    restoredParameterValues_ = state.parameterValues;
-    ApplyCanonicalSessionStateToCore();
-
-    const bool hasCanonicalParameterState = !state.parameterValues.empty();
-
-    for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
+    boardId_ = state.boardId.empty() ? "daisy_patch" : state.boardId;
+    std::vector<daisyhost::LiveRackTopologyRoute> routes;
+    routes.reserve(state.routes.size());
+    for(const auto& route : state.routes)
     {
-        if(!hasCanonicalParameterState)
+        routes.push_back({route.sourcePortId, route.destPortId});
+    }
+    const daisyhost::LiveRackTopologyConfig topologyConfig{
+        state.entryNodeId.empty() ? "node0" : state.entryNodeId,
+        state.outputNodeId.empty() ? "node0" : state.outputNodeId,
+        routes};
+    if(!daisyhost::TryInferLiveRackTopologyPreset(topologyConfig,
+                                                  &rackTopologyPreset_,
+                                                  nullptr))
+    {
+        rackTopologyPreset_ = daisyhost::LiveRackTopologyPreset::kNode0Only;
+    }
+
+    hasRestoredTestInputMode_ = false;
+
+    for(std::size_t index = 0; index < rackNodes_.size(); ++index)
+    {
+        auto& node = rackNodes_[index];
+        const auto stateNodeIt
+            = std::find_if(state.nodes.begin(),
+                           state.nodes.end(),
+                           [&node](const daisyhost::HostSessionNodeState& stateNode) {
+                               return stateNode.nodeId == node.nodeId;
+                           });
+        const bool hasStateNode = stateNodeIt != state.nodes.end();
+        const std::string requestedAppId
+            = hasStateNode
+                  ? stateNodeIt->appId
+                  : (node.nodeId == "node0" && !state.appId.empty()
+                         ? state.appId
+                         : daisyhost::GetDefaultHostedAppId());
+
+        RecreateRackNode(index, requestedAppId);
+        node.randomSeed = hasStateNode ? stateNodeIt->randomSeed
+                                       : (node.nodeId == "node0" ? state.randomSeed : 0u);
+        node.restoredParameterValues.clear();
+        node.pendingMenuValues.clear();
+        node.impulseRequested = false;
+        node.testPhase        = 0.0f;
+        node.noiseState       = node.randomSeed == 0 ? 1u : node.randomSeed;
+
+        for(const auto& entry : state.parameterValues)
         {
-            const auto controlIt
-                = state.controlValues.find(activeBindings_.knobControlIds[i]);
-            if(!activeBindings_.knobControlIds[i].empty()
-               && controlIt != state.controlValues.end())
+            if(entry.first.rfind(node.nodeId + "/", 0) == 0)
             {
-                topControlValues_[i].store(Clamp01(controlIt->second));
+                node.restoredParameterValues[entry.first] = entry.second;
             }
         }
 
-        const auto cvIt = state.cvValues.find(activeBindings_.cvInputPortIds[i]);
-        if(!activeBindings_.cvInputPortIds[i].empty()
-           && cvIt != state.cvValues.end())
+        if(node.core != nullptr)
         {
-            cvValues_[i].store(Clamp01(cvIt->second));
-            cvVoltages_[i].store(daisyhost::NormalizedToCvVolts(cvIt->second));
-            cvGeneratorStates_[i].manualVolts
-                = daisyhost::NormalizedToCvVolts(cvIt->second);
+            node.core->ResetToDefaultState(node.randomSeed);
+            if(!node.restoredParameterValues.empty())
+            {
+                node.core->RestoreStatefulParameterValues(node.restoredParameterValues);
+            }
         }
 
-        if(const auto it = state.controlValues.find(MakeCvHostStateId(i, "mode"));
+        const bool hasCanonicalParameterState = !node.restoredParameterValues.empty();
+        for(std::size_t i = 0; i < node.bindings.knobControlIds.size(); ++i)
+        {
+            if(!hasCanonicalParameterState
+               && !node.bindings.knobControlIds[i].empty())
+            {
+                if(const auto controlIt
+                   = state.controlValues.find(node.bindings.knobControlIds[i]);
+                   controlIt != state.controlValues.end())
+                {
+                    node.topControlValues[i] = Clamp01(controlIt->second);
+                }
+            }
+
+            if(!node.bindings.cvInputPortIds[i].empty())
+            {
+                if(const auto cvIt = state.cvValues.find(node.bindings.cvInputPortIds[i]);
+                   cvIt != state.cvValues.end())
+                {
+                    node.cvValues[i]   = Clamp01(cvIt->second);
+                    node.cvVoltages[i] = daisyhost::NormalizedToCvVolts(cvIt->second);
+                    node.cvGeneratorStates[i].manualVolts
+                        = daisyhost::NormalizedToCvVolts(cvIt->second);
+                }
+            }
+
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "mode"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].mode
+                    = ClampCvMode(static_cast<int>(std::round(it->second)));
+            }
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "waveform"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].waveform
+                    = static_cast<daisyhost::BasicWaveform>(
+                        daisyhost::ClampBasicWaveform(
+                            static_cast<int>(std::round(it->second))));
+            }
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "frequency_hz"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].frequencyHz
+                    = std::clamp(it->second, 0.01f, 20.0f);
+            }
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "amplitude_volts"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].amplitudeVolts
+                    = daisyhost::ClampCvAmplitudeVolts(it->second);
+            }
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "bias_volts"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].biasVolts
+                    = daisyhost::ClampCvVoltage(it->second);
+            }
+            if(const auto it = state.controlValues.find(
+                   MakeCvHostStateId(node.nodeId, i, "manual_volts"));
+               it != state.controlValues.end())
+            {
+                node.cvGeneratorStates[i].manualVolts
+                    = daisyhost::ClampCvVoltage(it->second);
+            }
+        }
+
+        for(std::size_t i = 0; i < node.bindings.gateInputPortIds.size(); ++i)
+        {
+            if(!node.bindings.gateInputPortIds[i].empty())
+            {
+                if(const auto gateIt
+                   = state.gateValues.find(node.bindings.gateInputPortIds[i]);
+                   gateIt != state.gateValues.end())
+                {
+                    node.gateValues[i] = gateIt->second;
+                }
+            }
+        }
+
+        if(const auto it = state.controlValues.find(
+               MakeComputerKeyboardEnabledStateId(node.nodeId));
            it != state.controlValues.end())
         {
-            cvGeneratorStates_[i].mode
-                = ClampCvMode(static_cast<int>(std::round(it->second)));
+            node.computerKeyboardEnabled = it->second >= 0.5f;
         }
-        if(const auto it
-           = state.controlValues.find(MakeCvHostStateId(i, "waveform"));
+        if(const auto it = state.controlValues.find(
+               MakeComputerKeyboardOctaveStateId(node.nodeId));
            it != state.controlValues.end())
         {
-            cvGeneratorStates_[i].waveform
-                = static_cast<daisyhost::BasicWaveform>(
-                    daisyhost::ClampBasicWaveform(
-                        static_cast<int>(std::round(it->second))));
+            node.computerKeyboardOctave
+                = daisyhost::ComputerKeyboardMidi::ClampOctave(
+                    static_cast<int>(std::round(it->second)));
         }
-        if(const auto it
-           = state.controlValues.find(MakeCvHostStateId(i, "frequency_hz"));
+        if(const auto it = state.controlValues.find(MakeTestInputModeStateId(node.nodeId));
            it != state.controlValues.end())
         {
-            cvGeneratorStates_[i].frequencyHz
-                = std::clamp(it->second, 0.01f, 20.0f);
+            node.testInputMode
+                = daisyhost::ClampTestInputSignalMode(static_cast<int>(std::round(it->second)));
+            hasRestoredTestInputMode_ = true;
         }
-        if(const auto it
-           = state.controlValues.find(MakeCvHostStateId(i, "amplitude_volts"));
+        if(const auto it = state.controlValues.find(MakeTestInputLevelStateId(node.nodeId));
            it != state.controlValues.end())
         {
-            cvGeneratorStates_[i].amplitudeVolts
-                = daisyhost::ClampCvAmplitudeVolts(it->second);
+            node.testInputLevel
+                = it->second <= 1.0f ? it->second * 10.0f : it->second;
         }
-        if(const auto it
-           = state.controlValues.find(MakeCvHostStateId(i, "bias_volts"));
+        if(const auto it = state.controlValues.find(
+               MakeTestInputFrequencyStateId(node.nodeId));
            it != state.controlValues.end())
         {
-            cvGeneratorStates_[i].biasVolts
-                = daisyhost::ClampCvVoltage(it->second);
+            node.testInputFrequencyHz = it->second;
         }
-        if(const auto it
-           = state.controlValues.find(MakeCvHostStateId(i, "manual_volts"));
-           it != state.controlValues.end())
-        {
-            cvGeneratorStates_[i].manualVolts
-                = daisyhost::ClampCvVoltage(it->second);
-        }
-    }
 
-    for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
-    {
-        const auto gateIt
-            = state.gateValues.find(activeBindings_.gateInputPortIds[i]);
-        if(!activeBindings_.gateInputPortIds[i].empty()
-           && gateIt != state.gateValues.end())
-        {
-            gateValues_[i].store(gateIt->second);
-        }
-    }
-
-    const auto keyboardEnabledIt
-        = state.controlValues.find(computerKeyboardEnabledStateId_);
-    if(keyboardEnabledIt != state.controlValues.end())
-    {
-        SetComputerKeyboardEnabled(keyboardEnabledIt->second >= 0.5f);
-    }
-
-    const auto keyboardOctaveIt
-        = state.controlValues.find(computerKeyboardOctaveStateId_);
-    if(keyboardOctaveIt != state.controlValues.end())
-    {
-        SetComputerKeyboardOctave(
-            static_cast<int>(std::round(keyboardOctaveIt->second)));
-    }
-
-    const auto testModeIt = state.controlValues.find(testInputModeStateId_);
-    if(testModeIt != state.controlValues.end())
-    {
-        hasRestoredTestInputMode_ = true;
-        SetTestInputMode(static_cast<int>(std::round(testModeIt->second)));
-    }
-
-    const auto testLevelIt = state.controlValues.find(testInputLevelStateId_);
-    if(testLevelIt != state.controlValues.end())
-    {
-        SetTestInputLevel(testLevelIt->second <= 1.0f ? testLevelIt->second * 10.0f
-                                                      : testLevelIt->second);
-    }
-
-    const auto testFrequencyIt
-        = state.controlValues.find(testInputFrequencyStateId_);
-    if(testFrequencyIt != state.controlValues.end())
-    {
-        SetTestInputFrequencyHz(testFrequencyIt->second);
+        UpdateRackNodeSnapshots(node);
     }
 
     {
@@ -1478,40 +2116,60 @@ void DaisyHostPatchAudioProcessor::LoadSession(
         learningTargetId_.clear();
     }
 
+    selectedRackNodeIndex_ = 0;
+    for(std::size_t index = 0; index < rackNodes_.size(); ++index)
     {
-        std::lock_guard<std::mutex> lock(pendingMenuValueMutex_);
-        pendingMenuValues_.clear();
+        if(rackNodes_[index].nodeId == state.selectedNodeId)
+        {
+            selectedRackNodeIndex_ = index;
+            break;
+        }
     }
 
-    UpdateCvGeneratorOutputs(0.0);
-
-    if(!hasCanonicalParameterState)
-    {
-        ApplyControlStateToCore();
-        UpdateCoreSnapshots();
-    }
-
+    SyncSelectedNodeStateFromRack();
     SyncAutomationParametersFromCore();
 }
 
-bool DaisyHostPatchAudioProcessor::RecreateHostedApp(
-    const std::string& requestedAppId)
+bool DaisyHostPatchAudioProcessor::RecreateRackNode(std::size_t        index,
+                                                    const std::string& requestedAppId)
 {
+    if(index >= rackNodes_.size())
+    {
+        return false;
+    }
+
+    auto& node = rackNodes_[index];
     std::string resolvedAppId;
     auto newCore = daisyhost::CreateHostedAppCore(
-        requestedAppId, boardProfile_.nodeId, &resolvedAppId);
+        requestedAppId, node.nodeId, &resolvedAppId);
     if(newCore == nullptr)
     {
         return false;
     }
 
-    core_         = std::move(newCore);
-    activeAppId_  = resolvedAppId;
-    activeBindings_ = core_->GetPatchBindings();
+    node.core     = std::move(newCore);
+    node.appId    = resolvedAppId;
+    node.bindings = node.core->GetPatchBindings();
 
     if(currentSampleRate_ > 1.0 && currentBlockSize_ > 0)
     {
-        core_->Prepare(currentSampleRate_, currentBlockSize_);
+        node.core->Prepare(currentSampleRate_, currentBlockSize_);
+    }
+
+    UpdateRackNodeSnapshots(node);
+
+    if(index == selectedRackNodeIndex_)
+    {
+        SyncSelectedNodeStateFromRack();
+    }
+    return true;
+}
+
+bool DaisyHostPatchAudioProcessor::RecreateHostedApp(const std::string& requestedAppId)
+{
+    if(!RecreateRackNode(selectedRackNodeIndex_, requestedAppId))
+    {
+        return false;
     }
 
     ClearPendingAutomationParameterState();
@@ -1661,6 +2319,7 @@ void DaisyHostPatchAudioProcessor::RefreshCoreStateFromIdleHostChange()
     ApplyVirtualPortStateToCore(std::vector<daisyhost::MidiMessageEvent>{});
     UpdateCoreSnapshots();
     SyncHostStateFromCore();
+    FlushSelectedNodeStateToRack();
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

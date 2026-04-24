@@ -33,6 +33,7 @@ TEST(HubSupportTest, RegistersPatchBoardAndCoreActivities)
     ASSERT_FALSE(boards.empty());
 
     bool sawPatch = false;
+    bool sawField = false;
     for(const auto& board : boards)
     {
         if(board.boardId == "daisy_patch")
@@ -41,8 +42,15 @@ TEST(HubSupportTest, RegistersPatchBoardAndCoreActivities)
             EXPECT_TRUE(board.available);
             EXPECT_EQ(board.displayName, "Daisy Patch");
         }
+        if(board.boardId == "daisy_field")
+        {
+            sawField = true;
+            EXPECT_TRUE(board.available);
+            EXPECT_EQ(board.displayName, "Daisy Field");
+        }
     }
     EXPECT_TRUE(sawPatch);
+    EXPECT_TRUE(sawField);
 
     const auto& activities = daisyhost::GetActivityRegistrations();
     ASSERT_GE(activities.size(), 3u);
@@ -83,7 +91,7 @@ TEST(HubSupportTest, RejectsUnknownOrUnavailableBoardSelection)
     paths.trainingScript = tempDir.directory.getChildFile("render_dataset.py");
 
     daisyhost::HubLaunchSelection selection;
-    selection.boardId    = "daisy_field";
+    selection.boardId    = "unknown_board";
     selection.appId      = daisyhost::GetDefaultHostedAppId();
     selection.activityId = "play_test";
 
@@ -92,6 +100,44 @@ TEST(HubSupportTest, RejectsUnknownOrUnavailableBoardSelection)
     EXPECT_FALSE(
         daisyhost::BuildHubLaunchPlan(selection, paths, &plan, &errorMessage));
     EXPECT_NE(errorMessage.find("board"), std::string::npos);
+}
+
+TEST(HubSupportTest, AcceptsFieldBoardSelectionForPlayLaunchPlan)
+{
+    ScopedTempDir tempDir;
+
+    daisyhost::HubToolPaths paths;
+    paths.supportDirectory   = tempDir.directory;
+    paths.renderExecutable   = tempDir.directory.getChildFile("DaisyHostRender.exe");
+    paths.standaloneExecutable
+        = tempDir.directory.getChildFile("DaisyHost Patch.exe");
+    paths.trainingScript = tempDir.directory.getChildFile("render_dataset.py");
+
+    daisyhost::HubProfile profile;
+    profile.boardId    = "daisy_field";
+    profile.appId      = "torus";
+    profile.activityId = "play_test";
+    const auto normalized = daisyhost::NormalizeHubProfile(profile);
+    EXPECT_EQ(normalized.boardId, "daisy_field");
+    EXPECT_EQ(normalized.appId, "torus");
+    EXPECT_EQ(normalized.activityId, "play_test");
+
+    daisyhost::HubLaunchSelection selection;
+    selection.boardId    = "daisy_field";
+    selection.appId      = "torus";
+    selection.activityId = "play_test";
+
+    daisyhost::HubLaunchPlan plan;
+    std::string              errorMessage;
+    ASSERT_TRUE(
+        daisyhost::BuildHubLaunchPlan(selection, paths, &plan, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(plan.arguments.size(), 4u);
+    EXPECT_EQ(plan.arguments[0], "--board");
+    EXPECT_EQ(plan.arguments[1], "daisy_field");
+    EXPECT_EQ(plan.arguments[2], "--app");
+    EXPECT_EQ(plan.arguments[3], "torus");
 }
 
 TEST(HubSupportTest, BuildsPlayLaunchPlanWithCommandLineArgs)

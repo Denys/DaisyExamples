@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <stdexcept>
+
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/apps/MultiDelayCore.h"
 
@@ -43,6 +46,36 @@ bool HasText(const daisyhost::BoardProfile& profile, const std::string& text)
         }
     }
     return false;
+}
+
+bool RectInsidePanel(const daisyhost::PanelRect& rect)
+{
+    return rect.x >= 0.0f && rect.y >= 0.0f && rect.width >= 0.0f
+           && rect.height >= 0.0f && rect.x + rect.width <= 1.0f
+           && rect.y + rect.height <= 1.0f;
+}
+
+std::size_t CountControls(const daisyhost::BoardProfile& profile,
+                          daisyhost::ControlKind         kind)
+{
+    return static_cast<std::size_t>(
+        std::count_if(profile.controls.begin(),
+                      profile.controls.end(),
+                      [kind](const daisyhost::ControlSpec& control) {
+                          return control.kind == kind;
+                      }));
+}
+
+std::size_t CountPorts(const daisyhost::BoardProfile& profile,
+                       daisyhost::VirtualPortType     type,
+                       daisyhost::PortDirection       direction)
+{
+    return static_cast<std::size_t>(
+        std::count_if(profile.ports.begin(),
+                      profile.ports.end(),
+                      [type, direction](const daisyhost::VirtualPort& port) {
+                          return port.type == type && port.direction == direction;
+                      }));
 }
 
 TEST(BoardProfileTest, DaisyPatchProfileHasExpectedControlsAndPorts)
@@ -95,6 +128,112 @@ TEST(BoardProfileTest, DaisyPatchProfileHasExpectedControlsAndPorts)
     EXPECT_EQ(cvInputs, 4u);
     EXPECT_EQ(gateInputs, 2u);
     EXPECT_EQ(midiPorts, 2u);
+}
+
+TEST(BoardProfileTest, BoardFactoryCreatesPatchProfileByBoardId)
+{
+    const auto profile = daisyhost::TryCreateBoardProfile("daisy_patch", "nodeA");
+    ASSERT_TRUE(profile.has_value());
+
+    EXPECT_EQ(profile->boardId, "daisy_patch");
+    EXPECT_EQ(profile->nodeId, "nodeA");
+    EXPECT_EQ(profile->displayName, "Daisy Patch");
+    EXPECT_EQ(profile->controls.size(), 6u);
+    EXPECT_EQ(profile->surfaceControls.size(), 6u);
+}
+
+TEST(BoardProfileTest, BoardFactoryRejectsUnknownBoardsCleanly)
+{
+    EXPECT_FALSE(daisyhost::TryCreateBoardProfile("unknown_board", "nodeA").has_value());
+    EXPECT_THROW(
+        static_cast<void>(daisyhost::CreateBoardProfile("unknown_board", "nodeA")),
+        std::invalid_argument);
+}
+
+TEST(BoardProfileTest, BoardFactoryCreatesFieldProfileByBoardId)
+{
+    const auto supportedBoards = daisyhost::GetSupportedBoardIds();
+    EXPECT_NE(std::find(supportedBoards.begin(), supportedBoards.end(), "daisy_field"),
+              supportedBoards.end());
+
+    const auto profile = daisyhost::TryCreateBoardProfile("daisy_field", "nodeA");
+    ASSERT_TRUE(profile.has_value());
+
+    EXPECT_EQ(profile->boardId, "daisy_field");
+    EXPECT_EQ(profile->nodeId, "nodeA");
+    EXPECT_EQ(profile->displayName, "Daisy Field");
+    EXPECT_EQ(profile->display.width, 128);
+    EXPECT_EQ(profile->display.height, 64);
+    EXPECT_TRUE(RectInsidePanel(profile->display.panelBounds));
+}
+
+TEST(BoardProfileTest, DaisyFieldProfileDescribesPassiveHardwareShell)
+{
+    const auto profile = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    EXPECT_EQ(CountControls(profile, daisyhost::ControlKind::kKnob), 8u);
+    EXPECT_EQ(CountControls(profile, daisyhost::ControlKind::kKey), 16u);
+    EXPECT_EQ(CountControls(profile, daisyhost::ControlKind::kSwitch), 2u);
+
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kAudio,
+                         daisyhost::PortDirection::kInput),
+              2u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kAudio,
+                         daisyhost::PortDirection::kOutput),
+              2u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kCv,
+                         daisyhost::PortDirection::kInput),
+              4u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kCv,
+                         daisyhost::PortDirection::kOutput),
+              2u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kGate,
+                         daisyhost::PortDirection::kInput),
+              1u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kGate,
+                         daisyhost::PortDirection::kOutput),
+              1u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kMidi,
+                         daisyhost::PortDirection::kInput),
+              1u);
+    EXPECT_EQ(CountPorts(profile,
+                         daisyhost::VirtualPortType::kMidi,
+                         daisyhost::PortDirection::kOutput),
+              1u);
+
+    EXPECT_NE(FindSurfaceControl(profile, "nodeA/surface/field_knob_1"), nullptr);
+    EXPECT_TRUE(HasText(profile, "DAISY FIELD"));
+    EXPECT_TRUE(HasText(profile, "FIELD BOARD-SUPPORT SHELL"));
+
+    for(const auto& control : profile.controls)
+    {
+        EXPECT_TRUE(RectInsidePanel(control.panelBounds)) << control.id;
+        EXPECT_FALSE(control.automatable) << control.id;
+    }
+    for(const auto& control : profile.surfaceControls)
+    {
+        EXPECT_TRUE(RectInsidePanel(control.panelBounds)) << control.id;
+        EXPECT_FALSE(control.primarySurface) << control.id;
+    }
+    for(const auto& port : profile.ports)
+    {
+        EXPECT_TRUE(RectInsidePanel(port.panelBounds)) << port.id;
+    }
+    for(const auto& decoration : profile.decorations)
+    {
+        EXPECT_TRUE(RectInsidePanel(decoration.panelBounds)) << decoration.id;
+    }
+    for(const auto& text : profile.texts)
+    {
+        EXPECT_TRUE(RectInsidePanel(text.panelBounds)) << text.id;
+    }
 }
 
 TEST(BoardProfileTest, DaisyPatchProfileExposesFinalSurfaceControlHierarchy)

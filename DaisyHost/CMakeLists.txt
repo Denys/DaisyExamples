@@ -7,6 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+set(DAISYHOST_UNIT_TEST_RUN_TAG "default" CACHE STRING
+    "Unique tag for the current unit-test payload output path."
+)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -33,11 +37,15 @@ add_library(daisyhost_core STATIC
     src/AppRegistry.cpp
     src/BoardProfile.cpp
     src/ComputerKeyboardMidi.cpp
+    src/DaisyBraidsCore.cpp
     src/DaisyCloudSeedCore.cpp
+    src/DaisyHarmoniqsCore.cpp
+    src/DaisyVASynthCore.cpp
     src/EffectiveHostStateSnapshot.cpp
     src/HostSessionState.cpp
     src/HostStartupPolicy.cpp
     src/HostAutomationBridge.cpp
+    src/LiveRackTopology.cpp
     src/MidiEventTracker.cpp
     src/MidiNotePreview.cpp
     src/MidiLearnMap.cpp
@@ -45,10 +53,18 @@ add_library(daisyhost_core STATIC
     src/StandaloneUiPolicy.cpp
     src/TestInputSignal.cpp
     src/VersionInfo.cpp
+    src/apps/BraidsCore.cpp
     src/apps/CloudSeedCore.cpp
+    src/apps/HarmoniqsCore.cpp
     src/apps/MultiDelayCore.cpp
     src/apps/TorusCore.cpp
+    src/apps/VASynthCore.cpp
+    ../third_party/BraidsCore/braids/analog_oscillator.cc
+    ../third_party/BraidsCore/braids/digital_oscillator.cc
+    ../third_party/BraidsCore/braids/macro_oscillator.cc
+    ../third_party/BraidsCore/braids/resources.cc
     ../third_party/CloudSeedCore/DSP/Biquad.cpp
+    ../stmlib/utils/random.cc
     ../third_party/CloudSeedCore/DSP/RandomBuffer.cpp
     ../third_party/CloudSeedCore/Parameters.cpp
 )
@@ -58,6 +74,8 @@ target_include_directories(daisyhost_core
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/../DaisySP/Source
     PRIVATE
+        ${PROJECT_SOURCE_DIR}/..
+        ${PROJECT_SOURCE_DIR}/../third_party/BraidsCore
         ${PROJECT_SOURCE_DIR}/../third_party/CloudSeedCore
 )
 
@@ -215,18 +233,24 @@ if(DAISYHOST_VST3_ARTEFACT)
     )
 endif()
 
-add_executable(unit_tests
+set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_app_registry.cpp
+    tests/test_braids_core.cpp
     tests/test_board_profile.cpp
     tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp
+    tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
+    tests/test_daisy_harmoniqs_core.cpp
+    tests/test_daisy_vasynth_core.cpp
     tests/test_effective_host_state_snapshot.cpp
     tests/test_midi_event_tracker.cpp
     tests/test_hub_support.cpp
     tests/test_host_automation_bridge.cpp
     tests/test_host_session_state.cpp
     tests/test_host_startup_policy.cpp
+    tests/test_harmoniqs_core.cpp
+    tests/test_live_rack_topology.cpp
     tests/test_midi_note_preview.cpp
     tests/test_multidelay_core.cpp
     tests/test_parameter_parity.cpp
@@ -235,7 +259,32 @@ add_executable(unit_tests
     tests/test_test_input_signal.cpp
     tests/test_render_runtime.cpp
     tests/test_torus_core.cpp
+    tests/test_vasynth_core.cpp
     tests/test_version_info.cpp
+)
+
+add_executable(unit_tests
+    ${DAISYHOST_UNIT_TEST_SOURCES}
+)
+
+set_target_properties(unit_tests
+    PROPERTIES
+        OUTPUT_NAME DaisyHostTestPayload
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/unit_test_bin/${DAISYHOST_UNIT_TEST_RUN_TAG}"
+        SUFFIX ".bin"
+)
+
+set_target_properties(unit_tests
+    PROPERTIES
+        TEST_LAUNCHER
+            "${DAISYHOST_PYTHON_LAUNCHER};-3;${PROJECT_SOURCE_DIR}/tests/run_unit_test_payload.py"
+)
+
+add_custom_command(
+    TARGET unit_tests
+    PRE_LINK
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:unit_tests>"
+    VERBATIM
 )
 
 target_link_libraries(unit_tests
@@ -246,10 +295,11 @@ target_link_libraries(unit_tests
         GTest::gtest_main
 )
 
-include(GoogleTest)
-gtest_discover_tests(unit_tests)
-
 find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
+
+include(GoogleTest)
+
+gtest_add_tests(TARGET unit_tests SOURCES ${DAISYHOST_UNIT_TEST_SOURCES})
 
 set(DAISYHOST_SMOKE_SCRIPT "${PROJECT_SOURCE_DIR}/tests/run_smoke.py")
 

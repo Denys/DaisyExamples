@@ -88,6 +88,15 @@ struct ParameterDescriptor
     bool          menuEditable    = false;
 };
 
+struct MetaControllerDescriptor
+{
+    std::string id;
+    std::string label;
+    float       normalizedValue        = 0.0f;
+    float       defaultNormalizedValue = 0.0f;
+    bool        stateful               = false;
+};
+
 struct ParameterValueLookup
 {
     bool  hasValue = false;
@@ -164,6 +173,20 @@ class HostedAppCore
         const std::string& parameterId) const = 0;
     virtual ParameterValueLookup GetEffectiveParameterValue(
         const std::string& parameterId) const = 0;
+    virtual const std::vector<MetaControllerDescriptor>& GetMetaControllers() const
+    {
+        static const std::vector<MetaControllerDescriptor> kEmptyMetaControllers;
+        return kEmptyMetaControllers;
+    }
+    virtual bool SetMetaControllerValue(const std::string&, float)
+    {
+        return false;
+    }
+    virtual ParameterValueLookup GetMetaControllerValue(
+        const std::string&) const
+    {
+        return {};
+    }
     virtual void ResetToDefaultState(std::uint32_t seed = 0) = 0;
     virtual std::unordered_map<std::string, float>
     CaptureStatefulParameterValues() const = 0;

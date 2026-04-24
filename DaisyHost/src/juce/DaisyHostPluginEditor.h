@@ -35,6 +35,13 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
         std::string      controlId;
     };
 
+    struct RackNodeUi
+    {
+        juce::Label    nodeIdLabel;
+        juce::Label    roleLabel;
+        juce::ComboBox appSelectorBox;
+    };
+
     juce::Rectangle<int>
     GetEditorBounds() const;
     juce::Rectangle<int>
@@ -59,6 +66,8 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void DrawDisplay(juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void DrawPorts(juce::Graphics& g) const;
     void DrawHostTools(juce::Graphics& g) const;
+    void DrawRackHeader(juce::Graphics& g,
+                        const juce::Rectangle<float>& area) const;
     void LayoutRotaryControl(ControlUi& control,
                              const daisyhost::PanelControlSlotSpec& slot,
                              bool showLearnButton = true);
@@ -70,6 +79,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void ConfigureMouseFriendlySlider(juce::Slider& slider, double defaultValue);
     void RegisterKeyboardSource(juce::Component& component);
     void UpdateLearnButton(ControlUi& control);
+    void UpdateRackUi();
     void UpdateCvGeneratorEditorUi();
     ControlUi& GetTopControlUi(std::size_t slotIndex);
     const ControlUi& GetTopControlUi(std::size_t slotIndex) const;
@@ -100,8 +110,12 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     std::array<juce::Slider, 4>   cvSliders_;
     std::array<juce::Label, 4>    cvLabels_;
     std::array<juce::ToggleButton, 2> gateButtons_;
-    juce::Label                   appSelectorLabel_;
-    juce::ComboBox                appSelectorBox_;
+    juce::Label                   rackHeaderLabel_;
+    juce::Label                   rackTopologyLabel_;
+    juce::Label                   rackSelectedNodeLabel_;
+    std::array<RackNodeUi, 2>     rackNodes_;
+    juce::ComboBox                rackTopologyBox_;
+    std::array<juce::Rectangle<int>, 2> rackNodeCardBounds_{};
     juce::ComboBox                testInputModeBox_;
     juce::Label                   testInputModeLabel_;
     juce::Slider                  testInputLevelSlider_;

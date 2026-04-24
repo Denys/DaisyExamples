@@ -21,19 +21,43 @@ const ParameterDescriptor* FindParameter(const std::vector<ParameterDescriptor>&
 } // namespace
 
 EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
+    const std::string&                       boardId,
+    const std::string&                       selectedNodeId,
+    std::size_t                              nodeCount,
+    const std::string&                       entryNodeId,
+    const std::string&                       outputNodeId,
     const std::string&                       appId,
     const std::string&                       appDisplayName,
+    const std::vector<EffectiveHostNodeSummary>& nodeSummaries,
+    const std::vector<EffectiveHostRouteSnapshot>& routes,
     const HostedAppPatchBindings&            patchBindings,
     const std::vector<ParameterDescriptor>&  parameters,
     const HostAutomationSlotBindings&        automationSlots,
     const std::array<HostCvInputState, 4>&   cvInputs,
     const std::array<HostGateInputState, 2>& gateInputs,
-    const HostAudioInputState&               audioInput)
+    const HostAudioInputState&               audioInput,
+    const std::vector<MetaControllerDescriptor>& metaControllers)
 {
     EffectiveHostStateSnapshot snapshot;
+    snapshot.boardId        = boardId;
+    snapshot.selectedNodeId = selectedNodeId;
+    snapshot.nodeCount      = nodeCount;
+    snapshot.entryNodeId    = entryNodeId;
+    snapshot.outputNodeId   = outputNodeId;
     snapshot.appId          = appId;
     snapshot.appDisplayName = appDisplayName;
+    snapshot.nodeSummaries  = nodeSummaries;
+    snapshot.routes         = routes;
     snapshot.parameters     = parameters;
+    snapshot.metaControllers.reserve(metaControllers.size());
+    for(const auto& controller : metaControllers)
+    {
+        snapshot.metaControllers.push_back({controller.id,
+                                            controller.label,
+                                            controller.normalizedValue,
+                                            controller.defaultNormalizedValue,
+                                            controller.stateful});
+    }
 
     for(std::size_t slotIndex = 0; slotIndex < automationSlots.size(); ++slotIndex)
     {

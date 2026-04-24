@@ -71,11 +71,44 @@ struct EffectiveHostAudioInputSnapshot
     float       frequencyHz = 0.0f;
 };
 
-struct EffectiveHostStateSnapshot
+struct EffectiveHostMetaControllerSnapshot
 {
+    std::string id;
+    std::string label;
+    float       normalizedValue        = 0.0f;
+    float       defaultNormalizedValue = 0.0f;
+    bool        stateful               = false;
+};
+
+struct EffectiveHostRouteSnapshot
+{
+    std::string sourcePortId;
+    std::string destPortId;
+};
+
+struct EffectiveHostNodeSummary
+{
+    std::string nodeId;
     std::string appId;
     std::string appDisplayName;
+    bool        selected  = false;
+    bool        entryNode = false;
+    bool        outputNode = false;
+};
+
+struct EffectiveHostStateSnapshot
+{
+    std::string boardId;
+    std::string selectedNodeId;
+    std::size_t nodeCount = 0;
+    std::string entryNodeId;
+    std::string outputNodeId;
+    std::string appId;
+    std::string appDisplayName;
+    std::vector<EffectiveHostNodeSummary> nodeSummaries;
+    std::vector<EffectiveHostRouteSnapshot> routes;
     std::vector<ParameterDescriptor> parameters;
+    std::vector<EffectiveHostMetaControllerSnapshot> metaControllers;
     std::array<EffectiveHostAutomationSlotSnapshot, kHostAutomationSlotCount>
         automationSlots{};
     std::array<EffectiveHostCvInputSnapshot, 4> cvInputs{};
@@ -84,12 +117,20 @@ struct EffectiveHostStateSnapshot
 };
 
 EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
+    const std::string&                       boardId,
+    const std::string&                       selectedNodeId,
+    std::size_t                              nodeCount,
+    const std::string&                       entryNodeId,
+    const std::string&                       outputNodeId,
     const std::string&                       appId,
     const std::string&                       appDisplayName,
+    const std::vector<EffectiveHostNodeSummary>& nodeSummaries,
+    const std::vector<EffectiveHostRouteSnapshot>& routes,
     const HostedAppPatchBindings&            patchBindings,
     const std::vector<ParameterDescriptor>&  parameters,
     const HostAutomationSlotBindings&        automationSlots,
     const std::array<HostCvInputState, 4>&   cvInputs,
     const std::array<HostGateInputState, 2>& gateInputs,
-    const HostAudioInputState&               audioInput);
+    const HostAudioInputState&               audioInput,
+    const std::vector<MetaControllerDescriptor>& metaControllers = {});
 } // namespace daisyhost

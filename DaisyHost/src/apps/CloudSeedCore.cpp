@@ -54,6 +54,12 @@ std::string MakeMenuItemId(const std::string& nodeId,
     return nodeId + "/menu/" + section + "/" + item;
 }
 
+std::string MakeMetaControllerId(const std::string& nodeId,
+                                 const std::string& suffix)
+{
+    return nodeId + "/meta/" + suffix;
+}
+
 std::string OnOffText(float normalizedValue)
 {
     return normalizedValue >= 0.5f ? "On" : "Off";
@@ -314,6 +320,61 @@ ParameterValueLookup CloudSeedCore::GetEffectiveParameterValue(
     return {true, value};
 }
 
+const std::vector<MetaControllerDescriptor>& CloudSeedCore::GetMetaControllers() const
+{
+    return metaControllers_;
+}
+
+bool CloudSeedCore::SetMetaControllerValue(const std::string& controllerId,
+                                           float              normalizedValue)
+{
+    const float value = Clamp01(normalizedValue);
+
+    if(controllerId == MakeMetaControllerId(nodeId_, "blend"))
+    {
+        sharedCore_.SetParameterValue("mix", value);
+    }
+    else if(controllerId == MakeMetaControllerId(nodeId_, "space"))
+    {
+        sharedCore_.SetParameterValue("size", 0.10f + (0.85f * value));
+        sharedCore_.SetParameterValue("decay", 0.05f + (0.90f * value));
+        sharedCore_.SetParameterValue("pre_delay", 0.10f + (0.70f * value));
+    }
+    else if(controllerId == MakeMetaControllerId(nodeId_, "motion"))
+    {
+        sharedCore_.SetParameterValue("mod_amount", value);
+        sharedCore_.SetParameterValue("mod_rate", 0.10f + (0.80f * value));
+    }
+    else if(controllerId == MakeMetaControllerId(nodeId_, "tone"))
+    {
+        sharedCore_.SetParameterValue("diffusion", 0.10f + (0.85f * value));
+        sharedCore_.SetParameterValue("damping", 0.90f - (0.80f * value));
+    }
+    else
+    {
+        return false;
+    }
+
+    RefreshSnapshots();
+    return true;
+}
+
+ParameterValueLookup CloudSeedCore::GetMetaControllerValue(
+    const std::string& controllerId) const
+{
+    const auto it = std::find_if(metaControllers_.begin(),
+                                 metaControllers_.end(),
+                                 [&controllerId](const MetaControllerDescriptor& controller) {
+                                     return controller.id == controllerId;
+                                 });
+    if(it == metaControllers_.end())
+    {
+        return {};
+    }
+
+    return {true, it->normalizedValue};
+}
+
 void CloudSeedCore::ResetToDefaultState(std::uint32_t seed)
 {
     sharedCore_.ResetToDefaultState(seed);
@@ -459,7 +520,27 @@ void CloudSeedCore::SetMenuItemValue(const std::string& itemId,
                                      float              normalizedValue)
 {
     const float clamped = Clamp01(normalizedValue);
-    if(itemId == MakeMenuItemId(nodeId_, "pages", "page"))
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "blend"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "blend"), clamped);
+        return;
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "macros", "space"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "space"), clamped);
+        return;
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "macros", "motion"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "motion"), clamped);
+        return;
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "macros", "tone"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "tone"), clamped);
+        return;
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "pages", "page"))
     {
         sharedCore_.SetActivePage(clamped >= 0.5f ? DaisyCloudSeedPage::kMotion
                                                   : DaisyCloudSeedPage::kSpace);
@@ -534,6 +615,7 @@ std::string CloudSeedCore::MakeAudioOutputPortId(const std::string& nodeId,
 void CloudSeedCore::RefreshSnapshots()
 {
     RefreshParameters();
+    RefreshMetaControllers();
     BuildMenuModel();
     BuildDisplay();
 }
@@ -562,6 +644,46 @@ void CloudSeedCore::RefreshParameters()
     }
 }
 
+void CloudSeedCore::RefreshMetaControllers()
+{
+    auto getParameterValue = [this](const char* parameterId) {
+        float value = 0.0f;
+        sharedCore_.GetParameterValue(parameterId, &value);
+        return value;
+    };
+    auto getDefaultValue = [this](const char* parameterId) {
+        const auto* parameter = sharedCore_.FindParameter(parameterId);
+        return parameter != nullptr ? parameter->defaultNormalizedValue : 0.0f;
+    };
+
+    metaControllers_.clear();
+    metaControllers_.reserve(4);
+    metaControllers_.push_back(
+        {MakeMetaControllerId(nodeId_, "blend"),
+         "Blend",
+         getParameterValue("mix"),
+         getDefaultValue("mix"),
+         true});
+    metaControllers_.push_back(
+        {MakeMetaControllerId(nodeId_, "space"),
+         "Space",
+         Clamp01((getParameterValue("size") - 0.10f) / 0.85f),
+         Clamp01((getDefaultValue("size") - 0.10f) / 0.85f),
+         true});
+    metaControllers_.push_back(
+        {MakeMetaControllerId(nodeId_, "motion"),
+         "Motion",
+         getParameterValue("mod_amount"),
+         getDefaultValue("mod_amount"),
+         true});
+    metaControllers_.push_back(
+        {MakeMetaControllerId(nodeId_, "tone"),
+         "Tone",
+         Clamp01((getParameterValue("diffusion") - 0.10f) / 0.85f),
+         Clamp01((getDefaultValue("diffusion") - 0.10f) / 0.85f),
+         true});
+}
+
 void CloudSeedCore::BuildMenuModel()
 {
     menu_.sections.clear();
@@ -574,6 +696,7 @@ void CloudSeedCore::BuildMenuModel()
 
     const auto rootId      = MakeMenuRootSectionId(nodeId_);
     const auto pagesId     = MakeMenuSectionId(nodeId_, "pages");
+    const auto macrosId    = MakeMenuSectionId(nodeId_, "macros");
     const auto programId   = MakeMenuSectionId(nodeId_, "program");
     const auto utilitiesId = MakeMenuSectionId(nodeId_, "utilities");
     const auto infoId      = MakeMenuSectionId(nodeId_, "info");
@@ -587,6 +710,13 @@ void CloudSeedCore::BuildMenuModel()
          0.0f,
          "",
          pagesId},
+        {MakeMenuItemId(nodeId_, "root", "macros"),
+         "Macros",
+         false,
+         MenuItemActionKind::kEnterSection,
+         0.0f,
+         "",
+         macrosId},
         {MakeMenuItemId(nodeId_, "root", "program"),
          "Program",
          false,
@@ -622,6 +752,42 @@ void CloudSeedCore::BuildMenuModel()
          MenuItemActionKind::kValue,
          sharedCore_.GetActivePage() == DaisyCloudSeedPage::kMotion ? 1.0f : 0.0f,
          FormatPageText(sharedCore_.GetActivePage()),
+         ""},
+    };
+
+    MenuSection& macros = addSection(macrosId, "Macros");
+    macros.items = {
+        {MakeMenuItemId(nodeId_, "macros", "back"),
+         "Back",
+         false,
+         MenuItemActionKind::kBack},
+        {MakeMenuItemId(nodeId_, "macros", "blend"),
+         "Blend",
+         true,
+         MenuItemActionKind::kValue,
+         metaControllers_[0].normalizedValue,
+         FormatPerformanceValue(metaControllers_[0].normalizedValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "macros", "space"),
+         "Space",
+         true,
+         MenuItemActionKind::kValue,
+         metaControllers_[1].normalizedValue,
+         FormatPerformanceValue(metaControllers_[1].normalizedValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "macros", "motion"),
+         "Motion",
+         true,
+         MenuItemActionKind::kValue,
+         metaControllers_[2].normalizedValue,
+         FormatPerformanceValue(metaControllers_[2].normalizedValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "macros", "tone"),
+         "Tone",
+         true,
+         MenuItemActionKind::kValue,
+         metaControllers_[3].normalizedValue,
+         FormatPerformanceValue(metaControllers_[3].normalizedValue),
          ""},
     };
 
@@ -828,13 +994,18 @@ void CloudSeedCore::ResetMenuState()
     menuSelections_.clear();
     menuSelections_[MakeMenuRootSectionId(nodeId_)]      = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "pages")] = 0;
+    menuSelections_[MakeMenuSectionId(nodeId_, "macros")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "program")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "utilities")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "info")] = 0;
 }
 
-float CloudSeedCore::GetMenuStepSize(const std::string&) const
+float CloudSeedCore::GetMenuStepSize(const std::string& itemId) const
 {
+    if(itemId.rfind(nodeId_ + "/menu/macros/", 0) == 0)
+    {
+        return 0.05f;
+    }
     return 1.0f;
 }
 

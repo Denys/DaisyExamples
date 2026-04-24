@@ -13,12 +13,19 @@ $ErrorActionPreference = "Stop"
 
 function Normalize-PathEnvironment {
     # Mirror the known-good manual fix already used in this checkout.
-    if (Test-Path Env:PATH) {
-        $env:Path = $env:PATH
-        Remove-Item Env:PATH -ErrorAction SilentlyContinue
+    # The PowerShell Env: provider can throw before cleanup when the process
+    # contains both Path and PATH, so normalize via .NET instead.
+    $existingPath = [System.Environment]::GetEnvironmentVariable("PATH", "Process")
+    if (-not $existingPath) {
+        $existingPath = [System.Environment]::GetEnvironmentVariable("Path", "Process")
     }
 
-    if (-not $env:Path) {
+    if ($existingPath) {
+        [System.Environment]::SetEnvironmentVariable("PATH", $null, "Process")
+        [System.Environment]::SetEnvironmentVariable("Path", $existingPath, "Process")
+    }
+
+    if (-not [System.Environment]::GetEnvironmentVariable("Path", "Process")) {
         throw "Env:Path is not set after PATH normalization."
     }
 }
@@ -49,11 +56,19 @@ $resolvedBuildDir = if ([System.IO.Path]::IsPathRooted($BuildDir)) {
 } else {
     Join-Path $workspaceRoot $BuildDir
 }
+$unitTestRunTag = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmssfff")
 
 Normalize-PathEnvironment
 
 if (-not $SkipConfigure) {
-    Invoke-Step @("cmake", "-S", $workspaceRoot, "-B", $resolvedBuildDir)
+    Invoke-Step @(
+        "cmake",
+        "-S",
+        $workspaceRoot,
+        "-B",
+        $resolvedBuildDir,
+        "-DDAISYHOST_UNIT_TEST_RUN_TAG=$unitTestRunTag"
+    )
 }
 
 if (-not $SkipBuild) {

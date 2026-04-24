@@ -4,6 +4,8 @@
 #include <sstream>
 #include <vector>
 
+#include "daisyhost/AppRegistry.h"
+
 namespace daisyhost
 {
 namespace
@@ -20,16 +22,79 @@ std::vector<typename MapType::key_type> SortedKeys(const MapType& map)
     std::sort(keys.begin(), keys.end());
     return keys;
 }
+
+void EnsurePrimaryNodeMetadata(HostSessionState* state)
+{
+    if(state == nullptr || !state->nodes.empty())
+    {
+        return;
+    }
+
+    if(state->appId.empty() && state->controlValues.empty()
+       && state->parameterValues.empty() && state->cvValues.empty()
+       && state->gateValues.empty())
+    {
+        return;
+    }
+
+    HostSessionNodeState node;
+    node.nodeId     = "node0";
+    node.appId      = state->appId.empty() ? GetDefaultHostedAppId() : state->appId;
+    node.randomSeed = state->randomSeed;
+    state->nodes.push_back(std::move(node));
+}
+
+void EnsureRackDefaults(HostSessionState* state)
+{
+    if(state == nullptr)
+    {
+        return;
+    }
+
+    if(state->boardId.empty())
+    {
+        state->boardId = "daisy_patch";
+    }
+    if(state->selectedNodeId.empty())
+    {
+        state->selectedNodeId = "node0";
+    }
+    if(state->entryNodeId.empty())
+    {
+        state->entryNodeId = "node0";
+    }
+    if(state->outputNodeId.empty())
+    {
+        state->outputNodeId = "node0";
+    }
+}
 } // namespace
 
 std::string HostSessionState::Serialize() const
 {
     std::ostringstream stream;
-    stream << "version 3\n";
+    stream << "version 5\n";
+    stream << "board " << (boardId.empty() ? "daisy_patch" : boardId) << '\n';
+    stream << "selected_node "
+           << (selectedNodeId.empty() ? "node0" : selectedNodeId) << '\n';
+    stream << "entry_node " << (entryNodeId.empty() ? "node0" : entryNodeId)
+           << '\n';
+    stream << "output_node "
+           << (outputNodeId.empty() ? "node0" : outputNodeId) << '\n';
 
-    if(!appId.empty())
+    std::vector<HostSessionNodeState> nodesToWrite = nodes;
+    if(nodesToWrite.empty())
     {
-        stream << "app " << appId << '\n';
+        HostSessionNodeState node;
+        node.nodeId     = "node0";
+        node.appId      = appId.empty() ? GetDefaultHostedAppId() : appId;
+        node.randomSeed = randomSeed;
+        nodesToWrite.push_back(std::move(node));
+    }
+    for(const auto& node : nodesToWrite)
+    {
+        stream << "node " << node.nodeId << ' ' << node.appId << ' '
+               << node.randomSeed << '\n';
     }
 
     const auto controlKeys = SortedKeys(controlValues);
@@ -56,7 +121,11 @@ std::string HostSessionState::Serialize() const
         stream << "gate " << key << ' ' << (gateValues.at(key) ? 1 : 0) << '\n';
     }
 
-    stream << "seed " << randomSeed << '\n';
+    for(const auto& route : routes)
+    {
+        stream << "route " << route.sourcePortId << ' ' << route.destPortId << '\n';
+    }
+
     stream << midiLearn.Serialize();
     return stream.str();
 }
@@ -97,6 +166,40 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
             continue;
         }
 
+        if(tag == "board")
+        {
+            stream >> state.boardId;
+            continue;
+        }
+
+        if(tag == "selected_node")
+        {
+            stream >> state.selectedNodeId;
+            continue;
+        }
+
+        if(tag == "entry_node")
+        {
+            stream >> state.entryNodeId;
+            continue;
+        }
+
+        if(tag == "output_node")
+        {
+            stream >> state.outputNodeId;
+            continue;
+        }
+
+        if(tag == "node")
+        {
+            HostSessionNodeState node;
+            if(stream >> node.nodeId >> node.appId >> node.randomSeed)
+            {
+                state.nodes.push_back(node);
+            }
+            continue;
+        }
+
         if(tag == "param")
         {
             std::string id;
@@ -130,6 +233,16 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
             continue;
         }
 
+        if(tag == "route")
+        {
+            HostSessionRoute route;
+            if(stream >> route.sourcePortId >> route.destPortId)
+            {
+                state.routes.push_back(route);
+            }
+            continue;
+        }
+
         if(tag == "seed")
         {
             std::uint32_t value = 0;
@@ -154,6 +267,25 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
         std::string ignored;
         std::getline(stream, ignored);
     }
+
+    if(!state.nodes.empty())
+    {
+        const auto primaryIt
+            = std::find_if(state.nodes.begin(),
+                           state.nodes.end(),
+                           [](const HostSessionNodeState& node) {
+                               return node.nodeId == "node0";
+                           });
+        const auto& primary = primaryIt != state.nodes.end() ? *primaryIt : state.nodes.front();
+        state.appId         = primary.appId;
+        state.randomSeed    = primary.randomSeed;
+    }
+    else
+    {
+        EnsurePrimaryNodeMetadata(&state);
+    }
+
+    EnsureRackDefaults(&state);
 
     return state;
 }

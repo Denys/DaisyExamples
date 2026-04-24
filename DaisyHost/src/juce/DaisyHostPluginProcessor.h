@@ -16,6 +16,7 @@
 #include "daisyhost/EffectiveHostStateSnapshot.h"
 #include "daisyhost/HostSessionState.h"
 #include "daisyhost/HubSupport.h"
+#include "daisyhost/LiveRackTopology.h"
 #include "daisyhost/MidiEventTracker.h"
 #include "daisyhost/MidiNotePreview.h"
 #include "daisyhost/SignalGenerator.h"
@@ -72,6 +73,16 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     juce::String GetActiveAppId() const;
     juce::String GetActiveAppDisplayName() const;
     bool SetActiveAppId(const std::string& requestedAppId);
+    std::size_t GetRackNodeCount() const;
+    juce::String GetSelectedRackNodeId() const;
+    bool SetSelectedRackNodeId(const std::string& nodeId);
+    juce::String GetRackNodeId(std::size_t index) const;
+    juce::String GetRackNodeAppId(std::size_t index) const;
+    juce::String GetRackNodeAppDisplayName(std::size_t index) const;
+    bool SetRackNodeAppId(std::size_t index, const std::string& requestedAppId);
+    int GetRackTopologyPreset() const;
+    void SetRackTopologyPreset(int preset);
+    juce::String GetRackNodeRoleLabel(std::size_t index) const;
     float GetTopControlValue(std::size_t index) const;
     juce::String GetTopControlLabel(std::size_t index) const;
     juce::String GetTopControlDetailLabel(std::size_t index) const;
@@ -136,9 +147,62 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::string GetMidiBindingLabel(const std::string& controlId) const;
 
   private:
+    struct RackNodeState
+    {
+        std::string                                nodeId;
+        std::string                                appId;
+        std::unique_ptr<daisyhost::HostedAppCore>  core;
+        daisyhost::HostedAppPatchBindings          bindings;
+        std::array<float, 4>                       topControlValues{};
+        std::array<float, 4>                       cvValues{};
+        std::array<float, 4>                       cvVoltages{};
+        std::array<bool, 2>                        gateValues{};
+        std::array<bool, 2>                        previousGateValues{};
+        std::array<float, 4>                       audioInputPeaks{};
+        std::array<float, 4>                       audioOutputPeaks{};
+        std::array<daisyhost::CvInputGeneratorState, 4> cvGeneratorStates{};
+        bool                                       computerKeyboardEnabled = true;
+        int                                        computerKeyboardOctave  = 4;
+        int                                        testInputMode           = kHostInput;
+        float                                      testInputLevel          = 3.5f;
+        float                                      testInputFrequencyHz    = 220.0f;
+        bool                                       impulseRequested        = false;
+        float                                      testPhase               = 0.0f;
+        std::uint32_t                              noiseState              = 1u;
+        std::uint32_t                              randomSeed              = 0u;
+        std::unordered_map<std::string, float>     restoredParameterValues;
+        daisyhost::DisplayModel                    latestDisplay;
+        daisyhost::MenuModel                       latestMenu;
+        std::vector<daisyhost::ParameterDescriptor> latestParameters;
+        std::vector<daisyhost::MetaControllerDescriptor> latestMetaControllers;
+        daisyhost::HostAutomationSlotBindings      automationSlotBindings{};
+        std::unordered_map<std::string, float>     pendingMenuValues;
+    };
+
     friend class DaisyHostAutomationParameter;
 
     float Clamp01(float value) const;
+    RackNodeState& GetSelectedRackNode();
+    const RackNodeState& GetSelectedRackNode() const;
+    RackNodeState* GetRackNodeById(const std::string& nodeId);
+    const RackNodeState* GetRackNodeById(const std::string& nodeId) const;
+    void FlushSelectedNodeStateToRack();
+    void SyncSelectedNodeStateFromRack();
+    void UpdateSelectedBoardProfile();
+    void UpdateRackNodeSnapshots(RackNodeState& node);
+    void StepRackNodeCvGenerators(RackNodeState& node, double blockDurationSeconds);
+    void ApplyRackNodeVirtualPortStateToCore(
+        RackNodeState& node,
+        const std::vector<daisyhost::MidiMessageEvent>& midiEvents);
+    bool RecreateRackNode(std::size_t index, const std::string& requestedAppId);
+    std::string MakeCvHostStateId(const std::string& nodeId,
+                                  std::size_t        index,
+                                  const char*        suffix) const;
+    std::string MakeTestInputModeStateId(const std::string& nodeId) const;
+    std::string MakeTestInputLevelStateId(const std::string& nodeId) const;
+    std::string MakeTestInputFrequencyStateId(const std::string& nodeId) const;
+    std::string MakeComputerKeyboardEnabledStateId(const std::string& nodeId) const;
+    std::string MakeComputerKeyboardOctaveStateId(const std::string& nodeId) const;
     void  ApplyControlStateToCore();
     void  ApplyPendingAutomationParametersToCore();
     void  ApplyPendingMenuInteractionsToCore();
@@ -159,7 +223,12 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     void  GenerateTestInput(float* destination, int numSamples);
 
     daisyhost::BoardProfile         boardProfile_;
-    std::unique_ptr<daisyhost::HostedAppCore> core_;
+    std::string                     boardId_ = "daisy_patch";
+    std::array<RackNodeState, 2>    rackNodes_;
+    std::size_t                     selectedRackNodeIndex_ = 0;
+    daisyhost::LiveRackTopologyPreset rackTopologyPreset_
+        = daisyhost::LiveRackTopologyPreset::kNode0Only;
+    daisyhost::HostedAppCore*       core_ = nullptr;
     std::string                     activeAppId_;
     daisyhost::HostedAppPatchBindings activeBindings_;
 
@@ -204,6 +273,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     mutable std::mutex       menuSnapshotMutex_;
     daisyhost::MenuModel     latestMenu_;
     std::vector<daisyhost::ParameterDescriptor> latestParameters_;
+    std::vector<daisyhost::MetaControllerDescriptor> latestMetaControllers_;
     daisyhost::HostAutomationSlotBindings automationSlotBindings_{};
     mutable std::mutex       midiLearnMutex_;
     daisyhost::MidiLearnMap  midiLearnMap_;
@@ -215,14 +285,6 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::vector<float>       zeroBuffer_;
     std::vector<float>       generatedInput_;
 
-    const std::string testInputModeStateId_  = "node0/host/test_input_mode";
-    const std::string testInputLevelStateId_ = "node0/host/test_input_level";
-    const std::string testInputFrequencyStateId_
-        = "node0/host/test_input_frequency_hz";
-    const std::string computerKeyboardEnabledStateId_
-        = "node0/host/computer_keyboard_enabled";
-    const std::string computerKeyboardOctaveStateId_
-        = "node0/host/computer_keyboard_octave";
     std::uint32_t appRandomSeed_ = 0;
     std::unordered_map<std::string, float> restoredParameterValues_;
     std::optional<daisyhost::HubStartupRequest> pendingHubStartupRequest_;

@@ -38,6 +38,15 @@ When instructions conflict, resolve by descending priority:
 7. DaisyBrain as strategic memory only; it does not override local source of
    truth
 
+## Prompt Expansion
+
+- Use `$prompt-expander` only when the user explicitly asks to rewrite,
+  sharpen, normalize, or expand a Codex prompt or repository instruction.
+- Do not use it for execution, code changes, review, or general discussion
+  unless the user asks for prompt expansion as the output.
+- Keep the result to one compact, copy-ready prompt block unless the skill
+  requires a clarification decision first.
+
 ## Start Here
 
 1. Identify the exact target directory before editing.

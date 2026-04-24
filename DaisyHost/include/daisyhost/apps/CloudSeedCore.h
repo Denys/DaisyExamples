@@ -43,6 +43,11 @@ class CloudSeedCore : public HostedAppCore
         const std::string& parameterId) const override;
     ParameterValueLookup GetEffectiveParameterValue(
         const std::string& parameterId) const override;
+    const std::vector<MetaControllerDescriptor>& GetMetaControllers() const override;
+    bool SetMetaControllerValue(const std::string& controllerId,
+                                float              normalizedValue) override;
+    ParameterValueLookup GetMetaControllerValue(
+        const std::string& controllerId) const override;
     void ResetToDefaultState(std::uint32_t seed = 0) override;
     std::unordered_map<std::string, float> CaptureStatefulParameterValues()
         const override;
@@ -70,6 +75,7 @@ class CloudSeedCore : public HostedAppCore
   private:
     void RefreshSnapshots();
     void RefreshParameters();
+    void RefreshMetaControllers();
     void BuildMenuModel();
     void BuildDisplay();
     void ResetMenuState();
@@ -83,6 +89,7 @@ class CloudSeedCore : public HostedAppCore
     std::string                              nodeId_;
     DaisyCloudSeedCore                       sharedCore_;
     std::vector<ParameterDescriptor>         parameters_;
+    std::vector<MetaControllerDescriptor>    metaControllers_;
     MenuModel                                menu_;
     DisplayModel                             display_;
     std::unordered_map<std::string, int>     menuSelections_;

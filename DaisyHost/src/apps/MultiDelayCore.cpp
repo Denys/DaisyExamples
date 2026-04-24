@@ -15,6 +15,7 @@ constexpr std::size_t kVisibleMenuRows = 4;
 
 const char* kRootSectionId    = "root";
 const char* kParamsSectionId  = "params";
+const char* kMacrosSectionId  = "macros";
 const char* kInputSectionId   = "input";
 const char* kMidiSectionId    = "midi";
 const char* kTrackerSectionId = "tracker";
@@ -31,6 +32,12 @@ std::string MakeIndexedId(const std::string& nodeId,
 std::string MakeParameterId(const std::string& nodeId, const std::string& name)
 {
     return nodeId + "/param/" + name;
+}
+
+std::string MakeMetaControllerId(const std::string& nodeId,
+                                 const std::string& name)
+{
+    return nodeId + "/meta/" + name;
 }
 
 std::string MakeMenuItemId(const std::string& nodeId,
@@ -177,9 +184,38 @@ MultiDelayCore::MultiDelayCore(const std::string& nodeId)
                             true,
                             true},
     };
+    const float defaultRegen = std::max(
+        0.0f,
+        std::min((parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
+                      .defaultNormalizedValue
+                  - 0.05f)
+                     / 0.85f,
+                 1.0f));
+    metaControllers_ = {
+        MetaControllerDescriptor{MakeMetaControllerId(nodeId_, "blend"),
+                                 "Blend",
+                                 0.0f,
+                                 parameters_[static_cast<std::size_t>(
+                                     ParameterIndex::kDryWet)]
+                                     .defaultNormalizedValue,
+                                 true},
+        MetaControllerDescriptor{MakeMetaControllerId(nodeId_, "space"),
+                                 "Space",
+                                 0.0f,
+                                 parameters_[static_cast<std::size_t>(
+                                     ParameterIndex::kDelayPrimary)]
+                                     .defaultNormalizedValue,
+                                 true},
+        MetaControllerDescriptor{MakeMetaControllerId(nodeId_, "regen"),
+                                 "Regen",
+                                 0.0f,
+                                 defaultRegen,
+                                 true},
+    };
 
     menuSelections_[kRootSectionId]    = 0;
     menuSelections_[kParamsSectionId]  = 0;
+    menuSelections_[kMacrosSectionId]  = 0;
     menuSelections_[kInputSectionId]   = 0;
     menuSelections_[kMidiSectionId]    = 0;
     menuSelections_[kTrackerSectionId] = 0;
@@ -556,6 +592,59 @@ ParameterValueLookup MultiDelayCore::GetEffectiveParameterValue(
     return {true, parameter->effectiveNormalizedValue};
 }
 
+const std::vector<MetaControllerDescriptor>& MultiDelayCore::GetMetaControllers() const
+{
+    return metaControllers_;
+}
+
+bool MultiDelayCore::SetMetaControllerValue(const std::string& controllerId,
+                                            float              normalizedValue)
+{
+    const float value = Clamp01(normalizedValue);
+
+    if(controllerId == MakeMetaControllerId(nodeId_, "blend"))
+    {
+        ApplyParameterValue(
+            ParameterIndex::kDryWet, value, ParameterSource::kMacro);
+        return true;
+    }
+
+    if(controllerId == MakeMetaControllerId(nodeId_, "space"))
+    {
+        ApplyParameterValue(
+            ParameterIndex::kDelayPrimary, value, ParameterSource::kMacro);
+        ApplyParameterValue(ParameterIndex::kDelaySecondary,
+                            0.05f + (0.90f * value),
+                            ParameterSource::kMacro);
+        ApplyParameterValue(ParameterIndex::kDelayTertiary,
+                            0.10f + (0.80f * value),
+                            ParameterSource::kMacro);
+        return true;
+    }
+
+    if(controllerId == MakeMetaControllerId(nodeId_, "regen"))
+    {
+        ApplyParameterValue(ParameterIndex::kFeedback,
+                            0.05f + (0.85f * value),
+                            ParameterSource::kMacro);
+        return true;
+    }
+
+    return false;
+}
+
+ParameterValueLookup MultiDelayCore::GetMetaControllerValue(
+    const std::string& controllerId) const
+{
+    const auto* controller = FindMetaControllerById(controllerId);
+    if(controller == nullptr)
+    {
+        return {};
+    }
+
+    return {true, controller->normalizedValue};
+}
+
 void MultiDelayCore::ResetToDefaultState(std::uint32_t seed)
 {
     randomSeed_ = seed;
@@ -579,6 +668,7 @@ void MultiDelayCore::ResetToDefaultState(std::uint32_t seed)
     menu_.currentSelection = 0;
     menuSelections_[kRootSectionId]    = 0;
     menuSelections_[kParamsSectionId]  = 0;
+    menuSelections_[kMacrosSectionId]  = 0;
     menuSelections_[kInputSectionId]   = 0;
     menuSelections_[kMidiSectionId]    = 0;
     menuSelections_[kTrackerSectionId] = 0;
@@ -756,6 +846,24 @@ void MultiDelayCore::MenuPress()
 void MultiDelayCore::SetMenuItemValue(const std::string& itemId, float normalizedValue)
 {
     const float value = Clamp01(normalizedValue);
+
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "blend"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "blend"), value);
+        return;
+    }
+
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "space"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "space"), value);
+        return;
+    }
+
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "regen"))
+    {
+        SetMetaControllerValue(MakeMetaControllerId(nodeId_, "regen"), value);
+        return;
+    }
 
     if(itemId == MakeMenuItemId(nodeId_, "params", "dry_wet"))
     {
@@ -958,6 +1066,25 @@ const ParameterDescriptor* MultiDelayCore::FindParameterById(
     return it != parameters_.end() ? &(*it) : nullptr;
 }
 
+MetaControllerDescriptor* MultiDelayCore::FindMetaControllerById(
+    const std::string& controllerId)
+{
+    const auto self = const_cast<const MultiDelayCore*>(this);
+    return const_cast<MetaControllerDescriptor*>(
+        self->FindMetaControllerById(controllerId));
+}
+
+const MetaControllerDescriptor* MultiDelayCore::FindMetaControllerById(
+    const std::string& controllerId) const
+{
+    const auto it = std::find_if(metaControllers_.begin(),
+                                 metaControllers_.end(),
+                                 [&controllerId](const MetaControllerDescriptor& controller) {
+                                     return controller.id == controllerId;
+                                 });
+    return it != metaControllers_.end() ? &(*it) : nullptr;
+}
+
 void MultiDelayCore::ApplyParameterValue(ParameterIndex index,
                                          float          normalizedValue,
                                          ParameterSource source)
@@ -1008,6 +1135,40 @@ void MultiDelayCore::UpdateMappedStateFromParameters()
         parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
             .normalizedValue
         * 100.0f));
+
+    UpdateMetaControllersFromParameters();
+}
+
+void MultiDelayCore::UpdateMetaControllersFromParameters()
+{
+    for(std::size_t index = 0; index < metaControllers_.size(); ++index)
+    {
+        metaControllers_[index].normalizedValue = DeriveMetaControllerValue(
+            static_cast<MetaControllerIndex>(index));
+    }
+}
+
+float MultiDelayCore::DeriveMetaControllerValue(MetaControllerIndex index) const
+{
+    switch(index)
+    {
+        case MetaControllerIndex::kBlend:
+            return parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
+                .normalizedValue;
+        case MetaControllerIndex::kSpace:
+            return parameters_[static_cast<std::size_t>(
+                                   ParameterIndex::kDelayPrimary)]
+                .normalizedValue;
+        case MetaControllerIndex::kRegen:
+            return Clamp01(
+                (parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
+                     .normalizedValue
+                 - 0.05f)
+                / 0.85f);
+        case MetaControllerIndex::kCount: break;
+    }
+
+    return 0.0f;
 }
 
 void MultiDelayCore::SyncMenuModel()
@@ -1027,6 +1188,13 @@ void MultiDelayCore::SyncMenuModel()
                           0.0f,
                           "",
                           kParamsSectionId});
+    root.items.push_back({MakeMenuItemId(nodeId_, "root", "macros"),
+                          "Macros",
+                          false,
+                          MenuItemActionKind::kEnterSection,
+                          0.0f,
+                          "",
+                          kMacrosSectionId});
     root.items.push_back({MakeMenuItemId(nodeId_, "root", "input"),
                           "Input",
                           false,
@@ -1091,6 +1259,30 @@ void MultiDelayCore::SyncMenuModel()
                             MenuItemActionKind::kValue,
                             parameters_[4].normalizedValue,
                             FormatDelaySamples(parameters_[4].normalizedValue)});
+
+    MenuSection& macros = addSection(kMacrosSectionId, "Macros");
+    macros.items.push_back({MakeMenuItemId(nodeId_, "macros", "back"),
+                            "Back",
+                            false,
+                            MenuItemActionKind::kBack});
+    macros.items.push_back({MakeMenuItemId(nodeId_, "macros", "blend"),
+                            "Blend",
+                            true,
+                            MenuItemActionKind::kValue,
+                            metaControllers_[0].normalizedValue,
+                            FormatPercent(metaControllers_[0].normalizedValue)});
+    macros.items.push_back({MakeMenuItemId(nodeId_, "macros", "space"),
+                            "Space",
+                            true,
+                            MenuItemActionKind::kValue,
+                            metaControllers_[1].normalizedValue,
+                            FormatPercent(metaControllers_[1].normalizedValue)});
+    macros.items.push_back({MakeMenuItemId(nodeId_, "macros", "regen"),
+                            "Regen",
+                            true,
+                            MenuItemActionKind::kValue,
+                            metaControllers_[2].normalizedValue,
+                            FormatPercent(metaControllers_[2].normalizedValue)});
 
     MenuSection& input = addSection(kInputSectionId, "Input");
     input.items.push_back({MakeMenuItemId(nodeId_, "input", "back"),
@@ -1369,6 +1561,24 @@ float MultiDelayCore::GetMenuStepSize(const std::string& itemId) const
 
 float MultiDelayCore::GetCurrentMenuItemValue(const std::string& itemId) const
 {
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "blend"))
+    {
+        return metaControllers_[static_cast<std::size_t>(
+            MetaControllerIndex::kBlend)]
+            .normalizedValue;
+    }
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "space"))
+    {
+        return metaControllers_[static_cast<std::size_t>(
+            MetaControllerIndex::kSpace)]
+            .normalizedValue;
+    }
+    if(itemId == MakeMenuItemId(nodeId_, "macros", "regen"))
+    {
+        return metaControllers_[static_cast<std::size_t>(
+            MetaControllerIndex::kRegen)]
+            .normalizedValue;
+    }
     if(itemId == MakeMenuItemId(nodeId_, "params", "dry_wet"))
     {
         return parameters_[0].normalizedValue;

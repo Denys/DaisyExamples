@@ -35,15 +35,19 @@ editing `DaisyHost/`.
 Owns:
 
 - `include/daisyhost/HostedAppCore.h`
+- `include/daisyhost/LiveRackTopology.h`
 - `include/daisyhost/DisplayModel.h`
 - `include/daisyhost/apps/MultiDelayCore.h`
+- `src/LiveRackTopology.cpp`
 - `src/apps/MultiDelayCore.cpp`
+- `tests/test_live_rack_topology.cpp`
 - `tests/test_multidelay_core.cpp`
 - `../patch/MultiDelay/MultiDelay.cpp`
 
 Expected outcomes:
 
 - shared `ParameterDescriptor` and `MenuModel`
+- live-rack topology preset expansion and reverse mapping helpers
 - final Patch control hierarchy
 - encoder/menu behavior shared by host and firmware
 - menu-editable access to all five DSP parameters
@@ -51,6 +55,7 @@ Expected outcomes:
 
 Required verification before handoff:
 
+- targeted live-rack topology tests pass
 - targeted `MultiDelayCore` tests pass
 - `make` passes in `../patch/MultiDelay`
 
@@ -68,8 +73,10 @@ Owns:
 Expected outcomes:
 
 - Patch-faithful vector layout
+- visible 2-node rack header and topology visuals without panel-layout regressions
 - visible control positions that match the final hierarchy
 - reduced right-hand drawer that mirrors the shared menu model
+- board-profile factory seam for board-aware UI/runtime handoff
 - standalone icon assets
 
 Required verification before handoff:
@@ -116,10 +123,14 @@ Owns:
 - `src/juce/DaisyHostPluginProcessor.cpp`
 - `include/daisyhost/HostSessionState.h`
 - `src/HostSessionState.cpp`
+- `include/daisyhost/RenderTypes.h`
+- `include/daisyhost/EffectiveHostStateSnapshot.h`
+- `src/EffectiveHostStateSnapshot.cpp`
+- `src/RenderRuntime.cpp`
 - `include/daisyhost/HostStartupPolicy.h`
 - `src/HostStartupPolicy.cpp`
 - `tests/test_host_startup_policy.cpp`
-- new targeted tests for saw input, version surfacing, or session wiring
+- new targeted tests for rack runtime, render/session wiring, or snapshot expansion
 
 Expected outcomes:
 
@@ -127,6 +138,9 @@ Expected outcomes:
 - `Saw` test input and `Host In` startup default
 - version/about surfacing in the app
 - final integration between shared menu state and the mirrored host drawer
+- visible 2-node live rack runtime with selected-node targeting
+- rack-aware session/render/snapshot plumbing
+- board-selection seam consumed by the runtime and hub-side flows
 
 Required verification before handoff:
 

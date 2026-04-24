@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,8 @@ enum class ControlKind
     kKnob,
     kEncoder,
     kButton,
+    kKey,
+    kSwitch,
 };
 
 enum class TextAlignment
@@ -97,5 +100,11 @@ struct BoardProfile
     std::vector<PanelTextSpec>        texts;
 };
 
+std::vector<std::string> GetSupportedBoardIds();
+std::optional<BoardProfile> TryCreateBoardProfile(const std::string& boardId,
+                                                  const std::string& nodeId = "node0");
+BoardProfile CreateBoardProfile(const std::string& boardId,
+                                const std::string& nodeId = "node0");
 BoardProfile MakeDaisyPatchProfile(const std::string& nodeId = "node0");
+BoardProfile MakeDaisyFieldProfile(const std::string& nodeId = "node0");
 } // namespace daisyhost

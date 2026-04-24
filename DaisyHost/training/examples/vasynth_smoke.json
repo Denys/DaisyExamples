@@ -1,0 +1,72 @@
+{
+  "appId": "vasynth",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 1.0,
+    "outputChannelCount": 2
+  },
+  "seed": 733,
+  "initialParameterValues": {
+    "node0/param/osc_mix": 0.58,
+    "node0/param/filter_cutoff": 0.64
+  },
+  "audioInput": {
+    "mode": "host_in",
+    "level": 0.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.0,
+      "type": "midi",
+      "status": 144,
+      "data1": 48,
+      "data2": 110
+    },
+    {
+      "timeSeconds": 0.05,
+      "type": "midi",
+      "status": 144,
+      "data1": 55,
+      "data2": 96
+    },
+    {
+      "timeSeconds": 0.1,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/pages/page",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.12,
+      "type": "parameter_set",
+      "parameterId": "node0/param/resonance",
+      "normalizedValue": 0.55
+    },
+    {
+      "timeSeconds": 0.18,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/utilities/stereo_sim",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.24,
+      "type": "midi",
+      "status": 128,
+      "data1": 48,
+      "data2": 0
+    },
+    {
+      "timeSeconds": 0.3,
+      "type": "gate_set",
+      "portId": "node0/port/gate_in_1",
+      "gate": true
+    },
+    {
+      "timeSeconds": 0.35,
+      "type": "gate_set",
+      "portId": "node0/port/gate_in_1",
+      "gate": false
+    }
+  ]
+}

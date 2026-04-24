@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
+#include <utility>
 
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
@@ -119,6 +121,206 @@ daisyhost::UiRect ToUiRect(const juce::Rectangle<int>& rect)
 juce::Rectangle<int> ToJuceRect(const daisyhost::UiRect& rect)
 {
     return {rect.x, rect.y, rect.width, rect.height};
+}
+
+constexpr std::size_t kVisibleRackNodeCount = 2;
+constexpr int kRackTopologyNode0Only        = 0;
+constexpr int kRackTopologyNode1Only        = 1;
+constexpr int kRackTopologyNode0ToNode1     = 2;
+constexpr int kRackTopologyNode1ToNode0     = 3;
+
+juce::String GetRackTopologyLabel(int preset)
+{
+    switch(preset)
+    {
+        case kRackTopologyNode0Only: return "Node 0 Only";
+        case kRackTopologyNode1Only: return "Node 1 Only";
+        case kRackTopologyNode0ToNode1: return "Node 0 -> Node 1";
+        case kRackTopologyNode1ToNode0: return "Node 1 -> Node 0";
+        default: return "Node 0 Only";
+    }
+}
+
+juce::String GetHostedAppDisplayNameForId(const std::string& appId)
+{
+    for(const auto& registration : daisyhost::GetHostedAppRegistrations())
+    {
+        if(registration.appId == appId)
+        {
+            return registration.displayName;
+        }
+    }
+
+    return appId.empty() ? "Unassigned" : juce::String(appId);
+}
+
+template <typename Processor, typename = void>
+struct HasRackEditorApi : std::false_type
+{};
+
+template <typename Processor>
+struct HasRackEditorApi<
+    Processor,
+    std::void_t<decltype(std::declval<const Processor&>().GetRackNodeCount()),
+                decltype(std::declval<const Processor&>().GetSelectedRackNodeId()),
+                decltype(std::declval<Processor&>().SetSelectedRackNodeId(
+                    std::declval<const std::string&>())),
+                decltype(std::declval<const Processor&>().GetRackNodeId(
+                    std::declval<std::size_t>())),
+                decltype(std::declval<const Processor&>().GetRackNodeAppId(
+                    std::declval<std::size_t>())),
+                decltype(std::declval<const Processor&>().GetRackNodeAppDisplayName(
+                    std::declval<std::size_t>())),
+                decltype(std::declval<Processor&>().SetRackNodeAppId(
+                    std::declval<std::size_t>(),
+                    std::declval<const std::string&>())),
+                decltype(std::declval<const Processor&>().GetRackTopologyPreset()),
+                decltype(std::declval<Processor&>().SetRackTopologyPreset(0)),
+                decltype(std::declval<const Processor&>().GetRackNodeRoleLabel(
+                    std::declval<std::size_t>()))>> : std::true_type
+{};
+
+template <typename Processor>
+std::size_t GetRackNodeCountCompat(const Processor& processor)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackNodeCount();
+    }
+    else
+    {
+        juce::ignoreUnused(processor);
+        return kVisibleRackNodeCount;
+    }
+}
+
+template <typename Processor>
+juce::String GetSelectedRackNodeIdCompat(const Processor& processor)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetSelectedRackNodeId();
+    }
+
+    juce::ignoreUnused(processor);
+    return "node0";
+}
+
+template <typename Processor>
+bool SetSelectedRackNodeIdCompat(Processor& processor, const std::string& nodeId)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.SetSelectedRackNodeId(nodeId);
+    }
+
+    juce::ignoreUnused(processor);
+    return nodeId == "node0";
+}
+
+template <typename Processor>
+juce::String GetRackNodeIdCompat(const Processor& processor, std::size_t index)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackNodeId(index);
+    }
+
+    juce::ignoreUnused(processor);
+    return index == 0 ? "node0" : "node1";
+}
+
+template <typename Processor>
+juce::String GetRackNodeAppIdCompat(const Processor& processor, std::size_t index)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackNodeAppId(index);
+    }
+
+    if(index == 0)
+    {
+        return processor.GetActiveAppId();
+    }
+
+    return daisyhost::GetDefaultHostedAppId();
+}
+
+template <typename Processor>
+juce::String GetRackNodeAppDisplayNameCompat(const Processor& processor,
+                                             std::size_t      index)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackNodeAppDisplayName(index);
+    }
+
+    if(index == 0)
+    {
+        return processor.GetActiveAppDisplayName();
+    }
+
+    return GetHostedAppDisplayNameForId(
+        GetRackNodeAppIdCompat(processor, index).toStdString());
+}
+
+template <typename Processor>
+bool SetRackNodeAppIdCompat(Processor&               processor,
+                            std::size_t              index,
+                            const std::string& requestedAppId)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.SetRackNodeAppId(index, requestedAppId);
+    }
+
+    return index == 0 && processor.SetActiveAppId(requestedAppId);
+}
+
+template <typename Processor>
+int GetRackTopologyPresetCompat(const Processor& processor)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackTopologyPreset();
+    }
+    else
+    {
+        juce::ignoreUnused(processor);
+        return kRackTopologyNode0Only;
+    }
+}
+
+template <typename Processor>
+void SetRackTopologyPresetCompat(Processor& processor, int preset)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        processor.SetRackTopologyPreset(preset);
+        return;
+    }
+
+    juce::ignoreUnused(processor, preset);
+}
+
+template <typename Processor>
+juce::String GetRackNodeRoleLabelCompat(const Processor& processor,
+                                        std::size_t      index)
+{
+    if constexpr(HasRackEditorApi<Processor>::value)
+    {
+        return processor.GetRackNodeRoleLabel(index);
+    }
+    else
+    {
+        juce::ignoreUnused(processor);
+        return index == 0 ? "Entry" : "Inactive";
+    }
+}
+
+bool HasSerialRackTopology(int preset)
+{
+    return preset == kRackTopologyNode0ToNode1 || preset == kRackTopologyNode1ToNode0;
 }
 
 void DrawDaisyHostBadge(juce::Graphics& g,
@@ -254,35 +456,83 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     RegisterKeyboardSource(gateButtons_[i]);
     }
 
-    appSelectorLabel_.setText("Hosted App", juce::dontSendNotification);
-    appSelectorLabel_.setJustificationType(juce::Justification::centredLeft);
-    appSelectorLabel_.setColour(juce::Label::textColourId, TextColour());
-    addAndMakeVisible(appSelectorLabel_);
+    rackHeaderLabel_.setText("Visible Rack", juce::dontSendNotification);
+    rackHeaderLabel_.setJustificationType(juce::Justification::centredLeft);
+    rackHeaderLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(rackHeaderLabel_);
+
+    rackSelectedNodeLabel_.setText("", juce::dontSendNotification);
+    rackSelectedNodeLabel_.setJustificationType(juce::Justification::centredLeft);
+    rackSelectedNodeLabel_.setColour(juce::Label::textColourId,
+                                     TextColour().withAlpha(0.72f));
+    addAndMakeVisible(rackSelectedNodeLabel_);
+
+    rackTopologyLabel_.setText("Topology", juce::dontSendNotification);
+    rackTopologyLabel_.setJustificationType(juce::Justification::centredLeft);
+    rackTopologyLabel_.setColour(juce::Label::textColourId, TextColour());
+    addAndMakeVisible(rackTopologyLabel_);
 
     {
         int itemId = 1;
         for(const auto& registration : daisyhost::GetHostedAppRegistrations())
         {
-            appSelectorBox_.addItem(registration.displayName, itemId++);
             availableAppIds_.push_back(registration.appId);
+            for(auto& rackNode : rackNodes_)
+            {
+                rackNode.appSelectorBox.addItem(registration.displayName, itemId);
+            }
+            ++itemId;
         }
     }
-    appSelectorBox_.onChange = [this]() {
-        const int selected = appSelectorBox_.getSelectedId();
-        if(selected <= 0
-           || static_cast<std::size_t>(selected - 1) >= availableAppIds_.size())
-        {
-            return;
-        }
 
-        if(processor_.SetActiveAppId(availableAppIds_[static_cast<std::size_t>(selected - 1)]))
-        {
-            UpdateTopControlUi();
-            resized();
-        }
+    for(std::size_t i = 0; i < rackNodes_.size(); ++i)
+    {
+        auto& rackNode = rackNodes_[i];
+        rackNode.nodeIdLabel.setText("node" + juce::String(static_cast<int>(i)),
+                                     juce::dontSendNotification);
+        rackNode.nodeIdLabel.setJustificationType(juce::Justification::centredLeft);
+        rackNode.nodeIdLabel.setColour(juce::Label::textColourId, TextColour());
+        addAndMakeVisible(rackNode.nodeIdLabel);
+
+        rackNode.roleLabel.setText("Inactive", juce::dontSendNotification);
+        rackNode.roleLabel.setJustificationType(juce::Justification::centredRight);
+        rackNode.roleLabel.setColour(juce::Label::textColourId,
+                                     TextColour().withAlpha(0.72f));
+        addAndMakeVisible(rackNode.roleLabel);
+
+        rackNode.appSelectorBox.onChange = [this, i]() {
+            const int selected = rackNodes_[i].appSelectorBox.getSelectedId();
+            if(selected <= 0
+               || static_cast<std::size_t>(selected - 1) >= availableAppIds_.size())
+            {
+                return;
+            }
+
+            if(SetRackNodeAppIdCompat(
+                   processor_,
+                   i,
+                   availableAppIds_[static_cast<std::size_t>(selected - 1)]))
+            {
+                UpdateRackUi();
+                UpdateTopControlUi();
+                resized();
+            }
+        };
+        addAndMakeVisible(rackNode.appSelectorBox);
+        RegisterKeyboardSource(rackNode.appSelectorBox);
+    }
+
+    rackTopologyBox_.addItem(GetRackTopologyLabel(kRackTopologyNode0Only), 1);
+    rackTopologyBox_.addItem(GetRackTopologyLabel(kRackTopologyNode1Only), 2);
+    rackTopologyBox_.addItem(GetRackTopologyLabel(kRackTopologyNode0ToNode1), 3);
+    rackTopologyBox_.addItem(GetRackTopologyLabel(kRackTopologyNode1ToNode0), 4);
+    rackTopologyBox_.onChange = [this]() {
+        SetRackTopologyPresetCompat(processor_, rackTopologyBox_.getSelectedId() - 1);
+        UpdateRackUi();
+        resized();
     };
-    addAndMakeVisible(appSelectorBox_);
-    RegisterKeyboardSource(appSelectorBox_);
+    addAndMakeVisible(rackTopologyBox_);
+    RegisterKeyboardSource(rackTopologyBox_);
 
     testInputModeLabel_.setText("Audio In 1 Source", juce::dontSendNotification);
     testInputModeLabel_.setJustificationType(juce::Justification::centredLeft);
@@ -473,6 +723,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     midiTrackerText_.setColour(juce::TextEditor::textColourId, TextColour());
     addAndMakeVisible(midiTrackerText_);
 
+    UpdateRackUi();
     UpdateTopControlUi();
     UpdateComputerKeyboardUi();
     UpdateCvGeneratorEditorUi();
@@ -592,12 +843,35 @@ void DaisyHostPatchAudioProcessorEditor::resized()
     }
 
     auto drawer = GetHostToolsBounds().reduced(18);
+    rackHeaderLabel_.setBounds(drawer.removeFromTop(20));
+    rackSelectedNodeLabel_.setBounds(drawer.removeFromTop(18));
+    drawer.removeFromTop(8);
 
-    appSelectorLabel_.setBounds(drawer.removeFromTop(18));
-    appSelectorBox_.setBounds(drawer.removeFromTop(28));
+    auto rackCardsArea = drawer.removeFromTop(92);
+    const int rackCardGap = 12;
+    const int rackCardWidth = (rackCardsArea.getWidth() - rackCardGap) / 2;
+    for(std::size_t i = 0; i < rackNodes_.size(); ++i)
+    {
+        auto card = juce::Rectangle<int>(rackCardsArea.getX()
+                                             + static_cast<int>(i) * (rackCardWidth + rackCardGap),
+                                         rackCardsArea.getY(),
+                                         rackCardWidth,
+                                         rackCardsArea.getHeight());
+        rackNodeCardBounds_[i] = card;
+
+        auto content = card.reduced(12, 10);
+        auto topRow  = content.removeFromTop(18);
+        rackNodes_[i].nodeIdLabel.setBounds(topRow.removeFromLeft(topRow.getWidth() / 2));
+        rackNodes_[i].roleLabel.setBounds(topRow);
+        content.removeFromTop(8);
+        rackNodes_[i].appSelectorBox.setBounds(content.removeFromTop(28));
+    }
+
+    drawer.removeFromTop(8);
+    rackTopologyLabel_.setBounds(drawer.removeFromTop(18));
+    rackTopologyBox_.setBounds(drawer.removeFromTop(28));
     drawer.removeFromTop(10);
 
-    drawer.removeFromTop(88);
     knobs_[3].slider.setBounds({});
     knobs_[3].label.setBounds({});
     knobs_[3].learnButton.setBounds({});
@@ -682,6 +956,22 @@ void DaisyHostPatchAudioProcessorEditor::resized()
 void DaisyHostPatchAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 {
     grabKeyboardFocus();
+
+    for(std::size_t i = 0; i < rackNodeCardBounds_.size(); ++i)
+    {
+        if(rackNodeCardBounds_[i].contains(event.getPosition()))
+        {
+            if(SetSelectedRackNodeIdCompat(
+                   processor_,
+                   GetRackNodeIdCompat(processor_, i).toStdString()))
+            {
+                UpdateRackUi();
+                UpdateTopControlUi();
+                resized();
+            }
+            return;
+        }
+    }
 
     const auto& profile = processor_.GetBoardProfile();
     if(const auto* encoder = FindSurfaceControlById(profile.nodeId + "/surface/enc1"))
@@ -877,9 +1167,22 @@ void DaisyHostPatchAudioProcessorEditor::DrawPanelTexts(juce::Graphics& g) const
                    false);
     }
 
+    juce::String selectedAppDisplay = processor_.GetActiveAppDisplayName();
+    const auto selectedNodeId       = GetSelectedRackNodeIdCompat(processor_);
+    const auto rackNodeCount = std::min(GetRackNodeCountCompat(processor_),
+                                        rackNodes_.size());
+    for(std::size_t i = 0; i < rackNodeCount; ++i)
+    {
+        if(GetRackNodeIdCompat(processor_, i) == selectedNodeId)
+        {
+            selectedAppDisplay = GetRackNodeAppDisplayNameCompat(processor_, i);
+            break;
+        }
+    }
+
     g.setColour(TextColour().withAlpha(0.86f));
     g.setFont(TitleFont(13.0f));
-    g.drawText(processor_.GetActiveAppDisplayName(),
+    g.drawText(selectedAppDisplay,
                RectFromPanel({0.47f, 0.045f, 0.20f, 0.03f}).toNearestInt(),
                juce::Justification::centred,
                false);
@@ -1010,6 +1313,32 @@ void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
     juce::Graphics&               g,
     const juce::Rectangle<float>& area) const
 {
+    const auto selectedNodeId = GetSelectedRackNodeIdCompat(processor_);
+    juce::String selectedAppDisplay;
+    const auto rackNodeCount = std::min(GetRackNodeCountCompat(processor_),
+                                        rackNodes_.size());
+    for(std::size_t i = 0; i < rackNodeCount; ++i)
+    {
+        if(GetRackNodeIdCompat(processor_, i) == selectedNodeId)
+        {
+            selectedAppDisplay = GetRackNodeAppDisplayNameCompat(processor_, i);
+            break;
+        }
+    }
+    if(selectedAppDisplay.isEmpty())
+    {
+        selectedAppDisplay = processor_.GetActiveAppDisplayName();
+    }
+
+    const auto displayHeaderArea = juce::Rectangle<float>(
+        area.getX() - 2.0f, area.getY() - 20.0f, area.getWidth() + 4.0f, 16.0f);
+    g.setColour(TextColour().withAlpha(0.88f));
+    g.setFont(BodyFont(11.0f));
+    g.drawText(selectedNodeId + " / " + selectedAppDisplay,
+               displayHeaderArea.toNearestInt(),
+               juce::Justification::centredLeft,
+               true);
+
     g.setColour(juce::Colour::fromRGB(13, 15, 18));
     g.fillRoundedRectangle(area, 8.0f);
     g.setColour(CreamColour().withAlpha(0.65f));
@@ -1121,28 +1450,41 @@ void DaisyHostPatchAudioProcessorEditor::DrawPorts(juce::Graphics& g) const
 void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 {
     auto panel = GetHostToolsBounds().toFloat().reduced(16.0f);
-    auto top   = panel.removeFromTop(148.0f);
     const auto menuModel = processor_.GetMenuModelSnapshot();
 
+    juce::Rectangle<int> rackArea = rackHeaderLabel_.getBounds()
+                                        .getUnion(rackSelectedNodeLabel_.getBounds())
+                                        .getUnion(rackTopologyLabel_.getBounds())
+                                        .getUnion(rackTopologyBox_.getBounds());
+    for(const auto& cardBounds : rackNodeCardBounds_)
+    {
+        rackArea = rackArea.getUnion(cardBounds);
+    }
+
     DrawDaisyHostBadge(g,
-                       {panel.getRight() - 68.0f, top.getY() - 2.0f, 54.0f, 54.0f},
+                       {panel.getRight() - 68.0f, panel.getY() - 2.0f, 54.0f, 54.0f},
                        true);
+    DrawRackHeader(g, rackArea.toFloat().expanded(8.0f, 8.0f));
+
+    auto body = panel;
+    const float rackHeight = static_cast<float>(rackArea.getBottom()) - panel.getY();
+    body.removeFromTop(std::max(0.0f, rackHeight) + 20.0f);
 
     g.setColour(TextColour());
-    g.setFont(TitleFont(20.0f));
-    g.drawText("Mirror / Host",
-               top.removeFromTop(22.0f).toNearestInt(),
+    g.setFont(TitleFont(18.0f));
+    g.drawText("Selected Node Mirror",
+               body.removeFromTop(20.0f).toNearestInt(),
                juce::Justification::centredLeft,
                false);
 
     g.setFont(BodyFont(11.5f));
     g.setColour(TextColour().withAlpha(0.72f));
-    g.drawText("Mouse-first mirror for Patch testing, input routing, and shared OLED menu state.",
-               top.removeFromTop(30.0f).toNearestInt(),
+    g.drawText("Patch controls, encoder/menu state, CV/gate inputs, and host tools apply to the selected rack node.",
+               body.removeFromTop(34.0f).toNearestInt(),
                juce::Justification::topLeft,
                true);
 
-    const auto menuBox = top.removeFromTop(92.0f);
+    const auto menuBox = body.removeFromTop(92.0f);
     g.setColour(juce::Colours::black.withAlpha(0.18f));
     g.fillRoundedRectangle(menuBox, 14.0f);
     g.setColour(juce::Colours::white.withAlpha(0.10f));
@@ -1207,23 +1549,88 @@ void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 
     g.setColour(TextColour().withAlpha(0.58f));
     g.drawText(processor_.GetBuildIdentityText(),
-               top.removeFromTop(14.0f).toNearestInt(),
+               body.removeFromTop(14.0f).toNearestInt(),
                juce::Justification::centredLeft,
                false);
     const auto highlights = processor_.GetReleaseHighlightLines();
     if(highlights.size() > 0)
     {
         g.drawText(highlights[0],
-                   top.removeFromTop(14.0f).toNearestInt(),
+                   body.removeFromTop(14.0f).toNearestInt(),
                    juce::Justification::centredLeft,
                    false);
     }
     if(highlights.size() > 1)
     {
         g.drawText(highlights[1],
-                   top.removeFromTop(14.0f).toNearestInt(),
+                   body.removeFromTop(14.0f).toNearestInt(),
                    juce::Justification::centredLeft,
                    false);
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawRackHeader(
+    juce::Graphics&               g,
+    const juce::Rectangle<float>& area) const
+{
+    g.setColour(juce::Colours::black.withAlpha(0.15f));
+    g.fillRoundedRectangle(area, 18.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.08f));
+    g.drawRoundedRectangle(area, 18.0f, 1.1f);
+
+    const auto selectedNodeId = GetSelectedRackNodeIdCompat(processor_);
+    const int topologyPreset  = GetRackTopologyPresetCompat(processor_);
+
+    for(std::size_t i = 0; i < rackNodeCardBounds_.size(); ++i)
+    {
+        const auto cardBounds = rackNodeCardBounds_[i].toFloat();
+        const bool isSelected = GetRackNodeIdCompat(processor_, i) == selectedNodeId;
+
+        g.setColour(DrawerInsetColour().withAlpha(isSelected ? 0.98f : 0.86f));
+        g.fillRoundedRectangle(cardBounds, 14.0f);
+
+        g.setColour((isSelected ? AccentColour() : juce::Colours::white)
+                        .withAlpha(isSelected ? 0.92f : 0.14f));
+        g.drawRoundedRectangle(cardBounds, 14.0f, isSelected ? 2.2f : 1.0f);
+
+        if(isSelected)
+        {
+            g.setColour(AccentColour().withAlpha(0.18f));
+            g.fillRoundedRectangle(cardBounds.reduced(4.0f), 10.0f);
+        }
+    }
+
+    if(HasSerialRackTopology(topologyPreset))
+    {
+        const std::size_t sourceIndex = topologyPreset == kRackTopologyNode0ToNode1 ? 0u : 1u;
+        const std::size_t destIndex   = topologyPreset == kRackTopologyNode0ToNode1 ? 1u : 0u;
+        const auto sourceBounds       = rackNodeCardBounds_[sourceIndex].toFloat();
+        const auto destBounds         = rackNodeCardBounds_[destIndex].toFloat();
+        const bool leftToRight        = sourceBounds.getCentreX() < destBounds.getCentreX();
+        const float startX = leftToRight ? sourceBounds.getRight() - 6.0f
+                                         : sourceBounds.getX() + 6.0f;
+        const float endX = leftToRight ? destBounds.getX() + 6.0f
+                                       : destBounds.getRight() - 6.0f;
+        const float topY    = sourceBounds.getCentreY() - 8.0f;
+        const float bottomY = sourceBounds.getCentreY() + 8.0f;
+
+        g.setColour(juce::Colours::black.withAlpha(0.25f));
+        g.drawLine(startX, topY + 1.5f, endX, topY + 1.5f, 4.0f);
+        g.drawLine(startX, bottomY + 1.5f, endX, bottomY + 1.5f, 4.0f);
+
+        g.setColour(PortColour(daisyhost::VirtualPortType::kAudio).withAlpha(0.90f));
+        g.drawLine(startX, topY, endX, topY, 2.6f);
+        g.drawLine(startX, bottomY, endX, bottomY, 2.6f);
+
+        const float arrowX = leftToRight ? endX - 3.0f : endX + 3.0f;
+        juce::Path arrowHead;
+        arrowHead.startNewSubPath(endX, sourceBounds.getCentreY());
+        arrowHead.lineTo(arrowX + (leftToRight ? -8.0f : 8.0f),
+                         sourceBounds.getCentreY() - 6.0f);
+        arrowHead.lineTo(arrowX + (leftToRight ? -8.0f : 8.0f),
+                         sourceBounds.getCentreY() + 6.0f);
+        arrowHead.closeSubPath();
+        g.fillPath(arrowHead);
     }
 }
 
@@ -1295,6 +1702,61 @@ void DaisyHostPatchAudioProcessorEditor::RegisterKeyboardSource(
     juce::Component& component)
 {
     component.addKeyListener(this);
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateRackUi()
+{
+    const auto selectedNodeId = GetSelectedRackNodeIdCompat(processor_);
+    juce::String selectedNodeDisplayName;
+
+    rackTopologyBox_.setSelectedId(GetRackTopologyPresetCompat(processor_) + 1,
+                                   juce::dontSendNotification);
+    rackTopologyBox_.setEnabled(HasRackEditorApi<DaisyHostPatchAudioProcessor>::value);
+
+    for(std::size_t i = 0; i < rackNodes_.size(); ++i)
+    {
+        auto& rackNode       = rackNodes_[i];
+        const auto nodeId    = GetRackNodeIdCompat(processor_, i);
+        const auto roleLabel = GetRackNodeRoleLabelCompat(processor_, i);
+        const auto appId     = GetRackNodeAppIdCompat(processor_, i).toStdString();
+        const bool isSelected = nodeId == selectedNodeId;
+
+        rackNode.nodeIdLabel.setText(nodeId, juce::dontSendNotification);
+        rackNode.nodeIdLabel.setColour(juce::Label::textColourId,
+                                       isSelected ? AccentColour() : TextColour());
+        rackNode.roleLabel.setText(roleLabel, juce::dontSendNotification);
+        rackNode.roleLabel.setColour(juce::Label::textColourId,
+                                     isSelected ? AccentColour().brighter(0.15f)
+                                                : TextColour().withAlpha(0.72f));
+
+        int selectedAppItemId = 0;
+        for(std::size_t appIndex = 0; appIndex < availableAppIds_.size(); ++appIndex)
+        {
+            if(availableAppIds_[appIndex] == appId)
+            {
+                selectedAppItemId = static_cast<int>(appIndex + 1);
+                break;
+            }
+        }
+        rackNode.appSelectorBox.setSelectedId(selectedAppItemId,
+                                              juce::dontSendNotification);
+        rackNode.appSelectorBox.setEnabled(
+            HasRackEditorApi<DaisyHostPatchAudioProcessor>::value || i == 0);
+
+        if(isSelected)
+        {
+            selectedNodeDisplayName = GetRackNodeAppDisplayNameCompat(processor_, i);
+        }
+    }
+
+    if(selectedNodeDisplayName.isEmpty())
+    {
+        selectedNodeDisplayName = processor_.GetActiveAppDisplayName();
+    }
+
+    rackSelectedNodeLabel_.setText("Selected node: " + selectedNodeId + "  |  "
+                                       + selectedNodeDisplayName,
+                                   juce::dontSendNotification);
 }
 
 void DaisyHostPatchAudioProcessorEditor::UpdateCvGeneratorEditorUi()
@@ -1673,6 +2135,7 @@ bool DaisyHostPatchAudioProcessorEditor::keyStateChanged(
 
 void DaisyHostPatchAudioProcessorEditor::timerCallback()
 {
+    UpdateRackUi();
     UpdateTopControlUi();
     for(std::size_t i = 0; i < 4; ++i)
     {
@@ -1698,16 +2161,6 @@ void DaisyHostPatchAudioProcessorEditor::timerCallback()
 
     testInputModeBox_.setSelectedId(processor_.GetTestInputMode() + 1,
                                     juce::dontSendNotification);
-    const auto activeAppId = processor_.GetActiveAppId().toStdString();
-    for(std::size_t i = 0; i < availableAppIds_.size(); ++i)
-    {
-        if(availableAppIds_[i] == activeAppId)
-        {
-            appSelectorBox_.setSelectedId(static_cast<int>(i + 1),
-                                          juce::dontSendNotification);
-            break;
-        }
-    }
     testInputLevelSlider_.setValue(processor_.GetTestInputLevel(),
                                    juce::dontSendNotification);
     testInputFrequencySlider_.setValue(processor_.GetTestInputFrequencyHz(),

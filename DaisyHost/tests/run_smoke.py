@@ -16,6 +16,7 @@ from pathlib import Path
 
 STANDALONE_WARMUP_SECONDS = 5.0
 PROCESS_EXIT_TIMEOUT_SECONDS = 10.0
+PROCESS_QUERY_TIMEOUT_SECONDS = 30.0
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
@@ -33,6 +34,9 @@ class SmokePaths:
     multidelay_scenario: Path
     torus_scenario: Path
     cloudseed_scenario: Path
+    braids_scenario: Path
+    harmoniqs_scenario: Path
+    vasynth_scenario: Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,6 +72,15 @@ def resolve_paths(args: argparse.Namespace) -> SmokePaths:
         / "training"
         / "examples"
         / "cloudseed_smoke.json",
+        braids_scenario=source_dir / "training" / "examples" / "braids_smoke.json",
+        harmoniqs_scenario=source_dir
+        / "training"
+        / "examples"
+        / "harmoniqs_smoke.json",
+        vasynth_scenario=source_dir
+        / "training"
+        / "examples"
+        / "vasynth_smoke.json",
     )
 
 
@@ -112,7 +125,7 @@ def query_processes_for_path(executable_path: Path) -> list[dict[str, object]]:
     )
     result = run_command(
         ["powershell.exe", "-NoProfile", "-Command", script],
-        timeout_seconds=PROCESS_EXIT_TIMEOUT_SECONDS,
+        timeout_seconds=PROCESS_QUERY_TIMEOUT_SECONDS,
     )
     if result.returncode != 0:
         raise SmokeFailure(
@@ -253,6 +266,9 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
     require_existing_file(paths.multidelay_scenario, "MultiDelay smoke scenario")
     require_existing_file(paths.torus_scenario, "Torus smoke scenario")
     require_existing_file(paths.cloudseed_scenario, "CloudSeed smoke scenario")
+    require_existing_file(paths.braids_scenario, "Braids smoke scenario")
+    require_existing_file(paths.harmoniqs_scenario, "Harmoniqs smoke scenario")
+    require_existing_file(paths.vasynth_scenario, "VA Synth smoke scenario")
 
     workspace = paths.build_dir / "smoke" / f"render_{uuid.uuid4().hex[:8]}"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -296,6 +312,30 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
             timeout_seconds=timeout_seconds,
             cwd=paths.source_dir,
         )
+        run_single_render(
+            paths.render_executable,
+            paths.braids_scenario,
+            output_dir=workspace / "braids_run",
+            expected_app_id="braids",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        run_single_render(
+            paths.render_executable,
+            paths.harmoniqs_scenario,
+            output_dir=workspace / "harmoniqs_run",
+            expected_app_id="harmoniqs",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        run_single_render(
+            paths.render_executable,
+            paths.vasynth_scenario,
+            output_dir=workspace / "vasynth_run",
+            expected_app_id="vasynth",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
         success = True
     except SmokeFailure as exc:
         raise SmokeFailure(f"{exc}\nRender smoke outputs preserved at: {workspace}") from exc
@@ -303,7 +343,9 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
         if success:
             shutil.rmtree(workspace, ignore_errors=True)
 
-    print("Render smoke passed for MultiDelay, Torus, and CloudSeed scenarios.")
+    print(
+        "Render smoke passed for MultiDelay, Torus, CloudSeed, Braids, Harmoniqs, and VA Synth scenarios."
+    )
 
 
 def main() -> int:

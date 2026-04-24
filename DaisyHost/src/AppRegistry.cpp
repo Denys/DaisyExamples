@@ -2,9 +2,12 @@
 
 #include <algorithm>
 
+#include "daisyhost/apps/BraidsCore.h"
 #include "daisyhost/apps/CloudSeedCore.h"
+#include "daisyhost/apps/HarmoniqsCore.h"
 #include "daisyhost/apps/MultiDelayCore.h"
 #include "daisyhost/apps/TorusCore.h"
+#include "daisyhost/apps/VASynthCore.h"
 
 namespace daisyhost
 {
@@ -25,6 +28,21 @@ const std::vector<HostedAppRegistration> kRegistrations = {
      "CloudSeed",
      [](const std::string& nodeId) {
          return std::make_unique<apps::CloudSeedCore>(nodeId);
+     }},
+    {"braids",
+     "Braids",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::BraidsCore>(nodeId);
+     }},
+    {"harmoniqs",
+     "Harmoniqs",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::HarmoniqsCore>(nodeId);
+     }},
+    {"vasynth",
+     "VA Synth",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::VASynthCore>(nodeId);
      }},
 };
 } // namespace

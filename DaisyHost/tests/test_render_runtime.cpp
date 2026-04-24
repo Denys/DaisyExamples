@@ -99,6 +99,107 @@ TEST(RenderRuntimeTest, ParsesScenarioJsonWithTimeline)
               daisyhost::RenderTimelineEventType::kImpulse);
 }
 
+TEST(RenderRuntimeTest, ParsesNodeAndRouteAwareScenarioJson)
+{
+    const std::string json = R"({
+  "boardId": "daisy_patch",
+  "selectedNodeId": "node1",
+  "entryNodeId": "node0",
+  "outputNodeId": "node1",
+  "appId": "multidelay",
+  "seed": 77,
+  "nodes": [
+    { "nodeId": "node0", "appId": "multidelay", "seed": 77 },
+    { "nodeId": "node1", "appId": "cloudseed", "seed": 91 }
+  ],
+  "routes": [
+    {
+      "sourcePortId": "node0/port/audio_out_1",
+      "destPortId": "node1/port/audio_in_1"
+    },
+    {
+      "sourcePortId": "node0/port/audio_out_2",
+      "destPortId": "node1/port/audio_in_2"
+    }
+  ]
+})";
+
+    daisyhost::RenderScenario scenario;
+    std::string               errorMessage;
+    ASSERT_TRUE(daisyhost::ParseRenderScenarioJson(json, &scenario, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(scenario.boardId, "daisy_patch");
+    EXPECT_EQ(scenario.selectedNodeId, "node1");
+    EXPECT_EQ(scenario.entryNodeId, "node0");
+    EXPECT_EQ(scenario.outputNodeId, "node1");
+    ASSERT_EQ(scenario.nodes.size(), 2u);
+    EXPECT_EQ(scenario.nodes[0].nodeId, "node0");
+    EXPECT_EQ(scenario.nodes[0].appId, "multidelay");
+    EXPECT_EQ(scenario.nodes[0].seed, 77u);
+    EXPECT_EQ(scenario.nodes[1].nodeId, "node1");
+    EXPECT_EQ(scenario.nodes[1].appId, "cloudseed");
+    EXPECT_EQ(scenario.nodes[1].seed, 91u);
+    ASSERT_EQ(scenario.routes.size(), 2u);
+    EXPECT_EQ(scenario.routes[0].sourcePortId, "node0/port/audio_out_1");
+    EXPECT_EQ(scenario.routes[0].destPortId, "node1/port/audio_in_1");
+}
+
+TEST(RenderRuntimeTest, ParsesFieldBoardIdWithoutChangingDefaultRackGlobals)
+{
+    const std::string json = R"({
+  "boardId": "daisy_field",
+  "appId": "multidelay",
+  "seed": 77
+})";
+
+    daisyhost::RenderScenario scenario;
+    std::string               errorMessage;
+    ASSERT_TRUE(daisyhost::ParseRenderScenarioJson(json, &scenario, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(scenario.boardId, "daisy_field");
+    EXPECT_EQ(scenario.selectedNodeId, "node0");
+    EXPECT_EQ(scenario.entryNodeId, "node0");
+    EXPECT_EQ(scenario.outputNodeId, "node0");
+    EXPECT_TRUE(scenario.nodes.empty());
+    EXPECT_TRUE(scenario.routes.empty());
+}
+
+TEST(RenderRuntimeTest, ParsesTargetNodeIdForNodeScopedNonSignalEvents)
+{
+    const std::string json = R"({
+  "appId": "multidelay",
+  "nodes": [
+    { "nodeId": "node0", "appId": "multidelay", "seed": 77 },
+    { "nodeId": "node1", "appId": "cloudseed", "seed": 91 }
+  ],
+  "timeline": [
+    {
+      "timeSeconds": 0.0,
+      "type": "audio_input_config",
+      "targetNodeId": "node1",
+      "audioMode": "sine",
+      "audioLevel": 4.0
+    },
+    {
+      "timeSeconds": 0.1,
+      "type": "impulse",
+      "targetNodeId": "node0"
+    }
+  ]
+})";
+
+    daisyhost::RenderScenario scenario;
+    std::string               errorMessage;
+    ASSERT_TRUE(daisyhost::ParseRenderScenarioJson(json, &scenario, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(scenario.timeline.size(), 2u);
+    EXPECT_EQ(scenario.timeline[0].targetNodeId, "node1");
+    EXPECT_EQ(scenario.timeline[1].targetNodeId, "node0");
+}
+
 TEST(RenderRuntimeTest, RejectsUnknownAppId)
 {
     auto        scenario = MakeBaseScenario("definitely-not-an-app");
@@ -106,6 +207,17 @@ TEST(RenderRuntimeTest, RejectsUnknownAppId)
     daisyhost::RenderResult result;
     EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
     EXPECT_NE(errorMessage.find("Unknown appId"), std::string::npos);
+}
+
+TEST(RenderRuntimeTest, RejectsUnknownBoardId)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.boardId = "unknown_board";
+
+    std::string errorMessage;
+    daisyhost::RenderResult result;
+    EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
+    EXPECT_NE(errorMessage.find("boardId"), std::string::npos);
 }
 
 TEST(RenderRuntimeTest, RejectsUnknownParameterId)
@@ -117,6 +229,224 @@ TEST(RenderRuntimeTest, RejectsUnknownParameterId)
     daisyhost::RenderResult result;
     EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
     EXPECT_NE(errorMessage.find("Unknown parameter id"), std::string::npos);
+}
+
+TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForBraids)
+{
+    auto scenario = MakeBaseScenario("braids");
+    scenario.renderConfig.durationSeconds = 0.5;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+    scenario.initialParameterValues["node0/param/model"] = 0.0f;
+    scenario.initialParameterValues["node0/param/timbre"] = 0.55f;
+    scenario.initialParameterValues["node0/param/color"] = 0.35f;
+
+    daisyhost::RenderTimelineEvent midiEvent;
+    midiEvent.timeSeconds = 0.0;
+    midiEvent.type = daisyhost::RenderTimelineEventType::kMidi;
+    midiEvent.midiMessage.status = 0x90;
+    midiEvent.midiMessage.data1 = 36;
+    midiEvent.midiMessage.data2 = 110;
+    scenario.timeline.push_back(midiEvent);
+
+    daisyhost::RenderTimelineEvent pageEvent;
+    pageEvent.timeSeconds = 0.1;
+    pageEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    pageEvent.menuItemId = "node0/menu/pages/page";
+    pageEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(pageEvent);
+
+    daisyhost::RenderTimelineEvent finishEvent;
+    finishEvent.timeSeconds = 0.12;
+    finishEvent.type = daisyhost::RenderTimelineEventType::kParameterSet;
+    finishEvent.parameterId = "node0/param/signature";
+    finishEvent.normalizedValue = 0.65f;
+    scenario.timeline.push_back(finishEvent);
+
+    daisyhost::RenderTimelineEvent modelEvent;
+    modelEvent.timeSeconds = 0.2;
+    modelEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    modelEvent.menuItemId = "node0/menu/utilities/randomize_model";
+    modelEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(modelEvent);
+
+    daisyhost::RenderTimelineEvent gateEvent;
+    gateEvent.timeSeconds = 0.3;
+    gateEvent.type = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId = "node0/port/gate_in_1";
+    gateEvent.gateValue = true;
+    scenario.timeline.push_back(gateEvent);
+
+    daisyhost::RenderResult firstResult;
+    daisyhost::RenderResult secondResult;
+    std::string errorMessage;
+
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &firstResult, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &secondResult, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(firstResult.manifest.appId, "braids");
+    EXPECT_EQ(firstResult.manifest.audioChecksum, secondResult.manifest.audioChecksum);
+    ASSERT_EQ(firstResult.audioChannels.size(), 2u);
+
+    float energy = 0.0f;
+    for(float sample : firstResult.audioChannels[0])
+    {
+        energy += std::abs(sample);
+    }
+    for(float sample : firstResult.audioChannels[1])
+    {
+        energy += std::abs(sample);
+    }
+    EXPECT_GT(energy, 0.01f);
+}
+
+TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForHarmoniqs)
+{
+    auto scenario = MakeBaseScenario("harmoniqs");
+    scenario.renderConfig.durationSeconds = 0.5;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+    scenario.initialParameterValues["node0/param/brightness"] = 0.62f;
+    scenario.initialParameterValues["node0/param/tilt"] = 0.38f;
+    scenario.initialParameterValues["node0/param/harmonic_3"] = 0.81f;
+
+    daisyhost::RenderTimelineEvent midiEvent;
+    midiEvent.timeSeconds = 0.0;
+    midiEvent.type = daisyhost::RenderTimelineEventType::kMidi;
+    midiEvent.midiMessage.status = 0x90;
+    midiEvent.midiMessage.data1 = 48;
+    midiEvent.midiMessage.data2 = 110;
+    scenario.timeline.push_back(midiEvent);
+
+    daisyhost::RenderTimelineEvent pageEvent;
+    pageEvent.timeSeconds = 0.1;
+    pageEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    pageEvent.menuItemId = "node0/menu/pages/page";
+    pageEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(pageEvent);
+
+    daisyhost::RenderTimelineEvent detuneEvent;
+    detuneEvent.timeSeconds = 0.12;
+    detuneEvent.type = daisyhost::RenderTimelineEventType::kParameterSet;
+    detuneEvent.parameterId = "node0/param/detune";
+    detuneEvent.normalizedValue = 0.68f;
+    scenario.timeline.push_back(detuneEvent);
+
+    daisyhost::RenderTimelineEvent randomizeEvent;
+    randomizeEvent.timeSeconds = 0.2;
+    randomizeEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    randomizeEvent.menuItemId = "node0/menu/utilities/randomize_spectrum";
+    randomizeEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(randomizeEvent);
+
+    daisyhost::RenderTimelineEvent gateEvent;
+    gateEvent.timeSeconds = 0.3;
+    gateEvent.type = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId = "node0/port/gate_in_1";
+    gateEvent.gateValue = true;
+    scenario.timeline.push_back(gateEvent);
+
+    daisyhost::RenderTimelineEvent gateReleaseEvent;
+    gateReleaseEvent.timeSeconds = 0.35;
+    gateReleaseEvent.type = daisyhost::RenderTimelineEventType::kGateSet;
+    gateReleaseEvent.portId = "node0/port/gate_in_1";
+    gateReleaseEvent.gateValue = false;
+    scenario.timeline.push_back(gateReleaseEvent);
+
+    daisyhost::RenderResult firstResult;
+    daisyhost::RenderResult secondResult;
+    std::string             errorMessage;
+
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &firstResult, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &secondResult, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(firstResult.manifest.appId, "harmoniqs");
+    EXPECT_EQ(firstResult.manifest.audioChecksum, secondResult.manifest.audioChecksum);
+    ASSERT_EQ(firstResult.audioChannels.size(), 2u);
+    EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
+    EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
+}
+
+TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForVASynth)
+{
+    auto scenario = MakeBaseScenario("vasynth");
+    scenario.renderConfig.durationSeconds = 0.5;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+    scenario.initialParameterValues["node0/param/osc_mix"] = 0.58f;
+    scenario.initialParameterValues["node0/param/filter_cutoff"] = 0.64f;
+
+    daisyhost::RenderTimelineEvent noteOnA;
+    noteOnA.timeSeconds = 0.0;
+    noteOnA.type = daisyhost::RenderTimelineEventType::kMidi;
+    noteOnA.midiMessage = {0x90, 48, 110};
+    scenario.timeline.push_back(noteOnA);
+
+    daisyhost::RenderTimelineEvent noteOnB;
+    noteOnB.timeSeconds = 0.05;
+    noteOnB.type = daisyhost::RenderTimelineEventType::kMidi;
+    noteOnB.midiMessage = {0x90, 55, 96};
+    scenario.timeline.push_back(noteOnB);
+
+    daisyhost::RenderTimelineEvent pageEvent;
+    pageEvent.timeSeconds = 0.1;
+    pageEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    pageEvent.menuItemId = "node0/menu/pages/page";
+    pageEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(pageEvent);
+
+    daisyhost::RenderTimelineEvent resonanceEvent;
+    resonanceEvent.timeSeconds = 0.12;
+    resonanceEvent.type = daisyhost::RenderTimelineEventType::kParameterSet;
+    resonanceEvent.parameterId = "node0/param/resonance";
+    resonanceEvent.normalizedValue = 0.55f;
+    scenario.timeline.push_back(resonanceEvent);
+
+    daisyhost::RenderTimelineEvent stereoEvent;
+    stereoEvent.timeSeconds = 0.18;
+    stereoEvent.type = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    stereoEvent.menuItemId = "node0/menu/utilities/stereo_sim";
+    stereoEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(stereoEvent);
+
+    daisyhost::RenderTimelineEvent noteOffA;
+    noteOffA.timeSeconds = 0.24;
+    noteOffA.type = daisyhost::RenderTimelineEventType::kMidi;
+    noteOffA.midiMessage = {0x80, 48, 0};
+    scenario.timeline.push_back(noteOffA);
+
+    daisyhost::RenderTimelineEvent gateEvent;
+    gateEvent.timeSeconds = 0.3;
+    gateEvent.type = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId = "node0/port/gate_in_1";
+    gateEvent.gateValue = true;
+    scenario.timeline.push_back(gateEvent);
+
+    daisyhost::RenderTimelineEvent gateReleaseEvent;
+    gateReleaseEvent.timeSeconds = 0.35;
+    gateReleaseEvent.type = daisyhost::RenderTimelineEventType::kGateSet;
+    gateReleaseEvent.portId = "node0/port/gate_in_1";
+    gateReleaseEvent.gateValue = false;
+    scenario.timeline.push_back(gateReleaseEvent);
+
+    daisyhost::RenderResult firstResult;
+    daisyhost::RenderResult secondResult;
+    std::string             errorMessage;
+
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &firstResult, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &secondResult, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(firstResult.manifest.appId, "vasynth");
+    EXPECT_EQ(firstResult.manifest.audioChecksum, secondResult.manifest.audioChecksum);
+    ASSERT_EQ(firstResult.audioChannels.size(), 2u);
+    EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
+    EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
 }
 
 TEST(RenderRuntimeTest, RejectsUnknownPortId)
@@ -139,16 +469,52 @@ TEST(RenderRuntimeTest, OrdersSameTimestampEventsByPriority)
 {
     auto scenario = MakeBaseScenario("multidelay");
     const auto parameterId = FirstParameterId("multidelay");
-    const auto cvPortId = FirstCvPortId("multidelay");
+    const auto cvPortId    = FirstCvPortId("multidelay");
     const auto gatePortId = FirstGatePortId("multidelay");
 
+    auto impulseEvent         = daisyhost::RenderTimelineEvent{};
+    impulseEvent.timeSeconds  = 0.0;
+    impulseEvent.type         = daisyhost::RenderTimelineEventType::kImpulse;
+
+    auto midiEvent                 = daisyhost::RenderTimelineEvent{};
+    midiEvent.timeSeconds          = 0.0;
+    midiEvent.type                 = daisyhost::RenderTimelineEventType::kMidi;
+    midiEvent.midiMessage.status   = 0x90;
+    midiEvent.midiMessage.data1    = 60;
+    midiEvent.midiMessage.data2    = 100;
+
+    auto gateEvent        = daisyhost::RenderTimelineEvent{};
+    gateEvent.timeSeconds = 0.0;
+    gateEvent.type        = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId      = gatePortId;
+    gateEvent.gateValue   = true;
+
+    auto audioConfigEvent          = daisyhost::RenderTimelineEvent{};
+    audioConfigEvent.timeSeconds   = 0.0;
+    audioConfigEvent.type          = daisyhost::RenderTimelineEventType::kAudioInputConfig;
+    audioConfigEvent.hasAudioMode  = true;
+    audioConfigEvent.audioMode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kTriangleInput);
+
+    auto cvEvent             = daisyhost::RenderTimelineEvent{};
+    cvEvent.timeSeconds      = 0.0;
+    cvEvent.type             = daisyhost::RenderTimelineEventType::kCvSet;
+    cvEvent.portId           = cvPortId;
+    cvEvent.normalizedValue  = 0.7f;
+
+    auto parameterEvent            = daisyhost::RenderTimelineEvent{};
+    parameterEvent.timeSeconds     = 0.0;
+    parameterEvent.type            = daisyhost::RenderTimelineEventType::kParameterSet;
+    parameterEvent.parameterId     = parameterId;
+    parameterEvent.normalizedValue = 0.6f;
+
     scenario.timeline = {
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kImpulse},
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kMidi, "", "", "", 0.0f, false, {0x90, 60, 100}},
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kGateSet, "", gatePortId, "", 0.0f, true},
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kAudioInputConfig, "", "", "", 0.0f, false, {}, 0, true, static_cast<int>(daisyhost::TestInputSignalMode::kTriangleInput)},
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kCvSet, "", cvPortId, "", 0.7f},
-        daisyhost::RenderTimelineEvent{0.0, daisyhost::RenderTimelineEventType::kParameterSet, parameterId, "", "", 0.6f},
+        impulseEvent,
+        midiEvent,
+        gateEvent,
+        audioConfigEvent,
+        cvEvent,
+        parameterEvent,
     };
     scenario.timeline[3].hasAudioLevel = true;
     scenario.timeline[3].audioLevel = 4.0f;
@@ -376,6 +742,149 @@ TEST(RenderRuntimeTest, ProducesDeterministicCloudSeedRenderWithMenuActions)
     ASSERT_GE(firstResult.manifest.executedTimeline.size(), 5u);
     EXPECT_EQ(firstResult.manifest.executedTimeline[0].type,
               daisyhost::RenderTimelineEventType::kMenuSetItem);
+}
+
+TEST(RenderRuntimeTest, RunsTwoNodeAudioChainScenario)
+{
+    daisyhost::RenderScenario scenario;
+    scenario.appId                           = "multidelay";
+    scenario.renderConfig.sampleRate         = 48000.0;
+    scenario.renderConfig.blockSize          = 48;
+    scenario.renderConfig.durationSeconds    = 0.25;
+    scenario.renderConfig.outputChannelCount = 2;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kSineInput);
+    scenario.audioInput.level       = 6.0f;
+    scenario.audioInput.frequencyHz = 220.0f;
+    scenario.selectedNodeId         = "node0";
+    scenario.entryNodeId            = "node0";
+    scenario.outputNodeId           = "node1";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "cloudseed", 456u});
+    scenario.routes.push_back({"node0/port/audio_out_1", "node1/port/audio_in_1"});
+    scenario.routes.push_back({"node0/port/audio_out_2", "node1/port/audio_in_2"});
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(result.manifest.appId, "multidelay");
+    ASSERT_EQ(result.manifest.nodes.size(), 2u);
+    EXPECT_EQ(result.manifest.nodes[0].nodeId, "node0");
+    EXPECT_EQ(result.manifest.nodes[0].appId, "multidelay");
+    EXPECT_EQ(result.manifest.nodes[1].nodeId, "node1");
+    EXPECT_EQ(result.manifest.nodes[1].appId, "cloudseed");
+    ASSERT_EQ(result.manifest.routes.size(), 2u);
+    EXPECT_EQ(result.manifest.routes[0].sourcePortId, "node0/port/audio_out_1");
+    EXPECT_EQ(result.manifest.routes[0].destPortId, "node1/port/audio_in_1");
+    ASSERT_EQ(result.audioChannels.size(), 2u);
+    EXPECT_GT(result.manifest.channelSummaries[0].peak, 0.0f);
+    EXPECT_GT(result.manifest.channelSummaries[1].peak, 0.0f);
+}
+
+TEST(RenderRuntimeTest, RejectsUnsupportedCrossNodeCvRoute)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "torus", 456u});
+    scenario.routes.push_back({"node0/port/audio_out_1", "node1/port/gate_in_1"});
+
+    std::string             errorMessage;
+    daisyhost::RenderResult result;
+    EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
+    EXPECT_NE(errorMessage.find("audio routes only"), std::string::npos);
+}
+
+TEST(RenderRuntimeTest, RejectsAmbiguousMultiNodeImpulseWithoutTargetNodeId)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "cloudseed", 456u});
+    scenario.entryNodeId  = "node0";
+    scenario.outputNodeId = "node1";
+    scenario.routes.push_back({"node0/port/audio_out_1", "node1/port/audio_in_1"});
+    scenario.routes.push_back({"node0/port/audio_out_2", "node1/port/audio_in_2"});
+
+    daisyhost::RenderTimelineEvent impulseEvent;
+    impulseEvent.timeSeconds = 0.05;
+    impulseEvent.type        = daisyhost::RenderTimelineEventType::kImpulse;
+    scenario.timeline.push_back(impulseEvent);
+
+    std::string             errorMessage;
+    daisyhost::RenderResult result;
+    EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
+    EXPECT_NE(errorMessage.find("targetNodeId"), std::string::npos);
+}
+
+TEST(RenderRuntimeTest, RunsReverseTwoNodeAudioChainScenario)
+{
+    daisyhost::RenderScenario scenario;
+    scenario.boardId                         = "daisy_patch";
+    scenario.appId                           = "multidelay";
+    scenario.renderConfig.sampleRate         = 48000.0;
+    scenario.renderConfig.blockSize          = 48;
+    scenario.renderConfig.durationSeconds    = 0.25;
+    scenario.renderConfig.outputChannelCount = 2;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kSineInput);
+    scenario.audioInput.level       = 6.0f;
+    scenario.audioInput.frequencyHz = 220.0f;
+    scenario.selectedNodeId         = "node0";
+    scenario.entryNodeId            = "node1";
+    scenario.outputNodeId           = "node0";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "cloudseed", 456u});
+    scenario.routes.push_back({"node1/port/audio_out_1", "node0/port/audio_in_1"});
+    scenario.routes.push_back({"node1/port/audio_out_2", "node0/port/audio_in_2"});
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(result.manifest.boardId, "daisy_patch");
+    EXPECT_EQ(result.manifest.selectedNodeId, "node0");
+    EXPECT_EQ(result.manifest.entryNodeId, "node1");
+    EXPECT_EQ(result.manifest.outputNodeId, "node0");
+    ASSERT_EQ(result.manifest.routes.size(), 2u);
+    EXPECT_EQ(result.manifest.routes[0].sourcePortId, "node1/port/audio_out_1");
+    EXPECT_EQ(result.manifest.routes[0].destPortId, "node0/port/audio_in_1");
+    ASSERT_EQ(result.audioChannels.size(), 2u);
+}
+
+TEST(RenderRuntimeTest, FieldBoardShellPreservesFrozenTwoNodeRackContract)
+{
+    daisyhost::RenderScenario scenario;
+    scenario.boardId                         = "daisy_field";
+    scenario.appId                           = "multidelay";
+    scenario.renderConfig.sampleRate         = 48000.0;
+    scenario.renderConfig.blockSize          = 48;
+    scenario.renderConfig.durationSeconds    = 0.25;
+    scenario.renderConfig.outputChannelCount = 2;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kSineInput);
+    scenario.audioInput.level       = 6.0f;
+    scenario.audioInput.frequencyHz = 220.0f;
+    scenario.selectedNodeId         = "node0";
+    scenario.entryNodeId            = "node0";
+    scenario.outputNodeId           = "node1";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "cloudseed", 456u});
+    scenario.routes.push_back({"node0/port/audio_out_1", "node1/port/audio_in_1"});
+    scenario.routes.push_back({"node0/port/audio_out_2", "node1/port/audio_in_2"});
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(result.manifest.boardId, "daisy_field");
+    EXPECT_EQ(result.manifest.selectedNodeId, "node0");
+    EXPECT_EQ(result.manifest.entryNodeId, "node0");
+    EXPECT_EQ(result.manifest.outputNodeId, "node1");
+    ASSERT_EQ(result.manifest.nodes.size(), 2u);
+    ASSERT_EQ(result.manifest.routes.size(), 2u);
 }
 
 TEST(RenderRuntimeTest, WritesAudioAndManifestOutputs)

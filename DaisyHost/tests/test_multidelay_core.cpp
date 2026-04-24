@@ -115,12 +115,111 @@ TEST(MultiDelayCoreTest, ExposesTopLevelMenuSectionsAndClosedStatusByDefault)
 
     const auto* root = FindSection(menu, "root");
     ASSERT_NE(root, nullptr);
-    ASSERT_EQ(root->items.size(), 5u);
+    ASSERT_EQ(root->items.size(), 6u);
     EXPECT_EQ(root->items[0].label, "Params");
-    EXPECT_EQ(root->items[1].label, "Input");
-    EXPECT_EQ(root->items[2].label, "MIDI");
-    EXPECT_EQ(root->items[3].label, "Tracker");
-    EXPECT_EQ(root->items[4].label, "About");
+    EXPECT_EQ(root->items[1].label, "Macros");
+    EXPECT_EQ(root->items[2].label, "Input");
+    EXPECT_EQ(root->items[3].label, "MIDI");
+    EXPECT_EQ(root->items[4].label, "Tracker");
+    EXPECT_EQ(root->items[5].label, "About");
+
+    const auto* macros = FindSection(menu, "macros");
+    ASSERT_NE(macros, nullptr);
+    ASSERT_EQ(macros->items.size(), 4u);
+    EXPECT_EQ(macros->items[1].label, "Blend");
+    EXPECT_EQ(macros->items[2].label, "Space");
+    EXPECT_EQ(macros->items[3].label, "Regen");
+}
+
+TEST(MultiDelayCoreTest, MetaControllersReflectCanonicalStateAndWriteThrough)
+{
+    daisyhost::apps::MultiDelayCore core("node0");
+    core.Prepare(48000.0, 64);
+
+    const auto& metaControllers = core.GetMetaControllers();
+    ASSERT_EQ(metaControllers.size(), 3u);
+    EXPECT_EQ(metaControllers[0].id, "node0/meta/blend");
+    EXPECT_EQ(metaControllers[0].label, "Blend");
+    EXPECT_FLOAT_EQ(metaControllers[0].defaultNormalizedValue, 0.50f);
+    EXPECT_FLOAT_EQ(metaControllers[0].normalizedValue, 0.50f);
+    EXPECT_TRUE(metaControllers[0].stateful);
+    EXPECT_EQ(metaControllers[1].id, "node0/meta/space");
+    EXPECT_EQ(metaControllers[1].label, "Space");
+    EXPECT_FLOAT_EQ(metaControllers[1].defaultNormalizedValue, 0.0f);
+    EXPECT_TRUE(metaControllers[1].stateful);
+    EXPECT_EQ(metaControllers[2].id, "node0/meta/regen");
+    EXPECT_EQ(metaControllers[2].label, "Regen");
+    EXPECT_FLOAT_EQ(metaControllers[2].defaultNormalizedValue, 0.0f);
+    EXPECT_TRUE(metaControllers[2].stateful);
+
+    ASSERT_TRUE(core.SetMetaControllerValue("node0/meta/blend", 0.25f));
+    ASSERT_TRUE(core.SetMetaControllerValue("node0/meta/space", 0.75f));
+    ASSERT_TRUE(core.SetMetaControllerValue("node0/meta/regen", 0.60f));
+
+    const auto dryWet = core.GetParameterValue("node0/param/dry_wet");
+    const auto primary = core.GetParameterValue("node0/param/delay_primary");
+    const auto secondary = core.GetParameterValue("node0/param/delay_secondary");
+    const auto tertiary = core.GetParameterValue("node0/param/delay_tertiary");
+    const auto feedback = core.GetParameterValue("node0/param/feedback");
+    ASSERT_TRUE(dryWet.hasValue);
+    ASSERT_TRUE(primary.hasValue);
+    ASSERT_TRUE(secondary.hasValue);
+    ASSERT_TRUE(tertiary.hasValue);
+    ASSERT_TRUE(feedback.hasValue);
+    EXPECT_NEAR(dryWet.value, 0.25f, 0.0001f);
+    EXPECT_NEAR(primary.value, 0.75f, 0.0001f);
+    EXPECT_NEAR(secondary.value, 0.725f, 0.0001f);
+    EXPECT_NEAR(tertiary.value, 0.70f, 0.0001f);
+    EXPECT_NEAR(feedback.value, 0.56f, 0.0001f);
+
+    const auto blend = core.GetMetaControllerValue("node0/meta/blend");
+    const auto space = core.GetMetaControllerValue("node0/meta/space");
+    const auto regen = core.GetMetaControllerValue("node0/meta/regen");
+    ASSERT_TRUE(blend.hasValue);
+    ASSERT_TRUE(space.hasValue);
+    ASSERT_TRUE(regen.hasValue);
+    EXPECT_NEAR(blend.value, 0.25f, 0.0001f);
+    EXPECT_NEAR(space.value, 0.75f, 0.0001f);
+    EXPECT_NEAR(regen.value, 0.60f, 0.0001f);
+
+    ASSERT_TRUE(core.SetParameterValue("node0/param/delay_primary", 0.40f));
+    const auto derivedSpace = core.GetMetaControllerValue("node0/meta/space");
+    ASSERT_TRUE(derivedSpace.hasValue);
+    EXPECT_NEAR(derivedSpace.value, 0.40f, 0.0001f);
+
+    const auto captured = core.CaptureStatefulParameterValues();
+    EXPECT_EQ(captured.size(), 5u);
+    EXPECT_EQ(captured.count("node0/meta/blend"), 0u);
+    EXPECT_EQ(captured.count("node0/meta/space"), 0u);
+    EXPECT_EQ(captured.count("node0/meta/regen"), 0u);
+    EXPECT_FALSE(core.SetMetaControllerValue("node0/meta/unknown", 0.5f));
+    EXPECT_FALSE(core.GetMetaControllerValue("node0/meta/unknown").hasValue);
+}
+
+TEST(MultiDelayCoreTest, MacroMenuItemsWriteIntoCanonicalParameters)
+{
+    daisyhost::apps::MultiDelayCore core("node0");
+    core.Prepare(48000.0, 64);
+
+    core.SetMenuItemValue("node0/menu/macros/blend", 0.30f);
+    core.SetMenuItemValue("node0/menu/macros/space", 0.25f);
+    core.SetMenuItemValue("node0/menu/macros/regen", 0.80f);
+
+    const auto dryWet = core.GetParameterValue("node0/param/dry_wet");
+    const auto primary = core.GetParameterValue("node0/param/delay_primary");
+    const auto secondary = core.GetParameterValue("node0/param/delay_secondary");
+    const auto tertiary = core.GetParameterValue("node0/param/delay_tertiary");
+    const auto feedback = core.GetParameterValue("node0/param/feedback");
+    ASSERT_TRUE(dryWet.hasValue);
+    ASSERT_TRUE(primary.hasValue);
+    ASSERT_TRUE(secondary.hasValue);
+    ASSERT_TRUE(tertiary.hasValue);
+    ASSERT_TRUE(feedback.hasValue);
+    EXPECT_NEAR(dryWet.value, 0.30f, 0.0001f);
+    EXPECT_NEAR(primary.value, 0.25f, 0.0001f);
+    EXPECT_NEAR(secondary.value, 0.275f, 0.0001f);
+    EXPECT_NEAR(tertiary.value, 0.30f, 0.0001f);
+    EXPECT_NEAR(feedback.value, 0.73f, 0.0001f);
 }
 
 TEST(MultiDelayCoreTest, EncoderNavigatesMenuAndEditsParametersLive)

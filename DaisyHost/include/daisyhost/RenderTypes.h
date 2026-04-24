@@ -26,6 +26,19 @@ struct RenderAudioInputConfig
     float frequencyHz = 220.0f;
 };
 
+struct RenderNodeConfig
+{
+    std::string   nodeId;
+    std::string   appId;
+    std::uint32_t seed = 0;
+};
+
+struct RenderRoute
+{
+    std::string sourcePortId;
+    std::string destPortId;
+};
+
 enum class RenderTimelineEventType
 {
     kParameterSet,
@@ -43,6 +56,7 @@ struct RenderTimelineEvent
 {
     double                  timeSeconds      = 0.0;
     RenderTimelineEventType type             = RenderTimelineEventType::kParameterSet;
+    std::string             targetNodeId;
     std::string             parameterId;
     std::string             portId;
     std::string             menuItemId;
@@ -60,12 +74,18 @@ struct RenderTimelineEvent
 
 struct RenderScenario
 {
-    std::string                 appId;
-    RenderConfig                renderConfig;
-    std::uint32_t               seed = 0;
+    std::string                  appId;
+    std::string                  boardId        = "daisy_patch";
+    std::string                  selectedNodeId = "node0";
+    std::string                  entryNodeId    = "node0";
+    std::string                  outputNodeId   = "node0";
+    RenderConfig                 renderConfig;
+    std::uint32_t                seed = 0;
     std::map<std::string, float> initialParameterValues;
-    RenderAudioInputConfig      audioInput;
+    RenderAudioInputConfig       audioInput;
     std::vector<RenderTimelineEvent> timeline;
+    std::vector<RenderNodeConfig>     nodes;
+    std::vector<RenderRoute>          routes;
 };
 
 struct RenderChannelSummary
@@ -74,9 +94,26 @@ struct RenderChannelSummary
     float rms  = 0.0f;
 };
 
+struct RenderNodeResultSummary
+{
+    std::string                  nodeId;
+    std::string                  appId;
+    std::string                  appDisplayName;
+    std::uint32_t                seed = 0;
+    std::map<std::string, float> initialParameterValues;
+    std::map<std::string, float> finalParameterValues;
+    std::map<std::string, float> finalEffectiveParameterValues;
+    std::map<std::string, float> finalCvInputs;
+    std::map<std::string, bool>  finalGateInputs;
+};
+
 struct RenderResultManifest
 {
     std::string                  appId;
+    std::string                  boardId;
+    std::string                  selectedNodeId;
+    std::string                  entryNodeId;
+    std::string                  outputNodeId;
     std::string                  appDisplayName;
     RenderConfig                 renderConfig;
     std::uint64_t                frameCount = 0;
@@ -93,6 +130,8 @@ struct RenderResultManifest
     std::string                  audioChecksum;
     std::string                  audioPath;
     std::string                  manifestPath;
+    std::vector<RenderNodeResultSummary> nodes;
+    std::vector<RenderRoute>             routes;
 };
 
 struct RenderResult

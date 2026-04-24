@@ -1,9 +1,37 @@
 #include "daisyhost/BoardProfile.h"
 
+#include <stdexcept>
+
 #include "daisyhost/apps/MultiDelayCore.h"
 
 namespace daisyhost
 {
+std::vector<std::string> GetSupportedBoardIds()
+{
+    return {"daisy_patch"};
+}
+
+std::optional<BoardProfile> TryCreateBoardProfile(const std::string& boardId,
+                                                  const std::string& nodeId)
+{
+    if(boardId == "daisy_patch")
+    {
+        return MakeDaisyPatchProfile(nodeId);
+    }
+
+    return std::nullopt;
+}
+
+BoardProfile CreateBoardProfile(const std::string& boardId, const std::string& nodeId)
+{
+    if(const auto profile = TryCreateBoardProfile(boardId, nodeId))
+    {
+        return *profile;
+    }
+
+    throw std::invalid_argument("Unsupported DaisyHost board id: " + boardId);
+}
+
 namespace
 {
 VirtualPort MakePort(const std::string& id,

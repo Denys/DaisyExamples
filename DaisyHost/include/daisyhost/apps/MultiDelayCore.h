@@ -48,6 +48,11 @@ class MultiDelayCore : public HostedAppCore
         const std::string& parameterId) const override;
     ParameterValueLookup GetEffectiveParameterValue(
         const std::string& parameterId) const override;
+    const std::vector<MetaControllerDescriptor>& GetMetaControllers() const override;
+    bool SetMetaControllerValue(const std::string& controllerId,
+                                float              normalizedValue) override;
+    ParameterValueLookup GetMetaControllerValue(
+        const std::string& controllerId) const override;
     void ResetToDefaultState(std::uint32_t seed = 0) override;
     std::unordered_map<std::string, float> CaptureStatefulParameterValues()
         const override;
@@ -102,6 +107,15 @@ class MultiDelayCore : public HostedAppCore
         kKnob,
         kCv,
         kMenu,
+        kMacro,
+    };
+
+    enum class MetaControllerIndex : std::size_t
+    {
+        kBlend = 0,
+        kSpace,
+        kRegen,
+        kCount,
     };
 
     struct DelayState
@@ -120,7 +134,13 @@ class MultiDelayCore : public HostedAppCore
     ParameterDescriptor* FindParameterById(const std::string& parameterId);
     const ParameterDescriptor* FindParameterById(
         const std::string& parameterId) const;
+    MetaControllerDescriptor* FindMetaControllerById(
+        const std::string& controllerId);
+    const MetaControllerDescriptor* FindMetaControllerById(
+        const std::string& controllerId) const;
     void  UpdateMappedStateFromParameters();
+    void  UpdateMetaControllersFromParameters();
+    float DeriveMetaControllerValue(MetaControllerIndex index) const;
     void  SyncMenuModel();
     void  UpdateDisplay();
     std::string FormatPercent(float normalized) const;
@@ -149,6 +169,7 @@ class MultiDelayCore : public HostedAppCore
     std::size_t                                  delayLineCount_   = 0;
     std::unique_ptr<DelayLineType[]>             ownedDelayLines_;
     std::vector<ParameterDescriptor>             parameters_;
+    std::vector<MetaControllerDescriptor>        metaControllers_;
     std::array<std::uint64_t, static_cast<std::size_t>(ParameterIndex::kCount)>
         parameterTouchSerials_;
     std::array<ParameterSource, static_cast<std::size_t>(ParameterIndex::kCount)>
