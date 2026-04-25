@@ -128,6 +128,43 @@ bool HasMeaningfulAutomationDelta(float left, float right)
 {
     return std::abs(left - right) > kAutomationParameterEpsilon;
 }
+
+const daisyhost::BoardSurfaceBinding* FindFieldKnobBinding(
+    const daisyhost::DaisyFieldControlMapping& mapping,
+    std::size_t                                index)
+{
+    return index < mapping.knobs.size() ? &mapping.knobs[index] : nullptr;
+}
+
+const daisyhost::BoardSurfaceBinding* FindFieldSwitchBinding(
+    const daisyhost::DaisyFieldControlMapping& mapping,
+    std::size_t                                index)
+{
+    return index < mapping.switches.size() ? &mapping.switches[index] : nullptr;
+}
+
+bool ApplySurfaceBinding(daisyhost::HostedAppCore&              core,
+                         const daisyhost::BoardSurfaceBinding& binding,
+                         float                                normalizedValue)
+{
+    switch(binding.targetKind)
+    {
+        case daisyhost::BoardSurfaceTargetKind::kControl:
+            core.SetControl(binding.targetId, normalizedValue);
+            return true;
+        case daisyhost::BoardSurfaceTargetKind::kParameter:
+            return core.SetParameterValue(binding.targetId, normalizedValue);
+        case daisyhost::BoardSurfaceTargetKind::kMenuItem:
+            core.SetMenuItemValue(binding.targetId, normalizedValue);
+            return true;
+        case daisyhost::BoardSurfaceTargetKind::kUnavailable:
+        case daisyhost::BoardSurfaceTargetKind::kCvInput:
+        case daisyhost::BoardSurfaceTargetKind::kGateInput:
+        case daisyhost::BoardSurfaceTargetKind::kMidiNote:
+        case daisyhost::BoardSurfaceTargetKind::kLed: return false;
+    }
+    return false;
+}
 } // namespace
 
 class DaisyHostAutomationParameter final : public juce::AudioParameterFloat
@@ -177,6 +214,18 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
             node.cvGeneratorStates[i].amplitudeVolts = 2.5f;
             node.cvGeneratorStates[i].frequencyHz    = 1.0f;
         }
+        for(auto& value : node.fieldKnobValues)
+        {
+            value = 0.0f;
+        }
+        for(auto& pressed : node.fieldKeyPressed)
+        {
+            pressed = false;
+        }
+        for(auto& pressed : node.fieldSwitchPressed)
+        {
+            pressed = false;
+        }
         for(std::size_t i = 0; i < node.gateValues.size(); ++i)
         {
             node.gateValues[i]         = false;
@@ -212,7 +261,7 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
     {
         if(!pendingHubStartupRequest_->boardId.empty())
         {
-            boardId_ = pendingHubStartupRequest_->boardId;
+            TryApplyBoardId(pendingHubStartupRequest_->boardId);
         }
         if(!pendingHubStartupRequest_->appId.empty())
         {
@@ -305,9 +354,57 @@ std::string DaisyHostPatchAudioProcessor::MakeComputerKeyboardOctaveStateId(
     return nodeId + "/host/computer_keyboard_octave";
 }
 
+daisyhost::DaisyFieldControlMapping
+DaisyHostPatchAudioProcessor::BuildActiveFieldControlMapping() const
+{
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& selectedNode = GetSelectedRackNode();
+    if(core_ != nullptr)
+    {
+        return daisyhost::BuildDaisyFieldControlMapping(
+            activeBindings_,
+            core_->GetParameters(),
+            core_->GetMenuModel(),
+            computerKeyboardOctave_.load(),
+            selectedNode.nodeId);
+    }
+
+    return daisyhost::BuildDaisyFieldControlMapping(activeBindings_,
+                                                    latestParameters_,
+                                                    latestMenu_,
+                                                    computerKeyboardOctave_.load(),
+                                                    selectedNode.nodeId);
+}
+
+bool DaisyHostPatchAudioProcessor::TryApplyBoardId(const std::string& requestedBoardId)
+{
+    const std::string boardId
+        = requestedBoardId.empty() ? std::string("daisy_patch") : requestedBoardId;
+    if(boardId_ == "daisy_field" && boardId != "daisy_field")
+    {
+        ReleaseFieldKeys();
+        ReleaseFieldSwitches();
+    }
+    if(const auto profile
+       = daisyhost::TryCreateBoardProfile(boardId, GetSelectedRackNode().nodeId))
+    {
+        boardId_      = boardId;
+        boardProfile_ = *profile;
+        return true;
+    }
+
+    if(const auto fallback
+       = daisyhost::TryCreateBoardProfile("daisy_patch", GetSelectedRackNode().nodeId))
+    {
+        boardId_      = "daisy_patch";
+        boardProfile_ = *fallback;
+    }
+    return false;
+}
+
 void DaisyHostPatchAudioProcessor::UpdateSelectedBoardProfile()
 {
-    boardProfile_ = daisyhost::CreateBoardProfile(boardId_, GetSelectedRackNode().nodeId);
+    TryApplyBoardId(boardId_);
 }
 
 void DaisyHostPatchAudioProcessor::UpdateRackNodeSnapshots(RackNodeState& node)
@@ -347,6 +444,18 @@ void DaisyHostPatchAudioProcessor::FlushSelectedNodeStateToRack()
         node.audioOutputPeaks[i] = audioOutputPeaks_[i].load();
         node.cvGeneratorStates[i] = cvGeneratorStates_[i];
     }
+    for(std::size_t i = 0; i < node.fieldKnobValues.size(); ++i)
+    {
+        node.fieldKnobValues[i] = fieldKnobValues_[i].load();
+    }
+    for(std::size_t i = 0; i < node.fieldKeyPressed.size(); ++i)
+    {
+        node.fieldKeyPressed[i] = fieldKeyPressed_[i].load();
+    }
+    for(std::size_t i = 0; i < node.fieldSwitchPressed.size(); ++i)
+    {
+        node.fieldSwitchPressed[i] = fieldSwitchPressed_[i].load();
+    }
     for(std::size_t i = 0; i < node.gateValues.size(); ++i)
     {
         node.gateValues[i]         = gateValues_[i].load();
@@ -385,6 +494,18 @@ void DaisyHostPatchAudioProcessor::SyncSelectedNodeStateFromRack()
         audioInputPeaks_[i].store(node.audioInputPeaks[i]);
         audioOutputPeaks_[i].store(node.audioOutputPeaks[i]);
         cvGeneratorStates_[i] = node.cvGeneratorStates[i];
+    }
+    for(std::size_t i = 0; i < node.fieldKnobValues.size(); ++i)
+    {
+        fieldKnobValues_[i].store(node.fieldKnobValues[i]);
+    }
+    for(std::size_t i = 0; i < node.fieldKeyPressed.size(); ++i)
+    {
+        fieldKeyPressed_[i].store(node.fieldKeyPressed[i]);
+    }
+    for(std::size_t i = 0; i < node.fieldSwitchPressed.size(); ++i)
+    {
+        fieldSwitchPressed_[i].store(node.fieldSwitchPressed[i]);
     }
     for(std::size_t i = 0; i < node.gateValues.size(); ++i)
     {
@@ -469,6 +590,7 @@ void DaisyHostPatchAudioProcessor::ApplyRackNodeVirtualPortStateToCore(
 void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
                                                  int    samplesPerBlock)
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     currentSampleRate_ = sampleRate;
     currentBlockSize_  = static_cast<std::size_t>(std::max(1, samplesPerBlock));
 
@@ -546,6 +668,7 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     juce::ScopedNoDenormals noDenormals;
     const int              numSamples = buffer.getNumSamples();
     isProcessingBlock_.store(true);
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
 
     virtualKeyboardState_.processNextMidiBuffer(
         midiMessages, 0, numSamples, true);
@@ -899,6 +1022,12 @@ void DaisyHostPatchAudioProcessor::getStateInformation(juce::MemoryBlock& destDa
                 state.controlValues[node.bindings.knobControlIds[i]]
                     = node.topControlValues[i];
             }
+            if(boardId_ == "daisy_field")
+            {
+                state.controlValues[daisyhost::MakeDaisyFieldKnobControlId(
+                    node.nodeId, i)]
+                    = node.fieldKnobValues[i];
+            }
             if(!node.bindings.cvInputPortIds[i].empty())
             {
                 state.cvValues[node.bindings.cvInputPortIds[i]] = node.cvValues[i];
@@ -918,6 +1047,17 @@ void DaisyHostPatchAudioProcessor::getStateInformation(juce::MemoryBlock& destDa
                 = node.cvGeneratorStates[i].biasVolts;
             state.controlValues[MakeCvHostStateId(node.nodeId, i, "manual_volts")]
                 = node.cvGeneratorStates[i].manualVolts;
+        }
+        if(boardId_ == "daisy_field")
+        {
+            for(std::size_t i = node.bindings.knobControlIds.size();
+                i < node.fieldKnobValues.size();
+                ++i)
+            {
+                state.controlValues[daisyhost::MakeDaisyFieldKnobControlId(
+                    node.nodeId, i)]
+                    = node.fieldKnobValues[i];
+            }
         }
         for(std::size_t i = 0; i < node.bindings.gateInputPortIds.size(); ++i)
         {
@@ -1006,6 +1146,7 @@ juce::String DaisyHostPatchAudioProcessor::GetActiveAppId() const
 
 juce::String DaisyHostPatchAudioProcessor::GetActiveAppDisplayName() const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return core_ != nullptr ? juce::String(core_->GetAppDisplayName())
                             : juce::String();
 }
@@ -1017,11 +1158,13 @@ std::size_t DaisyHostPatchAudioProcessor::GetRackNodeCount() const
 
 juce::String DaisyHostPatchAudioProcessor::GetSelectedRackNodeId() const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return rackNodes_[selectedRackNodeIndex_].nodeId;
 }
 
 bool DaisyHostPatchAudioProcessor::SetSelectedRackNodeId(const std::string& nodeId)
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     for(std::size_t index = 0; index < rackNodes_.size(); ++index)
     {
         if(rackNodes_[index].nodeId != nodeId)
@@ -1029,6 +1172,8 @@ bool DaisyHostPatchAudioProcessor::SetSelectedRackNodeId(const std::string& node
             continue;
         }
 
+        ReleaseFieldKeys();
+        ReleaseFieldSwitches();
         FlushSelectedNodeStateToRack();
         selectedRackNodeIndex_ = index;
         SyncSelectedNodeStateFromRack();
@@ -1041,17 +1186,20 @@ bool DaisyHostPatchAudioProcessor::SetSelectedRackNodeId(const std::string& node
 
 juce::String DaisyHostPatchAudioProcessor::GetRackNodeId(std::size_t index) const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return index < rackNodes_.size() ? juce::String(rackNodes_[index].nodeId) : juce::String();
 }
 
 juce::String DaisyHostPatchAudioProcessor::GetRackNodeAppId(std::size_t index) const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return index < rackNodes_.size() ? juce::String(rackNodes_[index].appId) : juce::String();
 }
 
 juce::String DaisyHostPatchAudioProcessor::GetRackNodeAppDisplayName(
     std::size_t index) const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     if(index >= rackNodes_.size() || rackNodes_[index].core == nullptr)
     {
         return {};
@@ -1062,6 +1210,7 @@ juce::String DaisyHostPatchAudioProcessor::GetRackNodeAppDisplayName(
 bool DaisyHostPatchAudioProcessor::SetRackNodeAppId(std::size_t index,
                                                     const std::string& requestedAppId)
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     if(index >= rackNodes_.size())
     {
         return false;
@@ -1158,6 +1307,7 @@ juce::String DaisyHostPatchAudioProcessor::GetTopControlLabel(std::size_t index)
 
 juce::String DaisyHostPatchAudioProcessor::GetTopControlDetailLabel(std::size_t index) const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return index < activeBindings_.knobDetailLabels.size()
                ? juce::String(activeBindings_.knobDetailLabels[index])
                : juce::String();
@@ -1165,9 +1315,169 @@ juce::String DaisyHostPatchAudioProcessor::GetTopControlDetailLabel(std::size_t 
 
 std::string DaisyHostPatchAudioProcessor::GetTopControlId(std::size_t index) const
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     return index < activeBindings_.knobControlIds.size()
                ? activeBindings_.knobControlIds[index]
                : std::string();
+}
+
+bool DaisyHostPatchAudioProcessor::IsDaisyFieldBoard() const
+{
+    return boardId_ == "daisy_field";
+}
+
+float DaisyHostPatchAudioProcessor::GetFieldKnobValue(std::size_t index) const
+{
+    return index < fieldKnobValues_.size() ? fieldKnobValues_[index].load() : 0.0f;
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldKnobLabel(std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKnobBinding(mapping, index);
+    return binding != nullptr ? juce::String(binding->label) : juce::String();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldKnobDetailLabel(
+    std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKnobBinding(mapping, index);
+    return binding != nullptr ? juce::String(binding->detailLabel) : juce::String();
+}
+
+std::string DaisyHostPatchAudioProcessor::GetFieldKnobControlId(
+    std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKnobBinding(mapping, index);
+    return binding != nullptr ? binding->controlId : std::string();
+}
+
+void DaisyHostPatchAudioProcessor::SetFieldKnobValue(std::size_t index,
+                                                     float       normalizedValue)
+{
+    if(index >= fieldKnobValues_.size())
+    {
+        return;
+    }
+
+    const float clamped = Clamp01(normalizedValue);
+    fieldKnobValues_[index].store(clamped);
+    if(index < topControlValues_.size())
+    {
+        topControlValues_[index].store(clamped);
+    }
+    RefreshCoreStateFromIdleHostChange();
+}
+
+int DaisyHostPatchAudioProcessor::GetFieldKeyMidiNote(std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    if(index >= mapping.keys.size())
+    {
+        return -1;
+    }
+    return mapping.keys[index].midiNote;
+}
+
+bool DaisyHostPatchAudioProcessor::GetFieldKeyPressed(std::size_t index) const
+{
+    return index < fieldKeyPressed_.size() && fieldKeyPressed_[index].load();
+}
+
+void DaisyHostPatchAudioProcessor::SetFieldKeyPressed(std::size_t index,
+                                                      bool        pressed)
+{
+    if(index >= fieldKeyPressed_.size() || !IsDaisyFieldBoard())
+    {
+        return;
+    }
+
+    const bool wasPressed = fieldKeyPressed_[index].exchange(pressed);
+    if(wasPressed == pressed)
+    {
+        return;
+    }
+
+    const int midiNote = GetFieldKeyMidiNote(index);
+    if(midiNote >= 0)
+    {
+        SetVirtualKeyboardNote(midiNote, pressed, pressed ? 1.0f : 0.0f);
+    }
+}
+
+float DaisyHostPatchAudioProcessor::GetFieldCvOutputValue(std::size_t index) const
+{
+    const auto snapshot = BuildFieldSurfaceSnapshot();
+    return index < snapshot.cvOutputs.size()
+               ? snapshot.cvOutputs[index].normalizedValue
+               : 0.0f;
+}
+
+float DaisyHostPatchAudioProcessor::GetFieldCvOutputVolts(std::size_t index) const
+{
+    const auto snapshot = BuildFieldSurfaceSnapshot();
+    return index < snapshot.cvOutputs.size() ? snapshot.cvOutputs[index].volts
+                                             : 0.0f;
+}
+
+bool DaisyHostPatchAudioProcessor::GetFieldSwitchPressed(std::size_t index) const
+{
+    return index < fieldSwitchPressed_.size()
+           && fieldSwitchPressed_[index].load();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldSwitchLabel(
+    std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldSwitchBinding(mapping, index);
+    if(binding == nullptr)
+    {
+        return {};
+    }
+    if(!binding->detailLabel.empty())
+    {
+        return juce::String(binding->label + " " + binding->detailLabel);
+    }
+    return juce::String(binding->label);
+}
+
+bool DaisyHostPatchAudioProcessor::GetFieldSwitchAvailable(std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldSwitchBinding(mapping, index);
+    return binding != nullptr && binding->available;
+}
+
+void DaisyHostPatchAudioProcessor::SetFieldSwitchPressed(std::size_t index,
+                                                         bool        pressed)
+{
+    if(index >= fieldSwitchPressed_.size() || !IsDaisyFieldBoard())
+    {
+        return;
+    }
+
+    fieldSwitchPressed_[index].store(pressed);
+    if(pressed)
+    {
+        const auto mapping = BuildActiveFieldControlMapping();
+        const auto* binding = FindFieldSwitchBinding(mapping, index);
+        if(binding != nullptr && binding->available
+           && binding->targetKind == daisyhost::BoardSurfaceTargetKind::kMenuItem)
+        {
+            SetMenuItemValue(binding->targetId, 1.0f);
+        }
+    }
+    RefreshCoreStateFromIdleHostChange();
+}
+
+float DaisyHostPatchAudioProcessor::GetFieldLedValue(std::size_t index) const
+{
+    const auto snapshot = BuildFieldSurfaceSnapshot();
+    return index < snapshot.leds.size() ? snapshot.leds[index].normalizedValue
+                                        : 0.0f;
 }
 
 bool DaisyHostPatchAudioProcessor::GetEncoderPressed() const
@@ -1180,7 +1490,12 @@ void DaisyHostPatchAudioProcessor::SetTopControlValue(std::size_t index,
 {
     if(index < topControlValues_.size())
     {
-        topControlValues_[index].store(Clamp01(normalizedValue));
+        const float clamped = Clamp01(normalizedValue);
+        topControlValues_[index].store(clamped);
+        if(IsDaisyFieldBoard() && index < fieldKnobValues_.size())
+        {
+            fieldKnobValues_[index].store(clamped);
+        }
         RefreshCoreStateFromIdleHostChange();
     }
 }
@@ -1404,6 +1719,101 @@ DaisyHostPatchAudioProcessor::GetParameterSnapshot() const
     return latestParameters_;
 }
 
+daisyhost::EffectiveHostFieldSurfaceSnapshot
+DaisyHostPatchAudioProcessor::BuildFieldSurfaceSnapshot() const
+{
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    daisyhost::EffectiveHostFieldSurfaceSnapshot snapshot;
+    if(!IsDaisyFieldBoard())
+    {
+        return snapshot;
+    }
+
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto nodeId  = GetSelectedRackNode().nodeId;
+    for(std::size_t index = 0; index < mapping.cvOutputs.size(); ++index)
+    {
+        const auto& binding = mapping.cvOutputs[index];
+        auto&       output  = snapshot.cvOutputs[index];
+        output.id           = daisyhost::MakeDaisyFieldCvOutputPortId(nodeId, index);
+        output.label        = binding.label.empty()
+                                  ? "CV OUT " + std::to_string(index + 1)
+                                  : binding.label;
+        output.available    = binding.available;
+        if(binding.available && binding.targetKind == daisyhost::BoardSurfaceTargetKind::kParameter)
+        {
+            daisyhost::ParameterValueLookup value;
+            if(core_ != nullptr)
+            {
+                value = core_->GetParameterValue(binding.targetId);
+            }
+            if(!value.hasValue)
+            {
+                std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
+                const auto it = std::find_if(
+                    latestParameters_.begin(),
+                    latestParameters_.end(),
+                    [&binding](const daisyhost::ParameterDescriptor& parameter) {
+                        return parameter.id == binding.targetId;
+                    });
+                if(it != latestParameters_.end())
+                {
+                    value.hasValue = true;
+                    value.value    = it->normalizedValue;
+                }
+            }
+            if(value.hasValue)
+            {
+                output.normalizedValue = Clamp01(value.value);
+                output.volts           = output.normalizedValue * 5.0f;
+            }
+        }
+    }
+
+    for(std::size_t index = 0; index < mapping.switches.size(); ++index)
+    {
+        const auto& binding = mapping.switches[index];
+        auto&       sw      = snapshot.switches[index];
+        sw.id               = binding.controlId;
+        sw.label            = binding.label.empty()
+                                  ? "SW" + std::to_string(index + 1)
+                                  : binding.label;
+        sw.detailLabel      = binding.detailLabel;
+        sw.available        = binding.available;
+        sw.pressed          = fieldSwitchPressed_[index].load();
+    }
+
+    for(std::size_t index = 0; index < mapping.leds.size(); ++index)
+    {
+        const auto& binding = mapping.leds[index];
+        auto&       led     = snapshot.leds[index];
+        led.id              = binding.controlId;
+        led.label           = binding.label;
+        if(index < daisyhost::kDaisyFieldKeyCount)
+        {
+            led.normalizedValue = fieldKeyPressed_[index].load() ? 1.0f : 0.0f;
+        }
+        else if(index < daisyhost::kDaisyFieldKeyCount + daisyhost::kDaisyFieldSwitchCount)
+        {
+            const std::size_t switchIndex = index - daisyhost::kDaisyFieldKeyCount;
+            led.normalizedValue
+                = fieldSwitchPressed_[switchIndex].load() ? 1.0f : 0.0f;
+        }
+        else if(index == 18)
+        {
+            led.normalizedValue = gateValues_[0].load() ? 1.0f : 0.0f;
+        }
+        else if(index == 19 && core_ != nullptr
+                && !activeBindings_.gateOutputPortId.empty())
+        {
+            const auto value = core_->GetPortOutput(activeBindings_.gateOutputPortId);
+            led.normalizedValue = value.gate ? 1.0f : 0.0f;
+        }
+    }
+
+    return snapshot;
+}
+
 daisyhost::EffectiveHostStateSnapshot
 DaisyHostPatchAudioProcessor::GetEffectiveHostStateSnapshot() const
 {
@@ -1483,7 +1893,8 @@ DaisyHostPatchAudioProcessor::GetEffectiveHostStateSnapshot() const
         cvInputs,
         gateInputs,
         audioInput,
-        metaControllers);
+        metaControllers,
+        BuildFieldSurfaceSnapshot());
 }
 
 juce::MidiKeyboardState& DaisyHostPatchAudioProcessor::GetVirtualKeyboardState()
@@ -1551,6 +1962,10 @@ void DaisyHostPatchAudioProcessor::AllVirtualKeyboardNotesOff()
     for(int channel = 1; channel <= 16; ++channel)
     {
         virtualKeyboardState_.allNotesOff(channel);
+    }
+    for(auto& pressed : fieldKeyPressed_)
+    {
+        pressed.store(false);
     }
 }
 
@@ -1715,6 +2130,11 @@ float DaisyHostPatchAudioProcessor::Clamp01(float value) const
 
 void DaisyHostPatchAudioProcessor::ApplyControlStateToCore()
 {
+    if(core_ == nullptr)
+    {
+        return;
+    }
+
     for(std::size_t i = 0; i < activeBindings_.knobControlIds.size(); ++i)
     {
         if(!activeBindings_.knobControlIds[i].empty())
@@ -1722,7 +2142,12 @@ void DaisyHostPatchAudioProcessor::ApplyControlStateToCore()
             core_->SetControl(activeBindings_.knobControlIds[i],
                               Clamp01(topControlValues_[i].load()));
         }
+        if(IsDaisyFieldBoard() && i < fieldKnobValues_.size())
+        {
+            fieldKnobValues_[i].store(Clamp01(topControlValues_[i].load()));
+        }
     }
+    ApplyFieldControlStateToCore();
 }
 
 void DaisyHostPatchAudioProcessor::ApplyPendingAutomationParametersToCore()
@@ -1851,6 +2276,94 @@ void DaisyHostPatchAudioProcessor::UpdateDisplaySnapshot()
     latestDisplay_ = core_->GetDisplayModel();
 }
 
+void DaisyHostPatchAudioProcessor::ApplyFieldControlStateToCore()
+{
+    if(!IsDaisyFieldBoard() || core_ == nullptr)
+    {
+        return;
+    }
+
+    const auto mapping = BuildActiveFieldControlMapping();
+    for(std::size_t i = 0; i < mapping.knobs.size(); ++i)
+    {
+        const auto& binding = mapping.knobs[i];
+        if(!binding.available)
+        {
+            continue;
+        }
+        ApplySurfaceBinding(*core_, binding, Clamp01(fieldKnobValues_[i].load()));
+    }
+}
+
+void DaisyHostPatchAudioProcessor::SyncFieldHostStateFromCore()
+{
+    if(!IsDaisyFieldBoard() || core_ == nullptr)
+    {
+        return;
+    }
+
+    const auto mapping = BuildActiveFieldControlMapping();
+    for(std::size_t i = 0; i < mapping.knobs.size(); ++i)
+    {
+        const auto& binding = mapping.knobs[i];
+        if(!binding.available)
+        {
+            continue;
+        }
+
+        daisyhost::ParameterValueLookup value;
+        switch(binding.targetKind)
+        {
+            case daisyhost::BoardSurfaceTargetKind::kControl:
+                value = core_->GetControlValue(binding.targetId);
+                break;
+            case daisyhost::BoardSurfaceTargetKind::kParameter:
+                value = core_->GetParameterValue(binding.targetId);
+                break;
+            case daisyhost::BoardSurfaceTargetKind::kUnavailable:
+            case daisyhost::BoardSurfaceTargetKind::kCvInput:
+            case daisyhost::BoardSurfaceTargetKind::kGateInput:
+            case daisyhost::BoardSurfaceTargetKind::kMidiNote:
+            case daisyhost::BoardSurfaceTargetKind::kMenuItem:
+            case daisyhost::BoardSurfaceTargetKind::kLed: break;
+        }
+
+        if(value.hasValue)
+        {
+            const float clamped = Clamp01(value.value);
+            fieldKnobValues_[i].store(clamped);
+            if(i < topControlValues_.size())
+            {
+                topControlValues_[i].store(clamped);
+            }
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessor::ReleaseFieldKeys()
+{
+    for(std::size_t i = 0; i < fieldKeyPressed_.size(); ++i)
+    {
+        if(!fieldKeyPressed_[i].exchange(false))
+        {
+            continue;
+        }
+        const int midiNote = GetFieldKeyMidiNote(i);
+        if(midiNote >= 0)
+        {
+            SetVirtualKeyboardNote(midiNote, false, 0.0f);
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessor::ReleaseFieldSwitches()
+{
+    for(auto& pressed : fieldSwitchPressed_)
+    {
+        pressed.store(false);
+    }
+}
+
 void DaisyHostPatchAudioProcessor::ApplyCanonicalSessionStateToCore()
 {
     core_->ResetToDefaultState(appRandomSeed_);
@@ -1873,8 +2386,7 @@ void DaisyHostPatchAudioProcessor::ApplyHubStartupRequestIfNeeded()
 
     if(!pendingHubStartupRequest_->boardId.empty())
     {
-        boardId_ = pendingHubStartupRequest_->boardId;
-        UpdateSelectedBoardProfile();
+        TryApplyBoardId(pendingHubStartupRequest_->boardId);
     }
 
     if(!pendingHubStartupRequest_->appId.empty())
@@ -1903,6 +2415,7 @@ void DaisyHostPatchAudioProcessor::SyncHostStateFromCore()
             topControlValues_[i].store(Clamp01(value.value));
         }
     }
+    SyncFieldHostStateFromCore();
 }
 
 void DaisyHostPatchAudioProcessor::UpdateCoreSnapshots()
@@ -1925,7 +2438,7 @@ void DaisyHostPatchAudioProcessor::UpdateCoreSnapshots()
 void DaisyHostPatchAudioProcessor::LoadSession(
     const daisyhost::HostSessionState& state)
 {
-    boardId_ = state.boardId.empty() ? "daisy_patch" : state.boardId;
+    TryApplyBoardId(state.boardId);
     std::vector<daisyhost::LiveRackTopologyRoute> routes;
     routes.reserve(state.routes.size());
     for(const auto& route : state.routes)
@@ -2001,6 +2514,17 @@ void DaisyHostPatchAudioProcessor::LoadSession(
                     node.topControlValues[i] = Clamp01(controlIt->second);
                 }
             }
+            node.fieldKnobValues[i] = node.topControlValues[i];
+            if(const auto fieldIt = state.controlValues.find(
+                   daisyhost::MakeDaisyFieldKnobControlId(node.nodeId, i));
+               fieldIt != state.controlValues.end())
+            {
+                node.fieldKnobValues[i] = Clamp01(fieldIt->second);
+                if(i < node.topControlValues.size())
+                {
+                    node.topControlValues[i] = node.fieldKnobValues[i];
+                }
+            }
 
             if(!node.bindings.cvInputPortIds[i].empty())
             {
@@ -2057,6 +2581,22 @@ void DaisyHostPatchAudioProcessor::LoadSession(
             {
                 node.cvGeneratorStates[i].manualVolts
                     = daisyhost::ClampCvVoltage(it->second);
+            }
+        }
+
+        for(std::size_t i = node.bindings.knobControlIds.size();
+            i < node.fieldKnobValues.size();
+            ++i)
+        {
+            if(const auto fieldIt = state.controlValues.find(
+                   daisyhost::MakeDaisyFieldKnobControlId(node.nodeId, i));
+               fieldIt != state.controlValues.end())
+            {
+                node.fieldKnobValues[i] = Clamp01(fieldIt->second);
+            }
+            else
+            {
+                node.fieldKnobValues[i] = 0.0f;
             }
         }
 
@@ -2133,6 +2673,7 @@ void DaisyHostPatchAudioProcessor::LoadSession(
 bool DaisyHostPatchAudioProcessor::RecreateRackNode(std::size_t        index,
                                                     const std::string& requestedAppId)
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     if(index >= rackNodes_.size())
     {
         return false;
@@ -2179,6 +2720,7 @@ bool DaisyHostPatchAudioProcessor::RecreateHostedApp(const std::string& requeste
 
 bool DaisyHostPatchAudioProcessor::SetActiveAppId(const std::string& requestedAppId)
 {
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     if(!RecreateHostedApp(requestedAppId))
     {
         return false;
@@ -2312,6 +2854,7 @@ void DaisyHostPatchAudioProcessor::RefreshCoreStateFromIdleHostChange()
         return;
     }
 
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     ApplyPendingAutomationParametersToCore();
     ApplyControlStateToCore();
     ApplyPendingMenuInteractionsToCore();

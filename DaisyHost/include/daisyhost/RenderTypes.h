@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "daisyhost/HostedAppCore.h"
+#include "daisyhost/EffectiveHostStateSnapshot.h"
 #include "daisyhost/TestInputSignal.h"
 
 namespace daisyhost
@@ -50,6 +51,7 @@ enum class RenderTimelineEventType
     kMenuRotate,
     kMenuPress,
     kMenuSetItem,
+    kSurfaceControlSet,
 };
 
 struct RenderTimelineEvent
@@ -57,6 +59,7 @@ struct RenderTimelineEvent
     double                  timeSeconds      = 0.0;
     RenderTimelineEventType type             = RenderTimelineEventType::kParameterSet;
     std::string             targetNodeId;
+    std::string             controlId;
     std::string             parameterId;
     std::string             portId;
     std::string             menuItemId;
@@ -130,6 +133,7 @@ struct RenderResultManifest
     std::string                  audioChecksum;
     std::string                  audioPath;
     std::string                  manifestPath;
+    EffectiveHostFieldSurfaceSnapshot fieldSurface;
     std::vector<RenderNodeResultSummary> nodes;
     std::vector<RenderRoute>             routes;
 };

@@ -36,7 +36,8 @@ EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
     const std::array<HostCvInputState, 4>&   cvInputs,
     const std::array<HostGateInputState, 2>& gateInputs,
     const HostAudioInputState&               audioInput,
-    const std::vector<MetaControllerDescriptor>& metaControllers)
+    const std::vector<MetaControllerDescriptor>& metaControllers,
+    const EffectiveHostFieldSurfaceSnapshot& fieldSurface)
 {
     EffectiveHostStateSnapshot snapshot;
     snapshot.boardId        = boardId;
@@ -49,6 +50,7 @@ EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
     snapshot.nodeSummaries  = nodeSummaries;
     snapshot.routes         = routes;
     snapshot.parameters     = parameters;
+    snapshot.fieldSurface   = fieldSurface;
     snapshot.metaControllers.reserve(metaControllers.size());
     for(const auto& controller : metaControllers)
     {

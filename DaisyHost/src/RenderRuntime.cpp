@@ -19,6 +19,8 @@
 #include <juce_core/juce_core.h>
 
 #include "daisyhost/AppRegistry.h"
+#include "daisyhost/BoardControlMapping.h"
+#include "daisyhost/BoardProfile.h"
 #include "daisyhost/LiveRackTopology.h"
 
 namespace daisyhost
@@ -42,6 +44,8 @@ struct ResolvedRenderNode
     HostedAppPatchBindings         bindings;
     std::map<std::string, float>   currentCvInputs;
     std::map<std::string, bool>    currentGateInputs;
+    std::array<bool, kDaisyFieldSwitchCount> currentFieldSwitches{};
+    std::set<int>                  activeMidiNotes;
 };
 
 struct RenderNodeInputState
@@ -67,6 +71,8 @@ const char* GetTimelineTypeLabel(RenderTimelineEventType type)
         case RenderTimelineEventType::kMenuRotate: return "menu_rotate";
         case RenderTimelineEventType::kMenuPress: return "menu_press";
         case RenderTimelineEventType::kMenuSetItem: return "menu_set_item";
+        case RenderTimelineEventType::kSurfaceControlSet:
+            return "surface_control_set";
     }
 
     return "timeline_event";
@@ -77,6 +83,7 @@ int EventPriority(RenderTimelineEventType type)
     switch(type)
     {
         case RenderTimelineEventType::kParameterSet: return 0;
+        case RenderTimelineEventType::kSurfaceControlSet: return 0;
         case RenderTimelineEventType::kCvSet:
         case RenderTimelineEventType::kGateSet: return 1;
         case RenderTimelineEventType::kMidi: return 2;
@@ -721,6 +728,32 @@ bool ParseTimelineEvent(const juce::var& value,
             event->normalizedValue = static_cast<float>(normalizedValue);
             return true;
         }
+
+        case RenderTimelineEventType::kSurfaceControlSet:
+        {
+            if(!ReadRequiredString(
+                   *object, "controlId", &event->controlId, errorMessage))
+            {
+                return false;
+            }
+            double normalizedValue = 0.0;
+            bool   hasValue        = false;
+            if(!ReadOptionalNumber(*object,
+                                   "normalizedValue",
+                                   &normalizedValue,
+                                   &hasValue,
+                                   errorMessage)
+               || !hasValue)
+            {
+                if(errorMessage != nullptr && errorMessage->empty())
+                {
+                    *errorMessage = "Missing or invalid numeric field: normalizedValue";
+                }
+                return false;
+            }
+            event->normalizedValue = static_cast<float>(normalizedValue);
+            return true;
+        }
     }
 
     return false;
@@ -929,6 +962,10 @@ juce::var MakeTimelineEventVar(const RenderTimelineEvent& event)
             object->setProperty("itemId", juce::String(event.menuItemId));
             object->setProperty("normalizedValue", event.normalizedValue);
             break;
+        case RenderTimelineEventType::kSurfaceControlSet:
+            object->setProperty("controlId", juce::String(event.controlId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
     }
 
     return juce::var(object.release());
@@ -955,6 +992,50 @@ juce::var MakeNodeSummaryVar(const RenderNodeResultSummary& node)
                         MakeMapVar(node.finalEffectiveParameterValues));
     object->setProperty("finalCvInputs", MakeMapVar(node.finalCvInputs));
     object->setProperty("finalGateInputs", MakeBoolMapVar(node.finalGateInputs));
+    return juce::var(object.release());
+}
+
+juce::var MakeFieldSurfaceVar(const EffectiveHostFieldSurfaceSnapshot& surface)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+
+    juce::Array<juce::var> cvOutputs;
+    for(const auto& output : surface.cvOutputs)
+    {
+        auto item = std::make_unique<juce::DynamicObject>();
+        item->setProperty("id", juce::String(output.id));
+        item->setProperty("label", juce::String(output.label));
+        item->setProperty("available", output.available);
+        item->setProperty("normalizedValue", output.normalizedValue);
+        item->setProperty("volts", output.volts);
+        cvOutputs.add(juce::var(item.release()));
+    }
+    object->setProperty("cvOutputs", juce::var(cvOutputs));
+
+    juce::Array<juce::var> switches;
+    for(const auto& sw : surface.switches)
+    {
+        auto item = std::make_unique<juce::DynamicObject>();
+        item->setProperty("id", juce::String(sw.id));
+        item->setProperty("label", juce::String(sw.label));
+        item->setProperty("detailLabel", juce::String(sw.detailLabel));
+        item->setProperty("available", sw.available);
+        item->setProperty("pressed", sw.pressed);
+        switches.add(juce::var(item.release()));
+    }
+    object->setProperty("switches", juce::var(switches));
+
+    juce::Array<juce::var> leds;
+    for(const auto& led : surface.leds)
+    {
+        auto item = std::make_unique<juce::DynamicObject>();
+        item->setProperty("id", juce::String(led.id));
+        item->setProperty("label", juce::String(led.label));
+        item->setProperty("normalizedValue", led.normalizedValue);
+        leds.add(juce::var(item.release()));
+    }
+    object->setProperty("leds", juce::var(leds));
+
     return juce::var(object.release());
 }
 
@@ -1077,7 +1158,8 @@ bool RequiresTargetNodeId(RenderTimelineEventType type)
         case RenderTimelineEventType::kCvSet:
         case RenderTimelineEventType::kGateSet:
         case RenderTimelineEventType::kMidi:
-        case RenderTimelineEventType::kMenuSetItem: return false;
+        case RenderTimelineEventType::kMenuSetItem:
+        case RenderTimelineEventType::kSurfaceControlSet: return false;
     }
 
     return false;
@@ -1164,6 +1246,16 @@ std::size_t ResolveEventNodeIndex(const RenderTimelineEvent&            event,
 bool ValidateCommonRenderScenario(const RenderScenario& scenario,
                                   std::string*          errorMessage)
 {
+    const std::string boardId = scenario.boardId.empty() ? "daisy_patch" : scenario.boardId;
+    if(!TryCreateBoardProfile(boardId, "node0").has_value())
+    {
+        if(errorMessage != nullptr)
+        {
+            *errorMessage = "Unknown boardId: " + boardId;
+        }
+        return false;
+    }
+
     if(scenario.appId.empty())
     {
         if(errorMessage != nullptr)
@@ -1428,6 +1520,205 @@ bool FindMenuItemId(const MenuModel& menu, const std::string& itemId)
     return false;
 }
 
+std::string EffectiveBoardId(const RenderScenario& scenario)
+{
+    return scenario.boardId.empty() ? "daisy_patch" : scenario.boardId;
+}
+
+template <std::size_t Size>
+const BoardSurfaceBinding* FindBindingByControlId(
+    const std::array<BoardSurfaceBinding, Size>& bindings,
+    const std::string&                           controlId)
+{
+    const auto bindingIt = std::find_if(
+        bindings.begin(),
+        bindings.end(),
+        [&controlId](const BoardSurfaceBinding& binding) {
+            return binding.controlId == controlId;
+        });
+    return bindingIt == bindings.end() ? nullptr : &(*bindingIt);
+}
+
+std::size_t FindFieldSwitchIndex(const DaisyFieldControlMapping& mapping,
+                                 const std::string&              controlId)
+{
+    for(std::size_t index = 0; index < mapping.switches.size(); ++index)
+    {
+        if(mapping.switches[index].controlId == controlId)
+        {
+            return index;
+        }
+    }
+    return mapping.switches.size();
+}
+
+bool ResolveFieldSurfaceControlBinding(const HostedAppPatchBindings& bindings,
+                                       const HostedAppCore&          app,
+                                       const std::string&            nodeId,
+                                       const std::string&            controlId,
+                                       BoardSurfaceBinding*          resolvedBinding)
+{
+    const auto mapping = BuildDaisyFieldControlMapping(
+        bindings, app.GetParameters(), app.GetMenuModel(), 4, nodeId);
+    const auto* binding = FindBindingByControlId(mapping.knobs, controlId);
+    if(binding == nullptr)
+    {
+        binding = FindBindingByControlId(mapping.switches, controlId);
+    }
+    if(binding == nullptr || !binding->available)
+    {
+        return false;
+    }
+    if(resolvedBinding != nullptr)
+    {
+        *resolvedBinding = *binding;
+    }
+    return true;
+}
+
+bool ApplyFieldSurfaceControlBinding(HostedAppCore&            app,
+                                     const BoardSurfaceBinding& binding,
+                                     float                     normalizedValue)
+{
+    switch(binding.targetKind)
+    {
+        case BoardSurfaceTargetKind::kControl:
+            app.SetControl(binding.targetId, normalizedValue);
+            return true;
+        case BoardSurfaceTargetKind::kParameter:
+            return app.SetParameterValue(binding.targetId, normalizedValue);
+        case BoardSurfaceTargetKind::kMenuItem:
+            if(normalizedValue >= 0.5f)
+            {
+                app.SetMenuItemValue(binding.targetId, 1.0f);
+            }
+            return true;
+        case BoardSurfaceTargetKind::kUnavailable:
+        case BoardSurfaceTargetKind::kCvInput:
+        case BoardSurfaceTargetKind::kGateInput:
+        case BoardSurfaceTargetKind::kMidiNote:
+        case BoardSurfaceTargetKind::kLed: return false;
+    }
+    return false;
+}
+
+void UpdateActiveMidiNotes(std::set<int>* activeNotes,
+                           const MidiMessageEvent& event)
+{
+    if(activeNotes == nullptr)
+    {
+        return;
+    }
+    const auto status = static_cast<std::uint8_t>(event.status & 0xF0u);
+    if(status == 0x90u && event.data2 > 0)
+    {
+        activeNotes->insert(static_cast<int>(event.data1));
+    }
+    else if(status == 0x80u || (status == 0x90u && event.data2 == 0))
+    {
+        activeNotes->erase(static_cast<int>(event.data1));
+    }
+}
+
+EffectiveHostFieldSurfaceSnapshot BuildFieldSurfaceSnapshotForRender(
+    const HostedAppPatchBindings&               bindings,
+    HostedAppCore&                              app,
+    const std::string&                          nodeId,
+    const std::map<std::string, bool>&          currentGateInputs,
+    const std::array<bool, kDaisyFieldSwitchCount>& currentFieldSwitches,
+    const std::set<int>&                        activeMidiNotes)
+{
+    EffectiveHostFieldSurfaceSnapshot snapshot;
+    const auto mapping = BuildDaisyFieldControlMapping(
+        bindings, app.GetParameters(), app.GetMenuModel(), 4, nodeId);
+
+    for(std::size_t index = 0; index < mapping.cvOutputs.size(); ++index)
+    {
+        const auto& binding = mapping.cvOutputs[index];
+        auto&       output  = snapshot.cvOutputs[index];
+        output.id           = MakeDaisyFieldCvOutputPortId(nodeId, index);
+        output.label     = binding.label;
+        output.available = binding.available;
+        if(binding.available && binding.targetKind == BoardSurfaceTargetKind::kParameter)
+        {
+            const auto value = app.GetParameterValue(binding.targetId);
+            if(value.hasValue)
+            {
+                output.normalizedValue = std::clamp(value.value, 0.0f, 1.0f);
+                output.volts           = output.normalizedValue * 5.0f;
+            }
+        }
+    }
+
+    for(std::size_t index = 0; index < mapping.switches.size(); ++index)
+    {
+        const auto& binding = mapping.switches[index];
+        auto&       sw      = snapshot.switches[index];
+        sw.id               = binding.controlId;
+        sw.label            = binding.label;
+        sw.detailLabel      = binding.detailLabel;
+        sw.available        = binding.available;
+        sw.pressed          = currentFieldSwitches[index];
+    }
+
+    for(std::size_t index = 0; index < mapping.leds.size(); ++index)
+    {
+        const auto& binding = mapping.leds[index];
+        auto&       led     = snapshot.leds[index];
+        led.id              = binding.controlId;
+        led.label           = binding.label;
+        if(index < kDaisyFieldKeyCount)
+        {
+            led.normalizedValue
+                = activeMidiNotes.count(mapping.keys[index].midiNote) > 0 ? 1.0f
+                                                                          : 0.0f;
+        }
+        else if(index < kDaisyFieldKeyCount + kDaisyFieldSwitchCount)
+        {
+            led.normalizedValue
+                = currentFieldSwitches[index - kDaisyFieldKeyCount] ? 1.0f : 0.0f;
+        }
+        else if(index == 18)
+        {
+            const auto gateIt = currentGateInputs.find(bindings.gateInputPortIds[0]);
+            led.normalizedValue = gateIt != currentGateInputs.end() && gateIt->second
+                                      ? 1.0f
+                                      : 0.0f;
+        }
+        else if(index == 19 && !bindings.gateOutputPortId.empty())
+        {
+            const auto output = app.GetPortOutput(bindings.gateOutputPortId);
+            led.normalizedValue = output.gate ? 1.0f : 0.0f;
+        }
+    }
+
+    return snapshot;
+}
+
+std::size_t ResolveSurfaceControlNodeIndex(
+    const RenderTimelineEvent&            event,
+    const RenderScenario&                 scenario,
+    const std::vector<ResolvedRenderNode>& nodes,
+    std::string*                          errorMessage)
+{
+    std::string nodeId = event.targetNodeId;
+    if(nodeId.empty())
+    {
+        nodeId = ExtractQualifiedNodeId(event.controlId);
+    }
+    if(nodeId.empty())
+    {
+        nodeId = scenario.selectedNodeId;
+    }
+
+    const auto nodeIndex = FindNodeIndexById(nodes, nodeId);
+    if(nodeIndex >= nodes.size() && errorMessage != nullptr)
+    {
+        *errorMessage = "Unknown targetNodeId in timeline: " + nodeId;
+    }
+    return nodeIndex;
+}
+
 struct TimelineEventWithIndex
 {
     RenderTimelineEvent event;
@@ -1529,6 +1820,36 @@ bool ValidateScenario(const RenderScenario& scenario,
                     return false;
                 }
                 break;
+
+            case RenderTimelineEventType::kSurfaceControlSet:
+            {
+                if(EffectiveBoardId(scenario) != "daisy_field")
+                {
+                    if(errorMessage != nullptr)
+                    {
+                        *errorMessage
+                            = "surface_control_set requires boardId daisy_field";
+                    }
+                    return false;
+                }
+                if(!ValidateNormalizedValue(event.normalizedValue,
+                                            "Timeline surface control value",
+                                            errorMessage))
+                {
+                    return false;
+                }
+                if(!ResolveFieldSurfaceControlBinding(
+                       bindings, app, "node0", event.controlId, nullptr))
+                {
+                    if(errorMessage != nullptr)
+                    {
+                        *errorMessage = "Unknown surface control id in timeline: "
+                                        + event.controlId;
+                    }
+                    return false;
+                }
+                break;
+            }
 
             case RenderTimelineEventType::kCvSet:
                 if(validCvPortIds.find(event.portId) == validCvPortIds.end())
@@ -1735,6 +2056,48 @@ bool ValidateMultiNodeScenario(const RenderScenario&             scenario,
                     return false;
                 }
                 break;
+
+            case RenderTimelineEventType::kSurfaceControlSet:
+            {
+                if(EffectiveBoardId(scenario) != "daisy_field")
+                {
+                    if(errorMessage != nullptr)
+                    {
+                        *errorMessage
+                            = "surface_control_set requires boardId daisy_field";
+                    }
+                    return false;
+                }
+                if(!ValidateNormalizedValue(event.normalizedValue,
+                                            "Timeline surface control value",
+                                            errorMessage))
+                {
+                    return false;
+                }
+                const auto nodeIndex
+                    = ResolveSurfaceControlNodeIndex(event,
+                                                     scenario,
+                                                     nodes,
+                                                     errorMessage);
+                if(nodeIndex >= nodes.size())
+                {
+                    return false;
+                }
+                if(!ResolveFieldSurfaceControlBinding(nodes[nodeIndex].bindings,
+                                                      *nodes[nodeIndex].app,
+                                                      nodes[nodeIndex].config.nodeId,
+                                                      event.controlId,
+                                                      nullptr))
+                {
+                    if(errorMessage != nullptr)
+                    {
+                        *errorMessage = "Unknown surface control id in timeline: "
+                                        + event.controlId;
+                    }
+                    return false;
+                }
+                break;
+            }
 
             case RenderTimelineEventType::kCvSet:
             case RenderTimelineEventType::kGateSet:
@@ -2052,6 +2415,41 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
                     break;
                 }
 
+                case RenderTimelineEventType::kSurfaceControlSet:
+                {
+                    const auto nodeIndex = ResolveSurfaceControlNodeIndex(
+                        event, scenario, nodes, nullptr);
+                    if(nodeIndex < nodes.size())
+                    {
+                        BoardSurfaceBinding binding;
+                        if(ResolveFieldSurfaceControlBinding(
+                               nodes[nodeIndex].bindings,
+                               *nodes[nodeIndex].app,
+                               nodes[nodeIndex].config.nodeId,
+                               event.controlId,
+                               &binding))
+                        {
+                            const auto mapping = BuildDaisyFieldControlMapping(
+                                nodes[nodeIndex].bindings,
+                                nodes[nodeIndex].app->GetParameters(),
+                                nodes[nodeIndex].app->GetMenuModel(),
+                                4,
+                                nodes[nodeIndex].config.nodeId);
+                            const auto switchIndex
+                                = FindFieldSwitchIndex(mapping, event.controlId);
+                            if(switchIndex < nodes[nodeIndex].currentFieldSwitches.size())
+                            {
+                                nodes[nodeIndex].currentFieldSwitches[switchIndex]
+                                    = event.normalizedValue >= 0.5f;
+                            }
+                            ApplyFieldSurfaceControlBinding(*nodes[nodeIndex].app,
+                                                            binding,
+                                                            event.normalizedValue);
+                        }
+                    }
+                    break;
+                }
+
                 case RenderTimelineEventType::kCvSet:
                 {
                     const auto nodeIndex = FindNodeIndexForQualifiedId(nodes, event.portId);
@@ -2080,6 +2478,8 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
                         = ResolveEventNodeIndex(event, scenario, nodes, nullptr);
                     if(nodeIndex < nodes.size())
                     {
+                        UpdateActiveMidiNotes(&nodes[nodeIndex].activeMidiNotes,
+                                              event.midiMessage);
                         midiEventsForSegment[nodeIndex].push_back(event.midiMessage);
                     }
                     break;
@@ -2350,6 +2750,17 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
         = result->manifest.nodes[primaryIndex].finalEffectiveParameterValues;
     result->manifest.finalCvInputs   = result->manifest.nodes[primaryIndex].finalCvInputs;
     result->manifest.finalGateInputs = result->manifest.nodes[primaryIndex].finalGateInputs;
+    if(EffectiveBoardId(scenario) == "daisy_field")
+    {
+        auto& selectedNode = nodes[selectedIndex];
+        result->manifest.fieldSurface = BuildFieldSurfaceSnapshotForRender(
+            selectedNode.bindings,
+            *selectedNode.app,
+            selectedNode.config.nodeId,
+            selectedNode.currentGateInputs,
+            selectedNode.currentFieldSwitches,
+            selectedNode.activeMidiNotes);
+    }
     result->manifest.finalAudioInput = inputStates[entryNodeIndex].audioInput;
     result->manifest.audioChecksum   = HashAudioChannels(result->audioChannels);
     result->manifest.channelSummaries.clear();
@@ -2377,6 +2788,8 @@ const char* GetRenderTimelineEventTypeName(RenderTimelineEventType type)
         case RenderTimelineEventType::kMenuRotate: return "menu_rotate";
         case RenderTimelineEventType::kMenuPress: return "menu_press";
         case RenderTimelineEventType::kMenuSetItem: return "menu_set_item";
+        case RenderTimelineEventType::kSurfaceControlSet:
+            return "surface_control_set";
     }
 
     return "parameter_set";
@@ -2429,6 +2842,11 @@ bool TryParseRenderTimelineEventType(const std::string& text,
     if(normalized == "menu_set_item")
     {
         *type = RenderTimelineEventType::kMenuSetItem;
+        return true;
+    }
+    if(normalized == "surface_control_set")
+    {
+        *type = RenderTimelineEventType::kSurfaceControlSet;
         return true;
     }
     return false;
@@ -2802,6 +3220,8 @@ bool RunRenderScenario(const RenderScenario& scenario,
 
     std::map<std::string, float> currentCvInputs;
     std::map<std::string, bool>  currentGateInputs;
+    std::array<bool, kDaisyFieldSwitchCount> currentFieldSwitches{};
+    std::set<int> activeMidiNotes;
     for(const auto& portId : bindings.cvInputPortIds)
     {
         if(!portId.empty())
@@ -2868,6 +3288,32 @@ bool RunRenderScenario(const RenderScenario& scenario,
                     app->SetParameterValue(event.parameterId, event.normalizedValue);
                     break;
 
+                case RenderTimelineEventType::kSurfaceControlSet:
+                {
+                    BoardSurfaceBinding binding;
+                    if(ResolveFieldSurfaceControlBinding(
+                           bindings, *app, "node0", event.controlId, &binding))
+                    {
+                        const auto mapping = BuildDaisyFieldControlMapping(
+                            bindings,
+                            app->GetParameters(),
+                            app->GetMenuModel(),
+                            4,
+                            "node0");
+                        const auto switchIndex
+                            = FindFieldSwitchIndex(mapping, event.controlId);
+                        if(switchIndex < currentFieldSwitches.size())
+                        {
+                            currentFieldSwitches[switchIndex]
+                                = event.normalizedValue >= 0.5f;
+                        }
+                        ApplyFieldSurfaceControlBinding(*app,
+                                                        binding,
+                                                        event.normalizedValue);
+                    }
+                    break;
+                }
+
                 case RenderTimelineEventType::kCvSet:
                     currentCvInputs[event.portId] = event.normalizedValue;
                     break;
@@ -2877,6 +3323,7 @@ bool RunRenderScenario(const RenderScenario& scenario,
                     break;
 
                 case RenderTimelineEventType::kMidi:
+                    UpdateActiveMidiNotes(&activeMidiNotes, event.midiMessage);
                     midiEventsForSegment.push_back(event.midiMessage);
                     break;
 
@@ -3030,6 +3477,16 @@ bool RunRenderScenario(const RenderScenario& scenario,
         = CaptureEffectiveParameterValues(*app);
     result->manifest.finalCvInputs    = currentCvInputs;
     result->manifest.finalGateInputs  = currentGateInputs;
+    if(EffectiveBoardId(scenario) == "daisy_field")
+    {
+        result->manifest.fieldSurface = BuildFieldSurfaceSnapshotForRender(
+            bindings,
+            *app,
+            "node0",
+            currentGateInputs,
+            currentFieldSwitches,
+            activeMidiNotes);
+    }
     result->manifest.finalAudioInput  = currentAudioInput;
     result->manifest.audioChecksum    = HashAudioChannels(result->audioChannels);
     result->manifest.channelSummaries.clear();
@@ -3071,6 +3528,7 @@ std::string SerializeRenderManifestJson(const RenderResultManifest& manifest)
                       MakeMapVar(manifest.finalEffectiveParameterValues));
     root->setProperty("finalCvInputs", MakeMapVar(manifest.finalCvInputs));
     root->setProperty("finalGateInputs", MakeBoolMapVar(manifest.finalGateInputs));
+    root->setProperty("fieldSurface", MakeFieldSurfaceVar(manifest.fieldSurface));
     root->setProperty("initialAudioInput",
                       MakeAudioInputVar(manifest.initialAudioInput));
     root->setProperty("finalAudioInput", MakeAudioInputVar(manifest.finalAudioInput));

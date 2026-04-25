@@ -12,6 +12,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "daisyhost/AppRegistry.h"
+#include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/EffectiveHostStateSnapshot.h"
 #include "daisyhost/HostSessionState.h"
@@ -87,6 +88,22 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     juce::String GetTopControlLabel(std::size_t index) const;
     juce::String GetTopControlDetailLabel(std::size_t index) const;
     std::string GetTopControlId(std::size_t index) const;
+    bool IsDaisyFieldBoard() const;
+    float GetFieldKnobValue(std::size_t index) const;
+    juce::String GetFieldKnobLabel(std::size_t index) const;
+    juce::String GetFieldKnobDetailLabel(std::size_t index) const;
+    std::string GetFieldKnobControlId(std::size_t index) const;
+    void SetFieldKnobValue(std::size_t index, float normalizedValue);
+    int  GetFieldKeyMidiNote(std::size_t index) const;
+    bool GetFieldKeyPressed(std::size_t index) const;
+    void SetFieldKeyPressed(std::size_t index, bool pressed);
+    float GetFieldCvOutputValue(std::size_t index) const;
+    float GetFieldCvOutputVolts(std::size_t index) const;
+    bool GetFieldSwitchPressed(std::size_t index) const;
+    juce::String GetFieldSwitchLabel(std::size_t index) const;
+    bool GetFieldSwitchAvailable(std::size_t index) const;
+    void SetFieldSwitchPressed(std::size_t index, bool pressed);
+    float GetFieldLedValue(std::size_t index) const;
     bool                           GetEncoderPressed() const;
     void                           SetTopControlValue(std::size_t index, float normalizedValue);
     void                           SetEncoderPressed(bool pressed);
@@ -154,6 +171,9 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
         std::unique_ptr<daisyhost::HostedAppCore>  core;
         daisyhost::HostedAppPatchBindings          bindings;
         std::array<float, 4>                       topControlValues{};
+        std::array<float, daisyhost::kDaisyFieldKnobCount> fieldKnobValues{};
+        std::array<bool, daisyhost::kDaisyFieldKeyCount> fieldKeyPressed{};
+        std::array<bool, daisyhost::kDaisyFieldSwitchCount> fieldSwitchPressed{};
         std::array<float, 4>                       cvValues{};
         std::array<float, 4>                       cvVoltages{};
         std::array<bool, 2>                        gateValues{};
@@ -188,6 +208,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     const RackNodeState* GetRackNodeById(const std::string& nodeId) const;
     void FlushSelectedNodeStateToRack();
     void SyncSelectedNodeStateFromRack();
+    bool TryApplyBoardId(const std::string& requestedBoardId);
     void UpdateSelectedBoardProfile();
     void UpdateRackNodeSnapshots(RackNodeState& node);
     void StepRackNodeCvGenerators(RackNodeState& node, double blockDurationSeconds);
@@ -203,6 +224,12 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::string MakeTestInputFrequencyStateId(const std::string& nodeId) const;
     std::string MakeComputerKeyboardEnabledStateId(const std::string& nodeId) const;
     std::string MakeComputerKeyboardOctaveStateId(const std::string& nodeId) const;
+    daisyhost::DaisyFieldControlMapping BuildActiveFieldControlMapping() const;
+    daisyhost::EffectiveHostFieldSurfaceSnapshot BuildFieldSurfaceSnapshot() const;
+    void  ApplyFieldControlStateToCore();
+    void  SyncFieldHostStateFromCore();
+    void  ReleaseFieldKeys();
+    void  ReleaseFieldSwitches();
     void  ApplyControlStateToCore();
     void  ApplyPendingAutomationParametersToCore();
     void  ApplyPendingMenuInteractionsToCore();
@@ -233,6 +260,12 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     daisyhost::HostedAppPatchBindings activeBindings_;
 
     std::array<std::atomic<float>, 4> topControlValues_;
+    std::array<std::atomic<float>, daisyhost::kDaisyFieldKnobCount>
+        fieldKnobValues_;
+    std::array<std::atomic<bool>, daisyhost::kDaisyFieldKeyCount>
+        fieldKeyPressed_;
+    std::array<std::atomic<bool>, daisyhost::kDaisyFieldSwitchCount>
+        fieldSwitchPressed_;
     std::array<juce::AudioParameterFloat*, daisyhost::kHostAutomationSlotCount>
         automationParameters_{};
     std::array<std::atomic<float>, daisyhost::kHostAutomationSlotCount>
@@ -268,6 +301,9 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     double                            currentSampleRate_ = 0.0;
     std::size_t                       currentBlockSize_  = 0;
 
+    // HostedAppCore instances are not thread-safe; serialize audio-thread
+    // processing with message-thread control refreshes and board/app switches.
+    mutable std::recursive_mutex coreStateMutex_;
     mutable std::mutex       displayMutex_;
     daisyhost::DisplayModel  latestDisplay_;
     mutable std::mutex       menuSnapshotMutex_;

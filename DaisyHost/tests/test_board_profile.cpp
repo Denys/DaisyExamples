@@ -22,6 +22,20 @@ const daisyhost::PanelControlSlotSpec* FindSurfaceControl(
     return nullptr;
 }
 
+const daisyhost::ControlSpec* FindControl(
+    const daisyhost::BoardProfile& profile,
+    const std::string&             id)
+{
+    for(const auto& control : profile.controls)
+    {
+        if(control.id == id)
+        {
+            return &control;
+        }
+    }
+    return nullptr;
+}
+
 const daisyhost::PanelDecorationSpec* FindDecoration(
     const daisyhost::BoardProfile&     profile,
     daisyhost::PanelDecorationKind kind)
@@ -36,11 +50,38 @@ const daisyhost::PanelDecorationSpec* FindDecoration(
     return nullptr;
 }
 
+const daisyhost::PanelIndicatorSpec* FindIndicator(
+    const daisyhost::BoardProfile& profile,
+    const std::string&             id)
+{
+    for(const auto& indicator : profile.indicators)
+    {
+        if(indicator.id == id)
+        {
+            return &indicator;
+        }
+    }
+    return nullptr;
+}
+
 bool HasText(const daisyhost::BoardProfile& profile, const std::string& text)
 {
     for(const auto& spec : profile.texts)
     {
         if(spec.text == text)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ContainsTextToken(const daisyhost::BoardProfile& profile,
+                       const std::string&             token)
+{
+    for(const auto& spec : profile.texts)
+    {
+        if(spec.text.find(token) != std::string::npos)
         {
             return true;
         }
@@ -167,7 +208,7 @@ TEST(BoardProfileTest, BoardFactoryCreatesFieldProfileByBoardId)
     EXPECT_TRUE(RectInsidePanel(profile->display.panelBounds));
 }
 
-TEST(BoardProfileTest, DaisyFieldProfileDescribesPassiveHardwareShell)
+TEST(BoardProfileTest, DaisyFieldProfileDescribesNativeControlSurface)
 {
     const auto profile = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
 
@@ -210,7 +251,7 @@ TEST(BoardProfileTest, DaisyFieldProfileDescribesPassiveHardwareShell)
 
     EXPECT_NE(FindSurfaceControl(profile, "nodeA/surface/field_knob_1"), nullptr);
     EXPECT_TRUE(HasText(profile, "DAISY FIELD"));
-    EXPECT_TRUE(HasText(profile, "FIELD BOARD-SUPPORT SHELL"));
+    EXPECT_TRUE(HasText(profile, "FIELD NATIVE CONTROLS"));
 
     for(const auto& control : profile.controls)
     {
@@ -234,6 +275,82 @@ TEST(BoardProfileTest, DaisyFieldProfileDescribesPassiveHardwareShell)
     {
         EXPECT_TRUE(RectInsidePanel(text.panelBounds)) << text.id;
     }
+}
+
+TEST(BoardProfileTest, DaisyFieldProfileExposesExtendedSurfaceIndicators)
+{
+    const auto profile = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    ASSERT_EQ(profile.indicators.size(), 22u);
+
+    const auto* keyLed = FindIndicator(profile, "nodeA/led/field_key_a_1");
+    ASSERT_NE(keyLed, nullptr);
+    EXPECT_EQ(keyLed->label, "A1");
+    EXPECT_EQ(keyLed->kind, daisyhost::PanelIndicatorKind::kLed);
+    EXPECT_TRUE(RectInsidePanel(keyLed->panelBounds));
+
+    const auto* switchLed = FindIndicator(profile, "nodeA/led/field_sw_1");
+    ASSERT_NE(switchLed, nullptr);
+    EXPECT_EQ(switchLed->label, "SW1");
+    EXPECT_EQ(switchLed->kind, daisyhost::PanelIndicatorKind::kLed);
+
+    const auto* gateInLed = FindIndicator(profile, "nodeA/led/field_gate_in");
+    ASSERT_NE(gateInLed, nullptr);
+    EXPECT_EQ(gateInLed->kind, daisyhost::PanelIndicatorKind::kLed);
+
+    const auto* gateOutLed = FindIndicator(profile, "nodeA/led/field_gate_out");
+    ASSERT_NE(gateOutLed, nullptr);
+    EXPECT_EQ(gateOutLed->kind, daisyhost::PanelIndicatorKind::kLed);
+
+    const auto* cvOut1 = FindIndicator(profile, "nodeA/indicator/field_cv_out_1");
+    ASSERT_NE(cvOut1, nullptr);
+    EXPECT_EQ(cvOut1->kind, daisyhost::PanelIndicatorKind::kCvOutput);
+    EXPECT_EQ(cvOut1->targetId, "nodeA/port/field_cv_out_1");
+
+    const auto* cvOut2 = FindIndicator(profile, "nodeA/indicator/field_cv_out_2");
+    ASSERT_NE(cvOut2, nullptr);
+    EXPECT_EQ(cvOut2->kind, daisyhost::PanelIndicatorKind::kCvOutput);
+    EXPECT_EQ(cvOut2->targetId, "nodeA/port/field_cv_out_2");
+
+    for(const auto& indicator : profile.indicators)
+    {
+        EXPECT_TRUE(RectInsidePanel(indicator.panelBounds)) << indicator.id;
+    }
+}
+
+TEST(BoardProfileTest, DaisyFieldSurfaceControlsExposeLookupTargets)
+{
+    const std::string             nodeId  = "nodeA";
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", nodeId);
+
+    std::size_t interactiveSurfaceCount = 0;
+    for(const auto& surface : profile.surfaceControls)
+    {
+        if(surface.kind != daisyhost::ControlKind::kKnob
+           && surface.kind != daisyhost::ControlKind::kKey
+           && surface.kind != daisyhost::ControlKind::kSwitch)
+        {
+            continue;
+        }
+
+        ++interactiveSurfaceCount;
+        EXPECT_FALSE(surface.targetId.empty()) << surface.id;
+        const auto* targetControl = FindControl(profile, surface.targetId);
+        ASSERT_NE(targetControl, nullptr) << surface.id << " -> " << surface.targetId;
+        EXPECT_EQ(targetControl->kind, surface.kind) << surface.id;
+    }
+
+    EXPECT_EQ(interactiveSurfaceCount, 26u);
+}
+
+TEST(BoardProfileTest, DaisyFieldVisibleProfileTextIsNotPatchOnly)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    EXPECT_TRUE(HasText(profile, "DAISY FIELD"));
+    EXPECT_FALSE(ContainsTextToken(profile, "PATCH"));
 }
 
 TEST(BoardProfileTest, DaisyPatchProfileExposesFinalSurfaceControlHierarchy)

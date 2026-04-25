@@ -1,6 +1,6 @@
 # DaisyHost Workstream Tracker
 
-Last updated: 2026-04-24
+Last updated: 2026-04-25
 
 This file tracks the next forward-looking DaisyHost portfolio after the current
 `WS1` through `WS7` milestone set.
@@ -10,10 +10,18 @@ Current baseline:
 - `WS1` through `WS7` planned milestone scope is complete enough to freeze in
   this checkout.
 - Latest full host gate:
-  `cmd /c build_host.cmd` passed on 2026-04-24 and `ctest` passed `128/128`.
-- Daisy Field readiness is now satisfied:
-  visible rack MVP landed, node-targeted controls/events are live, the board
-  seam exists, and the full host gate is green again.
+  `cmd /c build_host.cmd` passed on 2026-04-25 and `ctest` passed `159/159`.
+- Daisy Field board-support shell, host-side Field native controls, and Field
+  extended host surface support are now implemented:
+  `daisy_field` flows through Hub, session, standalone startup, render, and
+  smoke paths while the rack remains frozen, including host-side Field
+  outputs/switches/LEDs, startup-request launch planning, and selected-node
+  Field surface render evidence. Field K5-K8 now avoid explicit K1-K4
+  parameter targets, and the Field editor uses board-profile target metadata
+  for the first board-generic cleanup pass. Sprint F3 also adds
+  `field/MultiDelay` as the first Field firmware adapter; it is build-verified
+  and ST-Link flash-verified, with manual functional hardware validation still
+  pending.
 - This tracker is mirrored in `PROJECT_TRACKER.md` so the active ledger and the
   forward portfolio stay readable in one place.
 
@@ -22,8 +30,14 @@ Current baseline:
 - Product workstreams optimize operator-facing value and demo quality.
 - Technical-foundation workstreams reduce future integration cost and keep the
   platform extensible.
-- Daisy Field is allowed to proceed in parallel as a board-support package
-  through the existing board factory seam.
+- Daisy Field has landed as a board-support shell plus host-side Field native
+  controls and host-side Field outputs/switches/LEDs through the existing board
+  factory seam; the first `field/MultiDelay` firmware adapter now exists and
+  has build plus ST-Link flash/verify evidence. Full manual Field hardware
+  validation, broader firmware parity, real voltage-output measurement,
+  Field-specific app ergonomics, mixed-board racks, and manual DAW/VST3
+  validation remain separate future work. Field-specific follow-on scope is
+  tracked in `FIELD_PROJECT_TRACKER.md`.
 - Every implementation start still needs a per-iteration claim in
   `PROJECT_TRACKER.md`.
 
@@ -41,8 +55,8 @@ Current baseline:
 
 | ID | Workstream | What it unlocks | Depends on | Parallel-safe with | Status |
 |---|---|---|---|---|---|
-| `TF8` | Daisy Field board support | Adds `daisy_field` through the board factory seam so Field work can ship without reopening Patch-only architecture. | Green `WS7` freeze gate | `WS8`, `WS11`, `TF9`, `TF12` | Ready to start |
-| `TF9` | Board-generic editor surface | Removes remaining Patch-shaped assumptions from the editor and board rendering path. | Existing board seam; pairs naturally with `TF8` | `TF8`, `WS8`, `WS11` | Planned |
+| `TF8` | Daisy Field board support | Adds `daisy_field` through the board factory seam plus host-side Field native controls and host-side Field outputs/switches/LEDs so Field work can ship without reopening Patch-only architecture. | Green `WS7` freeze gate | `WS8`, `WS11`, `TF9`, `TF12` | Extended host surface implemented |
+| `TF9` | Board-generic editor surface | Removes remaining Patch-shaped assumptions from the editor and board rendering path. | Existing board seam; pairs naturally with `TF8` | `TF8`, `WS8`, `WS11` | First cleanup implemented |
 | `TF10` | Routing contract generalization | Stabilizes route validation and internal graph rules so richer routing does not become a rewrite every sprint. | `WS7` rack/session/render baseline | `WS9`, `TF11`, `TF12` | Planned |
 | `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | `WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | Planned |
 | `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | Current wrapper and smoke harness | All workstreams | Planned |
@@ -53,7 +67,7 @@ Current baseline:
 Time ------------------------------------------------------------------------>
 
 Frozen baseline:
-  [WS1-WS7 complete] ----> [Daisy Field implementation ready]
+  [WS1-WS7 complete] ----> [Daisy Field extended host surface implemented]
 
 Product track:
   [WS8 Rack UX] -----------------------> [WS11 Hub + Scenario]
@@ -79,14 +93,14 @@ Start these first if staffing exists:
 
 - `WS8`
 - `WS9`
-- `TF8`
 - `TF9`
 - `TF12`
 
 Start these after the first joins settle:
 
 - `WS10` once `TF11` stabilizes the event/readback shape
-- `WS11` once `WS8` and `TF8` stop moving quickly
+- `WS11` once `WS8` and Field hardware follow-on expectations stop moving
+  quickly
 - `WS12` once `WS8` and `TF12` are stable enough for DAW-facing validation
 - `TF10` and `TF11` can start early if owned as bounded contract-first tasks
 
@@ -95,5 +109,6 @@ Start these after the first joins settle:
 - The best product-side next move is not another hidden infrastructure pass; it
   is making the rack easier to use, route, inspect, and launch.
 - The best foundation-side next move is not more Patch-only polish; it is
-  `daisy_field`, board-generic UI/runtime cleanup, routing-contract hardening,
-  and verification resilience.
+  board-generic UI cleanup, routing-contract hardening, verification
+  resilience, and the deferred hardware-facing Field work after the host-side
+  Field extended surface package.

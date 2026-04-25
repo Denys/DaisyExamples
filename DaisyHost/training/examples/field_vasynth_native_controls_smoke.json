@@ -1,0 +1,56 @@
+{
+  "boardId": "daisy_field",
+  "appId": "vasynth",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.5,
+    "outputChannelCount": 2
+  },
+  "seed": 4242,
+  "audioInput": {
+    "mode": "host",
+    "level": 0.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.0,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_5",
+      "normalizedValue": 0.82
+    },
+    {
+      "timeSeconds": 0.0,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_6",
+      "normalizedValue": 0.44
+    },
+    {
+      "timeSeconds": 0.0,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_7",
+      "normalizedValue": 0.33
+    },
+    {
+      "timeSeconds": 0.0,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_8",
+      "normalizedValue": 0.77
+    },
+    {
+      "timeSeconds": 0.02,
+      "type": "midi",
+      "status": 144,
+      "data1": 60,
+      "data2": 110
+    },
+    {
+      "timeSeconds": 0.36,
+      "type": "midi",
+      "status": 128,
+      "data1": 60,
+      "data2": 0
+    }
+  ]
+}

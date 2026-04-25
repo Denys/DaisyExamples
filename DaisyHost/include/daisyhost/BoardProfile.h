@@ -34,6 +34,13 @@ enum class PanelDecorationKind
     kDisplayFrame,
 };
 
+enum class PanelIndicatorKind
+{
+    kLed,
+    kCvOutput,
+    kGateOutput,
+};
+
 struct ControlSpec
 {
     std::string id;
@@ -87,6 +94,16 @@ struct PanelTextSpec
     TextAlignment alignment = TextAlignment::kLeft;
 };
 
+struct PanelIndicatorSpec
+{
+    std::string        id;
+    std::string        nodeId;
+    std::string        targetId;
+    std::string        label;
+    PanelIndicatorKind kind = PanelIndicatorKind::kLed;
+    PanelRect          panelBounds;
+};
+
 struct BoardProfile
 {
     std::string              boardId;
@@ -98,6 +115,7 @@ struct BoardProfile
     std::vector<PanelControlSlotSpec> surfaceControls;
     std::vector<PanelDecorationSpec>  decorations;
     std::vector<PanelTextSpec>        texts;
+    std::vector<PanelIndicatorSpec>   indicators;
 };
 
 std::vector<std::string> GetSupportedBoardIds();

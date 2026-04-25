@@ -269,6 +269,10 @@ HostedAppPatchBindings MultiDelayCore::GetPatchBindings() const
                                MakeKnobControlId(nodeId_, 2),
                                MakeKnobControlId(nodeId_, 3),
                                MakeKnobControlId(nodeId_, 4)};
+    bindings.knobParameterIds = {MakeParameterId(nodeId_, "dry_wet"),
+                                 MakeParameterId(nodeId_, "delay_primary"),
+                                 MakeParameterId(nodeId_, "delay_secondary"),
+                                 MakeParameterId(nodeId_, "feedback")};
     bindings.knobDetailLabels = {"Mix", "Delay 1", "Delay 2", "Feedback"};
     bindings.encoderControlId = MakeEncoderControlId(nodeId_);
     bindings.encoderButtonControlId = MakeEncoderButtonControlId(nodeId_);

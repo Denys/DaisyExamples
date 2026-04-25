@@ -59,6 +59,8 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::Justification
     ToJustification(daisyhost::TextAlignment alignment) const;
     void DrawPanelDecorations(juce::Graphics& g) const;
+    void DrawPassiveSurfaceControls(juce::Graphics& g) const;
+    void DrawPanelIndicators(juce::Graphics& g) const;
     void DrawPanelTexts(juce::Graphics& g) const;
     void DrawPatchTraces(juce::Graphics& g) const;
     void DrawSeedModule(juce::Graphics& g,
@@ -84,6 +86,9 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     ControlUi& GetTopControlUi(std::size_t slotIndex);
     const ControlUi& GetTopControlUi(std::size_t slotIndex) const;
     void UpdateTopControlUi();
+    void LayoutFieldControls();
+    void UpdateFieldControlUi();
+    bool IsInteractiveFieldSurfaceControl(const std::string& surfaceId) const;
     void ReleaseComputerKeyboardNotes();
     void UpdateComputerKeyboardUi();
     void ApplyWindowIconIfNeeded();
@@ -91,6 +96,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
 
     void sliderValueChanged(juce::Slider* slider) override;
     void buttonClicked(juce::Button* button) override;
+    void buttonStateChanged(juce::Button* button) override;
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     bool keyStateChanged(bool isKeyDown, juce::Component* originatingComponent) override;
     void timerCallback() override;
@@ -98,6 +104,9 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     DaisyHostPatchAudioProcessor& processor_;
     std::array<ControlUi, 4>      knobs_;
     ControlUi                     dryWet_;
+    std::array<ControlUi, daisyhost::kDaisyFieldKnobCount> fieldKnobs_;
+    std::array<juce::TextButton, daisyhost::kDaisyFieldKeyCount> fieldKeyButtons_;
+    std::array<juce::TextButton, daisyhost::kDaisyFieldSwitchCount> fieldSwitchButtons_;
     juce::TextButton              encoderPressButton_;
     juce::ToggleButton            computerKeyboardToggle_;
     juce::Label                   computerKeyboardLabel_;

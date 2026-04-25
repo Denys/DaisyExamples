@@ -48,10 +48,11 @@ Or run the render-only path with:
 py -3 DaisyHost/tests/run_smoke.py --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release
 ```
 
-The render smoke uses the checked-in `multidelay` and `torus` scenario JSON
-files, writes fresh harness-owned output directories under `DaisyHost/build/smoke/`,
-verifies `audio.wav` plus `manifest.json`, and checks repeated `multidelay`
-render determinism via `audioChecksum`.
+The render smoke uses the checked-in app and Field scenario JSON files, writes
+fresh harness-owned output directories under `DaisyHost/build/smoke/`, verifies
+`audio.wav` plus `manifest.json`, checks repeated `multidelay` render
+determinism via `audioChecksum`, and validates Field shell/native/extended
+surface plus selected-node surface evidence.
 
 ## Scenario Schema
 

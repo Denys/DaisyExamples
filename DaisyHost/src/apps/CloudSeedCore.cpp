@@ -117,6 +117,8 @@ HostedAppPatchBindings CloudSeedCore::GetPatchBindings() const
     {
         bindings.knobControlIds[i]
             = MakeControlId(nodeId_, pageBinding.parameterIds[i]);
+        bindings.knobParameterIds[i]
+            = MakeParameterId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobDetailLabels[i] = pageBinding.parameterLabels[i];
     }
     bindings.encoderControlId       = MakeEncoderControlId(nodeId_);

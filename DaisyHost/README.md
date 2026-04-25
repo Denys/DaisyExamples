@@ -63,6 +63,8 @@ internals:
 - Shared app cores:
   - `MultiDelayCore` remains the deterministic regression fixture and continues
     to back the firmware adapter in [patch/MultiDelay](../patch/MultiDelay/README.md)
+    plus the first Daisy Field firmware adapter in
+    [field/MultiDelay](../field/MultiDelay/README.md)
   - `TorusCore` is the first nontrivial second hosted app, using a DaisyHost-native
     Patch wrapper with Torus-style semantics and menu/control assignment
   - `CloudSeedCore` is now a first-class supported hosted app, built on top of a
@@ -97,7 +99,8 @@ internals:
       `node0_only`, `node1_only`, `node0_to_node1`, `node1_to_node0`
     - a visible two-node rack header with per-node app selectors and role
       labels
-    - a board-id-based factory seam while still shipping only `daisy_patch`
+    - a board-id-based factory seam with `daisy_patch` as the default board
+      and `daisy_field` supported as a host-side Field surface
 - Headless rendering:
   - `DaisyHostRender.exe` loads a scenario JSON, renders offline, and writes
     `audio.wav` plus `manifest.json`
@@ -195,15 +198,43 @@ Implemented `0.2.0` additions:
 - `HostSessionState` v5 with board choice, selected node, rack entry/output
   topology fields, node metadata, and routes while keeping legacy single-node
   sessions backward-compatible
+- Daisy Field host-side board support through the board factory seam:
+  - `daisy_patch` remains the default board and fully supported Patch behavior
+  - `daisy_field` is accepted by the Hub, session, standalone startup, and
+    render paths as board metadata
+  - Field K1-K4 mirror the selected node's current Patch page bindings
+  - Field K5-K8 map to the next four automatable selected-node parameters by
+    `importanceRank`, excluding explicit K1-K4 parameter targets where the
+    hosted app exposes them, with unavailable controls left disabled
+  - Field CV1-CV4 and Gate In reuse the existing host CV/gate input paths
+  - Field A1-B8 emit 16 chromatic MIDI notes from the selected node's current
+    keyboard octave
+  - Field extended host surface support is now implemented for host-side Field
+    outputs/switches/LEDs:
+    - CV OUT 1-2 are derived monitor outputs that mirror the K5/K6 mapped
+      parameters as `0..5V` evidence in snapshots and render manifests
+    - SW1/SW2 are host-side momentary utility triggers selected from the first
+      two selected-app utility menu actions
+    - key LEDs, switch LEDs, Gate In LED, and Gate Out LED are derived
+      non-persisted indicators
+  - the Field panel renders K1-K8 as interactive controls and A1-B8 as
+    momentary key buttons, SW1/SW2 buttons, CV OUT indicators, and Field LEDs
+    when `boardId` is `daisy_field`
+  - Field editor layout and interactivity now use board-profile target metadata
+    for knobs, keys, and switches instead of relying on Field-only surface-id
+    construction
 - `DaisyHostRender` CLI target and Python dataset sweep orchestration under
   `training/`
 
 Non-goals for v1:
 
 - full STM32/libDaisy emulation
-- Patch SM / Field / Pod / custom board runtime support
+- Patch SM / Pod / custom board runtime support
 - freeform or arbitrary multi-node rack graph editing inside one plugin
-- mixed-board racks or Daisy Field runtime support
+- mixed-board racks
+- general Field firmware parity beyond the first `field/MultiDelay` adapter,
+  full real hardware voltage validation, Field-specific app ergonomics, and
+  DAW/VST3 manual validation
 
 The abstractions are node-scoped so future work can compose multiple boards in a
 single host without redesigning IDs or state formats.
@@ -250,6 +281,10 @@ Checked-in render smoke scenarios now include:
 - `training/examples/braids_smoke.json`
 - `training/examples/harmoniqs_smoke.json`
 - `training/examples/vasynth_smoke.json`
+- `training/examples/field_cloudseed_shell_smoke.json`
+- `training/examples/field_vasynth_native_controls_smoke.json`
+- `training/examples/field_extended_surface_smoke.json`
+- `training/examples/field_node_target_surface_smoke.json`
 
 Outputs:
 
@@ -263,13 +298,21 @@ Outputs:
 
 Current local verification caveat:
 
-- the wrapper-driven full host gate reran green on 2026-04-24:
-  `cmd /c build_host.cmd` passed and `ctest` passed `128/128`
+- the wrapper-driven full host gate reran green on 2026-04-25 after the
+  Field ergonomics polish and board-generic UI cleanup:
+  `cmd /c build_host.cmd` passed and `ctest` passed `159/159`
+  (the prior Field refinement closeout gate passed `155/155`)
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
-- Daisy Field implementation readiness is now satisfied in this checkout; the
-  next post-WS7 portfolio is tracked in `WORKSTREAM_TRACKER.md`
+- Daisy Field is now implemented and automatically tested as a host-side board
+  surface in this checkout: shell selection, native controls, derived CV OUT
+  monitor values, SW1/SW2 utility triggers, LED evidence, startup-request
+  launch planning, and selected-node Field render evidence are covered. Sprint
+  F3 also adds `field/MultiDelay` as the first Daisy Field firmware adapter;
+  it builds and flashes through ST-Link, but the hands-on audio/control/CV
+  checklist is still pending. Mixed-board racks, DAW-side manual validation,
+  and broader Field firmware/hardware parity remain follow-on work.
 
 ## Architecture
 
@@ -291,6 +334,8 @@ Current local verification caveat:
 - `src/AppRegistry.cpp`: app registry and factory layer
 - `src/HubSupport.cpp`: launcher hub registries, profiles, launch planning, and startup requests
 - `src/HostAutomationBridge.cpp`: stable five-slot DAW automation mapping
+- `src/BoardControlMapping.cpp`: host-side Field control mapping for K1-K8,
+  CV1-CV4, Gate In, and A1-B8 MIDI keys
 - `src/HostSessionState.cpp`: backward-compatible session serialization with
   rack globals plus node and route records
 - `src/LiveRackTopology.cpp`: visible rack topology preset expansion,

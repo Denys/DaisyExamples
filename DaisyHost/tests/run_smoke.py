@@ -37,6 +37,10 @@ class SmokePaths:
     braids_scenario: Path
     harmoniqs_scenario: Path
     vasynth_scenario: Path
+    field_shell_scenario: Path
+    field_native_controls_scenario: Path
+    field_extended_surface_scenario: Path
+    field_node_target_scenario: Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,6 +85,22 @@ def resolve_paths(args: argparse.Namespace) -> SmokePaths:
         / "training"
         / "examples"
         / "vasynth_smoke.json",
+        field_shell_scenario=source_dir
+        / "training"
+        / "examples"
+        / "field_cloudseed_shell_smoke.json",
+        field_native_controls_scenario=source_dir
+        / "training"
+        / "examples"
+        / "field_vasynth_native_controls_smoke.json",
+        field_extended_surface_scenario=source_dir
+        / "training"
+        / "examples"
+        / "field_extended_surface_smoke.json",
+        field_node_target_scenario=source_dir
+        / "training"
+        / "examples"
+        / "field_node_target_surface_smoke.json",
     )
 
 
@@ -171,7 +191,9 @@ def terminate_process(process: subprocess.Popen[bytes], *, label: str) -> None:
             raise SmokeFailure(f"{label} did not terminate cleanly") from exc
 
 
-def run_standalone_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
+def run_single_standalone_smoke(
+    paths: SmokePaths, *, board_id: str, app_id: str, timeout_seconds: float
+) -> None:
     require_existing_file(paths.standalone_executable, "Standalone executable")
     ensure_executable_not_running(paths.standalone_executable)
     ensure_executable_not_locked(paths.standalone_executable)
@@ -179,9 +201,9 @@ def run_standalone_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
     command = [
         str(paths.standalone_executable),
         "--board",
-        "daisy_patch",
+        board_id,
         "--app",
-        "torus",
+        app_id,
     ]
     process: subprocess.Popen[bytes] | None = None
     try:
@@ -214,10 +236,23 @@ def run_standalone_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
         if process is not None:
             terminate_process(process, label="Standalone smoke cleanup")
 
-    print("Standalone smoke passed for DaisyHost Patch.exe with app=torus.")
+    print(
+        f"Standalone smoke passed for DaisyHost Patch.exe with board={board_id}, app={app_id}."
+    )
 
 
-def verify_render_manifest(manifest_path: Path, *, expected_app_id: str) -> str:
+def run_standalone_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
+    run_single_standalone_smoke(
+        paths, board_id="daisy_patch", app_id="torus", timeout_seconds=timeout_seconds
+    )
+    run_single_standalone_smoke(
+        paths, board_id="daisy_field", app_id="torus", timeout_seconds=timeout_seconds
+    )
+
+
+def verify_render_manifest(
+    manifest_path: Path, *, expected_app_id: str, expected_board_id: str | None = None
+) -> str:
     require_existing_file(manifest_path, "Render manifest")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     actual_app_id = manifest.get("appId")
@@ -225,10 +260,130 @@ def verify_render_manifest(manifest_path: Path, *, expected_app_id: str) -> str:
         raise SmokeFailure(
             f"Manifest appId mismatch for {manifest_path}: expected {expected_app_id}, got {actual_app_id}"
         )
+    if expected_board_id is not None:
+        actual_board_id = manifest.get("boardId")
+        if actual_board_id != expected_board_id:
+            raise SmokeFailure(
+                f"Manifest boardId mismatch for {manifest_path}: expected {expected_board_id}, got {actual_board_id}"
+            )
     checksum = manifest.get("audioChecksum")
     if not isinstance(checksum, str) or not checksum:
         raise SmokeFailure(f"Manifest audioChecksum missing or invalid in {manifest_path}")
     return checksum
+
+
+def verify_manifest_parameter_values(
+    manifest_path: Path, expected_values: dict[str, float], *, tolerance: float = 0.0001
+) -> None:
+    require_existing_file(manifest_path, "Render manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    final_values = manifest.get("finalParameterValues")
+    if not isinstance(final_values, dict):
+        raise SmokeFailure(f"Manifest finalParameterValues missing in {manifest_path}")
+    for parameter_id, expected_value in expected_values.items():
+        actual_value = final_values.get(parameter_id)
+        if not isinstance(actual_value, (int, float)):
+            raise SmokeFailure(
+                f"Manifest finalParameterValues missing {parameter_id} in {manifest_path}"
+            )
+        if abs(float(actual_value) - expected_value) > tolerance:
+            raise SmokeFailure(
+                f"Manifest final value mismatch for {parameter_id}: "
+                f"expected {expected_value}, got {actual_value}"
+            )
+
+
+def verify_manifest_field_surface(manifest_path: Path, *, tolerance: float = 0.0001) -> None:
+    require_existing_file(manifest_path, "Render manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    surface = manifest.get("fieldSurface")
+    if not isinstance(surface, dict):
+        raise SmokeFailure(f"Manifest fieldSurface missing in {manifest_path}")
+
+    cv_outputs = surface.get("cvOutputs")
+    switches = surface.get("switches")
+    leds = surface.get("leds")
+    if not isinstance(cv_outputs, list) or len(cv_outputs) < 2:
+        raise SmokeFailure(f"Manifest fieldSurface.cvOutputs missing in {manifest_path}")
+    if not isinstance(switches, list) or len(switches) < 2:
+        raise SmokeFailure(f"Manifest fieldSurface.switches missing in {manifest_path}")
+    if not isinstance(leds, list) or len(leds) < 20:
+        raise SmokeFailure(f"Manifest fieldSurface.leds missing in {manifest_path}")
+
+    expected_cv = [
+        ("node0/port/field_cv_out_1", 0.82, 4.10),
+        ("node0/port/field_cv_out_2", 0.44, 2.20),
+    ]
+    for index, (expected_id, expected_normalized, expected_volts) in enumerate(expected_cv):
+        item = cv_outputs[index]
+        if item.get("id") != expected_id or item.get("available") is not True:
+            raise SmokeFailure(f"Field CV OUT {index + 1} manifest evidence is invalid")
+        if abs(float(item.get("normalizedValue", -1.0)) - expected_normalized) > tolerance:
+            raise SmokeFailure(f"Field CV OUT {index + 1} normalized value mismatch")
+        if abs(float(item.get("volts", -1.0)) - expected_volts) > tolerance:
+            raise SmokeFailure(f"Field CV OUT {index + 1} voltage mismatch")
+
+    if switches[0].get("id") != "node0/control/field_sw_1" or switches[0].get("pressed") is not True:
+        raise SmokeFailure("Field SW1 manifest evidence is invalid")
+    if switches[0].get("detailLabel") != "Audition":
+        raise SmokeFailure("Field SW1 utility label evidence is invalid")
+    if switches[1].get("id") != "node0/control/field_sw_2" or switches[1].get("pressed") is not True:
+        raise SmokeFailure("Field SW2 manifest evidence is invalid")
+
+    expected_leds = {
+        "node0/led/field_key_a_1": 1.0,
+        "node0/led/field_sw_1": 1.0,
+        "node0/led/field_sw_2": 1.0,
+        "node0/led/field_gate_in": 1.0,
+    }
+    led_map = {item.get("id"): item for item in leds if isinstance(item, dict)}
+    for led_id, expected_value in expected_leds.items():
+        item = led_map.get(led_id)
+        if item is None:
+            raise SmokeFailure(f"Field LED manifest evidence missing for {led_id}")
+        if abs(float(item.get("normalizedValue", -1.0)) - expected_value) > tolerance:
+            raise SmokeFailure(f"Field LED value mismatch for {led_id}")
+
+
+def verify_manifest_field_node_target(manifest_path: Path, *, tolerance: float = 0.0001) -> None:
+    require_existing_file(manifest_path, "Render manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("boardId") != "daisy_field":
+        raise SmokeFailure("Field node-target manifest boardId evidence is invalid")
+    if manifest.get("selectedNodeId") != "node1":
+        raise SmokeFailure("Field node-target manifest selectedNodeId evidence is invalid")
+
+    surface = manifest.get("fieldSurface")
+    if not isinstance(surface, dict):
+        raise SmokeFailure("Field node-target manifest fieldSurface missing")
+    cv_outputs = surface.get("cvOutputs")
+    if not isinstance(cv_outputs, list) or len(cv_outputs) < 2:
+        raise SmokeFailure("Field node-target CV OUT evidence missing")
+    expected_cv = [
+        ("node1/port/field_cv_out_1", 0.82, 4.10),
+        ("node1/port/field_cv_out_2", 0.44, 2.20),
+    ]
+    for index, (expected_id, expected_normalized, expected_volts) in enumerate(expected_cv):
+        item = cv_outputs[index]
+        if item.get("id") != expected_id or item.get("available") is not True:
+            raise SmokeFailure(f"Field node-target CV OUT {index + 1} id evidence is invalid")
+        if abs(float(item.get("normalizedValue", -1.0)) - expected_normalized) > tolerance:
+            raise SmokeFailure(f"Field node-target CV OUT {index + 1} normalized mismatch")
+        if abs(float(item.get("volts", -1.0)) - expected_volts) > tolerance:
+            raise SmokeFailure(f"Field node-target CV OUT {index + 1} volts mismatch")
+
+    nodes = manifest.get("nodes")
+    if not isinstance(nodes, list) or len(nodes) < 2:
+        raise SmokeFailure("Field node-target nodes evidence missing")
+    node1 = next((node for node in nodes if node.get("nodeId") == "node1"), None)
+    if not isinstance(node1, dict):
+        raise SmokeFailure("Field node-target node1 evidence missing")
+    final_values = node1.get("finalParameterValues")
+    if not isinstance(final_values, dict):
+        raise SmokeFailure("Field node-target node1 finalParameterValues missing")
+    actual = final_values.get("node1/param/filter_cutoff")
+    if not isinstance(actual, (int, float)) or abs(float(actual) - 0.82) > tolerance:
+        raise SmokeFailure("Field node-target node1 parameter evidence mismatch")
 
 
 def run_single_render(
@@ -237,6 +392,7 @@ def run_single_render(
     *,
     output_dir: Path,
     expected_app_id: str,
+    expected_board_id: str | None = None,
     timeout_seconds: float,
     cwd: Path,
 ) -> str:
@@ -258,7 +414,11 @@ def run_single_render(
     audio_path = output_dir / "audio.wav"
     manifest_path = output_dir / "manifest.json"
     require_existing_file(audio_path, "Rendered audio output")
-    return verify_render_manifest(manifest_path, expected_app_id=expected_app_id)
+    return verify_render_manifest(
+        manifest_path,
+        expected_app_id=expected_app_id,
+        expected_board_id=expected_board_id,
+    )
 
 
 def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
@@ -269,6 +429,19 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
     require_existing_file(paths.braids_scenario, "Braids smoke scenario")
     require_existing_file(paths.harmoniqs_scenario, "Harmoniqs smoke scenario")
     require_existing_file(paths.vasynth_scenario, "VA Synth smoke scenario")
+    require_existing_file(paths.field_shell_scenario, "Daisy Field shell smoke scenario")
+    require_existing_file(
+        paths.field_native_controls_scenario,
+        "Daisy Field native controls smoke scenario",
+    )
+    require_existing_file(
+        paths.field_extended_surface_scenario,
+        "Daisy Field extended surface smoke scenario",
+    )
+    require_existing_file(
+        paths.field_node_target_scenario,
+        "Daisy Field selected-node surface smoke scenario",
+    )
 
     workspace = paths.build_dir / "smoke" / f"render_{uuid.uuid4().hex[:8]}"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -336,6 +509,56 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
             timeout_seconds=timeout_seconds,
             cwd=paths.source_dir,
         )
+        run_single_render(
+            paths.render_executable,
+            paths.field_shell_scenario,
+            output_dir=workspace / "field_cloudseed_shell_run",
+            expected_app_id="cloudseed",
+            expected_board_id="daisy_field",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        native_controls_dir = workspace / "field_vasynth_native_controls_run"
+        run_single_render(
+            paths.render_executable,
+            paths.field_native_controls_scenario,
+            output_dir=native_controls_dir,
+            expected_app_id="vasynth",
+            expected_board_id="daisy_field",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        verify_manifest_parameter_values(
+            native_controls_dir / "manifest.json",
+            {
+                "node0/param/filter_cutoff": 0.82,
+                "node0/param/resonance": 0.44,
+                "node0/param/filter_env_amount": 0.33,
+                "node0/param/level": 0.77,
+            },
+        )
+        extended_surface_dir = workspace / "field_extended_surface_run"
+        run_single_render(
+            paths.render_executable,
+            paths.field_extended_surface_scenario,
+            output_dir=extended_surface_dir,
+            expected_app_id="vasynth",
+            expected_board_id="daisy_field",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        verify_manifest_field_surface(extended_surface_dir / "manifest.json")
+        node_target_dir = workspace / "field_node_target_surface_run"
+        run_single_render(
+            paths.render_executable,
+            paths.field_node_target_scenario,
+            output_dir=node_target_dir,
+            expected_app_id="vasynth",
+            expected_board_id="daisy_field",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        verify_manifest_field_node_target(node_target_dir / "manifest.json")
         success = True
     except SmokeFailure as exc:
         raise SmokeFailure(f"{exc}\nRender smoke outputs preserved at: {workspace}") from exc
@@ -344,7 +567,7 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
             shutil.rmtree(workspace, ignore_errors=True)
 
     print(
-        "Render smoke passed for MultiDelay, Torus, CloudSeed, Braids, Harmoniqs, and VA Synth scenarios."
+        "Render smoke passed for MultiDelay, Torus, CloudSeed, Braids, Harmoniqs, VA Synth, Daisy Field shell, Daisy Field native controls, Daisy Field extended surface, and Daisy Field selected-node surface scenarios."
     )
 
 

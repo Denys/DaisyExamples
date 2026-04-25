@@ -59,6 +59,7 @@ struct HostedAppCapabilities
 struct HostedAppPatchBindings
 {
     std::array<std::string, 4> knobControlIds{};
+    std::array<std::string, 4> knobParameterIds{};
     std::array<std::string, 4> knobDetailLabels{};
     std::string                encoderControlId;
     std::string                encoderButtonControlId;

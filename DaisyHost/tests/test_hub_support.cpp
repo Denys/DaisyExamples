@@ -133,14 +133,17 @@ TEST(HubSupportTest, AcceptsFieldBoardSelectionForPlayLaunchPlan)
         daisyhost::BuildHubLaunchPlan(selection, paths, &plan, &errorMessage))
         << errorMessage;
 
-    ASSERT_EQ(plan.arguments.size(), 4u);
-    EXPECT_EQ(plan.arguments[0], "--board");
-    EXPECT_EQ(plan.arguments[1], "daisy_field");
-    EXPECT_EQ(plan.arguments[2], "--app");
-    EXPECT_EQ(plan.arguments[3], "torus");
+    EXPECT_TRUE(plan.arguments.empty());
+    ASSERT_EQ(plan.generatedFiles.size(), 1u);
+    EXPECT_EQ(plan.generatedFiles.front().file.getFileName().toStdString(),
+              "hub_launch_request.json");
+    EXPECT_NE(plan.generatedFiles.front().contents.find("\"boardId\":\"daisy_field\""),
+              std::string::npos);
+    EXPECT_NE(plan.generatedFiles.front().contents.find("\"appId\":\"torus\""),
+              std::string::npos);
 }
 
-TEST(HubSupportTest, BuildsPlayLaunchPlanWithCommandLineArgs)
+TEST(HubSupportTest, BuildsPlayLaunchPlanWithStartupRequest)
 {
     ScopedTempDir tempDir;
 
@@ -164,15 +167,17 @@ TEST(HubSupportTest, BuildsPlayLaunchPlanWithCommandLineArgs)
 
     EXPECT_EQ(plan.executable,
               paths.standaloneExecutable.getFullPathName().toStdString());
-    ASSERT_EQ(plan.arguments.size(), 4u);
-    EXPECT_EQ(plan.arguments[0], "--board");
-    EXPECT_EQ(plan.arguments[1], "daisy_patch");
-    EXPECT_EQ(plan.arguments[2], "--app");
-    EXPECT_EQ(plan.arguments[3], "torus");
+    EXPECT_TRUE(plan.arguments.empty());
     ASSERT_EQ(plan.cleanupFiles.size(), 1u);
     EXPECT_EQ(plan.cleanupFiles.front().getFileName().toStdString(),
               "hub_launch_request.json");
-    EXPECT_TRUE(plan.generatedFiles.empty());
+    ASSERT_EQ(plan.generatedFiles.size(), 1u);
+    EXPECT_EQ(plan.generatedFiles.front().file.getFileName().toStdString(),
+              "hub_launch_request.json");
+    EXPECT_NE(plan.generatedFiles.front().contents.find("\"boardId\":\"daisy_patch\""),
+              std::string::npos);
+    EXPECT_NE(plan.generatedFiles.front().contents.find("\"appId\":\"torus\""),
+              std::string::npos);
 }
 
 TEST(HubSupportTest, LoadAndConsumeStartupRequestClearsRequestFile)
@@ -191,6 +196,24 @@ TEST(HubSupportTest, LoadAndConsumeStartupRequestClearsRequestFile)
     ASSERT_TRUE(request.has_value()) << errorMessage;
     EXPECT_EQ(request->boardId, "daisy_patch");
     EXPECT_EQ(request->appId, "torus");
+    EXPECT_FALSE(requestFile.existsAsFile());
+}
+
+TEST(HubSupportTest, LoadAndConsumeStartupRequestPreservesFieldBoard)
+{
+    ScopedTempDir tempDir;
+    const auto    requestFile = tempDir.directory.getChildFile("hub_launch_request.json");
+
+    std::string errorMessage;
+    ASSERT_TRUE(daisyhost::SaveHubStartupRequest(
+        requestFile, {"daisy_field", "vasynth"}, &errorMessage))
+        << errorMessage;
+
+    const auto request
+        = daisyhost::LoadAndConsumeHubStartupRequest(requestFile, &errorMessage);
+    ASSERT_TRUE(request.has_value()) << errorMessage;
+    EXPECT_EQ(request->boardId, "daisy_field");
+    EXPECT_EQ(request->appId, "vasynth");
     EXPECT_FALSE(requestFile.existsAsFile());
 }
 
@@ -229,6 +252,44 @@ TEST(HubSupportTest, BuildsRenderLaunchPlanUsingExistingScenario)
     EXPECT_EQ(plan.arguments[2],
               selection.outputDirectory.getFullPathName().toStdString());
     EXPECT_TRUE(plan.generatedFiles.empty());
+}
+
+TEST(HubSupportTest, GeneratesFieldRenderScenarioInsteadOfReusingDefaultBoardExample)
+{
+    ScopedTempDir tempDir;
+    const auto    exampleDirectory
+        = tempDir.directory.getChildFile("training").getChildFile("examples");
+    ASSERT_TRUE(exampleDirectory.createDirectory());
+    ASSERT_TRUE(exampleDirectory.getChildFile("cloudseed_smoke.json")
+                    .replaceWithText("{\"appId\":\"cloudseed\"}"));
+
+    daisyhost::HubToolPaths paths;
+    paths.supportDirectory   = tempDir.directory.getChildFile("support");
+    paths.sourceRoot         = tempDir.directory;
+    paths.renderExecutable   = tempDir.directory.getChildFile("DaisyHostRender.exe");
+    paths.standaloneExecutable
+        = tempDir.directory.getChildFile("DaisyHost Patch.exe");
+    paths.trainingScript = tempDir.directory.getChildFile("render_dataset.py");
+
+    daisyhost::HubLaunchSelection selection;
+    selection.boardId    = "daisy_field";
+    selection.appId      = "cloudseed";
+    selection.activityId = "render";
+    selection.outputDirectory
+        = tempDir.directory.getChildFile("render_out");
+
+    daisyhost::HubLaunchPlan plan;
+    std::string              errorMessage;
+    ASSERT_TRUE(
+        daisyhost::BuildHubLaunchPlan(selection, paths, &plan, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(plan.generatedFiles.size(), 1u);
+    EXPECT_NE(plan.generatedFiles.front().contents.find("\"boardId\":\"daisy_field\""),
+              std::string::npos);
+    ASSERT_GE(plan.arguments.size(), 1u);
+    EXPECT_EQ(plan.arguments[0],
+              plan.generatedFiles.front().file.getFullPathName().toStdString());
 }
 
 TEST(HubSupportTest, BuildsTrainLaunchPlanUsingGeneratedDatasetJob)

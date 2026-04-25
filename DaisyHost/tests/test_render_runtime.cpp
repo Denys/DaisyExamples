@@ -99,6 +99,33 @@ TEST(RenderRuntimeTest, ParsesScenarioJsonWithTimeline)
               daisyhost::RenderTimelineEventType::kImpulse);
 }
 
+TEST(RenderRuntimeTest, ParsesFieldSurfaceControlSetTimelineEvent)
+{
+    const std::string json = R"({
+  "boardId": "daisy_field",
+  "appId": "vasynth",
+  "timeline": [
+    {
+      "timeSeconds": 0.1,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_5",
+      "normalizedValue": 0.82
+    }
+  ]
+})";
+
+    daisyhost::RenderScenario scenario;
+    std::string               errorMessage;
+    ASSERT_TRUE(daisyhost::ParseRenderScenarioJson(json, &scenario, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(scenario.timeline.size(), 1u);
+    EXPECT_EQ(scenario.timeline[0].type,
+              daisyhost::RenderTimelineEventType::kSurfaceControlSet);
+    EXPECT_EQ(scenario.timeline[0].controlId, "node0/control/field_knob_5");
+    EXPECT_FLOAT_EQ(scenario.timeline[0].normalizedValue, 0.82f);
+}
+
 TEST(RenderRuntimeTest, ParsesNodeAndRouteAwareScenarioJson)
 {
     const std::string json = R"({
@@ -447,6 +474,185 @@ TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForVASynth)
     ASSERT_EQ(firstResult.audioChannels.size(), 2u);
     EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
     EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
+}
+
+TEST(RenderRuntimeTest, FieldSurfaceControlSetAppliesMappedParameter)
+{
+    auto scenario = MakeBaseScenario("vasynth");
+    scenario.boardId = "daisy_field";
+    scenario.renderConfig.durationSeconds = 0.25;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+
+    daisyhost::RenderTimelineEvent controlEvent;
+    controlEvent.timeSeconds     = 0.0;
+    controlEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    controlEvent.controlId       = "node0/control/field_knob_5";
+    controlEvent.normalizedValue = 0.82f;
+    scenario.timeline.push_back(controlEvent);
+
+    std::string             errorMessage;
+    daisyhost::RenderResult result;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_TRUE(result.manifest.finalParameterValues.count(
+                    "node0/param/filter_cutoff")
+                > 0);
+    EXPECT_FLOAT_EQ(result.manifest.finalParameterValues.at(
+                        "node0/param/filter_cutoff"),
+                    0.82f);
+    ASSERT_FALSE(result.manifest.executedTimeline.empty());
+    EXPECT_EQ(result.manifest.executedTimeline[0].type,
+              daisyhost::RenderTimelineEventType::kSurfaceControlSet);
+}
+
+TEST(RenderRuntimeTest, FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds)
+{
+    daisyhost::RenderScenario scenario;
+    scenario.boardId                 = "daisy_field";
+    scenario.appId                   = "vasynth";
+    scenario.renderConfig.durationSeconds = 0.03;
+    scenario.renderConfig.blockSize  = 16;
+
+    daisyhost::RenderTimelineEvent switchEvent;
+    switchEvent.timeSeconds     = 0.0;
+    switchEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    switchEvent.controlId       = "node0/control/field_sw_1";
+    switchEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(switchEvent);
+
+    daisyhost::RenderTimelineEvent cutoffEvent;
+    cutoffEvent.timeSeconds     = 0.0;
+    cutoffEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    cutoffEvent.controlId       = "node0/control/field_knob_5";
+    cutoffEvent.normalizedValue = 0.82f;
+    scenario.timeline.push_back(cutoffEvent);
+
+    daisyhost::RenderTimelineEvent resonanceEvent;
+    resonanceEvent.timeSeconds     = 0.0;
+    resonanceEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    resonanceEvent.controlId       = "node0/control/field_knob_6";
+    resonanceEvent.normalizedValue = 0.44f;
+    scenario.timeline.push_back(resonanceEvent);
+
+    daisyhost::RenderTimelineEvent gateEvent;
+    gateEvent.timeSeconds = 0.0;
+    gateEvent.type        = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId      = "node0/port/gate_in_1";
+    gateEvent.gateValue   = true;
+    scenario.timeline.push_back(gateEvent);
+
+    daisyhost::RenderTimelineEvent noteEvent;
+    noteEvent.timeSeconds         = 0.0;
+    noteEvent.type                = daisyhost::RenderTimelineEventType::kMidi;
+    noteEvent.midiMessage.status  = 0x90;
+    noteEvent.midiMessage.data1   = 60;
+    noteEvent.midiMessage.data2   = 100;
+    scenario.timeline.push_back(noteEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(result.manifest.fieldSurface.cvOutputs.size(),
+              daisyhost::kDaisyFieldCvOutputCount);
+    EXPECT_TRUE(result.manifest.fieldSurface.cvOutputs[0].available);
+    EXPECT_EQ(result.manifest.fieldSurface.cvOutputs[0].id,
+              "node0/port/field_cv_out_1");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[0].normalizedValue,
+                    0.82f);
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[0].volts, 4.10f);
+    EXPECT_EQ(result.manifest.fieldSurface.cvOutputs[1].id,
+              "node0/port/field_cv_out_2");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[1].normalizedValue,
+                    0.44f);
+
+    ASSERT_EQ(result.manifest.fieldSurface.switches.size(),
+              daisyhost::kDaisyFieldSwitchCount);
+    EXPECT_TRUE(result.manifest.fieldSurface.switches[0].available);
+    EXPECT_TRUE(result.manifest.fieldSurface.switches[0].pressed);
+    EXPECT_EQ(result.manifest.fieldSurface.switches[0].detailLabel, "Audition");
+
+    ASSERT_EQ(result.manifest.fieldSurface.leds.size(), daisyhost::kDaisyFieldLedCount);
+    EXPECT_EQ(result.manifest.fieldSurface.leds[0].id, "node0/led/field_key_a_1");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.leds[0].normalizedValue, 1.0f);
+    EXPECT_EQ(result.manifest.fieldSurface.leds[16].id, "node0/led/field_sw_1");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.leds[16].normalizedValue, 1.0f);
+    EXPECT_EQ(result.manifest.fieldSurface.leds[18].id, "node0/led/field_gate_in");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.leds[18].normalizedValue, 1.0f);
+}
+
+TEST(RenderRuntimeTest, FieldSurfaceSnapshotFollowsSelectedNodeInTwoNodeRack)
+{
+    daisyhost::RenderScenario scenario;
+    scenario.boardId                         = "daisy_field";
+    scenario.appId                           = "vasynth";
+    scenario.selectedNodeId                  = "node1";
+    scenario.entryNodeId                     = "node1";
+    scenario.outputNodeId                    = "node1";
+    scenario.renderConfig.sampleRate         = 48000.0;
+    scenario.renderConfig.blockSize          = 48;
+    scenario.renderConfig.durationSeconds    = 0.25;
+    scenario.renderConfig.outputChannelCount = 2;
+    scenario.nodes.push_back({"node0", "vasynth", 123u});
+    scenario.nodes.push_back({"node1", "vasynth", 456u});
+
+    daisyhost::RenderTimelineEvent cutoffEvent;
+    cutoffEvent.timeSeconds     = 0.0;
+    cutoffEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    cutoffEvent.controlId       = "node1/control/field_knob_5";
+    cutoffEvent.normalizedValue = 0.82f;
+    scenario.timeline.push_back(cutoffEvent);
+
+    daisyhost::RenderTimelineEvent resonanceEvent;
+    resonanceEvent.timeSeconds     = 0.0;
+    resonanceEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    resonanceEvent.controlId       = "node1/control/field_knob_6";
+    resonanceEvent.normalizedValue = 0.44f;
+    scenario.timeline.push_back(resonanceEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(result.manifest.selectedNodeId, "node1");
+    ASSERT_EQ(result.manifest.nodes.size(), 2u);
+    ASSERT_EQ(result.manifest.fieldSurface.cvOutputs.size(),
+              daisyhost::kDaisyFieldCvOutputCount);
+    EXPECT_EQ(result.manifest.fieldSurface.cvOutputs[0].id,
+              "node1/port/field_cv_out_1");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[0].normalizedValue,
+                    0.82f);
+    EXPECT_EQ(result.manifest.fieldSurface.cvOutputs[1].id,
+              "node1/port/field_cv_out_2");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[1].normalizedValue,
+                    0.44f);
+    ASSERT_TRUE(result.manifest.nodes[1].finalParameterValues.count(
+                    "node1/param/filter_cutoff")
+                > 0);
+    EXPECT_FLOAT_EQ(result.manifest.nodes[1].finalParameterValues.at(
+                        "node1/param/filter_cutoff"),
+                    0.82f);
+}
+
+TEST(RenderRuntimeTest, RejectsUnknownFieldSurfaceControlId)
+{
+    auto scenario = MakeBaseScenario("vasynth");
+    scenario.boardId = "daisy_field";
+
+    daisyhost::RenderTimelineEvent controlEvent;
+    controlEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    controlEvent.controlId       = "node0/control/field_knob_99";
+    controlEvent.normalizedValue = 0.5f;
+    scenario.timeline.push_back(controlEvent);
+
+    std::string             errorMessage;
+    daisyhost::RenderResult result;
+    EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
+    EXPECT_NE(errorMessage.find("Unknown surface control id"), std::string::npos);
 }
 
 TEST(RenderRuntimeTest, RejectsUnknownPortId)

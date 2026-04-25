@@ -4,8 +4,30 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- add `field/MultiDelay` as the first Daisy Field firmware adapter:
+  - uses `daisy::DaisyField` with the shared
+    `DaisyHost/src/apps/MultiDelayCore.cpp`
+  - maps K1-K4 to the current MultiDelay Patch-page controls, K5 to
+    `delay_tertiary`, CV1 to the tertiary CV path, CV OUT 1 to K5 as
+    `0..5V`, CV OUT 2 to `0V`, SW1 to `Fire Impulse`, and SW2 to OLED status
+    page switching
+  - includes Field firmware `README.md` and `CONTROLS.md`
+  - builds with `make`, passes QAE validation, and flashes/verifies through
+    ST-Link on 2026-04-25; full manual audio/control/CV hardware validation
+    remains pending
+- fix a board/app-independent knob-drag crash by serializing hosted-app core
+  access between audio processing and message-thread control/UI refresh paths
+- polish Field K5-K8 mapping so ranked extra Field knobs exclude explicit
+  K1-K4 parameter targets reported by hosted apps before falling back to the
+  older control-id conversion path
+- make Field surface controls carry profile target ids and have the editor use
+  board-profile lookup for Field knobs, keys, and switches instead of relying
+  on Field-only surface-id construction
 - add `tests/run_smoke.py` as a direct-entrypoint smoke harness for
   `DaisyHost Patch.exe` and `DaisyHostRender.exe`
+- assign the DaisyHost Patch compact icon asset to `DaisyHost Hub.exe` so the
+  launcher carries the same Windows executable icon family as the standalone
+  Patch host
 - wire `DaisyHostStandaloneSmoke` and `DaisyHostRenderSmoke` into CTest so the
   normal host gate now covers standalone startup stability plus render-output
   smoke and `multidelay` checksum determinism
@@ -82,6 +104,9 @@ Canonical change tracker for `DaisyHost`.
 - add `training/examples/harmoniqs_smoke.json` and
   `training/examples/vasynth_smoke.json`, extend render/runtime smoke coverage
   for both apps, and include the new scenarios in `DaisyHostRenderSmoke`
+- add `training/examples/field_cloudseed_shell_smoke.json`, extend standalone
+  smoke to launch `--board daisy_field`, and include the Field board-support
+  shell scenario in `DaisyHostRenderSmoke`
 - add DaisyHost-local `include/stmlib/...` compatibility shims so the vendored
   Braids sources build under the Windows MSVC host toolchain without modifying
   the shared repo `stmlib/` copy
@@ -104,6 +129,50 @@ Canonical change tracker for `DaisyHost`.
     `node0_only`, `node1_only`, `node0_to_node1`, `node1_to_node0`
 - add a board factory seam so the runtime creates board profiles by `boardId`
   instead of hardcoding Patch construction in the processor path
+- add `daisy_field` as a Field board-support shell through the existing board
+  factory seam, with passive profile metadata for eight knobs, four CV inputs,
+  two CV outputs, gate in/out, stereo audio I/O, OLED, keys, switches, and LED
+  affordances
+- register `daisy_field` in Hub, standalone startup, session, and render board
+  handling while preserving `daisy_patch` as the default board and keeping the
+  rack topology/runtime semantics frozen
+- add `BoardControlMapping` for host-side Field native controls:
+  - K1-K4 mirror the selected node's current Patch page bindings
+  - K5-K8 map to the next four automatable selected-node parameters by
+    `importanceRank`, leaving missing targets disabled
+  - CV1-CV4 and Gate In reuse the existing host CV/gate input paths
+  - A1-B8 emit 16 chromatic MIDI notes from the selected node's current
+    keyboard octave
+- render interactive Field K1-K8 controls and A1-B8 momentary keys on the
+  `daisy_field` panel while preserving Patch control behavior for
+  `daisy_patch`
+- add `surface_control_set` timeline events for Field render scenarios and
+  validate unknown Field surface control ids with clear errors
+- add `training/examples/field_vasynth_native_controls_smoke.json`, extend
+  render smoke coverage for Field native controls, and check final mapped
+  parameter evidence in the smoke manifest
+- add Field extended host surface support for host-side Field
+  outputs/switches/LEDs:
+  - CV OUT 1-2 are derived monitor outputs for the K5/K6 mapped parameters,
+    reported as normalized values and `0..5V` evidence
+  - SW1/SW2 are momentary selected-app utility triggers
+  - key LEDs, switch LEDs, Gate In LED, and Gate Out LED are derived,
+    non-persisted indicators
+- extend the effective-state snapshot and render manifest with Field surface
+  state so automated tests can prove CV OUT, switch, and LED behavior
+- render SW1/SW2, CV OUT indicators, and LED indicators on the `daisy_field`
+  panel while preserving `daisy_patch` behavior and the frozen rack topology
+- add `training/examples/field_extended_surface_smoke.json`, extend render
+  smoke coverage for Field extended host surface support, and validate final
+  Field CV OUT, SW, and LED manifest evidence
+- add `training/examples/field_node_target_surface_smoke.json`, extend render
+  smoke coverage for selected-node Field surface evidence, and make multi-node
+  Field manifests report the selected node's Field surface state
+- change Hub `Play / Test` launch planning to write the supported
+  `hub_launch_request.json` startup request for selected board/app launches,
+  while direct standalone `--board` / `--app` arguments remain supported
+- make the selected-node mirror copy board-aware so `daisy_field` no longer
+  describes Field runtime controls as Patch controls
 - move session persistence to `HostSessionState` v5 with rack globals
   `boardId`, `selectedNodeId`, `entryNodeId`, and `outputNodeId`
 - extend render timeline events with `targetNodeId` for multi-node non-ID-
@@ -127,7 +196,14 @@ Canonical change tracker for `DaisyHost`.
   needed by MSBuild-backed commands in this checkout
 - widen the standalone smoke process-query timeout so slower Windows
   process-path discovery does not cause a false timeout on a healthy launch
-- rerun the full wrapper-driven host gate on 2026-04-24 and pass `128/128`
+- rerun the full wrapper-driven host gate on 2026-04-24 and pass `136/136`
+- rerun the full wrapper-driven host gate on 2026-04-25 and pass `144/144`
+- rerun the full wrapper-driven host gate on 2026-04-25 after Field extended
+  host surface support and pass `152/152`
+- rerun the full wrapper-driven host gate on 2026-04-25 after Field refinement
+  closeout and pass `155/155`
+- rerun the full wrapper-driven host gate on 2026-04-25 after Field ergonomics
+  polish and board-generic UI cleanup and pass `159/159`
 - route Windows VST3 manifest generation through
   `tools/write_vst3_manifest.ps1` so `juce_vst3_helper.exe` is invoked through
   PowerShell instead of the failing direct MSBuild / `cmd` launch path

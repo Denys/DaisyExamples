@@ -105,6 +105,7 @@ HostedAppPatchBindings VASynthCore::GetPatchBindings() const
     for(std::size_t i = 0; i < pageBinding.parameterIds.size(); ++i)
     {
         bindings.knobControlIds[i]   = MakeControlId(nodeId_, pageBinding.parameterIds[i]);
+        bindings.knobParameterIds[i] = MakeParameterId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobDetailLabels[i] = pageBinding.parameterLabels[i];
     }
     bindings.encoderControlId       = MakeEncoderControlId(nodeId_);

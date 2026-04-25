@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/HostSessionState.h"
 
 namespace
@@ -175,6 +176,28 @@ TEST(HostSessionStateTest, VersionFiveRoundTripsFieldBoardIdWithoutChangingRackS
     EXPECT_EQ(restored.outputNodeId, "node1");
     ASSERT_EQ(restored.nodes.size(), 2u);
     ASSERT_EQ(restored.routes.size(), 2u);
+}
+
+TEST(HostSessionStateTest, FieldKnobControlValuesRoundTripWithoutPatchAliases)
+{
+    daisyhost::HostSessionState state;
+    state.boardId = "daisy_field";
+    state.controlValues[daisyhost::MakeDaisyFieldKnobControlId("node0", 0)] = 0.10f;
+    state.controlValues[daisyhost::MakeDaisyFieldKnobControlId("node0", 4)] = 0.65f;
+    state.controlValues[daisyhost::MakeDaisyFieldKnobControlId("node0", 7)] = 0.90f;
+    state.controlValues["node0/control/ctrl_1"] = 0.25f;
+
+    const auto restored = daisyhost::HostSessionState::Deserialize(state.Serialize());
+
+    EXPECT_EQ(restored.boardId, "daisy_field");
+    EXPECT_FLOAT_EQ(restored.controlValues.at("node0/control/field_knob_1"),
+                    0.10f);
+    EXPECT_FLOAT_EQ(restored.controlValues.at("node0/control/field_knob_5"),
+                    0.65f);
+    EXPECT_FLOAT_EQ(restored.controlValues.at("node0/control/field_knob_8"),
+                    0.90f);
+    EXPECT_FLOAT_EQ(restored.controlValues.at("node0/control/ctrl_1"), 0.25f);
+    EXPECT_EQ(restored.controlValues.count("node0/control/field_key_a_1"), 0u);
 }
 
 TEST(HostSessionStateTest, LegacySessionsSynthesizeNodeZeroMetadata)

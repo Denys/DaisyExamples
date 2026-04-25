@@ -38,6 +38,7 @@ std::string ToCompactJsonString(const juce::var& value)
 
 const std::vector<BoardRegistration> kBoardRegistrations = {
     {"daisy_patch", "Daisy Patch", true},
+    {"daisy_field", "Daisy Field", true},
 };
 
 const std::vector<ActivityRegistration> kActivityRegistrations = {
@@ -546,12 +547,11 @@ bool BuildHubLaunchPlan(const HubLaunchSelection& selection,
     {
         builtPlan.executable
             = paths.standaloneExecutable.getFullPathName().toStdString();
-        builtPlan.arguments.push_back("--board");
-        builtPlan.arguments.push_back(boardId);
-        builtPlan.arguments.push_back("--app");
-        builtPlan.arguments.push_back(appId);
-        builtPlan.cleanupFiles.push_back(
-            paths.supportDirectory.getChildFile("hub_launch_request.json"));
+        const auto startupRequestFile
+            = paths.supportDirectory.getChildFile("hub_launch_request.json");
+        builtPlan.cleanupFiles.push_back(startupRequestFile);
+        builtPlan.generatedFiles.push_back(
+            {startupRequestFile, SerializeHubStartupRequest({boardId, appId})});
     }
     else if(activityId == "render")
     {
@@ -563,7 +563,8 @@ bool BuildHubLaunchPlan(const HubLaunchSelection& selection,
                                                "render_out/" + appId);
 
         juce::File scenarioFile = selection.renderScenario;
-        if(!scenarioFile.existsAsFile() && paths.sourceRoot.isDirectory())
+        if(!scenarioFile.existsAsFile() && boardId == GetDefaultBoardId()
+           && paths.sourceRoot.isDirectory())
         {
             const auto exampleScenario = paths.sourceRoot.getChildFile(
                 "training/examples/" + appId + "_smoke.json");
@@ -638,17 +639,17 @@ bool ExecuteHubLaunchPlan(const HubLaunchPlan& plan, std::string* errorMessage)
         return false;
     }
 
-    if(!WriteGeneratedFiles(plan, errorMessage))
-    {
-        return false;
-    }
-
     for(const auto& file : plan.cleanupFiles)
     {
         if(file.exists())
         {
             file.deleteFile();
         }
+    }
+
+    if(!WriteGeneratedFiles(plan, errorMessage))
+    {
+        return false;
     }
 
     std::string parameterString;

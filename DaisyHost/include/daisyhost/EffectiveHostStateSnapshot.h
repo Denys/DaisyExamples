@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "daisyhost/HostAutomationBridge.h"
+#include "daisyhost/BoardControlMapping.h"
 
 namespace daisyhost
 {
@@ -86,6 +87,38 @@ struct EffectiveHostRouteSnapshot
     std::string destPortId;
 };
 
+struct EffectiveHostFieldCvOutputSnapshot
+{
+    std::string id;
+    std::string label;
+    bool        available       = false;
+    float       normalizedValue = 0.0f;
+    float       volts           = 0.0f;
+};
+
+struct EffectiveHostFieldSwitchSnapshot
+{
+    std::string id;
+    std::string label;
+    std::string detailLabel;
+    bool        available = false;
+    bool        pressed   = false;
+};
+
+struct EffectiveHostFieldLedSnapshot
+{
+    std::string id;
+    std::string label;
+    float       normalizedValue = 0.0f;
+};
+
+struct EffectiveHostFieldSurfaceSnapshot
+{
+    std::array<EffectiveHostFieldCvOutputSnapshot, kDaisyFieldCvOutputCount> cvOutputs{};
+    std::array<EffectiveHostFieldSwitchSnapshot, kDaisyFieldSwitchCount> switches{};
+    std::array<EffectiveHostFieldLedSnapshot, kDaisyFieldLedCount> leds{};
+};
+
 struct EffectiveHostNodeSummary
 {
     std::string nodeId;
@@ -114,6 +147,7 @@ struct EffectiveHostStateSnapshot
     std::array<EffectiveHostCvInputSnapshot, 4> cvInputs{};
     std::array<EffectiveHostGateInputSnapshot, 2> gateInputs{};
     EffectiveHostAudioInputSnapshot audioInput;
+    EffectiveHostFieldSurfaceSnapshot fieldSurface;
 };
 
 EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
@@ -132,5 +166,6 @@ EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
     const std::array<HostCvInputState, 4>&   cvInputs,
     const std::array<HostGateInputState, 2>& gateInputs,
     const HostAudioInputState&               audioInput,
-    const std::vector<MetaControllerDescriptor>& metaControllers = {});
+    const std::vector<MetaControllerDescriptor>& metaControllers = {},
+    const EffectiveHostFieldSurfaceSnapshot& fieldSurface = {});
 } // namespace daisyhost

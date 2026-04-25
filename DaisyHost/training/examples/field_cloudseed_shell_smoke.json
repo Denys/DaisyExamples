@@ -1,0 +1,59 @@
+{
+  "boardId": "daisy_field",
+  "appId": "cloudseed",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 1.0,
+    "outputChannelCount": 2
+  },
+  "seed": 512,
+  "initialParameterValues": {
+    "node0/param/mix": 0.42,
+    "node0/param/size": 0.66,
+    "node0/param/decay": 0.62,
+    "node0/param/diffusion": 0.58
+  },
+  "audioInput": {
+    "mode": "sine",
+    "level": 7.0,
+    "frequencyHz": 196.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.0,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/pages/page",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.15,
+      "type": "parameter_set",
+      "parameterId": "node0/param/pre_delay",
+      "normalizedValue": 0.68
+    },
+    {
+      "timeSeconds": 0.3,
+      "type": "parameter_set",
+      "parameterId": "node0/param/damping",
+      "normalizedValue": 0.36
+    },
+    {
+      "timeSeconds": 0.45,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/utilities/interpolation",
+      "normalizedValue": 0.0
+    },
+    {
+      "timeSeconds": 0.6,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/utilities/randomize_seeds",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.75,
+      "type": "audio_input_config",
+      "frequencyHz": 247.0
+    }
+  ]
+}

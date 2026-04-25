@@ -35,6 +35,7 @@ enable_testing()
 
 add_library(daisyhost_core STATIC
     src/AppRegistry.cpp
+    src/BoardControlMapping.cpp
     src/BoardProfile.cpp
     src/ComputerKeyboardMidi.cpp
     src/DaisyBraidsCore.cpp
@@ -141,6 +142,7 @@ target_link_libraries(DaisyHostRender
 
 juce_add_gui_app(DaisyHostHub
     COMPANY_NAME Antigravity
+    ICON_SMALL "${PROJECT_SOURCE_DIR}/assets/daisyhost-icon-compact.png"
     PRODUCT_NAME "DaisyHost Hub"
 )
 
@@ -236,6 +238,7 @@ endif()
 set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_app_registry.cpp
     tests/test_braids_core.cpp
+    tests/test_board_control_mapping.cpp
     tests/test_board_profile.cpp
     tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp

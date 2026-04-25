@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "daisyhost/AppRegistry.h"
+#include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
 #include "daisyhost/StandaloneUiPolicy.h"
 
@@ -412,6 +413,55 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
     knobs_[3].label.setVisible(false);
     knobs_[3].learnButton.setVisible(false);
 
+    for(std::size_t i = 0; i < fieldKnobs_.size(); ++i)
+    {
+        ConfigureControl(fieldKnobs_[i],
+                         processor_.GetFieldKnobLabel(i),
+                         processor_.GetFieldKnobControlId(i));
+        ConfigureMouseFriendlySlider(fieldKnobs_[i].slider, 0.0);
+        fieldKnobs_[i].learnButton.setVisible(false);
+        addAndMakeVisible(fieldKnobs_[i].slider);
+        addAndMakeVisible(fieldKnobs_[i].label);
+        addChildComponent(fieldKnobs_[i].learnButton);
+        RegisterKeyboardSource(fieldKnobs_[i].slider);
+    }
+
+    for(std::size_t i = 0; i < fieldKeyButtons_.size(); ++i)
+    {
+        const char row = i < 8 ? 'A' : 'B';
+        fieldKeyButtons_[i].setButtonText(
+            juce::String::charToString(row)
+            + juce::String(static_cast<int>((i % 8) + 1)));
+        fieldKeyButtons_[i].setClickingTogglesState(false);
+        fieldKeyButtons_[i].addListener(this);
+        fieldKeyButtons_[i].setColour(juce::TextButton::buttonColourId,
+                                      CreamColour().withAlpha(0.92f));
+        fieldKeyButtons_[i].setColour(juce::TextButton::buttonOnColourId,
+                                      AccentColour().withAlpha(0.92f));
+        fieldKeyButtons_[i].setColour(juce::TextButton::textColourOffId,
+                                      InkColour());
+        fieldKeyButtons_[i].setColour(juce::TextButton::textColourOnId,
+                                      InkColour());
+        addAndMakeVisible(fieldKeyButtons_[i]);
+        RegisterKeyboardSource(fieldKeyButtons_[i]);
+    }
+
+    for(std::size_t i = 0; i < fieldSwitchButtons_.size(); ++i)
+    {
+        auto& button = fieldSwitchButtons_[i];
+        button.setButtonText("SW" + juce::String(static_cast<int>(i + 1)));
+        button.setClickingTogglesState(false);
+        button.addListener(this);
+        button.setColour(juce::TextButton::buttonColourId,
+                         InkColour().withAlpha(0.82f));
+        button.setColour(juce::TextButton::buttonOnColourId,
+                         AccentColour().withAlpha(0.92f));
+        button.setColour(juce::TextButton::textColourOffId, CreamColour());
+        button.setColour(juce::TextButton::textColourOnId, InkColour());
+        addAndMakeVisible(button);
+        RegisterKeyboardSource(button);
+    }
+
     encoderPressButton_.setButtonText("PUSH");
     encoderPressButton_.setClickingTogglesState(false);
     encoderPressButton_.addListener(this);
@@ -515,6 +565,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
             {
                 UpdateRackUi();
                 UpdateTopControlUi();
+                UpdateFieldControlUi();
                 resized();
             }
         };
@@ -725,6 +776,7 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
 
     UpdateRackUi();
     UpdateTopControlUi();
+    UpdateFieldControlUi();
     UpdateComputerKeyboardUi();
     UpdateCvGeneratorEditorUi();
     startTimerHz(30);
@@ -742,6 +794,19 @@ DaisyHostPatchAudioProcessorEditor::~DaisyHostPatchAudioProcessorEditor()
     }
     dryWet_.slider.removeListener(this);
     dryWet_.learnButton.removeListener(this);
+    for(auto& control : fieldKnobs_)
+    {
+        control.slider.removeListener(this);
+        control.learnButton.removeListener(this);
+    }
+    for(auto& button : fieldKeyButtons_)
+    {
+        button.removeListener(this);
+    }
+    for(auto& button : fieldSwitchButtons_)
+    {
+        button.removeListener(this);
+    }
     encoderPressButton_.removeListener(this);
 
     for(auto& slider : cvSliders_)
@@ -795,8 +860,10 @@ void DaisyHostPatchAudioProcessorEditor::paint(juce::Graphics& g)
 
     DrawPanelDecorations(g);
     DrawPatchTraces(g);
+    DrawPassiveSurfaceControls(g);
     DrawDisplay(g, RectFromPanel(processor_.GetBoardProfile().display.panelBounds));
     DrawPorts(g);
+    DrawPanelIndicators(g);
     DrawPanelTexts(g);
     DrawHostTools(g);
 
@@ -815,32 +882,43 @@ void DaisyHostPatchAudioProcessorEditor::paint(juce::Graphics& g)
 void DaisyHostPatchAudioProcessorEditor::resized()
 {
     const auto& profile = processor_.GetBoardProfile();
+    const bool  fieldBoard = processor_.IsDaisyFieldBoard();
     const auto* ctrl1   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl1_mix");
     const auto* ctrl2   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl2_primary");
     const auto* ctrl3   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl3_secondary");
     const auto* ctrl4   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl4_feedback");
     const auto* push    = FindSurfaceControlById(profile.nodeId + "/surface/enc1_push");
 
-    if(ctrl1 != nullptr)
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        auto& control = GetTopControlUi(i);
+        control.slider.setVisible(!fieldBoard);
+        control.label.setVisible(!fieldBoard);
+        control.learnButton.setVisible(!fieldBoard);
+    }
+    encoderPressButton_.setVisible(!fieldBoard);
+
+    if(!fieldBoard && ctrl1 != nullptr)
     {
         LayoutRotaryControl(dryWet_, *ctrl1);
     }
-    if(ctrl2 != nullptr)
+    if(!fieldBoard && ctrl2 != nullptr)
     {
         LayoutRotaryControl(knobs_[0], *ctrl2);
     }
-    if(ctrl3 != nullptr)
+    if(!fieldBoard && ctrl3 != nullptr)
     {
         LayoutRotaryControl(knobs_[1], *ctrl3);
     }
-    if(ctrl4 != nullptr)
+    if(!fieldBoard && ctrl4 != nullptr)
     {
         LayoutRotaryControl(knobs_[2], *ctrl4);
     }
-    if(push != nullptr)
+    if(!fieldBoard && push != nullptr)
     {
         LayoutButtonControl(encoderPressButton_, *push);
     }
+    LayoutFieldControls();
 
     auto drawer = GetHostToolsBounds().reduced(18);
     rackHeaderLabel_.setBounds(drawer.removeFromTop(20));
@@ -967,6 +1045,7 @@ void DaisyHostPatchAudioProcessorEditor::mouseDown(const juce::MouseEvent& event
             {
                 UpdateRackUi();
                 UpdateTopControlUi();
+                UpdateFieldControlUi();
                 resized();
             }
             return;
@@ -1107,6 +1186,71 @@ void DaisyHostPatchAudioProcessorEditor::DrawPanelDecorations(juce::Graphics& g)
                                        decoration.emphasized ? 1.8f : 1.2f);
                 break;
         }
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::DrawPassiveSurfaceControls(
+    juce::Graphics& g) const
+{
+    const auto& profile = processor_.GetBoardProfile();
+    for(const auto& control : profile.surfaceControls)
+    {
+        if(control.primarySurface)
+        {
+            continue;
+        }
+        if(IsInteractiveFieldSurfaceControl(control.id))
+        {
+            continue;
+        }
+
+        const auto area = RectFromPanel(control.panelBounds);
+        switch(control.kind)
+        {
+            case daisyhost::ControlKind::kKnob:
+            case daisyhost::ControlKind::kEncoder:
+            {
+                const auto knob = SquareInside(area, 0.88f);
+                g.setColour(juce::Colours::black.withAlpha(0.28f));
+                g.fillEllipse(knob.expanded(4.0f));
+                g.setColour(CreamColour().withAlpha(0.92f));
+                g.fillEllipse(knob);
+                g.setColour(InkColour().withAlpha(0.84f));
+                g.drawEllipse(knob, 1.4f);
+                g.setColour(AccentColour().withAlpha(0.88f));
+                g.fillEllipse(knob.getCentreX() - 3.0f,
+                              knob.getY() + 7.0f,
+                              6.0f,
+                              6.0f);
+                break;
+            }
+
+            case daisyhost::ControlKind::kKey:
+                g.setColour(juce::Colours::black.withAlpha(0.20f));
+                g.fillRoundedRectangle(area.expanded(2.0f), 5.0f);
+                g.setColour(CreamColour().withAlpha(0.86f));
+                g.fillRoundedRectangle(area, 4.0f);
+                g.setColour(InkColour().withAlpha(0.75f));
+                g.drawRoundedRectangle(area, 4.0f, 1.0f);
+                break;
+
+            case daisyhost::ControlKind::kSwitch:
+            case daisyhost::ControlKind::kButton:
+                g.setColour(juce::Colours::black.withAlpha(0.26f));
+                g.fillRoundedRectangle(area.expanded(2.0f), 6.0f);
+                g.setColour(AccentColour().withAlpha(0.82f));
+                g.fillRoundedRectangle(area, 6.0f);
+                g.setColour(CreamColour().withAlpha(0.70f));
+                g.drawRoundedRectangle(area, 6.0f, 1.1f);
+                break;
+        }
+
+        g.setColour(InkColour().withAlpha(0.90f));
+        g.setFont(BodyFont(control.kind == daisyhost::ControlKind::kKey ? 8.0f : 9.5f));
+        g.drawText(juce::String(control.label),
+                   area.toNearestInt(),
+                   juce::Justification::centred,
+                   false);
     }
 }
 
@@ -1447,6 +1591,56 @@ void DaisyHostPatchAudioProcessorEditor::DrawPorts(juce::Graphics& g) const
     }
 }
 
+void DaisyHostPatchAudioProcessorEditor::DrawPanelIndicators(
+    juce::Graphics& g) const
+{
+    if(!processor_.IsDaisyFieldBoard())
+    {
+        return;
+    }
+
+    const auto& profile = processor_.GetBoardProfile();
+    std::size_t ledIndex = 0;
+    std::size_t cvOutIndex = 0;
+
+    for(const auto& indicator : profile.indicators)
+    {
+        const auto area = RectFromPanel(indicator.panelBounds);
+        if(indicator.kind == daisyhost::PanelIndicatorKind::kLed)
+        {
+            const float value = processor_.GetFieldLedValue(ledIndex++);
+            const auto led = SquareInside(area, 0.92f);
+            g.setColour(juce::Colours::black.withAlpha(0.34f));
+            g.fillEllipse(led.expanded(2.5f));
+            g.setColour(value > 0.5f ? AccentColour()
+                                     : juce::Colour::fromRGB(58, 65, 70));
+            g.fillEllipse(led);
+            g.setColour(CreamColour().withAlpha(value > 0.5f ? 0.88f : 0.28f));
+            g.drawEllipse(led, 1.0f);
+            continue;
+        }
+
+        if(indicator.kind == daisyhost::PanelIndicatorKind::kCvOutput)
+        {
+            const float normalized = processor_.GetFieldCvOutputValue(cvOutIndex);
+            const float volts = processor_.GetFieldCvOutputVolts(cvOutIndex);
+            ++cvOutIndex;
+
+            g.setColour(juce::Colours::black.withAlpha(0.30f));
+            g.fillRoundedRectangle(area, 3.0f);
+            g.setColour(PortColour(daisyhost::VirtualPortType::kCv).withAlpha(0.70f));
+            g.fillRoundedRectangle(area.withWidth(area.getWidth() * normalized),
+                                   3.0f);
+            g.setColour(TextColour().withAlpha(0.80f));
+            g.setFont(BodyFont(7.5f));
+            g.drawText(juce::String(volts, 1) + "V",
+                       area.translated(0.0f, -11.0f).toNearestInt(),
+                       juce::Justification::centred,
+                       false);
+        }
+    }
+}
+
 void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 {
     auto panel = GetHostToolsBounds().toFloat().reduced(16.0f);
@@ -1479,7 +1673,10 @@ void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 
     g.setFont(BodyFont(11.5f));
     g.setColour(TextColour().withAlpha(0.72f));
-    g.drawText("Patch controls, encoder/menu state, CV/gate inputs, and host tools apply to the selected rack node.",
+    const auto selectedSurfaceText = processor_.IsDaisyFieldBoard()
+                                         ? "Field controls, keys, switches, CV/gate inputs, and host tools apply to the selected rack node."
+                                         : "Patch controls, encoder/menu state, CV/gate inputs, and host tools apply to the selected rack node.";
+    g.drawText(selectedSurfaceText,
                body.removeFromTop(34.0f).toNearestInt(),
                juce::Justification::topLeft,
                true);
@@ -1832,6 +2029,144 @@ void DaisyHostPatchAudioProcessorEditor::UpdateTopControlUi()
     }
 }
 
+void DaisyHostPatchAudioProcessorEditor::LayoutFieldControls()
+{
+    const bool fieldBoard = processor_.IsDaisyFieldBoard();
+    const auto& profile = processor_.GetBoardProfile();
+
+    for(std::size_t i = 0; i < fieldKnobs_.size(); ++i)
+    {
+        auto& control = fieldKnobs_[i];
+        control.slider.setVisible(fieldBoard);
+        control.label.setVisible(fieldBoard);
+        control.learnButton.setVisible(false);
+        if(!fieldBoard)
+        {
+            control.slider.setBounds({});
+            control.label.setBounds({});
+            continue;
+        }
+
+        const auto* slot = FindSurfaceControlByTarget(control.controlId);
+        if(slot != nullptr)
+        {
+            LayoutRotaryControl(control, *slot, false);
+        }
+    }
+
+    for(std::size_t i = 0; i < fieldKeyButtons_.size(); ++i)
+    {
+        auto& button = fieldKeyButtons_[i];
+        button.setVisible(fieldBoard);
+        if(!fieldBoard)
+        {
+            button.setBounds({});
+            continue;
+        }
+
+        const auto* slot = FindSurfaceControlByTarget(
+            daisyhost::MakeDaisyFieldKeyControlId(profile.nodeId, i));
+        if(slot != nullptr)
+        {
+            LayoutButtonControl(button, *slot);
+        }
+    }
+
+    for(std::size_t i = 0; i < fieldSwitchButtons_.size(); ++i)
+    {
+        auto& button = fieldSwitchButtons_[i];
+        button.setVisible(fieldBoard);
+        if(!fieldBoard)
+        {
+            button.setBounds({});
+            continue;
+        }
+
+        const auto* slot = FindSurfaceControlByTarget(
+            daisyhost::MakeDaisyFieldSwitchControlId(profile.nodeId, i));
+        if(slot != nullptr)
+        {
+            LayoutButtonControl(button, *slot);
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateFieldControlUi()
+{
+    const bool fieldBoard = processor_.IsDaisyFieldBoard();
+    for(std::size_t i = 0; i < fieldKnobs_.size(); ++i)
+    {
+        auto& control = fieldKnobs_[i];
+        control.controlId = processor_.GetFieldKnobControlId(i);
+        control.label.setText(processor_.GetFieldKnobLabel(i),
+                              juce::dontSendNotification);
+        control.slider.setValue(processor_.GetFieldKnobValue(i),
+                                juce::dontSendNotification);
+        control.slider.setEnabled(fieldBoard);
+        control.label.setEnabled(fieldBoard);
+    }
+
+    for(std::size_t i = 0; i < fieldKeyButtons_.size(); ++i)
+    {
+        auto& button = fieldKeyButtons_[i];
+        const char row = i < 8 ? 'A' : 'B';
+        button.setButtonText(juce::String::charToString(row)
+                             + juce::String(static_cast<int>((i % 8) + 1)));
+        button.setEnabled(fieldBoard && processor_.GetFieldKeyMidiNote(i) >= 0);
+        button.setToggleState(processor_.GetFieldKeyPressed(i),
+                              juce::dontSendNotification);
+    }
+
+    for(std::size_t i = 0; i < fieldSwitchButtons_.size(); ++i)
+    {
+        auto& button = fieldSwitchButtons_[i];
+        button.setButtonText(processor_.GetFieldSwitchLabel(i));
+        button.setEnabled(fieldBoard && processor_.GetFieldSwitchAvailable(i));
+        button.setToggleState(processor_.GetFieldSwitchPressed(i),
+                              juce::dontSendNotification);
+    }
+    repaint();
+}
+
+bool DaisyHostPatchAudioProcessorEditor::IsInteractiveFieldSurfaceControl(
+    const std::string& surfaceId) const
+{
+    const auto& profile = processor_.GetBoardProfile();
+    if(!processor_.IsDaisyFieldBoard())
+    {
+        return false;
+    }
+
+    const auto* slot = FindSurfaceControlById(surfaceId);
+    if(slot == nullptr || slot->targetId.empty())
+    {
+        return false;
+    }
+
+    for(std::size_t i = 0; i < fieldKnobs_.size(); ++i)
+    {
+        if(slot->targetId == processor_.GetFieldKnobControlId(i))
+        {
+            return true;
+        }
+    }
+    for(std::size_t i = 0; i < fieldKeyButtons_.size(); ++i)
+    {
+        if(slot->targetId == daisyhost::MakeDaisyFieldKeyControlId(profile.nodeId, i))
+        {
+            return true;
+        }
+    }
+    for(std::size_t i = 0; i < fieldSwitchButtons_.size(); ++i)
+    {
+        if(slot->targetId == daisyhost::MakeDaisyFieldSwitchControlId(profile.nodeId, i))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void DaisyHostPatchAudioProcessorEditor::ReleaseComputerKeyboardNotes()
 {
     for(const auto& heldNote : heldComputerKeyboardNotes_)
@@ -1938,6 +2273,15 @@ void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider
         }
     }
 
+    for(std::size_t i = 0; i < fieldKnobs_.size(); ++i)
+    {
+        if(slider == &fieldKnobs_[i].slider)
+        {
+            processor_.SetFieldKnobValue(i, static_cast<float>(slider->getValue()));
+            return;
+        }
+    }
+
     if(slider == &testInputLevelSlider_)
     {
         processor_.SetTestInputLevel(static_cast<float>(slider->getValue()));
@@ -2030,6 +2374,27 @@ void DaisyHostPatchAudioProcessorEditor::buttonClicked(juce::Button* button)
         if(button == &gateButtons_[i])
         {
             processor_.SetGateValue(i, gateButtons_[i].getToggleState());
+            return;
+        }
+    }
+}
+
+void DaisyHostPatchAudioProcessorEditor::buttonStateChanged(juce::Button* button)
+{
+    for(std::size_t i = 0; i < fieldKeyButtons_.size(); ++i)
+    {
+        if(button == &fieldKeyButtons_[i])
+        {
+            processor_.SetFieldKeyPressed(i, button->isDown());
+            return;
+        }
+    }
+
+    for(std::size_t i = 0; i < fieldSwitchButtons_.size(); ++i)
+    {
+        if(button == &fieldSwitchButtons_[i])
+        {
+            processor_.SetFieldSwitchPressed(i, button->isDown());
             return;
         }
     }
@@ -2137,6 +2502,7 @@ void DaisyHostPatchAudioProcessorEditor::timerCallback()
 {
     UpdateRackUi();
     UpdateTopControlUi();
+    UpdateFieldControlUi();
     for(std::size_t i = 0; i < 4; ++i)
     {
         auto& control = GetTopControlUi(i);

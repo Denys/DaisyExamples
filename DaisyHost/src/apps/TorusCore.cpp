@@ -387,12 +387,15 @@ HostedAppPatchBindings TorusCore::GetPatchBindings() const
     HostedAppPatchBindings bindings;
     for(std::size_t i = 0; i < 4; ++i)
     {
+        const int assignment = QuantizeChoice(
+            impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl1Assignment) + i]
+                .effectiveNormalizedValue,
+            5);
         bindings.knobControlIds[i]    = MakeKnobControlId(nodeId_, i + 1);
-        bindings.knobDetailLabels[i]  = ControlNameFromAssignment(
-            QuantizeChoice(
-                impl_->parameters[static_cast<std::size_t>(ParameterIndex::kCtrl1Assignment) + i]
-                    .effectiveNormalizedValue,
-                5));
+        bindings.knobParameterIds[i]   = impl_->parameters[static_cast<std::size_t>(
+                                            AssignmentToParameterIndex(assignment))]
+                                           .id;
+        bindings.knobDetailLabels[i]  = ControlNameFromAssignment(assignment);
         bindings.cvInputPortIds[i]    = MakeCvInputPortId(nodeId_, i + 1);
         bindings.audioInputPortIds[i] = MakeAudioInputPortId(nodeId_, i + 1);
         bindings.audioOutputPortIds[i] = MakeAudioOutputPortId(nodeId_, i + 1);

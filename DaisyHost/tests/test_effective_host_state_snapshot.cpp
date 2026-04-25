@@ -204,4 +204,63 @@ TEST(EffectiveHostStateSnapshotTest, CarriesActiveNodeMetaControllers)
     EXPECT_FLOAT_EQ(snapshot.metaControllers[1].normalizedValue, 0.75f);
     EXPECT_FALSE(snapshot.metaControllers[1].stateful);
 }
+
+TEST(EffectiveHostStateSnapshotTest, CarriesFieldExtendedSurfaceState)
+{
+    const std::vector<daisyhost::ParameterDescriptor> parameters;
+    const daisyhost::HostAutomationSlotBindings       automationSlots{};
+    const std::array<daisyhost::HostCvInputState, 4>  cvInputs{};
+    const std::array<daisyhost::HostGateInputState, 2> gateInputs{};
+    const daisyhost::HostAudioInputState              audioInput{};
+    const daisyhost::HostedAppPatchBindings           patchBindings{};
+    const std::vector<daisyhost::EffectiveHostNodeSummary> nodeSummaries = {
+        {"node0", "vasynth", "VA Synth", true, true, true},
+    };
+    const std::vector<daisyhost::EffectiveHostRouteSnapshot> routes;
+    const std::vector<daisyhost::MetaControllerDescriptor> metaControllers;
+
+    daisyhost::EffectiveHostFieldSurfaceSnapshot fieldSurface;
+    fieldSurface.cvOutputs[0] = {"node0/port/field_cv_out_1",
+                                 "CV OUT 1",
+                                 true,
+                                 0.82f,
+                                 4.10f};
+    fieldSurface.switches[0] = {"node0/control/field_sw_1",
+                                "SW1",
+                                "Audition",
+                                true,
+                                true};
+    fieldSurface.leds[0] = {"node0/led/field_key_a_1", "A1", 1.0f};
+    fieldSurface.leds[19] = {"node0/led/field_gate_out", "Gate Out", 0.0f};
+
+    const auto snapshot = daisyhost::BuildEffectiveHostStateSnapshot(
+        "daisy_field",
+        "node0",
+        1u,
+        "node0",
+        "node0",
+        "vasynth",
+        "VA Synth",
+        nodeSummaries,
+        routes,
+        patchBindings,
+        parameters,
+        automationSlots,
+        cvInputs,
+        gateInputs,
+        audioInput,
+        metaControllers,
+        fieldSurface);
+
+    EXPECT_EQ(snapshot.boardId, "daisy_field");
+    EXPECT_TRUE(snapshot.fieldSurface.cvOutputs[0].available);
+    EXPECT_EQ(snapshot.fieldSurface.cvOutputs[0].id, "node0/port/field_cv_out_1");
+    EXPECT_FLOAT_EQ(snapshot.fieldSurface.cvOutputs[0].normalizedValue, 0.82f);
+    EXPECT_FLOAT_EQ(snapshot.fieldSurface.cvOutputs[0].volts, 4.10f);
+    EXPECT_TRUE(snapshot.fieldSurface.switches[0].pressed);
+    EXPECT_EQ(snapshot.fieldSurface.switches[0].detailLabel, "Audition");
+    EXPECT_EQ(snapshot.fieldSurface.leds[0].id, "node0/led/field_key_a_1");
+    EXPECT_FLOAT_EQ(snapshot.fieldSurface.leds[0].normalizedValue, 1.0f);
+    EXPECT_EQ(snapshot.fieldSurface.leds[19].id, "node0/led/field_gate_out");
+}
 } // namespace
