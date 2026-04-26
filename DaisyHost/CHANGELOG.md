@@ -4,6 +4,99 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- harden TF12 verification and CLI adoption docs:
+  - refresh current checkout verification truth to the 2026-04-26 `202/202`
+    `build_host.cmd` gate
+  - document the DaisyHostCLI agent/CI smoke sequence using existing commands
+    without adding new CLI surface
+  - keep older `159/159`, `168/168`, `196/196`, and `197/197` counts as dated
+    historical evidence only
+- add native `DaisyHostCLI.exe` for agent/CI workflows:
+  - discovery commands for hosted apps, board profiles, and test input modes
+  - app/board description JSON for scenario generation and control inspection
+  - scenario validation, offline render, effective-state snapshot, smoke, and
+    doctor commands built on existing DaisyHost runtime contracts
+  - CLI smoke entries wired into CTest and `build_host.ps1`
+- add `field/DaisyHostController` as a controller-only Daisy Field firmware
+  target for DaisyHost:
+  - sends standard USB MIDI using libDaisy `MidiUsbHandler`, with no audio
+    callback or custom DaisyHost protocol
+  - maps K1-K8 to CC 20-27, CV1-CV4 to CC 28-31, A1-B8 to notes 60-75, and
+    SW1/SW2 to momentary CC 80/81 on MIDI channel 1
+  - includes firmware `README.md`, `CONTROLS.md`, OLED/LED feedback, and a
+    manual DaisyHost MIDI learn validation checklist
+  - builds with `make`, passes QAE validation, and flashes/verifies through
+    ST-Link on 2026-04-26; USB MIDI enumeration and manual DaisyHost
+    validation remain pending
+- separate Daisy Field hosted-app navigation from right-side drawer navigation:
+  - SW1/X and SW2/C now rotate the active app menu instead of changing RSP
+    pages
+  - RSP Page 1/2/3 remains mouse/debug controlled by its page buttons
+  - RSP Page 1 adds latched CV target dropdowns for knob-controlled
+    parameters, with target selection switching that CV source to Generator
+  - CV target dropdowns now show both default and alternative Field knob target
+    sets as `Kx.1` and `Kx.2`, while preserving unsafe target filtering and
+    avoiding overlap between default and alternative K mappings
+  - the later oversized Page 1 modulation-bay/keyboard-helper experiment was
+    reverted; Page 1 remains the compact split layout with Keyboard MIDI and
+    MIDI tracker on the left and CV generator/manual CV/Gate controls on the
+    right
+  - CloudSeed adds Space, Motion, Arp, and Advanced app pages, with Advanced
+    Field knobs limited to safe EQ/seed parameters that avoid disabling,
+    muting, bypassing, or disconnecting audio input/output
+- add a compact CloudSeed arpeggiator as a deterministic parameter-stepper:
+  - new canonical `arp_enabled`, `arp_rate`, `arp_pattern`, `arp_depth`, and
+    `arp_target` state in `DaisyCloudSeedCore`
+  - effective-state modulation over CloudSeed performance groups while stored
+    knob/menu parameter values remain unchanged
+  - hosted `cloudseed` `Arp` menu section plus status/info display surfacing
+  - render-runtime and `cloudseed_smoke.json` coverage for the arp path
+  - deliberate tradeoff: this is not MIDI-note arpeggiation; CloudSeed remains
+    an audio-input effect
+- add `subharmoniq` as a first-class supported hosted app and Field firmware
+  target with:
+  - a portable `DaisySubharmoniqCore` inspired by Subharmonicon-style
+    subharmonic oscillators, dual 4-step sequencers, integer rhythm dividers,
+    quantization, and Round 1 SVF-style low-pass filtering
+  - a hosted `apps::SubharmoniqCore` wrapper registered as app id
+    `subharmoniq`
+  - `field/SubharmoniqField` firmware with K1-K8 page controls, A/B key
+    sequencer/rhythm/transport actions, SW1/SW2 pseudo-encoder menu
+    navigation, CV/Gate/MIDI mappings, OLED, LEDs, and CV OUT sequencer
+    monitors
+  - an internal tempo clock fix so `B7` play can produce rhythm-triggered
+    audio without requiring external MIDI clock or Gate In first
+  - playable-default tuning for the internal-clock path: real attack/decay
+    envelope phase handling, stronger output/filter/source defaults, and
+    pickup-style Field knob startup so physical K1-K8 positions do not mute
+    the patch before a knob is moved
+  - DaisyHost Field UI refinements for SW1/SW2 navigation, X/C virtual switch
+    shortcuts, Field knob parameter labels, octave-aligned keyboard view,
+    CV/Gate trace cues, and top-grouped audio/gate/MIDI artwork
+  - host tests, Field firmware `make`, QAE validation, and ST-Link flashing
+    passing on 2026-04-26; manual hardware validation remains pending
+  - follow-up Field key-row correction so physical `B7`/`B8`, not physical
+    `A7`/`A8`, trigger play/reset on hardware, plus DaisyHost
+    `subharmoniq` Field keys now route to dedicated sequencer/rhythm/transport
+    actions instead of generic chromatic MIDI notes
+- add `polyosc` as a first-class supported hosted app with:
+  - a portable `DaisyPolyOscCore` wrapper for `patch/PolyOsc`
+  - Patch K1-K3 oscillator-frequency controls, K4 global-frequency offset,
+    encoder waveform selection, individual oscillator outputs on outs 1-3, and
+    mixed output on out 4 as the host stereo source
+  - host-side Field support through existing board mappings, with K1-K4
+    mirroring Patch controls and K5 mapped to `waveform`
+  - `training/examples/polyosc_smoke.json` and
+    `training/examples/field_polyosc_surface_smoke.json` render smoke coverage
+- add HW/App adapter pipeline v0:
+  - `tools/generate_field_adapter.py` generates Daisy Field firmware adapter
+    projects from checked-in shared-core JSON specs
+  - `tools/adapter_specs/field_multidelay.json` captures the first golden
+    `MultiDelayCore` -> Daisy Field adapter contract
+  - `tools/audit_firmware_portability.py` classifies firmware projects as
+    `portable-core-ready`, `needs-core-extraction`, or `not-supported-by-v0`
+  - generated `field/MultiDelayGenerated` builds and passes QAE validation;
+    generated-adapter flashing remains manual/optional
 - add `field/MultiDelay` as the first Daisy Field firmware adapter:
   - uses `daisy::DaisyField` with the shared
     `DaisyHost/src/apps/MultiDelayCore.cpp`

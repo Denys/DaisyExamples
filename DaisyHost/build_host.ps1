@@ -80,6 +80,7 @@ if (-not $SkipBuild) {
         $Configuration,
         "--target",
         "unit_tests",
+        "DaisyHostCLI",
         "DaisyHostHub",
         "DaisyHostRender",
         "DaisyHostPatch_VST3",

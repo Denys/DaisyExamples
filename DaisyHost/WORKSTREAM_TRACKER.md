@@ -1,6 +1,6 @@
 # DaisyHost Workstream Tracker
 
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 This file tracks the next forward-looking DaisyHost portfolio after the current
 `WS1` through `WS7` milestone set.
@@ -10,7 +10,7 @@ Current baseline:
 - `WS1` through `WS7` planned milestone scope is complete enough to freeze in
   this checkout.
 - Latest full host gate:
-  `cmd /c build_host.cmd` passed on 2026-04-25 and `ctest` passed `159/159`.
+  `cmd /c build_host.cmd` passed on 2026-04-26 and `ctest` passed `202/202`.
 - Daisy Field board-support shell, host-side Field native controls, and Field
   extended host surface support are now implemented:
   `daisy_field` flows through Hub, session, standalone startup, render, and
@@ -21,9 +21,14 @@ Current baseline:
   for the first board-generic cleanup pass. Sprint F3 also adds
   `field/MultiDelay` as the first Field firmware adapter; it is build-verified
   and ST-Link flash-verified, with manual functional hardware validation still
-  pending.
+  pending. Adapter-pipeline v0 now generates a build/QAE-verified
+  `field/MultiDelayGenerated` adapter from a checked-in spec and audits firmware
+  portability without claiming arbitrary source translation.
 - This tracker is mirrored in `PROJECT_TRACKER.md` so the active ledger and the
   forward portfolio stay readable in one place.
+- The TF12 adoption slice is implemented as docs plus verification hardening:
+  `DaisyHostCLI` is in the current build target list, CTest covers its core
+  smoke commands, and the documented agent/CI smoke sequence passed directly.
 
 ## Portfolio Rules
 
@@ -33,8 +38,10 @@ Current baseline:
 - Daisy Field has landed as a board-support shell plus host-side Field native
   controls and host-side Field outputs/switches/LEDs through the existing board
   factory seam; the first `field/MultiDelay` firmware adapter now exists and
-  has build plus ST-Link flash/verify evidence. Full manual Field hardware
-  validation, broader firmware parity, real voltage-output measurement,
+  has build plus ST-Link flash/verify evidence, and adapter-pipeline v0 can
+  generate the same class of Field firmware adapter from a shared-core spec.
+  Full manual Field hardware validation, generated-adapter flashing, broader
+  firmware parity, arbitrary firmware import, real voltage-output measurement,
   Field-specific app ergonomics, mixed-board racks, and manual DAW/VST3
   validation remain separate future work. Field-specific follow-on scope is
   tracked in `FIELD_PROJECT_TRACKER.md`.
@@ -55,11 +62,11 @@ Current baseline:
 
 | ID | Workstream | What it unlocks | Depends on | Parallel-safe with | Status |
 |---|---|---|---|---|---|
-| `TF8` | Daisy Field board support | Adds `daisy_field` through the board factory seam plus host-side Field native controls and host-side Field outputs/switches/LEDs so Field work can ship without reopening Patch-only architecture. | Green `WS7` freeze gate | `WS8`, `WS11`, `TF9`, `TF12` | Extended host surface implemented |
+| `TF8` | Daisy Field board support | Adds `daisy_field` through the board factory seam plus host-side Field native controls, host-side Field outputs/switches/LEDs, and first shared-core-to-Field firmware adapter generation so Field work can ship without reopening Patch-only architecture. | Green `WS7` freeze gate | `WS8`, `WS11`, `TF9`, `TF12` | Extended host surface + adapter pipeline v0 implemented |
 | `TF9` | Board-generic editor surface | Removes remaining Patch-shaped assumptions from the editor and board rendering path. | Existing board seam; pairs naturally with `TF8` | `TF8`, `WS8`, `WS11` | First cleanup implemented |
 | `TF10` | Routing contract generalization | Stabilizes route validation and internal graph rules so richer routing does not become a rewrite every sprint. | `WS7` rack/session/render baseline | `WS9`, `TF11`, `TF12` | Planned |
 | `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | `WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | Planned |
-| `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | Current wrapper and smoke harness | All workstreams | Planned |
+| `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | Current wrapper and smoke harness | All workstreams | Verification/adoption slice implemented |
 
 ## ASCII Parallelization View
 

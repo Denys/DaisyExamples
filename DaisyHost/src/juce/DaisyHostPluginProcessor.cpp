@@ -143,6 +143,13 @@ const daisyhost::BoardSurfaceBinding* FindFieldSwitchBinding(
     return index < mapping.switches.size() ? &mapping.switches[index] : nullptr;
 }
 
+const daisyhost::BoardSurfaceBinding* FindFieldKeyBinding(
+    const daisyhost::DaisyFieldControlMapping& mapping,
+    std::size_t                                index)
+{
+    return index < mapping.keys.size() ? &mapping.keys[index] : nullptr;
+}
+
 bool ApplySurfaceBinding(daisyhost::HostedAppCore&              core,
                          const daisyhost::BoardSurfaceBinding& binding,
                          float                                normalizedValue)
@@ -230,6 +237,10 @@ DaisyHostPatchAudioProcessor::DaisyHostPatchAudioProcessor()
         {
             node.gateValues[i]         = false;
             node.previousGateValues[i] = false;
+        }
+        for(auto& targetId : node.cvTargetIds)
+        {
+            targetId.clear();
         }
     };
     initializeRackNode(rackNodes_[0], "node0");
@@ -359,6 +370,12 @@ DaisyHostPatchAudioProcessor::BuildActiveFieldControlMapping() const
 {
     std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
     const auto& selectedNode = GetSelectedRackNode();
+    const auto drawerPage = static_cast<daisyhost::DaisyFieldDrawerPage>(
+        fieldDrawerPage_.load());
+    const auto knobLayoutMode
+        = drawerPage == daisyhost::DaisyFieldDrawerPage::kPublicParameters
+              ? daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters
+              : daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras;
     if(core_ != nullptr)
     {
         return daisyhost::BuildDaisyFieldControlMapping(
@@ -366,14 +383,16 @@ DaisyHostPatchAudioProcessor::BuildActiveFieldControlMapping() const
             core_->GetParameters(),
             core_->GetMenuModel(),
             computerKeyboardOctave_.load(),
-            selectedNode.nodeId);
+            selectedNode.nodeId,
+            knobLayoutMode);
     }
 
     return daisyhost::BuildDaisyFieldControlMapping(activeBindings_,
                                                     latestParameters_,
                                                     latestMenu_,
                                                     computerKeyboardOctave_.load(),
-                                                    selectedNode.nodeId);
+                                                    selectedNode.nodeId,
+                                                    knobLayoutMode);
 }
 
 bool DaisyHostPatchAudioProcessor::TryApplyBoardId(const std::string& requestedBoardId)
@@ -440,6 +459,7 @@ void DaisyHostPatchAudioProcessor::FlushSelectedNodeStateToRack()
         node.topControlValues[i] = topControlValues_[i].load();
         node.cvValues[i]         = cvValues_[i].load();
         node.cvVoltages[i]       = cvVoltages_[i].load();
+        node.cvTargetIds[i]      = cvTargetIds_[i];
         node.audioInputPeaks[i]  = audioInputPeaks_[i].load();
         node.audioOutputPeaks[i] = audioOutputPeaks_[i].load();
         node.cvGeneratorStates[i] = cvGeneratorStates_[i];
@@ -491,6 +511,7 @@ void DaisyHostPatchAudioProcessor::SyncSelectedNodeStateFromRack()
         topControlValues_[i].store(node.topControlValues[i]);
         cvValues_[i].store(node.cvValues[i]);
         cvVoltages_[i].store(node.cvVoltages[i]);
+        cvTargetIds_[i] = node.cvTargetIds[i];
         audioInputPeaks_[i].store(node.audioInputPeaks[i]);
         audioOutputPeaks_[i].store(node.audioOutputPeaks[i]);
         cvGeneratorStates_[i] = node.cvGeneratorStates[i];
@@ -553,11 +574,37 @@ void DaisyHostPatchAudioProcessor::ApplyRackNodeVirtualPortStateToCore(
         {
             continue;
         }
+        if(i < node.cvTargetIds.size()
+           && !daisyhost::ShouldForwardDaisyFieldCvInput(node.cvTargetIds[i]))
+        {
+            continue;
+        }
 
         daisyhost::PortValue value;
         value.type   = daisyhost::VirtualPortType::kCv;
         value.scalar = node.cvValues[i];
         node.core->SetPortInput(node.bindings.cvInputPortIds[i], value);
+    }
+
+    for(std::size_t i = 0; i < node.cvTargetIds.size(); ++i)
+    {
+        const auto& targetId = node.cvTargetIds[i];
+        if(targetId.empty())
+        {
+            continue;
+        }
+        if(!daisyhost::IsDaisyFieldCvTargetIdSafe(targetId))
+        {
+            continue;
+        }
+        if(targetId.find("/control/") != std::string::npos)
+        {
+            node.core->SetControl(targetId, node.cvValues[i]);
+        }
+        else if(targetId.find("/param/") != std::string::npos)
+        {
+            node.core->SetParameterValue(targetId, node.cvValues[i]);
+        }
     }
 
     for(std::size_t i = 0; i < node.bindings.gateInputPortIds.size(); ++i)
@@ -1354,6 +1401,14 @@ std::string DaisyHostPatchAudioProcessor::GetFieldKnobControlId(
     return binding != nullptr ? binding->controlId : std::string();
 }
 
+std::string DaisyHostPatchAudioProcessor::GetFieldKnobTargetId(
+    std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKnobBinding(mapping, index);
+    return binding != nullptr ? binding->targetId : std::string();
+}
+
 void DaisyHostPatchAudioProcessor::SetFieldKnobValue(std::size_t index,
                                                      float       normalizedValue)
 {
@@ -1364,7 +1419,11 @@ void DaisyHostPatchAudioProcessor::SetFieldKnobValue(std::size_t index,
 
     const float clamped = Clamp01(normalizedValue);
     fieldKnobValues_[index].store(clamped);
-    if(index < topControlValues_.size())
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKnobBinding(mapping, index);
+    if(binding != nullptr
+       && binding->targetKind == daisyhost::BoardSurfaceTargetKind::kControl
+       && index < topControlValues_.size())
     {
         topControlValues_[index].store(clamped);
     }
@@ -1400,10 +1459,24 @@ void DaisyHostPatchAudioProcessor::SetFieldKeyPressed(std::size_t index,
         return;
     }
 
-    const int midiNote = GetFieldKeyMidiNote(index);
-    if(midiNote >= 0)
+    const auto mapping = BuildActiveFieldControlMapping();
+    const auto* binding = FindFieldKeyBinding(mapping, index);
+    if(binding != nullptr
+       && binding->targetKind == daisyhost::BoardSurfaceTargetKind::kMenuItem)
     {
-        SetVirtualKeyboardNote(midiNote, pressed, pressed ? 1.0f : 0.0f);
+        if(pressed && core_ != nullptr)
+        {
+            ApplySurfaceBinding(*core_, *binding, 1.0f);
+            RefreshCoreStateFromIdleHostChange();
+        }
+        return;
+    }
+
+    if(binding != nullptr
+       && binding->targetKind == daisyhost::BoardSurfaceTargetKind::kMidiNote
+       && binding->midiNote >= 0)
+    {
+        SetVirtualKeyboardNote(binding->midiNote, pressed, pressed ? 1.0f : 0.0f);
     }
 }
 
@@ -1467,7 +1540,20 @@ void DaisyHostPatchAudioProcessor::SetFieldSwitchPressed(std::size_t index,
         if(binding != nullptr && binding->available
            && binding->targetKind == daisyhost::BoardSurfaceTargetKind::kMenuItem)
         {
-            SetMenuItemValue(binding->targetId, 1.0f);
+            if(binding->targetId
+               == GetSelectedRackNode().nodeId + "/menu/navigation/back")
+            {
+                RotateEncoder(-1);
+            }
+            else if(binding->targetId
+                    == GetSelectedRackNode().nodeId + "/menu/navigation/forward")
+            {
+                RotateEncoder(1);
+            }
+            else
+            {
+                SetMenuItemValue(binding->targetId, 1.0f);
+            }
         }
     }
     RefreshCoreStateFromIdleHostChange();
@@ -1572,6 +1658,148 @@ void DaisyHostPatchAudioProcessor::SetCvSourceMode(std::size_t index, int mode)
             RefreshCoreStateFromIdleHostChange();
         }
     }
+}
+
+int DaisyHostPatchAudioProcessor::GetFieldCvTargetSelection(
+    std::size_t index) const
+{
+    if(index >= cvTargetIds_.size())
+    {
+        return 0;
+    }
+
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& selectedNode = GetSelectedRackNode();
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto options = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, cvTargetIds_[index]);
+    for(std::size_t optionIndex = 0; optionIndex < options.size(); ++optionIndex)
+    {
+        if(options[optionIndex].targetId == cvTargetIds_[index])
+        {
+            return static_cast<int>(optionIndex);
+        }
+    }
+    return 0;
+}
+
+int DaisyHostPatchAudioProcessor::GetFieldCvTargetOptionCount(
+    std::size_t index) const
+{
+    if(index >= cvTargetIds_.size())
+    {
+        return 0;
+    }
+
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& selectedNode = GetSelectedRackNode();
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    return static_cast<int>(daisyhost::BuildDaisyFieldCvTargetOptions(
+                                defaultMapping,
+                                alternativeMapping,
+                                cvTargetIds_[index])
+                                .size());
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldCvTargetOptionLabel(
+    std::size_t index,
+    int         optionIndex) const
+{
+    if(index >= cvTargetIds_.size() || optionIndex < 0)
+    {
+        return {};
+    }
+
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& selectedNode = GetSelectedRackNode();
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto options = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, cvTargetIds_[index]);
+    if(static_cast<std::size_t>(optionIndex) >= options.size())
+    {
+        return {};
+    }
+    return juce::String(options[static_cast<std::size_t>(optionIndex)].detailLabel);
+}
+
+void DaisyHostPatchAudioProcessor::SetFieldCvTargetSelection(
+    std::size_t index,
+    int         optionIndex)
+{
+    if(index >= cvTargetIds_.size() || optionIndex < 0)
+    {
+        return;
+    }
+
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& selectedNode = GetSelectedRackNode();
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        activeBindings_,
+        core_ != nullptr ? core_->GetParameters() : latestParameters_,
+        core_ != nullptr ? core_->GetMenuModel() : latestMenu_,
+        computerKeyboardOctave_.load(),
+        selectedNode.nodeId,
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto options = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, cvTargetIds_[index]);
+    if(static_cast<std::size_t>(optionIndex) >= options.size())
+    {
+        return;
+    }
+
+    cvTargetIds_[index] = options[static_cast<std::size_t>(optionIndex)].targetId;
+    if(!cvTargetIds_[index].empty())
+    {
+        cvGeneratorStates_[index].mode
+            = daisyhost::CvInputSourceMode::kGenerator;
+    }
+    RefreshCoreStateFromIdleHostChange();
 }
 
 int DaisyHostPatchAudioProcessor::GetCvWaveform(std::size_t index) const
@@ -1717,6 +1945,56 @@ DaisyHostPatchAudioProcessor::GetParameterSnapshot() const
 {
     std::lock_guard<std::mutex> lock(menuSnapshotMutex_);
     return latestParameters_;
+}
+
+std::vector<daisyhost::BoardSurfaceBinding>
+DaisyHostPatchAudioProcessor::GetFieldPublicParameterBindings() const
+{
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    if(core_ != nullptr)
+    {
+        return daisyhost::BuildDaisyFieldPublicParameterList(
+            activeBindings_, core_->GetParameters());
+    }
+
+    return daisyhost::BuildDaisyFieldPublicParameterList(activeBindings_,
+                                                         latestParameters_);
+}
+
+int DaisyHostPatchAudioProcessor::GetFieldDrawerPage() const
+{
+    return fieldDrawerPage_.load();
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldDrawerPageLabel(int page) const
+{
+    switch(static_cast<daisyhost::DaisyFieldDrawerPage>(page))
+    {
+        case daisyhost::DaisyFieldDrawerPage::kKeyboardMidiCv:
+            return "Page 1";
+        case daisyhost::DaisyFieldDrawerPage::kPublicParameters:
+            return "Page 2";
+        case daisyhost::DaisyFieldDrawerPage::kRackAudio: return "Page 3";
+    }
+    return "Page";
+}
+
+void DaisyHostPatchAudioProcessor::SetFieldDrawerPage(int page)
+{
+    constexpr int kPageCount = 3;
+    const int clampedPage = juce::jlimit(0, kPageCount - 1, page);
+    if(fieldDrawerPage_.exchange(clampedPage) != clampedPage)
+    {
+        SyncFieldHostStateFromCore();
+    }
+}
+
+void DaisyHostPatchAudioProcessor::StepFieldDrawerPage(int delta)
+{
+    const auto current = static_cast<daisyhost::DaisyFieldDrawerPage>(
+        fieldDrawerPage_.load());
+    SetFieldDrawerPage(static_cast<int>(
+        daisyhost::StepDaisyFieldDrawerPage(current, delta)));
 }
 
 daisyhost::EffectiveHostFieldSurfaceSnapshot
@@ -2217,10 +2495,37 @@ void DaisyHostPatchAudioProcessor::ApplyVirtualPortStateToCore(
         {
             continue;
         }
+        if(i < cvTargetIds_.size()
+           && !daisyhost::ShouldForwardDaisyFieldCvInput(cvTargetIds_[i]))
+        {
+            continue;
+        }
         daisyhost::PortValue value;
         value.type   = daisyhost::VirtualPortType::kCv;
         value.scalar = cvValues_[i].load();
         core_->SetPortInput(activeBindings_.cvInputPortIds[i], value);
+    }
+
+    for(std::size_t i = 0; i < cvTargetIds_.size(); ++i)
+    {
+        const auto& targetId = cvTargetIds_[i];
+        if(targetId.empty())
+        {
+            continue;
+        }
+        if(!daisyhost::IsDaisyFieldCvTargetIdSafe(targetId))
+        {
+            continue;
+        }
+        const float value = cvValues_[i].load();
+        if(targetId.find("/control/") != std::string::npos)
+        {
+            core_->SetControl(targetId, value);
+        }
+        else if(targetId.find("/param/") != std::string::npos)
+        {
+            core_->SetParameterValue(targetId, value);
+        }
     }
 
     for(std::size_t i = 0; i < activeBindings_.gateInputPortIds.size(); ++i)
@@ -2332,7 +2637,8 @@ void DaisyHostPatchAudioProcessor::SyncFieldHostStateFromCore()
         {
             const float clamped = Clamp01(value.value);
             fieldKnobValues_[i].store(clamped);
-            if(i < topControlValues_.size())
+            if(binding.targetKind == daisyhost::BoardSurfaceTargetKind::kControl
+               && i < topControlValues_.size())
             {
                 topControlValues_[i].store(clamped);
             }

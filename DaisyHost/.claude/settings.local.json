@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py scripts/run.py notebook_manager.py list)",
+      "Bash(py scripts/run.py auto_add.py --url \"https://notebooklm.google.com/notebook/8084395c-2d50-464c-967b-7569926fe771\" --activate)"
+    ]
+  }
+}

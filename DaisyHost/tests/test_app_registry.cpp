@@ -4,11 +4,12 @@
 
 namespace
 {
-TEST(AppRegistryTest, RegistersMultiDelayTorusCloudSeedBraidsHarmoniqsAndVASynthApps)
+TEST(AppRegistryTest,
+     RegistersMultiDelayTorusCloudSeedBraidsHarmoniqsVASynthPolyOscAndSubharmoniqApps)
 {
     const auto& registrations = daisyhost::GetHostedAppRegistrations();
 
-    ASSERT_GE(registrations.size(), 6u);
+    ASSERT_GE(registrations.size(), 8u);
     EXPECT_EQ(registrations.front().appId, "multidelay");
 
     bool sawMultiDelay = false;
@@ -17,6 +18,8 @@ TEST(AppRegistryTest, RegistersMultiDelayTorusCloudSeedBraidsHarmoniqsAndVASynth
     bool sawBraids     = false;
     bool sawHarmoniqs  = false;
     bool sawVASynth    = false;
+    bool sawPolyOsc    = false;
+    bool sawSubharmoniq = false;
     for(const auto& registration : registrations)
     {
         if(registration.appId == "multidelay")
@@ -43,6 +46,14 @@ TEST(AppRegistryTest, RegistersMultiDelayTorusCloudSeedBraidsHarmoniqsAndVASynth
         {
             sawVASynth = true;
         }
+        if(registration.appId == "polyosc")
+        {
+            sawPolyOsc = true;
+        }
+        if(registration.appId == "subharmoniq")
+        {
+            sawSubharmoniq = true;
+        }
     }
 
     EXPECT_TRUE(sawMultiDelay);
@@ -51,6 +62,8 @@ TEST(AppRegistryTest, RegistersMultiDelayTorusCloudSeedBraidsHarmoniqsAndVASynth
     EXPECT_TRUE(sawBraids);
     EXPECT_TRUE(sawHarmoniqs);
     EXPECT_TRUE(sawVASynth);
+    EXPECT_TRUE(sawPolyOsc);
+    EXPECT_TRUE(sawSubharmoniq);
 }
 
 TEST(AppRegistryTest, FallsBackToDefaultAppForUnknownId)

@@ -476,6 +476,98 @@ TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForVASynth)
     EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
 }
 
+TEST(RenderRuntimeTest, ProducesDeterministicOfflineRenderForPolyOsc)
+{
+    auto scenario = MakeBaseScenario("polyosc");
+    scenario.renderConfig.durationSeconds = 0.35;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+    scenario.initialParameterValues["node0/param/osc1_freq"] = 0.1f;
+    scenario.initialParameterValues["node0/param/osc2_freq"] = 0.2f;
+    scenario.initialParameterValues["node0/param/osc3_freq"] = 0.3f;
+    scenario.initialParameterValues["node0/param/global_freq"] = 0.35f;
+
+    daisyhost::RenderTimelineEvent waveformEvent;
+    waveformEvent.timeSeconds     = 0.05;
+    waveformEvent.type            = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    waveformEvent.menuItemId      = "node0/menu/waveform/waveform";
+    waveformEvent.normalizedValue = 0.5f;
+    scenario.timeline.push_back(waveformEvent);
+
+    daisyhost::RenderTimelineEvent globalEvent;
+    globalEvent.timeSeconds     = 0.10;
+    globalEvent.type            = daisyhost::RenderTimelineEventType::kParameterSet;
+    globalEvent.parameterId     = "node0/param/global_freq";
+    globalEvent.normalizedValue = 0.45f;
+    scenario.timeline.push_back(globalEvent);
+
+    daisyhost::RenderResult firstResult;
+    daisyhost::RenderResult secondResult;
+    std::string             errorMessage;
+
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &firstResult, &errorMessage))
+        << errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &secondResult, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(firstResult.manifest.appId, "polyosc");
+    EXPECT_EQ(firstResult.manifest.audioChecksum, secondResult.manifest.audioChecksum);
+    ASSERT_EQ(firstResult.audioChannels.size(), 2u);
+    EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
+    EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
+    EXPECT_TRUE(firstResult.manifest.finalParameterValues.count(
+                    "node0/param/waveform")
+                > 0);
+    EXPECT_FLOAT_EQ(firstResult.manifest.finalParameterValues.at(
+                        "node0/param/waveform"),
+                    0.5f);
+}
+
+TEST(RenderRuntimeTest, PolyOscFieldSurfaceMapsK5ToWaveformOnly)
+{
+    auto scenario = MakeBaseScenario("polyosc");
+    scenario.boardId = "daisy_field";
+    scenario.renderConfig.durationSeconds = 0.25;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+
+    daisyhost::RenderTimelineEvent waveformEvent;
+    waveformEvent.timeSeconds     = 0.0;
+    waveformEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    waveformEvent.controlId       = "node0/control/field_knob_5";
+    waveformEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(waveformEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_TRUE(result.manifest.finalParameterValues.count(
+                    "node0/param/waveform")
+                > 0);
+    EXPECT_FLOAT_EQ(result.manifest.finalParameterValues.at(
+                        "node0/param/waveform"),
+                    1.0f);
+
+    ASSERT_EQ(result.manifest.fieldSurface.cvOutputs.size(),
+              daisyhost::kDaisyFieldCvOutputCount);
+    EXPECT_TRUE(result.manifest.fieldSurface.cvOutputs[0].available);
+    EXPECT_EQ(result.manifest.fieldSurface.cvOutputs[0].id,
+              "node0/port/field_cv_out_1");
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[0].normalizedValue,
+                    1.0f);
+    EXPECT_FLOAT_EQ(result.manifest.fieldSurface.cvOutputs[0].volts, 5.0f);
+    EXPECT_FALSE(result.manifest.fieldSurface.cvOutputs[1].available);
+
+    ASSERT_EQ(result.manifest.fieldSurface.switches.size(),
+              daisyhost::kDaisyFieldSwitchCount);
+    EXPECT_TRUE(result.manifest.fieldSurface.switches[0].available);
+    EXPECT_EQ(result.manifest.fieldSurface.switches[0].detailLabel, "Back");
+    EXPECT_TRUE(result.manifest.fieldSurface.switches[1].available);
+    EXPECT_EQ(result.manifest.fieldSurface.switches[1].detailLabel, "Forward");
+}
+
 TEST(RenderRuntimeTest, FieldSurfaceControlSetAppliesMappedParameter)
 {
     auto scenario = MakeBaseScenario("vasynth");
@@ -505,6 +597,43 @@ TEST(RenderRuntimeTest, FieldSurfaceControlSetAppliesMappedParameter)
     ASSERT_FALSE(result.manifest.executedTimeline.empty());
     EXPECT_EQ(result.manifest.executedTimeline[0].type,
               daisyhost::RenderTimelineEventType::kSurfaceControlSet);
+}
+
+TEST(RenderRuntimeTest, SubharmoniqFieldB7StartsAudioAfterA7RhythmEdit)
+{
+    auto scenario = MakeBaseScenario("subharmoniq");
+    scenario.boardId = "daisy_field";
+    scenario.renderConfig.durationSeconds = 1.0;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+
+    daisyhost::RenderTimelineEvent rhythmEvent;
+    rhythmEvent.timeSeconds     = 0.0;
+    rhythmEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    rhythmEvent.controlId       = "node0/control/field_key_a_7";
+    rhythmEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(rhythmEvent);
+
+    daisyhost::RenderTimelineEvent playEvent;
+    playEvent.timeSeconds     = 0.0;
+    playEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    playEvent.controlId       = "node0/control/field_key_b_7";
+    playEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(playEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(result.manifest.channelSummaries.size(), 2u);
+    EXPECT_GT(result.manifest.channelSummaries[0].peak, 0.02f);
+    EXPECT_GT(result.manifest.channelSummaries[1].peak, 0.02f);
+    ASSERT_EQ(result.manifest.executedTimeline.size(), 2u);
+    EXPECT_EQ(result.manifest.executedTimeline[0].controlId,
+              "node0/control/field_key_a_7");
+    EXPECT_EQ(result.manifest.executedTimeline[1].controlId,
+              "node0/control/field_key_b_7");
 }
 
 TEST(RenderRuntimeTest, FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds)
@@ -573,7 +702,7 @@ TEST(RenderRuntimeTest, FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds)
               daisyhost::kDaisyFieldSwitchCount);
     EXPECT_TRUE(result.manifest.fieldSurface.switches[0].available);
     EXPECT_TRUE(result.manifest.fieldSurface.switches[0].pressed);
-    EXPECT_EQ(result.manifest.fieldSurface.switches[0].detailLabel, "Audition");
+    EXPECT_EQ(result.manifest.fieldSurface.switches[0].detailLabel, "Back");
 
     ASSERT_EQ(result.manifest.fieldSurface.leds.size(), daisyhost::kDaisyFieldLedCount);
     EXPECT_EQ(result.manifest.fieldSurface.leds[0].id, "node0/led/field_key_a_1");
@@ -899,6 +1028,27 @@ TEST(RenderRuntimeTest, ProducesDeterministicCloudSeedRenderWithMenuActions)
     pageEvent.normalizedValue = 1.0f;
     scenario.timeline.push_back(pageEvent);
 
+    daisyhost::RenderTimelineEvent arpEnableEvent;
+    arpEnableEvent.timeSeconds = 0.0;
+    arpEnableEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    arpEnableEvent.menuItemId  = "node0/menu/arp/enabled";
+    arpEnableEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(arpEnableEvent);
+
+    daisyhost::RenderTimelineEvent arpRateEvent;
+    arpRateEvent.timeSeconds = 0.0;
+    arpRateEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    arpRateEvent.menuItemId  = "node0/menu/arp/rate";
+    arpRateEvent.normalizedValue = 0.0f;
+    scenario.timeline.push_back(arpRateEvent);
+
+    daisyhost::RenderTimelineEvent arpDepthEvent;
+    arpDepthEvent.timeSeconds = 0.0;
+    arpDepthEvent.type        = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    arpDepthEvent.menuItemId  = "node0/menu/arp/depth";
+    arpDepthEvent.normalizedValue = 0.40f;
+    scenario.timeline.push_back(arpDepthEvent);
+
     daisyhost::RenderTimelineEvent preDelayEvent;
     preDelayEvent.timeSeconds = 0.05;
     preDelayEvent.type        = daisyhost::RenderTimelineEventType::kParameterSet;
@@ -942,10 +1092,19 @@ TEST(RenderRuntimeTest, ProducesDeterministicCloudSeedRenderWithMenuActions)
     EXPECT_GT(firstResult.manifest.channelSummaries[0].peak, 0.0f);
     EXPECT_GT(firstResult.manifest.channelSummaries[1].peak, 0.0f);
     EXPECT_TRUE(firstResult.manifest.finalParameterValues.count("node0/param/mix") > 0);
+    ASSERT_TRUE(firstResult.manifest.finalEffectiveParameterValues.count(
+                    "node0/param/mix")
+                > 0);
+    EXPECT_NE(firstResult.manifest.finalParameterValues.at("node0/param/mix"),
+              firstResult.manifest.finalEffectiveParameterValues.at(
+                  "node0/param/mix"));
+    EXPECT_EQ(firstResult.manifest.finalParameterValues.at(
+                  "node0/param/arp_enabled"),
+              1.0f);
     EXPECT_TRUE(firstResult.manifest.finalEffectiveParameterValues.count(
                     "node0/param/late_line_size")
                 > 0);
-    ASSERT_GE(firstResult.manifest.executedTimeline.size(), 5u);
+    ASSERT_GE(firstResult.manifest.executedTimeline.size(), 8u);
     EXPECT_EQ(firstResult.manifest.executedTimeline[0].type,
               daisyhost::RenderTimelineEventType::kMenuSetItem);
 }

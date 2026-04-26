@@ -1,0 +1,30 @@
+{
+  "boardId": "daisy_field",
+  "appId": "polyosc",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.5,
+    "outputChannelCount": 2
+  },
+  "seed": 909,
+  "initialParameterValues": {
+    "node0/param/osc1_freq": 0.08,
+    "node0/param/osc2_freq": 0.16,
+    "node0/param/osc3_freq": 0.24,
+    "node0/param/global_freq": 0.4
+  },
+  "audioInput": {
+    "mode": "host",
+    "level": 0.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.0,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_5",
+      "normalizedValue": 1.0
+    }
+  ]
+}

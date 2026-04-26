@@ -2,18 +2,24 @@
 
 ## Snapshot
 
-- Date: 2026-04-25
+- Date: 2026-04-26
 - Workspace: `DaisyHost/`
 - Current CMake version in source: `0.2.0`
 - Active refresh target: `0.2.0`
 - Scope: host-side Daisy Patch plugin and standalone app with a multi-app host
   layer, `MultiDelay` as the default regression fixture, `Torus` as the first
-  second app, first-class `CloudSeed`, `Braids`, `Harmoniqs`, and `VA Synth`
-  support, named MetaControllers for `multidelay` and `cloudseed`, plus a
+  second app, first-class `CloudSeed`, `Braids`, `Harmoniqs`, `VA Synth`,
+  `PolyOsc`, and `Subharmoniq` support, named MetaControllers for
+  `multidelay` and `cloudseed`, plus a
   visible two-node live rack, board factory seam, Field board-support shell,
   host-side Field native controls, Field extended host surface support,
   forward/reverse two-node audio-chain proof paths, and the first
-  flash-verified Daisy Field firmware adapter under `field/MultiDelay`
+  flash-verified Daisy Field firmware adapter under `field/MultiDelay`, plus
+  adapter-pipeline v0 tooling that generates a build/QAE-verified
+  `field/MultiDelayGenerated` adapter from a JSON spec, and a
+  build/QAE/ST-Link flash-verified `field/SubharmoniqField` firmware target
+  backed by the portable `DaisySubharmoniqCore`, plus a build/QAE/ST-Link flash-verified
+  `field/DaisyHostController` USB MIDI controller firmware target
 
 This checkpoint records the current source-backed state plus the last recorded
 runtime verification. `PROJECT_TRACKER.md` is now the active ordered roadmap
@@ -80,7 +86,7 @@ Underlying raw commands:
 
 ```sh
 cmake -S . -B build
-cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir build -C Release --output-on-failure
 ```
 
@@ -89,6 +95,11 @@ ctest --test-dir build -C Release --output-on-failure
 - `unit_tests`
 - `DaisyHostStandaloneSmoke`
 - `DaisyHostRenderSmoke`
+- `DaisyHostCliListApps`
+- `DaisyHostCliDescribeApp`
+- `DaisyHostCliDescribeBoard`
+- `DaisyHostCliValidateScenario`
+- `DaisyHostCliRender`
 
 Current shell note:
 
@@ -96,7 +107,7 @@ Current shell note:
   `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
 - `ctest` launches unit cases through `tests/run_unit_test_payload.py`, which
   receives that payload path and attempts to run a fresh temporary copy
-- the wrapper-driven full host gate reran green on 2026-04-25, so the current
+- the wrapper-driven full host gate reran green on 2026-04-26, so the current
   baseline in this checkout is again a fully green Release host gate rather
   than only partial smoke/debug proof
 - after local Debug rebuilds, direct `ctest -C Debug -R ...` can still point at
@@ -107,12 +118,14 @@ Current shell note:
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
 - result: the rack freeze gate is no longer blocked in this checkout, the
-  Daisy Field board-support shell, host-side Field native controls, and Field
-  extended host surface support are implemented, the latest Field ergonomics
-  polish and board-generic UI cleanup gate passed `159/159`, and the first
-  Field firmware adapter (`field/MultiDelay`) is build-verified and
-  ST-Link flash-verified; its manual audio/control/CV checklist is still
-  pending
+  Daisy Field board-support shell, host-side Field native controls, Field
+  extended host surface support, host-side `polyosc` app import, and
+  `subharmoniq` hosted app are implemented, native `DaisyHostCLI.exe` is
+  build/gate-verified for agent and CI workflows, the latest host gate passed
+  `202/202`, the first Field firmware adapter (`field/MultiDelay`) is
+  build-verified and ST-Link flash-verified, and `field/SubharmoniqField` is
+  build/QAE/ST-Link flash-verified with host-tested playable defaults; both
+  Field hardware manual checklists remain pending
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -134,7 +147,386 @@ from `patch/Torus/`.
 ## Last Recorded Runtime Verification
 
 - Last fully green DaisyHost host build/test verification rerun from this
-  checkout: 2026-04-25
+  checkout: 2026-04-26
+- Verified commands/results in the current 2026-04-26 TF12 verification/build
+  hardening pass:
+  - manager-readable result: TF12 is a documentation and verification adoption
+    slice, not a new CLI command or product-behavior pass. The current truth is
+    the fresh `202/202` full host gate, and older `196/196` and `197/197`
+    results remain dated historical evidence only.
+  - preflight:
+    - `git status --short`: reviewed; checkout is broadly dirty across host,
+      docs, firmware, submodules, build outputs, and untracked files
+    - `git diff --name-status --`: reviewed; TF12 did not revert, stage,
+      delete, or normalize unrelated work
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `202/202`
+  - direct DaisyHostCLI adoption checks:
+    - `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
+      passed
+    - `build\Release\DaisyHostCLI.exe list-apps --json`: passed
+    - `build\Release\DaisyHostCLI.exe describe-app cloudseed --json`: passed
+    - `build\Release\DaisyHostCLI.exe describe-board daisy_field --json`:
+      passed
+    - `build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json`:
+      passed
+    - `build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay --json`:
+      passed, audio checksum `c9c3f665e6a0dd2b`
+    - `build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json`:
+      passed
+  - caveats:
+    - no new DaisyHostCLI commands were added
+    - manual DAW/VST3 validation, standalone icon visibility, computer-side USB
+      MIDI validation, and hands-on Field audio/control/CV validation were not
+      run
+- Verified commands/results in the current 2026-04-26 DaisyHostCLI pass:
+  - manager-readable result: `DaisyHostCLI.exe` now exposes native agent/CI
+    commands for app/board/input discovery, app/board JSON descriptions,
+    scenario validation, offline render, effective-state snapshots, render
+    smoke delegation, and build-artifact doctor checks.
+  - red proof:
+    - `cmake --build build --config Debug --target unit_tests`: failed on
+      missing `daisyhost/CliPayloads.h`
+  - targeted host proof:
+    - `.\build_host.cmd -Configuration Debug -SkipTests`: passed for
+      `unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "CliPayloadsTest"`:
+      passed, `4/4`
+    - direct Debug CLI checks for `list-apps`, `describe-app cloudseed`,
+      `describe-board daisy_field`, `validate-scenario`, `snapshot`,
+      `doctor`, `render`, and `smoke --mode render`: passed
+    - `ctest --test-dir build -C Debug --output-on-failure -R "DaisyHostCli"`:
+      passed, `5/5`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `197/197`
+    - Release `DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json`:
+      passed
+    - Release `DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
+      passed
+  - caveats:
+    - this was host-side only; no firmware path was touched
+    - raw MSBuild still needs the wrapper or one-Path environment normalization
+- Verified commands/results in the current 2026-04-26 Field Page 1 rollback
+  after the oversized modulation-bay redesign:
+  - manager-readable result: the last Page 1 enlargement/keyboard-helper
+    experiment is reverted. RSP Page 1 is back to the compact split layout:
+    Keyboard MIDI, octave, visible keyboard, and MIDI tracker on the left;
+    compact CV generator controls, live CV bars, and Gate 1/2 on the right.
+    Earlier stable Field behavior remains: three RSP pages, SW1/X and SW2/C
+    hosted-app navigation, `.1`/`.2` CV target labels, non-overlapping
+    default/alternative K targets, unsafe target filtering, and CV generator
+    stability.
+  - targeted host proof:
+    - `rg -n "VisibleKeyboardStartForOctave|kKeyboardMinMidiNote|kKeyboardMaxMidiNote|BaseMidiNoteForOctave" include src tests`:
+      returned no matches
+    - `git diff --check -- src\juce\DaisyHostPluginEditor.cpp include\daisyhost\ComputerKeyboardMidi.h src\ComputerKeyboardMidi.cpp tests\test_computer_keyboard_midi.cpp`:
+      passed, with line-ending warnings only
+    - `cmake --build build --config Debug --target unit_tests DaisyHostPatch_Standalone`:
+      passed, with existing `DaisyHostPluginEditor.cpp` C4702 warnings
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(ComputerKeyboardMidiTest|BoardControlMappingTest|SignalGeneratorTest)"`:
+      passed, `27/27`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `196/196`
+  - caveats:
+    - this was host-side only; no firmware path was touched
+    - automated visual screenshot capture was not run
+    - the reverted expanded modulation bay, Page 3 status move, and
+      `VisibleKeyboardStartForOctave` helper are not current behavior
+- Verified commands/results in the current 2026-04-26 DaisyHostController
+  Field USB MIDI controller firmware pass:
+  - manager-readable result: `field/DaisyHostController` now builds and
+    flashes as a controller-only Daisy Field firmware target that sends
+    standard USB MIDI for DaisyHost control. The mapping is K1-K8 -> CC 20-27,
+    CV1-CV4 -> CC 28-31, A1-B8 -> notes 60-75, and SW1/SW2 -> momentary
+    CC 80/81 on MIDI channel 1.
+  - red proof:
+    - `py -3 -m pytest -q tests\test_daisyhost_controller_firmware.py`:
+      failed because `field/DaisyHostController/Makefile` did not exist yet
+  - targeted proof:
+    - `py -3 -m pytest -q tests\test_daisyhost_controller_firmware.py`:
+      passed, `1/1`
+    - `make` from `field/DaisyHostController`: passed; FLASH `98252 B` /
+      `74.96%`
+    - `$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .`:
+      passed, `0 error(s), 0 warning(s)`
+    - `make` from `field/DaisyHostController`: passed as up to date
+    - `make program` from `field/DaisyHostController`: passed; OpenOCD
+      detected STLINK V3, target voltage `3.238171`, programmed
+      `build/DaisyHostController.elf`, reported `** Verified OK **`, and reset
+      the target
+    - user manual check: all knobs, buttons, and keys displayed correctly on
+      the Field screen
+  - caveats:
+    - the first QAE command without `PYTHONIOENCODING=utf-8` failed before
+      findings due to Windows cp1252 Unicode output encoding
+    - USB MIDI enumeration, DaisyHost standalone MIDI learn, DAW/VST3 routing,
+      and computer-side MIDI validation were not run
+- Verified commands/results in the current 2026-04-26 Field CV target menu and
+  generator visibility refinement:
+  - manager-readable result: DaisyHost Field now keeps the normal and
+    alternative K mappings distinct. The alternative layout excludes every
+    default Field K target, and CV target dropdowns expose both safe sets as
+    `Kx.1` for normal/default Field targets and `Kx.2` for alternative/public
+    parameter targets. RSP Page 1 now exposes all four CV generators with
+    mode, waveform, target, Offset, Amp Vp, and Freq controls while preserving
+    the live momentary CV bars.
+  - targeted host proof:
+    - `cmake --build build --config Debug --target unit_tests DaisyHostPatch_Standalone`:
+      passed, with existing `DaisyHostPluginEditor.cpp` C4702 warnings
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(BoardControlMappingTest|CloudSeedCoreTest|DaisyCloudSeedCoreTest|RenderRuntimeTest|SignalGeneratorTest)"`:
+      passed, `66/66`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `187/187`
+  - caveats:
+    - this was host-side only; no firmware path was touched
+    - manual standalone visual/audio QA was not run
+- Verified commands/results in the current 2026-04-26 Field CV generator
+  stability pass:
+  - manager-readable result: DaisyHost Field CV generators no longer use one
+    generated CV lane to drive both an app CV input port and a latched
+    knob/parameter target. Latched targets own their lane, and audio-critical
+    targets are hidden/skipped by default so a generator cannot sweep `Mix`,
+    input/output, mute/bypass/enabled, level, or volume-style controls into
+    disappearing-output states.
+  - red proof:
+    - `cmake --build build --config Debug --target unit_tests`: failed because
+      `ShouldForwardDaisyFieldCvInput` did not exist yet
+  - targeted host proof:
+    - `cmake --build build --config Debug --target unit_tests`: passed
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(BoardControlMappingTest|SignalGeneratorTest|CloudSeedCoreTest|DaisyCloudSeedCoreTest|RenderRuntimeTest)"`:
+      passed, `64/64`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `185/185`
+  - caveats:
+    - this was host-side only; no firmware path was touched
+    - manual standalone audio QA with CloudSeed/MultiDelay CV generators still
+      needs hands-on confirmation
+- Verified commands/results in the current 2026-04-26 Field UI/control
+  separation pass:
+  - manager-readable result: DaisyHost Field now separates the hosted app menu
+    from the right-side program drawer. SW1/X and SW2/C rotate the hosted app
+    menu only; the RSP Page 1/2/3 drawer remains mouse/debug controlled.
+    RSP Page 1 now has latched CV target dropdowns for knob-controlled
+    parameters, and selecting a target switches that CV source to Generator.
+    CloudSeed exposes Space, Motion, Arp, and Advanced app pages; Advanced maps
+    the Field knobs to `eq_low_freq`, `eq_high_freq`, `eq_cutoff`,
+    `eq_low_gain`, `eq_high_gain`, `eq_cross_seed`, `seed_diffusion`, and
+    `seed_delay`.
+  - red proof:
+    - `cmake --build build --config Debug --target unit_tests`: failed for
+      missing `BuildDaisyFieldCvTargetOptions`, missing CloudSeed page fields,
+      and missing Field knob override bindings
+  - targeted host proof:
+    - `cmake --build build --config Debug --target unit_tests`: passed
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(BoardControlMappingTest|CloudSeedCoreTest|DaisyCloudSeedCoreTest|RenderRuntimeTest)"`:
+      passed, `59/59`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `183/183`
+  - caveats:
+    - MP4 inspection was unavailable because `ffmpeg`, `cv2`, `imageio`, and
+      `moviepy` were not installed
+    - no firmware or hardware paths were touched
+- Verified commands/results in the current 2026-04-26 CloudSeed arpeggiator
+  pass:
+  - manager-readable result: `cloudseed` now has a deterministic
+    parameter-based arpeggiator that rhythmically steps selected CloudSeed
+    performance parameters through effective-state modulation. It is not a
+    MIDI-note arpeggiator; CloudSeed remains an audio-input reverb/effect.
+  - red proof:
+    - direct Debug payload for
+      `DaisyCloudSeedCoreTest.*:CloudSeedCoreTest.*:RenderRuntimeTest.ProducesDeterministicCloudSeedRenderWithMenuActions`
+      first failed for missing `arp_*` canonical parameters, missing
+      `node0/menu/arp/*` menu ids, and render-runtime rejection of
+      `node0/menu/arp/enabled`
+  - targeted green proof:
+    - `cmake --build build --config Debug --target unit_tests`: passed
+    - direct Debug payload for
+      `DaisyCloudSeedCoreTest.*:CloudSeedCoreTest.*:RenderRuntimeTest.ProducesDeterministicCloudSeedRenderWithMenuActions:RenderRuntimeTest.PolyOscFieldSurfaceMapsK5ToWaveformOnly:RenderRuntimeTest.FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds`:
+      passed, `13/13`
+    - sanitized `cmake --build build --config Release --target unit_tests`:
+      passed
+    - direct Release payload for the same `13/13` filter: passed
+    - sanitized `cmake --build build --config Release --target DaisyHostRender`:
+      passed
+    - `py -3 tests/run_smoke.py --mode render --build-dir build --source-dir . --config Release --timeout-seconds 120`:
+      passed
+  - full host-gate caveat:
+    - `cmd /c build_host.cmd` configured and built `unit_tests`, but failed
+      before `ctest` because `build\DaisyHostHub_artefacts\Release\DaisyHost Hub.exe`
+      was locked by a running `DaisyHost Hub` process (`PID 78928`), producing
+      `LNK1104`
+- Verified commands/results in the current 2026-04-26 Subharmoniq hosted-app,
+  no-audio fix, Field UI refinement, and Field firmware pass:
+  - manager-readable result: DaisyHost now has a first-class `subharmoniq`
+    hosted app plus a real `field/SubharmoniqField` firmware target. Round 1
+    implements a Subharmonicon-inspired portable core with six oscillator
+    sources, two four-step sequencers, four integer rhythm dividers, quantize
+    modes, SVF-style low-pass filtering, VCF/VCA envelopes, CV/Gate/MIDI
+    mapping, OLED/menu state, Field K1-K8/A-B/SW1-SW2 controls, and an
+    internal tempo clock so `B7` play can produce rhythmic envelope triggers
+    without external MIDI clock or Gate In. The follow-up audible-default fix
+    changes the envelope from a one-sample attack blip to a real attack/decay
+    phase, raises the default filter/output/source levels, and makes Field
+    K1-K8 startup pickup-style so physical knob positions do not immediately
+    overwrite the safe patch.
+  - red proof:
+    - `cmake --build build --config Debug --target unit_tests` first failed
+      because `src/DaisySubharmoniqCore.cpp` did not exist
+    - `make` from `field/SubharmoniqField` first failed on const
+      `MidiEvent::AsNoteOn()` adapter use before the firmware fix
+    - `ctest --test-dir build -C Debug --output-on-failure -R "SubharmoniqCoreTest.PlayToggleRunsInternalClockAndProducesAudio"`:
+      failed before the no-audio fix with `GetTriggerCount() == 0` and peak
+      audio `0`
+    - after the internal-clock fix, the same test was tightened for usable
+      level and failed before the audible-default fix with peak `0.00323891826`
+      versus required `0.02`, and energy `0.383889765` versus required `1.0`
+  - targeted host proof:
+    - `cmake --build build --config Debug --target unit_tests`: passed after
+      the audible-default fix
+    - `ctest --test-dir build -C Debug --output-on-failure -R SubharmoniqCoreTest`:
+      passed, `6/6`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest|AppRegistryTest|BoardControlMappingTest)"`:
+      passed, `20/20`
+    - after the SW1/SW2 pseudo-encoder mapping change, the first wrapper gate
+      failed only on old Field switch expectations; targeted rerun passed
+      `RenderRuntimeTest.PolyOscFieldSurfaceMapsK5ToWaveformOnly`,
+      `RenderRuntimeTest.FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds`,
+      and `DaisyHostRenderSmoke`
+  - firmware proof:
+    - `cd ..\field\SubharmoniqField; make`: passed; FLASH `124520 B` /
+      `95.00%`
+    - `$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .`:
+      passed, `0 error(s), 0 warning(s)`
+    - follow-up `cd ..\field\SubharmoniqField; make`: passed as up to date
+    - follow-up `cd ..\field\SubharmoniqField; make program`: passed; OpenOCD
+      detected STLINK `V3J7M2`, target voltage `3.263618`, programmed
+      `build/SubharmoniqField.elf`, reported `** Verified OK **`, and reset
+      the target
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `175/175`
+  - caveats:
+    - manual Field audio/control/CV/MIDI/OLED/LED validation was not performed
+    - Round 2 filter switching between SVF LPF/BPF and ladder-style LPF remains
+      intentionally deferred
+- Verified commands/results in the current 2026-04-25 PolyOsc hosted-app
+  import:
+  - manager-readable result: DaisyHost now hosts the original Patch `PolyOsc`
+    behavior as `polyosc` without adding new firmware. Patch K1-K3 control the
+    three oscillator frequencies, K4 applies the global frequency offset, the
+    encoder selects waveform, outputs 1-3 carry individual oscillators, and
+    output 4 is the mixed host/render output. Field support is host-side only:
+    K1-K4 mirror Patch controls and K5 maps to `waveform`.
+  - red proof:
+    - `cmake --build build --config Debug --target unit_tests`: failed first
+      because `daisyhost/DaisyPolyOscCore.h` and
+      `daisyhost/apps/PolyOscCore.h` did not exist
+  - green targeted proof:
+    - `cmake --build build --config Debug --target unit_tests`: passed
+    - `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260425214512302\Debug\DaisyHostTestPayload.bin --gtest_filter="AppRegistryTest.*:DaisyPolyOscCoreTest.*:PolyOscCoreTest.*:BoardControlMappingTest.*PolyOsc*:RenderRuntimeTest.*PolyOsc*"`:
+      passed, `11/11`
+  - render proof:
+    - raw `cmake --build build --config Release --target DaisyHostRender`
+      first hit the known duplicate `Path` / `PATH` MSBuild environment issue
+    - sanitized `$env:Path = $env:PATH; Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Release --target DaisyHostRender`:
+      passed
+    - `py -3 tests\run_smoke.py --mode render --build-dir build --source-dir . --config Release --timeout-seconds 120`:
+      passed, including `PolyOsc` and Daisy Field PolyOsc surface scenarios
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying host-gate steps executed by the wrapper:
+      - `cmake -S . -B build`: passed
+      - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+        passed
+      - `ctest --test-dir build -C Release --output-on-failure`: passed,
+        `168/168`
+  - caveats:
+    - no firmware `make` was required because this pass stayed host-side
+    - real Field firmware, hardware voltage validation, mixed-board racks, and
+      DAW/VST3 manual validation remain deferred
+- Verified commands/results in the current 2026-04-25 HW/App adapter pipeline
+  v0 pass:
+  - manager-readable result: DaisyHost now has a semi-automatic shared-core to
+    Field-firmware adapter pipeline. This is intentionally not a full
+    libDaisy/STM32 firmware translator; it generates adapter glue around a
+    portable DaisyHost app core and audits existing firmware for portability.
+  - implementation scope:
+    - `tools/generate_field_adapter.py`
+    - `tools/adapter_specs/field_multidelay.json`
+    - `tools/audit_firmware_portability.py`
+    - `tests/test_field_adapter_generator.py`
+    - `field/MultiDelayGenerated/*`
+  - red proof:
+    - `py -3 -m pytest -q tests/test_field_adapter_generator.py -p no:cacheprovider`
+      first failed because the generator and audit scripts did not exist
+  - `py -3 -m pytest -q tests/test_field_adapter_generator.py -p no:cacheprovider`:
+    passed, `3/3`
+  - `py -3 tools/generate_field_adapter.py --spec tools/adapter_specs/field_multidelay.json --out ..\field\MultiDelayGenerated`:
+    passed
+  - `cd ..\field\MultiDelayGenerated; make`: passed; FLASH `121376 B` /
+    `92.60%`
+  - `$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .`:
+    passed, `0 error(s), 0 warning(s)`
+  - `py -3 tools/audit_firmware_portability.py ..\field\MultiDelay --json`:
+    passed and classified the hand-written adapter as `portable-core-ready`
+  - `py -3 tools/audit_firmware_portability.py ..\field\MultiDelayGenerated --json`:
+    passed and classified the generated adapter as `portable-core-ready`
+  - `cmake --build build --config Debug --target unit_tests`: passed
+  - `ctest --test-dir build -C Debug --output-on-failure -R "(MultiDelayCoreTest|BoardControlMappingTest|RenderRuntimeTest)"`:
+    passed, `52/52`
+  - `cmd /c build_host.cmd`: passed
+  - underlying host-gate steps executed by the wrapper:
+    - `cmake -S . -B build`: passed
+    - `cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
+      passed
+    - `ctest --test-dir build -C Release --output-on-failure`: passed,
+      `159/159`
+  - caveats:
+    - `make program` was not run for `field/MultiDelayGenerated`; generated
+      adapter status is build/QAE-verified only
+    - arbitrary firmware import remains out of scope; the audit tool reports
+      required extraction work instead of rewriting firmware
 - Verified commands/results in the current 2026-04-25 Sprint F3 Field
   hardware/firmware parity adapter pass:
   - manager-readable result: DaisyHost now has its first hardware-facing Daisy
@@ -336,6 +728,7 @@ from `patch/Torus/`.
     - `braids`
     - `harmoniqs`
     - `vasynth`
+    - `polyosc`
   - this rerun verified the Daisy Field board-support shell from this checkout
 - Verified commands/results in the earlier 2026-04-23 full-gate pass:
   - `.\build_host.cmd`: passed
@@ -466,9 +859,9 @@ The following paths were verified from this checkout on 2026-04-23:
     `DaisyHost/build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   - `ctest` currently launches unit cases through
     `tests/run_unit_test_payload.py`
-  - last fully green `ctest` aggregate is now the 2026-04-25
-    `155/155` pass, including `DaisyHostStandaloneSmoke` and
-    `DaisyHostRenderSmoke`
+  - historical note: the later TF12 pass supersedes this as current checkout
+    truth with a 2026-04-26 `202/202` gate including the CLI CTest smoke
+    entries
 
 ## Current Hosted Apps
 
@@ -478,6 +871,7 @@ The following paths were verified from this checkout on 2026-04-23:
 - additional app id: `braids`
 - additional app id: `harmoniqs`
 - additional app id: `vasynth`
+- additional app id: `polyosc`
 
 Current Phase 2 host behavior:
 
@@ -546,9 +940,23 @@ Current `CloudSeed` supported-app behavior:
   - `Motion` = `Pre-Delay`, `Damping`, `Mod Amt`, `Mod Rate`
 - encoder/menu sections:
   - `Pages`
+  - `Arp`
   - `Program`
   - `Utilities`
   - `Info`
+- `Arp` controls:
+  - `Enabled`
+  - `Rate`
+  - `Pattern`
+  - `Target`
+  - `Depth`
+- arpeggiator behavior:
+  - deterministic host-time parameter stepping over selected performance
+    groups
+  - `Space` target group = `Mix`, `Size`, `Decay`, `Diffusion`
+  - `Motion` target group = `Pre-Delay`, `Damping`, `Mod Amt`, `Mod Rate`
+  - stored canonical values stay unchanged while effective values step over
+    time for audio/render
 - utilities currently expose:
   - `Bypass`
   - `Clear Tails`
@@ -651,6 +1059,32 @@ Current `VA Synth` supported-app behavior:
   - `osc2_wave`
   - `filter_cutoff`
 
+Current `PolyOsc` supported-app behavior:
+
+- hosted app id: `polyosc`
+- shared portable wrapper: `DaisyPolyOscCore`
+- host-side import of `patch/PolyOsc` behavior:
+  - three oscillators rendered to Patch outputs 1-3
+  - mixed oscillator output rendered to Patch output 4
+  - stereo host/render output duplicates output 4 through `mainOutputChannels`
+- no host audio input, MIDI input, gates, CV inputs, or firmware adapter in this
+  pass
+- Patch control model:
+  - K1-K3 = oscillator 1-3 frequency controls
+  - K4 = global frequency offset
+  - encoder = waveform selection across `Sine`, `Triangle`, `Saw`, `Ramp`, and
+    `Square`
+- Field host-surface model:
+  - K1-K4 mirror the Patch controls
+  - K5 maps to `waveform`
+  - K6-K8 and SW1/SW2 remain unavailable for PolyOsc
+- DAW automation priority for the first five slots is:
+  - `osc1_freq`
+  - `osc2_freq`
+  - `osc3_freq`
+  - `global_freq`
+  - `waveform`
+
 Current Phase 3 render behavior:
 
 - `DaisyHostRender` loads scenario JSON by `appId`
@@ -740,11 +1174,9 @@ Version/change tracking target behavior:
 ## Current Notes
 
 - The last fully green `build_host.cmd` host-gate rerun from this checkout is
-  now the 2026-04-25 Field ergonomics polish and board-generic UI cleanup
-  `159/159` pass.
-- The resumed 2026-04-24 Braids verification pass and the later same-day
-  Harmoniqs + VA Synth proof wave are now folded into that fully green Release
-  aggregate.
+  now the 2026-04-26 TF12 verification/build hardening `202/202` pass.
+- Older `159/159`, `168/168`, `196/196`, and `197/197` counts remain useful as
+  dated historical ledger evidence, but they are not the current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path
   discovery by using a wider process-query timeout before declaring a false
   launch timeout.
@@ -780,9 +1212,13 @@ Version/change tracking target behavior:
     hosted apps, makes Field K5-K8 avoid duplicate K1-K4 targets, and lets the
     Field editor resolve knobs, keys, and switches through board-profile target
     metadata
-  - Field firmware, real hardware voltage output, Field-specific app
-    ergonomics, mixed-board rack behavior, and manual DAW/VST3 validation
-    remain deferred
+  - `field/MultiDelay` is the first flash-verified Field firmware adapter, and
+    adapter-pipeline v0 can generate the build/QAE-verified
+    `field/MultiDelayGenerated` adapter from a shared-core spec
+  - full manual Field hardware validation, generated-adapter flashing, broad
+    Field firmware parity, real hardware voltage-output measurement,
+    Field-specific app ergonomics, mixed-board rack behavior, arbitrary
+    firmware import, and manual DAW/VST3 validation remain deferred
   - board creation now flows through a board-id factory seam instead of
     hardcoded Patch construction in the processor path
   - render scenario and manifest contracts now accept rack globals plus
@@ -795,12 +1231,14 @@ Version/change tracking target behavior:
     then terminates the process cleanly; the process-path query now has a
     wider timeout budget for slower shells
   - `DaisyHostRenderSmoke` runs `DaisyHostRender.exe` against the checked-in
-    `multidelay`, `torus`, `cloudseed`, `braids`, `harmoniqs`, `vasynth`, Field
-    board-support shell, Field native controls, Field extended surface, and
-    Field selected-node surface scenarios, verifies `audio.wav` plus
+    `multidelay`, `torus`, `cloudseed`, `braids`, `harmoniqs`, `vasynth`,
+    `polyosc`, Field board-support shell, Field native controls, Field extended
+    surface, Field selected-node surface, and Field PolyOsc surface scenarios,
+    verifies `audio.wav` plus
     `manifest.json`, checks repeated `multidelay` `audioChecksum`
     determinism, and validates final Field surface evidence for CV OUT, SW,
-    LED state, and selected-node Field surface state
+    LED state, selected-node Field surface state, and PolyOsc K5 waveform
+    mapping
 - `cloudseed` continues to wrap `third_party/CloudSeedCore` through a portable
   `DaisyCloudSeedCore`, and page changes refresh the JUCE processor's active
   patch bindings so DaisyHost control labels and control ids follow the active
@@ -834,10 +1272,12 @@ Version/change tracking target behavior:
   - `training/examples/braids_smoke.json`
   - `training/examples/harmoniqs_smoke.json`
   - `training/examples/vasynth_smoke.json`
+  - `training/examples/polyosc_smoke.json`
   - `training/examples/field_cloudseed_shell_smoke.json`
   - `training/examples/field_vasynth_native_controls_smoke.json`
   - `training/examples/field_extended_surface_smoke.json`
   - `training/examples/field_node_target_surface_smoke.json`
+  - `training/examples/field_polyosc_surface_smoke.json`
   - `training/examples/dataset_job_example.json`
 - `WORKSTREAM_TRACKER.md` now holds the dedicated post-WS7 portfolio tracker,
   and the same tracker content is mirrored into `PROJECT_TRACKER.md`.
@@ -851,7 +1291,7 @@ Use the following commands for the next full rerun:
 
 ```sh
 cmake -S DaisyHost -B DaisyHost/build
-cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build DaisyHost/build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir DaisyHost/build -C Release --output-on-failure
 ```
 
@@ -865,12 +1305,15 @@ from `patch/MultiDelay/` and/or `patch/Torus/` as appropriate.
 
 ## Last Recorded Render Checks
 
-The following direct-entrypoint render smoke command was last recorded as
-executed on 2026-04-25:
+The following DaisyHostCLI render-path checks were last recorded as executed on
+2026-04-26:
 
 ```sh
-py -3 DaisyHost/tests/run_smoke.py --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release
+DaisyHost/build/Release/DaisyHostCLI.exe render DaisyHost/training/examples/multidelay_smoke.json --output-dir DaisyHost/build/cli_smoke/tf12_multidelay --json
+DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release --json
 ```
+
+The CLI render produced checksum `c9c3f665e6a0dd2b`.
 
 The following historical manual render commands were last recorded as executed
 on 2026-04-19:

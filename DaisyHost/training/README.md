@@ -33,6 +33,25 @@ Each run writes:
 - `audio.wav`
 - `manifest.json`
 
+## Agent/CI CLI
+
+`DaisyHostCLI.exe` wraps the same metadata, scenario, render, and smoke
+contracts for automation:
+
+```sh
+DaisyHost/build/Release/DaisyHostCLI.exe doctor --build-dir DaisyHost/build --source-dir DaisyHost --config Release --json
+DaisyHost/build/Release/DaisyHostCLI.exe list-apps --json
+DaisyHost/build/Release/DaisyHostCLI.exe describe-app cloudseed --json
+DaisyHost/build/Release/DaisyHostCLI.exe describe-board daisy_field --json
+DaisyHost/build/Release/DaisyHostCLI.exe validate-scenario DaisyHost/training/examples/multidelay_smoke.json --json
+DaisyHost/build/Release/DaisyHostCLI.exe render DaisyHost/training/examples/multidelay_smoke.json --output-dir DaisyHost/build/cli_smoke/tf12_multidelay --json
+DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release --json
+```
+
+Use `DaisyHostCLI` as a thin offline facade for reproducible agent/CI
+inspection and render validation; defer new commands until a real workflow
+proves a missing automation operation.
+
 ## Automated Smoke Harness
 
 The host gate now includes a direct-entrypoint smoke harness for the standalone

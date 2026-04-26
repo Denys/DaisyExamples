@@ -28,6 +28,19 @@ enum class BoardSurfaceTargetKind
     kLed,
 };
 
+enum class DaisyFieldKnobLayoutMode
+{
+    kPatchPagePlusExtras,
+    kControllableParameters,
+};
+
+enum class DaisyFieldDrawerPage
+{
+    kKeyboardMidiCv = 0,
+    kPublicParameters,
+    kRackAudio,
+};
+
 struct BoardSurfaceBinding
 {
     std::string            controlId;
@@ -67,16 +80,42 @@ std::string MakeDaisyFieldSwitchControlId(const std::string& nodeId,
 
 int DaisyFieldKeyToMidiNote(std::size_t zeroBasedIndex, int keyboardOctave);
 
+std::vector<BoardSurfaceBinding> BuildDaisyFieldPublicParameterList(
+    const HostedAppPatchBindings&             patchBindings,
+    const std::vector<ParameterDescriptor>&   parameters);
+
+std::vector<BoardSurfaceBinding> BuildDaisyFieldCvTargetOptions(
+    const DaisyFieldControlMapping& mapping,
+    const std::string&              latchedTargetId);
+
+std::vector<BoardSurfaceBinding> BuildDaisyFieldCvTargetOptions(
+    const DaisyFieldControlMapping& defaultMapping,
+    const DaisyFieldControlMapping& alternativeMapping,
+    const std::string&              latchedTargetId);
+
+bool IsDaisyFieldCvTargetSafe(const BoardSurfaceBinding& binding);
+
+bool IsDaisyFieldCvTargetIdSafe(const std::string& targetId);
+
+bool ShouldForwardDaisyFieldCvInput(const std::string& latchedTargetId);
+
+DaisyFieldDrawerPage StepDaisyFieldDrawerPage(DaisyFieldDrawerPage page,
+                                               int                  delta);
+
 DaisyFieldControlMapping BuildDaisyFieldControlMapping(
     const HostedAppPatchBindings&             patchBindings,
     const std::vector<ParameterDescriptor>&   parameters,
     const MenuModel&                          menu,
     int                                       keyboardOctave,
-    const std::string&                        nodeId);
+    const std::string&                        nodeId,
+    DaisyFieldKnobLayoutMode                  knobLayoutMode
+    = DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
 
 DaisyFieldControlMapping BuildDaisyFieldControlMapping(
     const HostedAppPatchBindings&             patchBindings,
     const std::vector<ParameterDescriptor>&   parameters,
     int                                       keyboardOctave,
-    const std::string&                        nodeId);
+    const std::string&                        nodeId,
+    DaisyFieldKnobLayoutMode                  knobLayoutMode
+    = DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
 } // namespace daisyhost

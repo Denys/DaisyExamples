@@ -26,6 +26,30 @@
       "normalizedValue": 1.0
     },
     {
+      "timeSeconds": 0.05,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/arp/enabled",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.05,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/arp/rate",
+      "normalizedValue": 0.0
+    },
+    {
+      "timeSeconds": 0.05,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/arp/depth",
+      "normalizedValue": 0.35
+    },
+    {
+      "timeSeconds": 0.05,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/arp/target",
+      "normalizedValue": 0.0
+    },
+    {
       "timeSeconds": 0.15,
       "type": "parameter_set",
       "parameterId": "node0/param/pre_delay",

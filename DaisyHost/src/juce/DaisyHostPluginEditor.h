@@ -88,6 +88,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void UpdateTopControlUi();
     void LayoutFieldControls();
     void UpdateFieldControlUi();
+    void UpdateFieldDrawerPageUi();
     bool IsInteractiveFieldSurfaceControl(const std::string& surfaceId) const;
     void ReleaseComputerKeyboardNotes();
     void UpdateComputerKeyboardUi();
@@ -107,6 +108,8 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     std::array<ControlUi, daisyhost::kDaisyFieldKnobCount> fieldKnobs_;
     std::array<juce::TextButton, daisyhost::kDaisyFieldKeyCount> fieldKeyButtons_;
     std::array<juce::TextButton, daisyhost::kDaisyFieldSwitchCount> fieldSwitchButtons_;
+    std::array<juce::TextButton, 3> fieldDrawerPageButtons_;
+    std::array<juce::TextButton, 16> fieldParameterButtons_;
     juce::TextButton              encoderPressButton_;
     juce::ToggleButton            computerKeyboardToggle_;
     juce::Label                   computerKeyboardLabel_;
@@ -137,10 +140,14 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::Label                   cvGeneratorLabel_;
     std::array<juce::Label, 4>    cvGeneratorTitles_;
     std::array<juce::ComboBox, 4> cvGeneratorModeBoxes_;
+    std::array<juce::ComboBox, 4> cvGeneratorTargetBoxes_;
     std::array<juce::ComboBox, 4> cvGeneratorWaveformBoxes_;
     std::array<juce::Slider, 4>   cvGeneratorFrequencySliders_;
     std::array<juce::Slider, 4>   cvGeneratorAmplitudeSliders_;
     std::array<juce::Slider, 4>   cvGeneratorBiasSliders_;
+    std::array<std::array<juce::Label, 3>, 4> cvGeneratorSliderLabels_;
+    std::array<bool, daisyhost::kDaisyFieldSwitchCount> fieldSwitchKeyHeld_{};
+    int                           selectedFieldParameterIndex_ = -1;
     bool                          octaveDownHeld_ = false;
     bool                          octaveUpHeld_   = false;
     bool                          windowIconApplied_ = false;

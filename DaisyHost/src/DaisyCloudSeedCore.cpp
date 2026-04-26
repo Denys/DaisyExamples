@@ -63,6 +63,11 @@ enum class ParameterIndex : std::size_t
     kModRate,
     kBypass,
     kProgram,
+    kArpEnabled,
+    kArpRate,
+    kArpPattern,
+    kArpDepth,
+    kArpTarget,
     kGlobalInterpolation,
     kGlobalLowCutEnabled,
     kGlobalHighCutEnabled,
@@ -125,6 +130,20 @@ struct ExpertParameterDefinition
     const char*    groupLabel;
     int            stepCount;
 };
+
+constexpr std::array<ParameterIndex, 4> kArpSpaceTargets = {{
+    ParameterIndex::kMix,
+    ParameterIndex::kSize,
+    ParameterIndex::kDecay,
+    ParameterIndex::kDiffusion,
+}};
+
+constexpr std::array<ParameterIndex, 4> kArpMotionTargets = {{
+    ParameterIndex::kPreDelay,
+    ParameterIndex::kDamping,
+    ParameterIndex::kModAmount,
+    ParameterIndex::kModRate,
+}};
 
 constexpr std::array<ExpertParameterDefinition, 45> kExpertDefinitions = {{
     {ParameterIndex::kGlobalInterpolation,
@@ -399,6 +418,22 @@ constexpr std::array<ExpertParameterDefinition, 45> kExpertDefinitions = {{
      1000},
 }};
 
+bool IsSafeAdvancedFieldParameter(ParameterIndex index)
+{
+    switch(index)
+    {
+        case ParameterIndex::kEqLowFreq:
+        case ParameterIndex::kEqHighFreq:
+        case ParameterIndex::kEqCutoff:
+        case ParameterIndex::kEqLowGain:
+        case ParameterIndex::kEqHighGain:
+        case ParameterIndex::kEqCrossSeed:
+        case ParameterIndex::kSeedDiffusion:
+        case ParameterIndex::kSeedDelay: return true;
+        default: return false;
+    }
+}
+
 std::size_t SeedNumber(float normalizedValue)
 {
     const float clamped = Clamp01(normalizedValue);
@@ -423,6 +458,8 @@ struct DaisyCloudSeedCore::Impl
     std::array<float, Cloudseed::Parameter::COUNT> effectiveEngineParameters{};
     DaisyCloudSeedPage                            activePage = DaisyCloudSeedPage::kSpace;
     std::uint32_t                                 randomState = 1u;
+    std::uint64_t                                 arpSamplesIntoStep = 0;
+    std::uint32_t                                 arpStepIndex = 0;
     std::vector<float>                            tempInLeft;
     std::vector<float>                            tempInRight;
     std::vector<float>                            tempOutLeft;
@@ -518,6 +555,11 @@ struct DaisyCloudSeedCore::Impl
                      true);
         addParameter("bypass", "Bypass", "Utilities", 0.0f, 2, 100, false, true, false);
         addParameter("program", "Program", "Program", 0.0f, 1, 101, false, true, false);
+        addParameter("arp_enabled", "Arp Enable", "Arp", 0.0f, 2, 120, false, true, false);
+        addParameter("arp_rate", "Arp Rate", "Arp", 0.33333334f, 4, 121, false, true, false);
+        addParameter("arp_pattern", "Arp Pattern", "Arp", 0.0f, 3, 122, false, true, false);
+        addParameter("arp_depth", "Arp Depth", "Arp", 0.35f, 0, 123, false, true, false);
+        addParameter("arp_target", "Arp Target", "Arp", 0.0f, 2, 124, false, true, false);
 
         for(const auto& definition : kExpertDefinitions)
         {
@@ -527,7 +569,7 @@ struct DaisyCloudSeedCore::Impl
                          static_cast<float>(Cloudseed::ProgramDarkPlate[definition.rawIndex]),
                          definition.stepCount,
                          200 + definition.rawIndex,
-                         false,
+                         IsSafeAdvancedFieldParameter(definition.index),
                          true,
                          false);
         }
@@ -553,6 +595,102 @@ struct DaisyCloudSeedCore::Impl
         return it != parameters.end() ? &(*it) : nullptr;
     }
 
+    bool IsArpEnabled() const
+    {
+        return Param(ParameterIndex::kArpEnabled).normalizedValue >= 0.5f
+               && Param(ParameterIndex::kArpDepth).normalizedValue > 0.0001f;
+    }
+
+    bool IsArpControlParameter(ParameterIndex index) const
+    {
+        return index == ParameterIndex::kArpEnabled
+               || index == ParameterIndex::kArpRate
+               || index == ParameterIndex::kArpPattern
+               || index == ParameterIndex::kArpDepth
+               || index == ParameterIndex::kArpTarget;
+    }
+
+    std::uint64_t ArpSamplesPerStep() const
+    {
+        static constexpr std::array<double, 4> kSecondsPerStep = {
+            {0.03125, 0.0625, 0.125, 0.25}};
+        const int index = std::clamp(
+            static_cast<int>(
+                std::round(Param(ParameterIndex::kArpRate).normalizedValue
+                           * static_cast<float>(kSecondsPerStep.size() - 1))),
+            0,
+            static_cast<int>(kSecondsPerStep.size()) - 1);
+        return std::max<std::uint64_t>(
+            1u,
+            static_cast<std::uint64_t>(
+                std::llround(sampleRate * kSecondsPerStep[static_cast<std::size_t>(index)])));
+    }
+
+    void ResetArpPhase()
+    {
+        arpSamplesIntoStep = 0;
+        arpStepIndex       = 0;
+    }
+
+    ParameterIndex SelectArpTarget() const
+    {
+        const auto& targets = Param(ParameterIndex::kArpTarget).normalizedValue >= 0.5f
+                                  ? kArpMotionTargets
+                                  : kArpSpaceTargets;
+        const int pattern = std::clamp(
+            static_cast<int>(
+                std::round(Param(ParameterIndex::kArpPattern).normalizedValue * 2.0f)),
+            0,
+            2);
+
+        std::size_t position = 0;
+        if(pattern == 1)
+        {
+            position = targets.size() - 1u
+                       - (static_cast<std::size_t>(arpStepIndex) % targets.size());
+        }
+        else if(pattern == 2)
+        {
+            static constexpr std::array<std::size_t, 6> kPendulum = {{0, 1, 2, 3, 2, 1}};
+            position = kPendulum[static_cast<std::size_t>(arpStepIndex)
+                                 % kPendulum.size()];
+        }
+        else
+        {
+            position = static_cast<std::size_t>(arpStepIndex) % targets.size();
+        }
+
+        return targets[position];
+    }
+
+    void ApplyArpBump(ParameterIndex selected,
+                      float&         mix,
+                      float&         size,
+                      float&         decay,
+                      float&         diffusion,
+                      float&         preDelay,
+                      float&         damping,
+                      float&         modAmount,
+                      float&         modRate) const
+    {
+        const float bump = 0.5f * Param(ParameterIndex::kArpDepth).normalizedValue;
+        auto apply = [selected, bump](ParameterIndex index, float& value) {
+            if(selected == index)
+            {
+                value = Clamp01(value + bump);
+            }
+        };
+
+        apply(ParameterIndex::kMix, mix);
+        apply(ParameterIndex::kSize, size);
+        apply(ParameterIndex::kDecay, decay);
+        apply(ParameterIndex::kDiffusion, diffusion);
+        apply(ParameterIndex::kPreDelay, preDelay);
+        apply(ParameterIndex::kDamping, damping);
+        apply(ParameterIndex::kModAmount, modAmount);
+        apply(ParameterIndex::kModRate, modRate);
+    }
+
     void UpdateEffectiveState()
     {
         for(const auto& definition : kExpertDefinitions)
@@ -561,13 +699,27 @@ struct DaisyCloudSeedCore::Impl
                 = Param(definition.index).normalizedValue;
         }
 
-        const float size       = Param(ParameterIndex::kSize).normalizedValue;
-        const float decay      = Param(ParameterIndex::kDecay).normalizedValue;
-        const float diffusion  = Param(ParameterIndex::kDiffusion).normalizedValue;
-        const float preDelay   = Param(ParameterIndex::kPreDelay).normalizedValue;
-        const float damping    = Param(ParameterIndex::kDamping).normalizedValue;
-        const float modAmount  = Param(ParameterIndex::kModAmount).normalizedValue;
-        const float modRate    = Param(ParameterIndex::kModRate).normalizedValue;
+        float mix        = Param(ParameterIndex::kMix).normalizedValue;
+        float size       = Param(ParameterIndex::kSize).normalizedValue;
+        float decay      = Param(ParameterIndex::kDecay).normalizedValue;
+        float diffusion  = Param(ParameterIndex::kDiffusion).normalizedValue;
+        float preDelay   = Param(ParameterIndex::kPreDelay).normalizedValue;
+        float damping    = Param(ParameterIndex::kDamping).normalizedValue;
+        float modAmount  = Param(ParameterIndex::kModAmount).normalizedValue;
+        float modRate    = Param(ParameterIndex::kModRate).normalizedValue;
+
+        if(IsArpEnabled())
+        {
+            ApplyArpBump(SelectArpTarget(),
+                         mix,
+                         size,
+                         decay,
+                         diffusion,
+                         preDelay,
+                         damping,
+                         modAmount,
+                         modRate);
+        }
 
         // v1 keeps the performance layer authoritative and derives the
         // underlying CloudSeed parameter set from it while preserving the
@@ -599,7 +751,7 @@ struct DaisyCloudSeedCore::Impl
         effectiveEngineParameters[Cloudseed::Parameter::LateDiffuseModRate]    = modRate;
         effectiveEngineParameters[Cloudseed::Parameter::HighCut]               = Clamp01(0.18f + 0.80f * (1.0f - damping));
 
-        Param(ParameterIndex::kMix).effectiveNormalizedValue        = Param(ParameterIndex::kMix).normalizedValue;
+        Param(ParameterIndex::kMix).effectiveNormalizedValue        = mix;
         Param(ParameterIndex::kSize).effectiveNormalizedValue       = size;
         Param(ParameterIndex::kDecay).effectiveNormalizedValue      = decay;
         Param(ParameterIndex::kDiffusion).effectiveNormalizedValue  = diffusion;
@@ -609,6 +761,11 @@ struct DaisyCloudSeedCore::Impl
         Param(ParameterIndex::kModRate).effectiveNormalizedValue    = modRate;
         Param(ParameterIndex::kBypass).effectiveNormalizedValue     = Param(ParameterIndex::kBypass).normalizedValue;
         Param(ParameterIndex::kProgram).effectiveNormalizedValue    = Param(ParameterIndex::kProgram).normalizedValue;
+        Param(ParameterIndex::kArpEnabled).effectiveNormalizedValue = Param(ParameterIndex::kArpEnabled).normalizedValue;
+        Param(ParameterIndex::kArpRate).effectiveNormalizedValue    = Param(ParameterIndex::kArpRate).normalizedValue;
+        Param(ParameterIndex::kArpPattern).effectiveNormalizedValue = Param(ParameterIndex::kArpPattern).normalizedValue;
+        Param(ParameterIndex::kArpDepth).effectiveNormalizedValue   = Param(ParameterIndex::kArpDepth).normalizedValue;
+        Param(ParameterIndex::kArpTarget).effectiveNormalizedValue  = Param(ParameterIndex::kArpTarget).normalizedValue;
 
         for(const auto& definition : kExpertDefinitions)
         {
@@ -625,6 +782,29 @@ struct DaisyCloudSeedCore::Impl
         for(int rawIndex = 0; rawIndex < Cloudseed::Parameter::COUNT; ++rawIndex)
         {
             controller->SetParameter(rawIndex, effectiveEngineParameters[rawIndex]);
+        }
+    }
+
+    void AdvanceArp(std::size_t frameCount)
+    {
+        if(!IsArpEnabled())
+        {
+            return;
+        }
+
+        arpSamplesIntoStep += static_cast<std::uint64_t>(frameCount);
+        const auto samplesPerStep = ArpSamplesPerStep();
+        bool       advanced       = false;
+        while(arpSamplesIntoStep >= samplesPerStep)
+        {
+            arpSamplesIntoStep -= samplesPerStep;
+            ++arpStepIndex;
+            advanced = true;
+        }
+
+        if(advanced)
+        {
+            UpdateEffectiveState();
         }
     }
 
@@ -695,6 +875,8 @@ void DaisyCloudSeedCore::Process(const float* inputLeft,
         Prepare(impl_->sampleRate, std::max(impl_->maxBlockSize, frameCount));
     }
 
+    impl_->AdvanceArp(frameCount);
+
     impl_->tempInLeft.resize(frameCount, 0.0f);
     impl_->tempInRight.resize(frameCount, 0.0f);
     impl_->tempOutLeft.resize(frameCount, 0.0f);
@@ -724,7 +906,7 @@ void DaisyCloudSeedCore::Process(const float* inputLeft,
                                impl_->tempOutRight.data(),
                                static_cast<int>(frameCount));
 
-    const float mix = impl_->Param(ParameterIndex::kMix).normalizedValue;
+    const float mix = impl_->Param(ParameterIndex::kMix).effectiveNormalizedValue;
     const float dry = 1.0f - mix;
     for(std::size_t i = 0; i < frameCount; ++i)
     {
@@ -737,6 +919,7 @@ void DaisyCloudSeedCore::ResetToDefaultState(std::uint32_t seed)
 {
     impl_->activePage  = DaisyCloudSeedPage::kSpace;
     impl_->randomState = seed == 0 ? 0xC10D5EEDu : seed;
+    impl_->ResetArpPhase();
 
     for(auto& parameter : impl_->parameters)
     {
@@ -772,6 +955,12 @@ bool DaisyCloudSeedCore::SetParameterValue(const std::string& parameterId,
     }
 
     parameter->normalizedValue = quantized;
+    const auto parameterIndex = static_cast<ParameterIndex>(
+        static_cast<std::size_t>(parameter - impl_->parameters.data()));
+    if(impl_->IsArpControlParameter(parameterIndex))
+    {
+        impl_->ResetArpPhase();
+    }
     impl_->UpdateEffectiveState();
     return true;
 }
@@ -860,6 +1049,7 @@ void DaisyCloudSeedCore::RestoreStatefulParameterValues(
         }
         parameter->normalizedValue = QuantizeNormalized(entry.second, parameter->stepCount);
     }
+    impl_->ResetArpPhase();
     impl_->UpdateEffectiveState();
 }
 
@@ -884,17 +1074,97 @@ DaisyCloudSeedPageBinding DaisyCloudSeedCore::GetActivePageBinding() const
     DaisyCloudSeedPageBinding binding;
     binding.page = impl_->activePage;
 
+    if(impl_->activePage == DaisyCloudSeedPage::kAdvanced)
+    {
+        binding.pageLabel      = "Advanced";
+        binding.parameterIds   = {{"eq_low_freq", "eq_high_freq", "eq_cutoff", "eq_low_gain"}};
+        binding.parameterLabels = {{"Low Freq", "High Freq", "Cutoff", "Low Gain"}};
+        binding.fieldParameterIds = {{"eq_low_freq",
+                                      "eq_high_freq",
+                                      "eq_cutoff",
+                                      "eq_low_gain",
+                                      "eq_high_gain",
+                                      "eq_cross_seed",
+                                      "seed_diffusion",
+                                      "seed_delay"}};
+        binding.fieldParameterLabels = {{"Low Freq",
+                                         "High Freq",
+                                         "Cutoff",
+                                         "Low Gain",
+                                         "High Gain",
+                                         "Cross Seed",
+                                         "Diff Seed",
+                                         "Delay Seed"}};
+        return binding;
+    }
+
+    if(impl_->activePage == DaisyCloudSeedPage::kArp)
+    {
+        binding.pageLabel      = "Arp";
+        binding.parameterIds   = {{"arp_enabled", "arp_rate", "arp_pattern", "arp_target"}};
+        binding.parameterLabels = {{"Arp Enable", "Arp Rate", "Pattern", "Target"}};
+        binding.fieldParameterIds = {{"arp_enabled",
+                                      "arp_rate",
+                                      "arp_pattern",
+                                      "arp_target",
+                                      "arp_depth",
+                                      "",
+                                      "",
+                                      ""}};
+        binding.fieldParameterLabels = {{"Arp Enable",
+                                         "Arp Rate",
+                                         "Pattern",
+                                         "Target",
+                                         "Arp Depth",
+                                         "",
+                                         "",
+                                         ""}};
+        return binding;
+    }
+
     if(impl_->activePage == DaisyCloudSeedPage::kMotion)
     {
         binding.pageLabel      = "Motion";
         binding.parameterIds   = {{"pre_delay", "damping", "mod_amount", "mod_rate"}};
         binding.parameterLabels = {{"Pre-Delay", "Damping", "Mod Amt", "Mod Rate"}};
+        binding.fieldParameterIds = {{"pre_delay",
+                                      "damping",
+                                      "mod_amount",
+                                      "mod_rate",
+                                      "mix",
+                                      "size",
+                                      "decay",
+                                      "diffusion"}};
+        binding.fieldParameterLabels = {{"Pre-Delay",
+                                         "Damping",
+                                         "Mod Amt",
+                                         "Mod Rate",
+                                         "Mix",
+                                         "Size",
+                                         "Decay",
+                                         "Diffusion"}};
         return binding;
     }
 
     binding.pageLabel      = "Space";
     binding.parameterIds   = {{"mix", "size", "decay", "diffusion"}};
     binding.parameterLabels = {{"Mix", "Size", "Decay", "Diffusion"}};
+    binding.fieldParameterIds = {{"mix",
+                                  "size",
+                                  "decay",
+                                  "diffusion",
+                                  "pre_delay",
+                                  "damping",
+                                  "mod_amount",
+                                  "mod_rate"}};
+    binding.fieldParameterLabels = {{"Mix",
+                                     "Size",
+                                     "Decay",
+                                     "Diffusion",
+                                     "Pre-Delay",
+                                     "Damping",
+                                     "Mod Amt",
+                                     "Mod Rate"}};
     return binding;
 }
 

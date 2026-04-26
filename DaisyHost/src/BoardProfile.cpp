@@ -447,16 +447,16 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
     profile.decorations.push_back(MakeDecoration(
         nodeId + "/decoration/field_io_row",
         nodeId,
-        "I/O",
+        "CV I/O",
         PanelDecorationKind::kAudioSection,
-        {0.06f, 0.84f, 0.88f, 0.11f},
+        {0.48f, 0.84f, 0.46f, 0.11f},
         0.02f));
     profile.decorations.push_back(MakeDecoration(
         nodeId + "/decoration/field_midi_gate",
         nodeId,
-        "GATE / MIDI",
+        "AUDIO / GATE / MIDI",
         PanelDecorationKind::kMidiSection,
-        {0.82f, 0.06f, 0.12f, 0.22f},
+        {0.80f, 0.055f, 0.17f, 0.25f},
         0.02f));
     profile.decorations.push_back(MakeDecoration(
         nodeId + "/decoration/field_seed_module",
@@ -497,8 +497,8 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
                                      TextAlignment::kCenter));
     profile.texts.push_back(MakeText(nodeId + "/text/io",
                                      nodeId,
-                                     "AUDIO  CV  GATE  MIDI",
-                                     {0.28f, 0.825f, 0.46f, 0.03f},
+                                     "CV IN / CV OUT",
+                                     {0.54f, 0.825f, 0.34f, 0.03f},
                                      11.0f,
                                      false,
                                      TextAlignment::kCenter));
@@ -604,21 +604,21 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
 
     for(std::size_t i = 1; i <= 2; ++i)
     {
-        const float x = 0.085f + static_cast<float>(i - 1) * 0.08f;
+        const float x = 0.815f + static_cast<float>(i - 1) * 0.060f;
         profile.ports.push_back(MakePort(nodeId + "/port/field_audio_in_"
                                              + std::to_string(i),
                                          nodeId,
                                          "IN " + std::to_string(i),
                                          VirtualPortType::kAudio,
                                          PortDirection::kInput,
-                                         {x, 0.88f, 0.05f, 0.045f}));
+                                         {x, 0.105f, 0.045f, 0.040f}));
         profile.ports.push_back(MakePort(nodeId + "/port/field_audio_out_"
                                              + std::to_string(i),
                                          nodeId,
                                          "OUT " + std::to_string(i),
                                          VirtualPortType::kAudio,
                                          PortDirection::kOutput,
-                                         {x + 0.18f, 0.88f, 0.05f, 0.045f}));
+                                         {x, 0.185f, 0.045f, 0.040f}));
     }
 
     for(std::size_t i = 1; i <= 4; ++i)
@@ -657,37 +657,37 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
                                      "GATE IN",
                                      VirtualPortType::kGate,
                                      PortDirection::kInput,
-                                     {0.845f, 0.10f, 0.055f, 0.05f}));
+                                     {0.815f, 0.260f, 0.045f, 0.040f}));
     profile.indicators.push_back(MakeIndicator(nodeId + "/led/field_gate_in",
                                                nodeId,
                                                nodeId + "/control/field_gate_in",
                                                "Gate In",
                                                PanelIndicatorKind::kLed,
-                                               {0.857f, 0.065f, 0.030f, 0.025f}));
+                                               {0.828f, 0.235f, 0.020f, 0.017f}));
     profile.ports.push_back(MakePort(nodeId + "/port/field_gate_out_1",
                                      nodeId,
                                      "GATE OUT",
                                      VirtualPortType::kGate,
                                      PortDirection::kOutput,
-                                     {0.845f, 0.19f, 0.055f, 0.05f}));
+                                     {0.875f, 0.260f, 0.045f, 0.040f}));
     profile.indicators.push_back(MakeIndicator(nodeId + "/led/field_gate_out",
                                                nodeId,
                                                nodeId + "/port/gate_out_1",
                                                "Gate Out",
                                                PanelIndicatorKind::kLed,
-                                               {0.857f, 0.155f, 0.030f, 0.025f}));
+                                               {0.888f, 0.235f, 0.020f, 0.017f}));
     profile.ports.push_back(MakePort(nodeId + "/port/field_midi_in_1",
                                      nodeId,
                                      "MIDI IN",
                                      VirtualPortType::kMidi,
                                      PortDirection::kInput,
-                                     {0.91f, 0.10f, 0.045f, 0.045f}));
+                                     {0.935f, 0.105f, 0.040f, 0.040f}));
     profile.ports.push_back(MakePort(nodeId + "/port/field_midi_out_1",
                                      nodeId,
                                      "MIDI OUT",
                                      VirtualPortType::kMidi,
                                      PortDirection::kOutput,
-                                     {0.91f, 0.19f, 0.045f, 0.045f}));
+                                     {0.935f, 0.185f, 0.040f, 0.040f}));
 
     return profile;
 }

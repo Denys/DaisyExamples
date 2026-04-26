@@ -1565,6 +1565,10 @@ bool ResolveFieldSurfaceControlBinding(const HostedAppPatchBindings& bindings,
     {
         binding = FindBindingByControlId(mapping.switches, controlId);
     }
+    if(binding == nullptr)
+    {
+        binding = FindBindingByControlId(mapping.keys, controlId);
+    }
     if(binding == nullptr || !binding->available)
     {
         return false;

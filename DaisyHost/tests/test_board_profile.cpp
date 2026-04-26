@@ -353,6 +353,46 @@ TEST(BoardProfileTest, DaisyFieldVisibleProfileTextIsNotPatchOnly)
     EXPECT_FALSE(ContainsTextToken(profile, "PATCH"));
 }
 
+TEST(BoardProfileTest, DaisyFieldProfilePlacesAudioGateAndMidiAtTop)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    std::size_t topAudio = 0;
+    std::size_t topGate = 0;
+    std::size_t topMidi = 0;
+    std::size_t bottomCv = 0;
+
+    for(const auto& port : profile.ports)
+    {
+        if(port.type == daisyhost::VirtualPortType::kAudio
+           && port.panelBounds.y < 0.32f)
+        {
+            ++topAudio;
+        }
+        if(port.type == daisyhost::VirtualPortType::kGate
+           && port.panelBounds.y < 0.32f)
+        {
+            ++topGate;
+        }
+        if(port.type == daisyhost::VirtualPortType::kMidi
+           && port.panelBounds.y < 0.32f)
+        {
+            ++topMidi;
+        }
+        if(port.type == daisyhost::VirtualPortType::kCv
+           && port.panelBounds.y > 0.80f)
+        {
+            ++bottomCv;
+        }
+    }
+
+    EXPECT_EQ(topAudio, 4u);
+    EXPECT_EQ(topGate, 2u);
+    EXPECT_EQ(topMidi, 2u);
+    EXPECT_EQ(bottomCv, 6u);
+}
+
 TEST(BoardProfileTest, DaisyPatchProfileExposesFinalSurfaceControlHierarchy)
 {
     const std::string             nodeId  = "nodeA";

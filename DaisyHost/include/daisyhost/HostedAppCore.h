@@ -61,6 +61,11 @@ struct HostedAppPatchBindings
     std::array<std::string, 4> knobControlIds{};
     std::array<std::string, 4> knobParameterIds{};
     std::array<std::string, 4> knobDetailLabels{};
+    std::array<std::string, 8> fieldKnobControlIds{};
+    std::array<std::string, 8> fieldKnobParameterIds{};
+    std::array<std::string, 8> fieldKnobDetailLabels{};
+    std::array<std::string, 16> fieldKeyMenuItemIds{};
+    std::array<std::string, 16> fieldKeyDetailLabels{};
     std::string                encoderControlId;
     std::string                encoderButtonControlId;
     std::array<std::string, 4> cvInputPortIds{};

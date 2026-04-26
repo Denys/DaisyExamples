@@ -37,10 +37,12 @@ class SmokePaths:
     braids_scenario: Path
     harmoniqs_scenario: Path
     vasynth_scenario: Path
+    polyosc_scenario: Path
     field_shell_scenario: Path
     field_native_controls_scenario: Path
     field_extended_surface_scenario: Path
     field_node_target_scenario: Path
+    field_polyosc_surface_scenario: Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,6 +87,10 @@ def resolve_paths(args: argparse.Namespace) -> SmokePaths:
         / "training"
         / "examples"
         / "vasynth_smoke.json",
+        polyosc_scenario=source_dir
+        / "training"
+        / "examples"
+        / "polyosc_smoke.json",
         field_shell_scenario=source_dir
         / "training"
         / "examples"
@@ -101,6 +107,10 @@ def resolve_paths(args: argparse.Namespace) -> SmokePaths:
         / "training"
         / "examples"
         / "field_node_target_surface_smoke.json",
+        field_polyosc_surface_scenario=source_dir
+        / "training"
+        / "examples"
+        / "field_polyosc_surface_smoke.json",
     )
 
 
@@ -325,10 +335,12 @@ def verify_manifest_field_surface(manifest_path: Path, *, tolerance: float = 0.0
 
     if switches[0].get("id") != "node0/control/field_sw_1" or switches[0].get("pressed") is not True:
         raise SmokeFailure("Field SW1 manifest evidence is invalid")
-    if switches[0].get("detailLabel") != "Audition":
-        raise SmokeFailure("Field SW1 utility label evidence is invalid")
+    if switches[0].get("detailLabel") != "Back":
+        raise SmokeFailure("Field SW1 navigation label evidence is invalid")
     if switches[1].get("id") != "node0/control/field_sw_2" or switches[1].get("pressed") is not True:
         raise SmokeFailure("Field SW2 manifest evidence is invalid")
+    if switches[1].get("detailLabel") != "Forward":
+        raise SmokeFailure("Field SW2 navigation label evidence is invalid")
 
     expected_leds = {
         "node0/led/field_key_a_1": 1.0,
@@ -429,6 +441,7 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
     require_existing_file(paths.braids_scenario, "Braids smoke scenario")
     require_existing_file(paths.harmoniqs_scenario, "Harmoniqs smoke scenario")
     require_existing_file(paths.vasynth_scenario, "VA Synth smoke scenario")
+    require_existing_file(paths.polyosc_scenario, "PolyOsc smoke scenario")
     require_existing_file(paths.field_shell_scenario, "Daisy Field shell smoke scenario")
     require_existing_file(
         paths.field_native_controls_scenario,
@@ -441,6 +454,10 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
     require_existing_file(
         paths.field_node_target_scenario,
         "Daisy Field selected-node surface smoke scenario",
+    )
+    require_existing_file(
+        paths.field_polyosc_surface_scenario,
+        "Daisy Field PolyOsc surface smoke scenario",
     )
 
     workspace = paths.build_dir / "smoke" / f"render_{uuid.uuid4().hex[:8]}"
@@ -511,6 +528,14 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
         )
         run_single_render(
             paths.render_executable,
+            paths.polyosc_scenario,
+            output_dir=workspace / "polyosc_run",
+            expected_app_id="polyosc",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        run_single_render(
+            paths.render_executable,
             paths.field_shell_scenario,
             output_dir=workspace / "field_cloudseed_shell_run",
             expected_app_id="cloudseed",
@@ -559,6 +584,20 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
             cwd=paths.source_dir,
         )
         verify_manifest_field_node_target(node_target_dir / "manifest.json")
+        field_polyosc_dir = workspace / "field_polyosc_surface_run"
+        run_single_render(
+            paths.render_executable,
+            paths.field_polyosc_surface_scenario,
+            output_dir=field_polyosc_dir,
+            expected_app_id="polyosc",
+            expected_board_id="daisy_field",
+            timeout_seconds=timeout_seconds,
+            cwd=paths.source_dir,
+        )
+        verify_manifest_parameter_values(
+            field_polyosc_dir / "manifest.json",
+            {"node0/param/waveform": 1.0},
+        )
         success = True
     except SmokeFailure as exc:
         raise SmokeFailure(f"{exc}\nRender smoke outputs preserved at: {workspace}") from exc
@@ -567,7 +606,7 @@ def run_render_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
             shutil.rmtree(workspace, ignore_errors=True)
 
     print(
-        "Render smoke passed for MultiDelay, Torus, CloudSeed, Braids, Harmoniqs, VA Synth, Daisy Field shell, Daisy Field native controls, Daisy Field extended surface, and Daisy Field selected-node surface scenarios."
+        "Render smoke passed for MultiDelay, Torus, CloudSeed, Braids, Harmoniqs, VA Synth, PolyOsc, Daisy Field shell, Daisy Field native controls, Daisy Field extended surface, Daisy Field selected-node surface, and Daisy Field PolyOsc surface scenarios."
     )
 
 

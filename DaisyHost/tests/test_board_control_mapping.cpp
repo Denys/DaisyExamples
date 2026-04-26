@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/BoardControlMapping.h"
 
@@ -36,6 +38,19 @@ void ExpectKnobTarget(const daisyhost::DaisyFieldControlMapping& mapping,
     EXPECT_EQ(mapping.knobs[zeroBasedIndex].targetId,
               "node0/param/" + parameterSuffix);
 }
+
+void ExpectKnobControlTarget(const daisyhost::DaisyFieldControlMapping& mapping,
+                             std::size_t                               zeroBasedIndex,
+                             const std::string&                        controlSuffix)
+{
+    ASSERT_LT(zeroBasedIndex, mapping.knobs.size());
+    EXPECT_TRUE(mapping.knobs[zeroBasedIndex].available);
+    EXPECT_EQ(mapping.knobs[zeroBasedIndex].targetKind,
+              daisyhost::BoardSurfaceTargetKind::kControl);
+    EXPECT_EQ(mapping.knobs[zeroBasedIndex].targetId,
+              "node0/control/" + controlSuffix);
+}
+
 
 void ExpectKnobDisabled(const daisyhost::DaisyFieldControlMapping& mapping,
                         std::size_t                               zeroBasedIndex)
@@ -111,6 +126,7 @@ TEST(BoardControlMappingTest, FieldExtraKnobsUseLockedMappingsForSupportedApps)
     const auto braids = MakeApp("braids", "node0");
     const auto harmoniqs = MakeApp("harmoniqs", "node0");
     const auto vasynth = MakeApp("vasynth", "node0");
+    const auto polyosc = MakeApp("polyosc", "node0");
 
     const auto multidelayMapping = daisyhost::BuildDaisyFieldControlMapping(
         multidelay->GetPatchBindings(), multidelay->GetParameters(), 4, "node0");
@@ -128,10 +144,10 @@ TEST(BoardControlMappingTest, FieldExtraKnobsUseLockedMappingsForSupportedApps)
 
     const auto cloudseedMapping = daisyhost::BuildDaisyFieldControlMapping(
         cloudseed->GetPatchBindings(), cloudseed->GetParameters(), 4, "node0");
-    ExpectKnobTarget(cloudseedMapping, 4, "pre_delay");
-    ExpectKnobTarget(cloudseedMapping, 5, "damping");
-    ExpectKnobTarget(cloudseedMapping, 6, "mod_amount");
-    ExpectKnobTarget(cloudseedMapping, 7, "mod_rate");
+    ExpectKnobControlTarget(cloudseedMapping, 4, "pre_delay");
+    ExpectKnobControlTarget(cloudseedMapping, 5, "damping");
+    ExpectKnobControlTarget(cloudseedMapping, 6, "mod_amount");
+    ExpectKnobControlTarget(cloudseedMapping, 7, "mod_rate");
 
     const auto braidsMapping = daisyhost::BuildDaisyFieldControlMapping(
         braids->GetPatchBindings(), braids->GetParameters(), 4, "node0");
@@ -153,6 +169,143 @@ TEST(BoardControlMappingTest, FieldExtraKnobsUseLockedMappingsForSupportedApps)
     ExpectKnobTarget(vasynthMapping, 5, "resonance");
     ExpectKnobTarget(vasynthMapping, 6, "filter_env_amount");
     ExpectKnobTarget(vasynthMapping, 7, "level");
+
+    const auto polyoscMapping = daisyhost::BuildDaisyFieldControlMapping(
+        polyosc->GetPatchBindings(), polyosc->GetParameters(), 4, "node0");
+    ExpectKnobTarget(polyoscMapping, 4, "waveform");
+    ExpectKnobDisabled(polyoscMapping, 5);
+    ExpectKnobDisabled(polyoscMapping, 6);
+    ExpectKnobDisabled(polyoscMapping, 7);
+}
+
+TEST(BoardControlMappingTest, FieldExtraKnobsExposePolyOscWaveformOnly)
+{
+    const auto polyosc = MakeApp("polyosc", "node0");
+
+    const auto mapping = daisyhost::BuildDaisyFieldControlMapping(
+        polyosc->GetPatchBindings(), polyosc->GetParameters(), 4, "node0");
+
+    ExpectKnobTarget(mapping, 4, "waveform");
+    ExpectKnobDisabled(mapping, 5);
+    ExpectKnobDisabled(mapping, 6);
+    ExpectKnobDisabled(mapping, 7);
+}
+
+TEST(BoardControlMappingTest, FieldAlternativeLayoutUsesRemainingPublicParameters)
+{
+    const auto multidelay = MakeApp("multidelay", "node0");
+    ASSERT_NE(multidelay, nullptr);
+
+    const auto multidelayMapping = daisyhost::BuildDaisyFieldControlMapping(
+        multidelay->GetPatchBindings(),
+        multidelay->GetParameters(),
+        multidelay->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+
+    ExpectKnobTarget(multidelayMapping, 0, "delay_tertiary");
+    EXPECT_EQ(multidelayMapping.knobs[0].detailLabel, "Delay 3");
+    for(std::size_t i = 1; i < daisyhost::kDaisyFieldKnobCount; ++i)
+    {
+        ExpectKnobDisabled(multidelayMapping, i);
+    }
+
+    const auto cloudseed = MakeApp("cloudseed", "node0");
+    ASSERT_NE(cloudseed, nullptr);
+
+    const auto cloudseedMapping = daisyhost::BuildDaisyFieldControlMapping(
+        cloudseed->GetPatchBindings(),
+        cloudseed->GetParameters(),
+        cloudseed->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+
+    ExpectKnobTarget(cloudseedMapping, 0, "eq_low_freq");
+    ExpectKnobTarget(cloudseedMapping, 1, "eq_high_freq");
+    ExpectKnobTarget(cloudseedMapping, 2, "eq_cutoff");
+    ExpectKnobTarget(cloudseedMapping, 3, "eq_low_gain");
+    ExpectKnobTarget(cloudseedMapping, 4, "eq_high_gain");
+    ExpectKnobTarget(cloudseedMapping, 5, "eq_cross_seed");
+    ExpectKnobTarget(cloudseedMapping, 6, "seed_diffusion");
+    ExpectKnobTarget(cloudseedMapping, 7, "seed_delay");
+}
+
+TEST(BoardControlMappingTest, FieldAlternativeLayoutDoesNotOverlapDefaultKnobs)
+{
+    const auto cloudseed = MakeApp("cloudseed", "node0");
+    ASSERT_NE(cloudseed, nullptr);
+
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        cloudseed->GetPatchBindings(),
+        cloudseed->GetParameters(),
+        cloudseed->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        cloudseed->GetPatchBindings(),
+        cloudseed->GetParameters(),
+        cloudseed->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+
+    std::vector<std::string> defaultTargets;
+    for(const auto& knob : defaultMapping.knobs)
+    {
+        if(knob.available)
+        {
+            defaultTargets.push_back(knob.targetId);
+        }
+    }
+
+    for(const auto& knob : alternativeMapping.knobs)
+    {
+        if(!knob.available)
+        {
+            continue;
+        }
+        EXPECT_EQ(std::find(defaultTargets.begin(),
+                            defaultTargets.end(),
+                            knob.targetId),
+                  defaultTargets.end())
+            << knob.targetId;
+    }
+}
+
+TEST(BoardControlMappingTest, FieldPublicParameterListUsesControllableMetadata)
+{
+    const auto cloudseed = MakeApp("cloudseed", "node0");
+    ASSERT_NE(cloudseed, nullptr);
+
+    const auto publicParameters = daisyhost::BuildDaisyFieldPublicParameterList(
+        cloudseed->GetPatchBindings(), cloudseed->GetParameters());
+
+    ASSERT_EQ(publicParameters.size(), 16u);
+    EXPECT_EQ(publicParameters[0].targetId, "node0/param/mix");
+    EXPECT_EQ(publicParameters[0].detailLabel, "Mix");
+    EXPECT_EQ(publicParameters[4].targetId, "node0/param/pre_delay");
+    EXPECT_EQ(publicParameters[7].targetId, "node0/param/mod_rate");
+    EXPECT_EQ(publicParameters[8].targetId, "node0/param/eq_low_freq");
+    EXPECT_EQ(publicParameters[15].targetId, "node0/param/seed_delay");
+}
+
+TEST(BoardControlMappingTest, FieldDrawerPagesNavigateCircularly)
+{
+    EXPECT_EQ(daisyhost::StepDaisyFieldDrawerPage(
+                  daisyhost::DaisyFieldDrawerPage::kKeyboardMidiCv, 1),
+              daisyhost::DaisyFieldDrawerPage::kPublicParameters);
+    EXPECT_EQ(daisyhost::StepDaisyFieldDrawerPage(
+                  daisyhost::DaisyFieldDrawerPage::kPublicParameters, 1),
+              daisyhost::DaisyFieldDrawerPage::kRackAudio);
+    EXPECT_EQ(daisyhost::StepDaisyFieldDrawerPage(
+                  daisyhost::DaisyFieldDrawerPage::kRackAudio, 1),
+              daisyhost::DaisyFieldDrawerPage::kKeyboardMidiCv);
+    EXPECT_EQ(daisyhost::StepDaisyFieldDrawerPage(
+                  daisyhost::DaisyFieldDrawerPage::kKeyboardMidiCv, -1),
+              daisyhost::DaisyFieldDrawerPage::kRackAudio);
 }
 
 TEST(BoardControlMappingTest, MissingExtraParametersDisableFieldKnobs)
@@ -262,7 +415,7 @@ TEST(BoardControlMappingTest, FieldCvOutputsDisableWhenExtraKnobsAreUnavailable)
     }
 }
 
-TEST(BoardControlMappingTest, FieldSwitchesMapToFirstTwoMomentaryUtilities)
+TEST(BoardControlMappingTest, FieldSwitchesMapToHostedAppMenuNavigation)
 {
     const auto app = MakeApp("vasynth", "node0");
     ASSERT_NE(app, nullptr);
@@ -275,16 +428,16 @@ TEST(BoardControlMappingTest, FieldSwitchesMapToFirstTwoMomentaryUtilities)
     EXPECT_EQ(mapping.switches[0].controlId, "node0/control/field_sw_1");
     EXPECT_EQ(mapping.switches[0].targetKind,
               daisyhost::BoardSurfaceTargetKind::kMenuItem);
-    EXPECT_EQ(mapping.switches[0].targetId, "node0/menu/utilities/audition");
+    EXPECT_EQ(mapping.switches[0].targetId, "node0/menu/navigation/back");
     EXPECT_EQ(mapping.switches[0].label, "SW1");
-    EXPECT_EQ(mapping.switches[0].detailLabel, "Audition");
+    EXPECT_EQ(mapping.switches[0].detailLabel, "Back");
 
     EXPECT_TRUE(mapping.switches[1].available);
-    EXPECT_EQ(mapping.switches[1].targetId, "node0/menu/utilities/init_patch");
-    EXPECT_EQ(mapping.switches[1].detailLabel, "Init Patch");
+    EXPECT_EQ(mapping.switches[1].targetId, "node0/menu/navigation/forward");
+    EXPECT_EQ(mapping.switches[1].detailLabel, "Forward");
 }
 
-TEST(BoardControlMappingTest, FieldSwitchesDisableWhenMomentaryUtilitiesAreMissing)
+TEST(BoardControlMappingTest, FieldSwitchesStayAvailableForHostedAppMenuNavigation)
 {
     const daisyhost::HostedAppPatchBindings patchBindings;
     const std::vector<daisyhost::ParameterDescriptor> parameters;
@@ -304,13 +457,142 @@ TEST(BoardControlMappingTest, FieldSwitchesDisableWhenMomentaryUtilitiesAreMissi
     const auto mapping = daisyhost::BuildDaisyFieldControlMapping(
         patchBindings, parameters, menu, 4, "node0");
 
-    for(const auto& fieldSwitch : mapping.switches)
-    {
-        EXPECT_FALSE(fieldSwitch.available);
-        EXPECT_EQ(fieldSwitch.targetKind,
-                  daisyhost::BoardSurfaceTargetKind::kUnavailable);
-        EXPECT_TRUE(fieldSwitch.targetId.empty());
-    }
+    EXPECT_TRUE(mapping.switches[0].available);
+    EXPECT_EQ(mapping.switches[0].targetId, "node0/menu/navigation/back");
+    EXPECT_TRUE(mapping.switches[1].available);
+    EXPECT_EQ(mapping.switches[1].targetId, "node0/menu/navigation/forward");
+}
+
+TEST(BoardControlMappingTest, FieldCvTargetOptionsPreserveLatchedKnobTargets)
+{
+    const auto app = MakeApp("cloudseed", "node0");
+    ASSERT_NE(app, nullptr);
+
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(), app->GetParameters(), app->GetMenuModel(), 4, "node0");
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(),
+        app->GetParameters(),
+        app->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto defaultOptions = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, "");
+    ASSERT_GT(defaultOptions.size(), 1u);
+    EXPECT_EQ(defaultOptions[0].targetKind,
+              daisyhost::BoardSurfaceTargetKind::kUnavailable);
+    EXPECT_EQ(defaultOptions[1].targetId, "node0/control/size");
+    EXPECT_EQ(defaultOptions[1].detailLabel, "K2.1 Size");
+
+    const std::string latchedTarget = "node0/control/size";
+    app->SetMenuItemValue("node0/menu/pages/page", 1.0f);
+    const auto advancedMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(), app->GetParameters(), app->GetMenuModel(), 4, "node0");
+    const auto advancedAlternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(),
+        app->GetParameters(),
+        app->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto advancedOptions = daisyhost::BuildDaisyFieldCvTargetOptions(
+        advancedMapping, advancedAlternativeMapping, latchedTarget);
+
+    ASSERT_FALSE(advancedOptions.empty());
+    const auto found = std::find_if(
+        advancedOptions.begin(),
+        advancedOptions.end(),
+        [&latchedTarget](const daisyhost::BoardSurfaceBinding& binding) {
+            return binding.targetId == latchedTarget;
+        });
+    ASSERT_NE(found, advancedOptions.end());
+    EXPECT_EQ(found->detailLabel, "Latched K target");
+}
+
+TEST(BoardControlMappingTest, FieldCvTargetOptionsExcludeAudioCriticalTargets)
+{
+    const auto app = MakeApp("cloudseed", "node0");
+    ASSERT_NE(app, nullptr);
+
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(), app->GetParameters(), app->GetMenuModel(), 4, "node0");
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(),
+        app->GetParameters(),
+        app->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+    const auto defaultOptions = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, "");
+
+    auto hasTarget = [&defaultOptions](const std::string& targetId) {
+        return std::any_of(
+            defaultOptions.begin(),
+            defaultOptions.end(),
+            [&targetId](const daisyhost::BoardSurfaceBinding& binding) {
+                return binding.targetId == targetId;
+            });
+    };
+
+    EXPECT_FALSE(hasTarget("node0/control/mix"));
+    EXPECT_FALSE(hasTarget("node0/param/global_input_mix"));
+    EXPECT_FALSE(hasTarget("node0/param/global_dry_out"));
+    EXPECT_TRUE(hasTarget("node0/control/size"));
+    EXPECT_TRUE(hasTarget("node0/control/decay"));
+    EXPECT_TRUE(hasTarget("node0/control/diffusion"));
+    EXPECT_TRUE(hasTarget("node0/param/eq_low_freq"));
+    EXPECT_TRUE(hasTarget("node0/param/eq_cutoff"));
+}
+
+TEST(BoardControlMappingTest, FieldCvTargetOptionsLabelDefaultAndAlternativeSets)
+{
+    const auto app = MakeApp("cloudseed", "node0");
+    ASSERT_NE(app, nullptr);
+
+    const auto defaultMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(),
+        app->GetParameters(),
+        app->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kPatchPagePlusExtras);
+    const auto alternativeMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(),
+        app->GetParameters(),
+        app->GetMenuModel(),
+        4,
+        "node0",
+        daisyhost::DaisyFieldKnobLayoutMode::kControllableParameters);
+
+    const auto options = daisyhost::BuildDaisyFieldCvTargetOptions(
+        defaultMapping, alternativeMapping, "");
+
+    auto hasLabel = [&options](const std::string& label) {
+        return std::any_of(
+            options.begin(),
+            options.end(),
+            [&label](const daisyhost::BoardSurfaceBinding& binding) {
+                return binding.detailLabel == label;
+            });
+    };
+
+    EXPECT_TRUE(hasLabel("K2.1 Size"));
+    EXPECT_TRUE(hasLabel("K8.1 Mod Rate"));
+    EXPECT_TRUE(hasLabel("K1.2 Low Freq"));
+    EXPECT_TRUE(hasLabel("K3.2 Cutoff"));
+    EXPECT_TRUE(hasLabel("K8.2 Delay Seed"));
+    EXPECT_FALSE(hasLabel("K1.1 Mix"));
+}
+
+TEST(BoardControlMappingTest, FieldCvLatchedTargetOwnsItsCvLane)
+{
+    EXPECT_TRUE(daisyhost::ShouldForwardDaisyFieldCvInput(""));
+    EXPECT_FALSE(
+        daisyhost::ShouldForwardDaisyFieldCvInput("node0/control/size"));
+    EXPECT_FALSE(
+        daisyhost::ShouldForwardDaisyFieldCvInput("node0/param/eq_cutoff"));
 }
 
 TEST(BoardControlMappingTest, FieldLedBindingsExposeKeysSwitchesAndGateIndicators)
@@ -357,5 +639,38 @@ TEST(BoardControlMappingTest, FieldKeysMapChromaticallyFromKeyboardOctave)
     EXPECT_EQ(mapping.keys[15].controlId, "node0/control/field_key_b_8");
     EXPECT_EQ(mapping.keys[15].label, "B8");
     EXPECT_EQ(mapping.keys[15].midiNote, 75);
+}
+
+TEST(BoardControlMappingTest, SubharmoniqFieldKeysMapToDedicatedPerformanceActions)
+{
+    const auto app = MakeApp("subharmoniq", "node0");
+    ASSERT_NE(app, nullptr);
+
+    const auto mapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(), app->GetParameters(), app->GetMenuModel(), 4, "node0");
+
+    ASSERT_EQ(mapping.keys.size(), daisyhost::kDaisyFieldKeyCount);
+    EXPECT_EQ(mapping.keys[0].controlId, "node0/control/field_key_a_1");
+    EXPECT_EQ(mapping.keys[0].label, "A1");
+    EXPECT_EQ(mapping.keys[0].detailLabel, "Seq1 Step1");
+    EXPECT_EQ(mapping.keys[0].targetKind,
+              daisyhost::BoardSurfaceTargetKind::kMenuItem);
+    EXPECT_EQ(mapping.keys[0].targetId, "node0/menu/field_keys/a1");
+    EXPECT_EQ(mapping.keys[0].midiNote, -1);
+
+    EXPECT_EQ(mapping.keys[6].label, "A7");
+    EXPECT_EQ(mapping.keys[6].detailLabel, "Rhythm 3");
+    EXPECT_EQ(mapping.keys[6].targetId, "node0/menu/field_keys/a7");
+
+    EXPECT_EQ(mapping.keys[14].label, "B7");
+    EXPECT_EQ(mapping.keys[14].detailLabel, "Play/Stop");
+    EXPECT_EQ(mapping.keys[14].targetKind,
+              daisyhost::BoardSurfaceTargetKind::kMenuItem);
+    EXPECT_EQ(mapping.keys[14].targetId, "node0/menu/field_keys/b7");
+    EXPECT_EQ(mapping.keys[14].midiNote, -1);
+
+    EXPECT_EQ(mapping.keys[15].label, "B8");
+    EXPECT_EQ(mapping.keys[15].detailLabel, "Reset");
+    EXPECT_EQ(mapping.keys[15].targetId, "node0/menu/field_keys/b8");
 }
 } // namespace

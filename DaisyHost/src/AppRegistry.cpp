@@ -6,6 +6,8 @@
 #include "daisyhost/apps/CloudSeedCore.h"
 #include "daisyhost/apps/HarmoniqsCore.h"
 #include "daisyhost/apps/MultiDelayCore.h"
+#include "daisyhost/apps/PolyOscCore.h"
+#include "daisyhost/apps/SubharmoniqCore.h"
 #include "daisyhost/apps/TorusCore.h"
 #include "daisyhost/apps/VASynthCore.h"
 
@@ -43,6 +45,16 @@ const std::vector<HostedAppRegistration> kRegistrations = {
      "VA Synth",
      [](const std::string& nodeId) {
          return std::make_unique<apps::VASynthCore>(nodeId);
+     }},
+    {"polyosc",
+     "PolyOsc",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::PolyOscCore>(nodeId);
+     }},
+    {"subharmoniq",
+     "Subharmoniq",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::SubharmoniqCore>(nodeId);
      }},
 };
 } // namespace

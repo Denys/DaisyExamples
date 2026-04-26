@@ -1,0 +1,35 @@
+{
+  "appId": "polyosc",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.5,
+    "outputChannelCount": 2
+  },
+  "seed": 808,
+  "initialParameterValues": {
+    "node0/param/osc1_freq": 0.1,
+    "node0/param/osc2_freq": 0.2,
+    "node0/param/osc3_freq": 0.3,
+    "node0/param/global_freq": 0.35
+  },
+  "audioInput": {
+    "mode": "host",
+    "level": 0.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.05,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/waveform/waveform",
+      "normalizedValue": 0.5
+    },
+    {
+      "timeSeconds": 0.1,
+      "type": "parameter_set",
+      "parameterId": "node0/param/global_freq",
+      "normalizedValue": 0.45
+    }
+  ]
+}

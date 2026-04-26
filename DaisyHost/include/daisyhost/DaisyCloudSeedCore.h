@@ -14,6 +14,8 @@ enum class DaisyCloudSeedPage
 {
     kSpace = 0,
     kMotion,
+    kArp,
+    kAdvanced,
 };
 
 struct DaisyCloudSeedParameter
@@ -37,6 +39,8 @@ struct DaisyCloudSeedPageBinding
     std::string                  pageLabel;
     std::array<std::string, 4>   parameterIds{};
     std::array<std::string, 4>   parameterLabels{};
+    std::array<std::string, 8>   fieldParameterIds{};
+    std::array<std::string, 8>   fieldParameterLabels{};
 };
 
 class DaisyCloudSeedCore

@@ -1,6 +1,7 @@
 #include "DaisyHostPluginEditor.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -462,6 +463,36 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         RegisterKeyboardSource(button);
     }
 
+    for(std::size_t i = 0; i < fieldDrawerPageButtons_.size(); ++i)
+    {
+        auto& button = fieldDrawerPageButtons_[i];
+        button.setButtonText("Page " + juce::String(static_cast<int>(i + 1)));
+        button.setClickingTogglesState(false);
+        button.addListener(this);
+        button.setColour(juce::TextButton::buttonColourId,
+                         DrawerInsetColour());
+        button.setColour(juce::TextButton::buttonOnColourId,
+                         AccentColour().withAlpha(0.88f));
+        button.setColour(juce::TextButton::textColourOffId, TextColour());
+        button.setColour(juce::TextButton::textColourOnId, InkColour());
+        addAndMakeVisible(button);
+        RegisterKeyboardSource(button);
+    }
+
+    for(auto& button : fieldParameterButtons_)
+    {
+        button.setClickingTogglesState(false);
+        button.addListener(this);
+        button.setColour(juce::TextButton::buttonColourId,
+                         DrawerInsetColour());
+        button.setColour(juce::TextButton::buttonOnColourId,
+                         AccentColour().withAlpha(0.82f));
+        button.setColour(juce::TextButton::textColourOffId, TextColour());
+        button.setColour(juce::TextButton::textColourOnId, InkColour());
+        addAndMakeVisible(button);
+        RegisterKeyboardSource(button);
+    }
+
     encoderPressButton_.setButtonText("PUSH");
     encoderPressButton_.setClickingTogglesState(false);
     encoderPressButton_.addListener(this);
@@ -673,6 +704,14 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         addAndMakeVisible(cvGeneratorModeBoxes_[i]);
         RegisterKeyboardSource(cvGeneratorModeBoxes_[i]);
 
+        cvGeneratorTargetBoxes_[i].onChange = [this, i]() {
+            processor_.SetFieldCvTargetSelection(
+                i, cvGeneratorTargetBoxes_[i].getSelectedId() - 1);
+            UpdateCvGeneratorEditorUi();
+        };
+        addAndMakeVisible(cvGeneratorTargetBoxes_[i]);
+        RegisterKeyboardSource(cvGeneratorTargetBoxes_[i]);
+
         for(int waveform = 0;
             waveform <= static_cast<int>(daisyhost::BasicWaveform::kSaw);
             ++waveform)
@@ -688,12 +727,20 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         RegisterKeyboardSource(cvGeneratorWaveformBoxes_[i]);
 
         auto configureCvSlider = [this](juce::Slider& slider, double defaultValue) {
-            slider.setSliderStyle(juce::Slider::LinearHorizontal);
-            slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 18);
+            slider.setSliderStyle(juce::Slider::LinearVertical);
+            slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 46, 18);
             slider.addListener(this);
             ConfigureMouseFriendlySlider(slider, defaultValue);
             slider.setColour(juce::Slider::thumbColourId,
                              PortColour(daisyhost::VirtualPortType::kCv));
+            slider.setColour(juce::Slider::trackColourId,
+                             PortColour(daisyhost::VirtualPortType::kCv)
+                                 .withAlpha(0.22f));
+            slider.setColour(juce::Slider::textBoxTextColourId, TextColour());
+            slider.setColour(juce::Slider::textBoxBackgroundColourId,
+                             DrawerInsetColour());
+            slider.setColour(juce::Slider::textBoxOutlineColourId,
+                             juce::Colours::white.withAlpha(0.18f));
             addAndMakeVisible(slider);
             RegisterKeyboardSource(slider);
         };
@@ -710,6 +757,18 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         cvGeneratorBiasSliders_[i].setRange(0.0, 5.0, 0.01);
         cvGeneratorBiasSliders_[i].setTextValueSuffix(" V");
         configureCvSlider(cvGeneratorBiasSliders_[i], 2.5);
+
+        const std::array<const char*, 3> sliderLabels{{"Offset", "Amp Vp", "Freq"}};
+        for(std::size_t labelIndex = 0; labelIndex < sliderLabels.size();
+            ++labelIndex)
+        {
+            auto& label = cvGeneratorSliderLabels_[i][labelIndex];
+            label.setText(sliderLabels[labelIndex], juce::dontSendNotification);
+            label.setJustificationType(juce::Justification::centred);
+            label.setColour(juce::Label::textColourId,
+                            TextColour().withAlpha(0.72f));
+            addAndMakeVisible(label);
+        }
     }
 
     computerKeyboardLabel_.setText("Keyboard MIDI", juce::dontSendNotification);
@@ -921,50 +980,193 @@ void DaisyHostPatchAudioProcessorEditor::resized()
     LayoutFieldControls();
 
     auto drawer = GetHostToolsBounds().reduced(18);
-    rackHeaderLabel_.setBounds(drawer.removeFromTop(20));
-    rackSelectedNodeLabel_.setBounds(drawer.removeFromTop(18));
-    drawer.removeFromTop(8);
-
-    auto rackCardsArea = drawer.removeFromTop(92);
-    const int rackCardGap = 12;
-    const int rackCardWidth = (rackCardsArea.getWidth() - rackCardGap) / 2;
-    for(std::size_t i = 0; i < rackNodes_.size(); ++i)
+    auto pageBar = drawer.removeFromTop(28);
+    const int pageButtonGap = 6;
+    const int pageButtonWidth
+        = (pageBar.getWidth()
+           - pageButtonGap * (static_cast<int>(fieldDrawerPageButtons_.size()) - 1))
+          / static_cast<int>(fieldDrawerPageButtons_.size());
+    for(std::size_t i = 0; i < fieldDrawerPageButtons_.size(); ++i)
     {
-        auto card = juce::Rectangle<int>(rackCardsArea.getX()
-                                             + static_cast<int>(i) * (rackCardWidth + rackCardGap),
-                                         rackCardsArea.getY(),
-                                         rackCardWidth,
-                                         rackCardsArea.getHeight());
-        rackNodeCardBounds_[i] = card;
-
-        auto content = card.reduced(12, 10);
-        auto topRow  = content.removeFromTop(18);
-        rackNodes_[i].nodeIdLabel.setBounds(topRow.removeFromLeft(topRow.getWidth() / 2));
-        rackNodes_[i].roleLabel.setBounds(topRow);
-        content.removeFromTop(8);
-        rackNodes_[i].appSelectorBox.setBounds(content.removeFromTop(28));
+        fieldDrawerPageButtons_[i].setVisible(fieldBoard);
+        fieldDrawerPageButtons_[i].setBounds(
+            pageBar.removeFromLeft(pageButtonWidth));
+        pageBar.removeFromLeft(pageButtonGap);
     }
-
-    drawer.removeFromTop(8);
-    rackTopologyLabel_.setBounds(drawer.removeFromTop(18));
-    rackTopologyBox_.setBounds(drawer.removeFromTop(28));
     drawer.removeFromTop(10);
+
+    const int activeDrawerPage = processor_.GetFieldDrawerPage();
+    const bool showKeyboardPage
+        = !fieldBoard
+          || activeDrawerPage
+          == static_cast<int>(daisyhost::DaisyFieldDrawerPage::kKeyboardMidiCv);
+    const bool showParameterPage
+        = fieldBoard
+          && activeDrawerPage
+          == static_cast<int>(daisyhost::DaisyFieldDrawerPage::kPublicParameters);
+    const bool showRackPage
+        = !fieldBoard
+          || activeDrawerPage
+          == static_cast<int>(daisyhost::DaisyFieldDrawerPage::kRackAudio);
 
     knobs_[3].slider.setBounds({});
     knobs_[3].label.setBounds({});
     knobs_[3].learnButton.setBounds({});
 
-    testInputModeLabel_.setBounds(drawer.removeFromTop(18));
-    testInputModeBox_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(6);
-    testInputLevelLabel_.setBounds(drawer.removeFromTop(18));
-    testInputLevelSlider_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(6);
-    testInputFrequencyLabel_.setBounds(drawer.removeFromTop(18));
-    testInputFrequencySlider_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(6);
-    triggerImpulseButton_.setBounds(drawer.removeFromTop(28));
-    drawer.removeFromTop(10);
+    for(auto& button : fieldParameterButtons_)
+    {
+        button.setBounds({});
+        button.setVisible(fieldBoard && showParameterPage);
+    }
+
+    rackHeaderLabel_.setVisible(showRackPage);
+    rackSelectedNodeLabel_.setVisible(showRackPage);
+    rackTopologyLabel_.setVisible(showRackPage);
+    rackTopologyBox_.setVisible(showRackPage);
+    testInputModeLabel_.setVisible(showRackPage);
+    testInputModeBox_.setVisible(showRackPage);
+    testInputLevelLabel_.setVisible(showRackPage);
+    testInputLevelSlider_.setVisible(showRackPage);
+    testInputFrequencyLabel_.setVisible(showRackPage);
+    testInputFrequencySlider_.setVisible(showRackPage);
+    triggerImpulseButton_.setVisible(showRackPage);
+    for(auto& rackNode : rackNodes_)
+    {
+        rackNode.nodeIdLabel.setVisible(showRackPage);
+        rackNode.roleLabel.setVisible(showRackPage);
+        rackNode.appSelectorBox.setVisible(showRackPage);
+    }
+    if(!showRackPage)
+    {
+        for(auto& card : rackNodeCardBounds_)
+        {
+            card = {};
+        }
+    }
+
+    computerKeyboardLabel_.setVisible(showKeyboardPage);
+    computerKeyboardToggle_.setVisible(showKeyboardPage);
+    computerKeyboardOctaveLabel_.setVisible(showKeyboardPage);
+    computerKeyboardOctaveBox_.setVisible(showKeyboardPage);
+    midiKeyboard_.setVisible(showKeyboardPage);
+    midiTrackerLabel_.setVisible(showKeyboardPage);
+    midiTrackerStatusLabel_.setVisible(showKeyboardPage);
+    midiTrackerText_.setVisible(showKeyboardPage);
+    cvGeneratorLabel_.setVisible(showKeyboardPage);
+    for(auto& label : cvGeneratorTitles_)
+    {
+        label.setVisible(showKeyboardPage);
+    }
+    for(auto& box : cvGeneratorModeBoxes_)
+    {
+        box.setVisible(showKeyboardPage);
+    }
+    for(auto& box : cvGeneratorTargetBoxes_)
+    {
+        box.setVisible(showKeyboardPage);
+    }
+    for(auto& box : cvGeneratorWaveformBoxes_)
+    {
+        box.setVisible(showKeyboardPage);
+    }
+    for(auto& slider : cvGeneratorFrequencySliders_)
+    {
+        slider.setVisible(showKeyboardPage);
+    }
+    for(auto& slider : cvGeneratorAmplitudeSliders_)
+    {
+        slider.setVisible(showKeyboardPage);
+    }
+    for(auto& slider : cvGeneratorBiasSliders_)
+    {
+        slider.setVisible(showKeyboardPage);
+    }
+    for(auto& labelSet : cvGeneratorSliderLabels_)
+    {
+        for(auto& label : labelSet)
+        {
+            label.setVisible(showKeyboardPage);
+        }
+    }
+    for(auto& label : cvLabels_)
+    {
+        label.setVisible(showKeyboardPage);
+    }
+    for(auto& slider : cvSliders_)
+    {
+        slider.setVisible(showKeyboardPage);
+    }
+    for(auto& button : gateButtons_)
+    {
+        button.setVisible(showKeyboardPage);
+    }
+
+    if(showRackPage)
+    {
+        rackHeaderLabel_.setBounds(drawer.removeFromTop(20));
+        rackSelectedNodeLabel_.setBounds(drawer.removeFromTop(18));
+        drawer.removeFromTop(8);
+
+        auto rackCardsArea = drawer.removeFromTop(92);
+        const int rackCardGap = 12;
+        const int rackCardWidth = (rackCardsArea.getWidth() - rackCardGap) / 2;
+        for(std::size_t i = 0; i < rackNodes_.size(); ++i)
+        {
+            auto card = juce::Rectangle<int>(
+                rackCardsArea.getX()
+                    + static_cast<int>(i) * (rackCardWidth + rackCardGap),
+                rackCardsArea.getY(),
+                rackCardWidth,
+                rackCardsArea.getHeight());
+            rackNodeCardBounds_[i] = card;
+
+            auto content = card.reduced(12, 10);
+            auto topRow  = content.removeFromTop(18);
+            rackNodes_[i].nodeIdLabel.setBounds(
+                topRow.removeFromLeft(topRow.getWidth() / 2));
+            rackNodes_[i].roleLabel.setBounds(topRow);
+            content.removeFromTop(8);
+            rackNodes_[i].appSelectorBox.setBounds(content.removeFromTop(28));
+        }
+
+        drawer.removeFromTop(8);
+        rackTopologyLabel_.setBounds(drawer.removeFromTop(18));
+        rackTopologyBox_.setBounds(drawer.removeFromTop(28));
+        drawer.removeFromTop(10);
+
+        testInputModeLabel_.setBounds(drawer.removeFromTop(18));
+        testInputModeBox_.setBounds(drawer.removeFromTop(28));
+        drawer.removeFromTop(6);
+        testInputLevelLabel_.setBounds(drawer.removeFromTop(18));
+        testInputLevelSlider_.setBounds(drawer.removeFromTop(28));
+        drawer.removeFromTop(6);
+        testInputFrequencyLabel_.setBounds(drawer.removeFromTop(18));
+        testInputFrequencySlider_.setBounds(drawer.removeFromTop(28));
+        drawer.removeFromTop(6);
+        triggerImpulseButton_.setBounds(drawer.removeFromTop(28));
+        drawer.removeFromTop(10);
+    }
+
+    if(showParameterPage)
+    {
+        auto parameterArea = drawer;
+        const int rowHeight = 28;
+        for(auto& button : fieldParameterButtons_)
+        {
+            if(parameterArea.getHeight() < rowHeight)
+            {
+                button.setBounds({});
+                continue;
+            }
+            button.setBounds(parameterArea.removeFromTop(rowHeight));
+            parameterArea.removeFromTop(4);
+        }
+    }
+
+    if(!showKeyboardPage)
+    {
+        return;
+    }
 
     auto lowerArea = drawer;
     auto leftColumn
@@ -988,29 +1190,45 @@ void DaisyHostPatchAudioProcessorEditor::resized()
     cvGeneratorLabel_.setBounds(rightColumn.removeFromTop(18));
     rightColumn.removeFromTop(4);
 
-    auto generatorGrid = rightColumn.removeFromTop(314);
-    const int cardGap = 8;
-    const int cardWidth = (generatorGrid.getWidth() - cardGap) / 2;
-    const int cardHeight = (generatorGrid.getHeight() - cardGap) / 2;
+    auto generatorGrid = rightColumn.removeFromTop(194);
+    const int cardGap = 6;
+    const int cardWidth = (generatorGrid.getWidth() - (cardGap * 3)) / 4;
+    const int cardHeight = generatorGrid.getHeight();
     for(std::size_t i = 0; i < cvGeneratorTitles_.size(); ++i)
     {
-        const int row = static_cast<int>(i / 2);
-        const int col = static_cast<int>(i % 2);
+        const int col = static_cast<int>(i);
         auto card = juce::Rectangle<int>(generatorGrid.getX() + col * (cardWidth + cardGap),
-                                         generatorGrid.getY() + row * (cardHeight + cardGap),
+                                         generatorGrid.getY(),
                                          cardWidth,
                                          cardHeight);
 
         cvGeneratorTitles_[i].setBounds(card.removeFromTop(18));
-        cvGeneratorModeBoxes_[i].setBounds(card.removeFromTop(24));
+        auto modeRow = card.removeFromTop(24);
+        const int modeBoxWidth = (modeRow.getWidth() - 4) / 2;
+        cvGeneratorModeBoxes_[i].setBounds(modeRow.removeFromLeft(modeBoxWidth));
+        modeRow.removeFromLeft(4);
+        cvGeneratorWaveformBoxes_[i].setBounds(modeRow);
         card.removeFromTop(4);
-        cvGeneratorWaveformBoxes_[i].setBounds(card.removeFromTop(24));
-        card.removeFromTop(4);
-        cvGeneratorFrequencySliders_[i].setBounds(card.removeFromTop(22));
-        card.removeFromTop(2);
-        cvGeneratorAmplitudeSliders_[i].setBounds(card.removeFromTop(22));
-        card.removeFromTop(2);
-        cvGeneratorBiasSliders_[i].setBounds(card.removeFromTop(22));
+        cvGeneratorTargetBoxes_[i].setBounds(card.removeFromTop(24));
+        card.removeFromTop(6);
+        auto sliderRow = card.removeFromTop(94);
+        const int sliderGap = 4;
+        const int sliderWidth = (sliderRow.getWidth() - (sliderGap * 2)) / 3;
+        cvGeneratorBiasSliders_[i].setBounds(sliderRow.removeFromLeft(sliderWidth));
+        sliderRow.removeFromLeft(sliderGap);
+        cvGeneratorAmplitudeSliders_[i].setBounds(
+            sliderRow.removeFromLeft(sliderWidth));
+        sliderRow.removeFromLeft(sliderGap);
+        cvGeneratorFrequencySliders_[i].setBounds(sliderRow);
+        auto labelRow = card.removeFromTop(16);
+        const int labelWidth = (labelRow.getWidth() - (sliderGap * 2)) / 3;
+        cvGeneratorSliderLabels_[i][0].setBounds(
+            labelRow.removeFromLeft(labelWidth));
+        labelRow.removeFromLeft(sliderGap);
+        cvGeneratorSliderLabels_[i][1].setBounds(
+            labelRow.removeFromLeft(labelWidth));
+        labelRow.removeFromLeft(sliderGap);
+        cvGeneratorSliderLabels_[i][2].setBounds(labelRow);
     }
 
     rightColumn.removeFromTop(8);
@@ -1340,6 +1558,65 @@ void DaisyHostPatchAudioProcessorEditor::DrawPatchTraces(juce::Graphics& g) cons
     const auto* ctrl3   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl3_secondary");
     const auto* ctrl4   = FindSurfaceControlById(profile.nodeId + "/surface/ctrl4_feedback");
 
+    if(processor_.IsDaisyFieldBoard())
+    {
+        std::size_t cvInputIndex = 0;
+        for(const auto& port : profile.ports)
+        {
+            if(port.type != daisyhost::VirtualPortType::kCv
+               || port.direction != daisyhost::PortDirection::kInput
+               || cvInputIndex >= 4)
+            {
+                continue;
+            }
+
+            const auto* knobSlot = FindSurfaceControlByTarget(
+                processor_.GetFieldKnobControlId(cvInputIndex));
+            if(knobSlot == nullptr)
+            {
+                ++cvInputIndex;
+                continue;
+            }
+
+            const auto jack = RectFromPanel(port.panelBounds);
+            const auto knob = RectFromPanel(knobSlot->panelBounds);
+            juce::Path trace;
+            trace.startNewSubPath(jack.getCentreX(), jack.getY());
+            trace.cubicTo(jack.getCentreX(),
+                          jack.getY() - 52.0f,
+                          knob.getCentreX(),
+                          knob.getBottom() + 42.0f,
+                          knob.getCentreX(),
+                          knob.getBottom());
+            g.setColour(PortColour(daisyhost::VirtualPortType::kCv).withAlpha(0.36f));
+            g.strokePath(trace, juce::PathStrokeType(1.25f));
+            ++cvInputIndex;
+        }
+
+        const auto displayArea = RectFromPanel(profile.display.panelBounds);
+        for(const auto& port : profile.ports)
+        {
+            if(port.type != daisyhost::VirtualPortType::kGate
+               || port.direction != daisyhost::PortDirection::kInput)
+            {
+                continue;
+            }
+
+            const auto jack = RectFromPanel(port.panelBounds);
+            juce::Path trace;
+            trace.startNewSubPath(jack.getCentreX(), jack.getBottom());
+            trace.cubicTo(jack.getCentreX(),
+                          jack.getBottom() + 70.0f,
+                          displayArea.getRight() + 34.0f,
+                          displayArea.getCentreY(),
+                          displayArea.getRight(),
+                          displayArea.getCentreY());
+            g.setColour(PortColour(daisyhost::VirtualPortType::kGate).withAlpha(0.32f));
+            g.strokePath(trace, juce::PathStrokeType(1.2f));
+            break;
+        }
+    }
+
     const daisyhost::PanelControlSlotSpec* topSlots[] = {ctrl1, ctrl2, ctrl3, ctrl4};
     std::size_t topIndex = 0;
     for(const auto& port : profile.ports)
@@ -1644,7 +1921,6 @@ void DaisyHostPatchAudioProcessorEditor::DrawPanelIndicators(
 void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
 {
     auto panel = GetHostToolsBounds().toFloat().reduced(16.0f);
-    const auto menuModel = processor_.GetMenuModelSnapshot();
 
     juce::Rectangle<int> rackArea = rackHeaderLabel_.getBounds()
                                         .getUnion(rackSelectedNodeLabel_.getBounds())
@@ -1654,97 +1930,65 @@ void DaisyHostPatchAudioProcessorEditor::DrawHostTools(juce::Graphics& g) const
     {
         rackArea = rackArea.getUnion(cardBounds);
     }
+    const auto upperControlsArea = rackArea
+                                       .getUnion(rackTopologyLabel_.getBounds())
+                                       .getUnion(rackTopologyBox_.getBounds())
+                                       .getUnion(testInputModeLabel_.getBounds())
+                                       .getUnion(testInputModeBox_.getBounds())
+                                       .getUnion(testInputLevelLabel_.getBounds())
+                                       .getUnion(testInputLevelSlider_.getBounds())
+                                       .getUnion(testInputFrequencyLabel_.getBounds())
+                                       .getUnion(testInputFrequencySlider_.getBounds())
+                                       .getUnion(triggerImpulseButton_.getBounds());
+
+    auto lowerControlsArea = computerKeyboardLabel_.getBounds()
+                                 .getUnion(computerKeyboardToggle_.getBounds())
+                                 .getUnion(computerKeyboardOctaveLabel_.getBounds())
+                                 .getUnion(computerKeyboardOctaveBox_.getBounds())
+                                 .getUnion(midiKeyboard_.getBounds())
+                                 .getUnion(midiTrackerLabel_.getBounds())
+                                 .getUnion(midiTrackerStatusLabel_.getBounds())
+                                 .getUnion(midiTrackerText_.getBounds())
+                                 .getUnion(cvGeneratorLabel_.getBounds());
+    for(std::size_t i = 0; i < cvGeneratorTitles_.size(); ++i)
+    {
+        lowerControlsArea = lowerControlsArea
+                                .getUnion(cvGeneratorTitles_[i].getBounds())
+                                .getUnion(cvGeneratorModeBoxes_[i].getBounds())
+                                .getUnion(cvGeneratorTargetBoxes_[i].getBounds())
+                                .getUnion(cvGeneratorWaveformBoxes_[i].getBounds())
+                                .getUnion(cvGeneratorFrequencySliders_[i].getBounds())
+                                .getUnion(cvGeneratorAmplitudeSliders_[i].getBounds())
+                                .getUnion(cvGeneratorBiasSliders_[i].getBounds())
+                                .getUnion(cvGeneratorSliderLabels_[i][0].getBounds())
+                                .getUnion(cvGeneratorSliderLabels_[i][1].getBounds())
+                                .getUnion(cvGeneratorSliderLabels_[i][2].getBounds());
+    }
+    for(std::size_t i = 0; i < cvSliders_.size(); ++i)
+    {
+        lowerControlsArea = lowerControlsArea.getUnion(cvLabels_[i].getBounds())
+                                .getUnion(cvSliders_[i].getBounds());
+    }
+    for(const auto& gateButton : gateButtons_)
+    {
+        lowerControlsArea = lowerControlsArea.getUnion(gateButton.getBounds());
+    }
 
     DrawDaisyHostBadge(g,
                        {panel.getRight() - 68.0f, panel.getY() - 2.0f, 54.0f, 54.0f},
                        true);
+
+    g.setColour(juce::Colours::black.withAlpha(0.12f));
+    g.fillRoundedRectangle(upperControlsArea.toFloat().expanded(8.0f, 8.0f), 10.0f);
+    g.fillRoundedRectangle(lowerControlsArea.toFloat().expanded(8.0f, 8.0f), 10.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.08f));
+    g.drawRoundedRectangle(upperControlsArea.toFloat().expanded(8.0f, 8.0f), 10.0f, 1.0f);
+    g.drawRoundedRectangle(lowerControlsArea.toFloat().expanded(8.0f, 8.0f), 10.0f, 1.0f);
     DrawRackHeader(g, rackArea.toFloat().expanded(8.0f, 8.0f));
 
-    auto body = panel;
-    const float rackHeight = static_cast<float>(rackArea.getBottom()) - panel.getY();
-    body.removeFromTop(std::max(0.0f, rackHeight) + 20.0f);
-
-    g.setColour(TextColour());
-    g.setFont(TitleFont(18.0f));
-    g.drawText("Selected Node Mirror",
-               body.removeFromTop(20.0f).toNearestInt(),
-               juce::Justification::centredLeft,
-               false);
-
-    g.setFont(BodyFont(11.5f));
-    g.setColour(TextColour().withAlpha(0.72f));
-    const auto selectedSurfaceText = processor_.IsDaisyFieldBoard()
-                                         ? "Field controls, keys, switches, CV/gate inputs, and host tools apply to the selected rack node."
-                                         : "Patch controls, encoder/menu state, CV/gate inputs, and host tools apply to the selected rack node.";
-    g.drawText(selectedSurfaceText,
-               body.removeFromTop(34.0f).toNearestInt(),
-               juce::Justification::topLeft,
-               true);
-
-    const auto menuBox = body.removeFromTop(92.0f);
-    g.setColour(juce::Colours::black.withAlpha(0.18f));
-    g.fillRoundedRectangle(menuBox, 14.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.10f));
-    g.drawRoundedRectangle(menuBox, 14.0f, 1.0f);
-
-    auto menuTextArea = menuBox.reduced(12.0f, 10.0f);
-    const auto* currentSection = [&]() -> const daisyhost::MenuSection* {
-        for(const auto& section : menuModel.sections)
-        {
-            if(section.id == menuModel.currentSectionId)
-            {
-                return &section;
-            }
-        }
-        return nullptr;
-    }();
-    g.setColour(TextColour());
-    g.setFont(TitleFont(14.0f));
-    const juce::String menuTitle
-        = menuModel.isOpen
-              ? juce::String("Menu: ")
-                    + (currentSection != nullptr ? currentSection->title.c_str()
-                                                 : menuModel.currentSectionId.c_str())
-                           : "Menu Closed";
-    g.drawText(menuTitle,
-               menuTextArea.removeFromTop(18.0f).toNearestInt(),
-               juce::Justification::centredLeft,
-               false);
-
-    g.setFont(BodyFont(10.5f));
-    g.setColour(TextColour().withAlpha(0.72f));
-    g.drawText("Click ENC 1 / PUSH, or wheel over ENC 1 to browse.",
-               menuTextArea.removeFromTop(16.0f).toNearestInt(),
-               juce::Justification::centredLeft,
-               false);
-
-    if(currentSection != nullptr)
-    {
-        g.setColour(TextColour().withAlpha(0.92f));
-        for(int row = 0; row < 4; ++row)
-        {
-            const int itemIndex = row + std::max(0, menuModel.currentSelection - 1);
-            if(itemIndex >= static_cast<int>(currentSection->items.size()))
-            {
-                break;
-            }
-
-            const auto& item = currentSection->items[static_cast<std::size_t>(itemIndex)];
-            juce::String line
-                = (itemIndex == menuModel.currentSelection ? "> " : "  ");
-            line += juce::String(item.label);
-            if(!item.valueText.empty())
-            {
-                line += ": " + juce::String(item.valueText);
-            }
-            g.drawText(line,
-                       menuTextArea.removeFromTop(14.0f).toNearestInt(),
-                       juce::Justification::centredLeft,
-                       false);
-        }
-    }
-
+    auto body = panel.withTop(static_cast<float>(lowerControlsArea.getBottom()) + 8.0f);
     g.setColour(TextColour().withAlpha(0.58f));
+    g.setFont(BodyFont(10.5f));
     g.drawText(processor_.GetBuildIdentityText(),
                body.removeFromTop(14.0f).toNearestInt(),
                juce::Justification::centredLeft,
@@ -1962,6 +2206,17 @@ void DaisyHostPatchAudioProcessorEditor::UpdateCvGeneratorEditorUi()
     {
         cvGeneratorModeBoxes_[i].setSelectedId(processor_.GetCvSourceMode(i) + 1,
                                                juce::dontSendNotification);
+        cvGeneratorTargetBoxes_[i].clear(juce::dontSendNotification);
+        const int targetOptionCount = processor_.GetFieldCvTargetOptionCount(i);
+        for(int optionIndex = 0; optionIndex < targetOptionCount; ++optionIndex)
+        {
+            cvGeneratorTargetBoxes_[i].addItem(
+                processor_.GetFieldCvTargetOptionLabel(i, optionIndex),
+                optionIndex + 1);
+        }
+        cvGeneratorTargetBoxes_[i].setSelectedId(
+            processor_.GetFieldCvTargetSelection(i) + 1,
+            juce::dontSendNotification);
         cvGeneratorWaveformBoxes_[i].setSelectedId(processor_.GetCvWaveform(i) + 1,
                                                    juce::dontSendNotification);
         cvGeneratorFrequencySliders_[i].setValue(processor_.GetCvFrequencyHz(i),
@@ -2098,7 +2353,9 @@ void DaisyHostPatchAudioProcessorEditor::UpdateFieldControlUi()
     {
         auto& control = fieldKnobs_[i];
         control.controlId = processor_.GetFieldKnobControlId(i);
-        control.label.setText(processor_.GetFieldKnobLabel(i),
+        const auto detailLabel = processor_.GetFieldKnobDetailLabel(i);
+        control.label.setText(detailLabel.isNotEmpty() ? detailLabel
+                                                       : juce::String(),
                               juce::dontSendNotification);
         control.slider.setValue(processor_.GetFieldKnobValue(i),
                                 juce::dontSendNotification);
@@ -2125,7 +2382,87 @@ void DaisyHostPatchAudioProcessorEditor::UpdateFieldControlUi()
         button.setToggleState(processor_.GetFieldSwitchPressed(i),
                               juce::dontSendNotification);
     }
+    UpdateFieldDrawerPageUi();
     repaint();
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateFieldDrawerPageUi()
+{
+    const bool fieldBoard = processor_.IsDaisyFieldBoard();
+    const int activePage = processor_.GetFieldDrawerPage();
+    for(std::size_t i = 0; i < fieldDrawerPageButtons_.size(); ++i)
+    {
+        auto& button = fieldDrawerPageButtons_[i];
+        button.setButtonText(processor_.GetFieldDrawerPageLabel(
+            static_cast<int>(i)));
+        button.setEnabled(fieldBoard);
+        button.setToggleState(activePage == static_cast<int>(i),
+                              juce::dontSendNotification);
+    }
+
+    const auto bindings = processor_.GetFieldPublicParameterBindings();
+    const auto parameters = processor_.GetParameterSnapshot();
+    std::unordered_map<std::string, daisyhost::ParameterDescriptor> parameterById;
+    parameterById.reserve(parameters.size());
+    for(const auto& parameter : parameters)
+    {
+        parameterById[parameter.id] = parameter;
+    }
+
+    for(std::size_t i = 0; i < fieldParameterButtons_.size(); ++i)
+    {
+        auto& button = fieldParameterButtons_[i];
+        if(i >= bindings.size())
+        {
+            button.setButtonText("");
+            button.setEnabled(false);
+            button.setVisible(false);
+            button.setToggleState(false, juce::dontSendNotification);
+            continue;
+        }
+
+        const auto& binding = bindings[i];
+        juce::String text = juce::String(static_cast<int>(i + 1)) + "  "
+                            + juce::String(binding.detailLabel);
+        if(const auto found = parameterById.find(binding.targetId);
+           found != parameterById.end())
+        {
+            const auto& parameter = found->second;
+            text += "  "
+                    + juce::String(parameter.normalizedValue * 100.0f, 0)
+                    + "%";
+            if(!parameter.unitLabel.empty())
+            {
+                text += " " + juce::String(parameter.unitLabel);
+            }
+            text += "  d"
+                    + juce::String(parameter.defaultNormalizedValue * 100.0f,
+                                   0)
+                    + "%";
+        }
+
+        bool mappedToKnob = false;
+        for(std::size_t knobIndex = 0; knobIndex < fieldKnobs_.size();
+            ++knobIndex)
+        {
+            if(processor_.GetFieldKnobTargetId(knobIndex) == binding.targetId)
+            {
+                mappedToKnob = true;
+                break;
+            }
+        }
+
+        button.setButtonText(mappedToKnob ? text + "  K" : text);
+        button.setEnabled(fieldBoard && binding.available);
+        button.setVisible(
+            fieldBoard
+            && processor_.GetFieldDrawerPage()
+                   == static_cast<int>(
+                       daisyhost::DaisyFieldDrawerPage::kPublicParameters));
+        button.setToggleState(selectedFieldParameterIndex_
+                                  == static_cast<int>(i),
+                              juce::dontSendNotification);
+    }
 }
 
 bool DaisyHostPatchAudioProcessorEditor::IsInteractiveFieldSurfaceControl(
@@ -2169,6 +2506,15 @@ bool DaisyHostPatchAudioProcessorEditor::IsInteractiveFieldSurfaceControl(
 
 void DaisyHostPatchAudioProcessorEditor::ReleaseComputerKeyboardNotes()
 {
+    for(std::size_t i = 0; i < fieldSwitchKeyHeld_.size(); ++i)
+    {
+        if(fieldSwitchKeyHeld_[i])
+        {
+            processor_.SetFieldSwitchPressed(i, false);
+            fieldSwitchKeyHeld_[i] = false;
+        }
+    }
+
     for(const auto& heldNote : heldComputerKeyboardNotes_)
     {
         processor_.SetVirtualKeyboardNote(heldNote.second, false, 0.0f);
@@ -2182,6 +2528,9 @@ void DaisyHostPatchAudioProcessorEditor::ReleaseComputerKeyboardNotes()
 void DaisyHostPatchAudioProcessorEditor::UpdateComputerKeyboardUi()
 {
     const bool enabled = processor_.GetComputerKeyboardEnabled();
+    computerKeyboardToggle_.setButtonText(
+        processor_.IsDaisyFieldBoard() ? "Enable A/W/S/E  X/C=SW"
+                                       : "Enable A/W/S/E");
     computerKeyboardToggle_.setToggleState(enabled, juce::dontSendNotification);
     computerKeyboardOctaveBox_.setSelectedId(
         processor_.GetComputerKeyboardOctave() + 1,
@@ -2189,7 +2538,9 @@ void DaisyHostPatchAudioProcessorEditor::UpdateComputerKeyboardUi()
     computerKeyboardOctaveBox_.setEnabled(enabled);
     midiKeyboard_.setEnabled(enabled);
     midiKeyboard_.setLowestVisibleKey(
-        juce::jlimit(24, 72, processor_.GetComputerKeyboardOctave() * 12));
+        juce::jlimit(24,
+                     96,
+                     (processor_.GetComputerKeyboardOctave() + 1) * 12));
 }
 
 void DaisyHostPatchAudioProcessorEditor::ApplyWindowIconIfNeeded()
@@ -2357,6 +2708,29 @@ void DaisyHostPatchAudioProcessorEditor::buttonClicked(juce::Button* button)
         return;
     }
 
+    for(std::size_t i = 0; i < fieldDrawerPageButtons_.size(); ++i)
+    {
+        if(button == &fieldDrawerPageButtons_[i])
+        {
+            processor_.SetFieldDrawerPage(static_cast<int>(i));
+            selectedFieldParameterIndex_ = -1;
+            UpdateFieldControlUi();
+            resized();
+            return;
+        }
+    }
+
+    for(std::size_t i = 0; i < fieldParameterButtons_.size(); ++i)
+    {
+        if(button == &fieldParameterButtons_[i])
+        {
+            selectedFieldParameterIndex_ = static_cast<int>(i);
+            UpdateFieldDrawerPageUi();
+            repaint();
+            return;
+        }
+    }
+
     if(button == &computerKeyboardToggle_)
     {
         processor_.SetComputerKeyboardEnabled(
@@ -2395,6 +2769,12 @@ void DaisyHostPatchAudioProcessorEditor::buttonStateChanged(juce::Button* button
         if(button == &fieldSwitchButtons_[i])
         {
             processor_.SetFieldSwitchPressed(i, button->isDown());
+            if(button->isDown())
+            {
+                selectedFieldParameterIndex_ = -1;
+                UpdateFieldControlUi();
+                resized();
+            }
             return;
         }
     }
@@ -2418,6 +2798,23 @@ bool DaisyHostPatchAudioProcessorEditor::keyPressed(
     }
 
     const char keyChar = static_cast<char>(textCharacter);
+    const char lowerKeyChar
+        = static_cast<char>(std::tolower(static_cast<unsigned char>(keyChar)));
+    if(processor_.IsDaisyFieldBoard()
+       && (lowerKeyChar == 'x' || lowerKeyChar == 'c'))
+    {
+        const std::size_t switchIndex = lowerKeyChar == 'x' ? 0u : 1u;
+        if(!fieldSwitchKeyHeld_[switchIndex])
+        {
+            fieldSwitchKeyHeld_[switchIndex] = true;
+            processor_.SetFieldSwitchPressed(switchIndex, true);
+            selectedFieldParameterIndex_ = -1;
+            UpdateFieldControlUi();
+            resized();
+        }
+        return true;
+    }
+
     if(daisyhost::ComputerKeyboardMidi::IsOctaveDownKey(keyChar))
     {
         if(!octaveDownHeld_)
@@ -2466,6 +2863,24 @@ bool DaisyHostPatchAudioProcessorEditor::keyStateChanged(
     juce::ignoreUnused(isKeyDown, originatingComponent);
 
     bool handledAny = false;
+    if(processor_.IsDaisyFieldBoard())
+    {
+        const std::array<int, daisyhost::kDaisyFieldSwitchCount> switchKeys = {
+            {'X', 'C'}};
+        for(std::size_t i = 0; i < fieldSwitchKeyHeld_.size(); ++i)
+        {
+            if(fieldSwitchKeyHeld_[i]
+               && !juce::KeyPress::isKeyCurrentlyDown(switchKeys[i])
+               && !juce::KeyPress::isKeyCurrentlyDown(
+                   std::tolower(static_cast<unsigned char>(switchKeys[i]))))
+            {
+                processor_.SetFieldSwitchPressed(i, false);
+                fieldSwitchKeyHeld_[i] = false;
+                handledAny = true;
+            }
+        }
+    }
+
     for(auto it = heldComputerKeyboardNotes_.begin();
         it != heldComputerKeyboardNotes_.end();)
     {

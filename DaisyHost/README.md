@@ -55,6 +55,9 @@ internals:
 - MIDI tracking: the Host Tools panel shows current standalone MIDI input status
   plus a rolling log of recent note/CC/program messages; in standalone, external
   MIDI devices must still be enabled in the JUCE `Settings...` dialog
+- Real Daisy Field hardware can now be flashed with
+  [field/DaisyHostController](../field/DaisyHostController/README.md) to act
+  as a standard USB MIDI controller for DaisyHost MIDI learn and note input
 - Current standalone default stays on `Host In`; alternate internal sources are
   available from the mirrored host drawer and shared menu when live input is
   muted or unavailable
@@ -64,12 +67,15 @@ internals:
   - `MultiDelayCore` remains the deterministic regression fixture and continues
     to back the firmware adapter in [patch/MultiDelay](../patch/MultiDelay/README.md)
     plus the first Daisy Field firmware adapter in
-    [field/MultiDelay](../field/MultiDelay/README.md)
+    [field/MultiDelay](../field/MultiDelay/README.md) and the generated
+    adapter proof in [field/MultiDelayGenerated](../field/MultiDelayGenerated/README.md)
   - `TorusCore` is the first nontrivial second hosted app, using a DaisyHost-native
     Patch wrapper with Torus-style semantics and menu/control assignment
   - `CloudSeedCore` is now a first-class supported hosted app, built on top of a
     portable `DaisyCloudSeedCore` wrapper around the imported
     `third_party/CloudSeedCore` with a performance-first Patch control model
+    and a deterministic parameter arpeggiator for rhythmic CloudSeed parameter
+    stepping
   - `BraidsCore` is now a first-class supported hosted app, built on top of a
     portable `DaisyBraidsCore` wrapper around the imported Braids oscillator
     sources with a percussion-first MIDI/gate control model
@@ -79,6 +85,16 @@ internals:
   - `VASynthCore` is now a first-class supported hosted app, built on top of a
     portable `DaisyVASynthCore` seven-voice subtractive wrapper with `Osc` /
     `Filter` / `Motion` pages and MIDI-first polyphonic triggering
+  - `PolyOscCore` is now a first-class supported hosted app, built on top of a
+    portable `DaisyPolyOscCore` wrapper for the original Patch `PolyOsc`
+    three-oscillator source behavior
+  - `SubharmoniqCore` is now a first-class supported hosted app, built on top
+    of a portable `DaisySubharmoniqCore` inspired by Subharmonicon-style
+    subharmonic oscillators, dual four-step sequencers, integer rhythm
+    dividers, Field-oriented page controls, and an internal tempo clock for
+    standalone rhythm-triggered audio; the 2026-04-26 follow-up also tunes the
+    default envelope/output/filter path and Field knob pickup behavior so the
+    startup patch is audible in host tests without physical knobs muting it
 - Multi-app host:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings
@@ -104,6 +120,9 @@ internals:
 - Headless rendering:
   - `DaisyHostRender.exe` loads a scenario JSON, renders offline, and writes
     `audio.wav` plus `manifest.json`
+  - `DaisyHostCLI.exe` provides agent/CI-friendly discovery, scenario
+    validation, render, snapshot, smoke, and doctor commands around the same
+    core contracts
   - scenarios drive apps through canonical parameter ids, typed Patch ports,
     and optional compatibility menu actions
   - optional `nodes[]` / `routes[]` contracts now allow internal two-node audio
@@ -150,9 +169,12 @@ Implemented `0.2.0` additions:
   - `Space` and `Motion` performance pages that remap the four Patch knobs
   - named `Blend`, `Space`, `Motion`, and `Tone` MetaControllers surfaced
     through the shared menu/drawer path
+  - a compact `Arp` menu that rhythmically steps selected performance
+    parameters through effective-state modulation without adding MIDI-note
+    synthesis
   - utility actions for `Bypass`, `Clear Tails`, `Randomize Seeds`, and
     `Interpolation`
-  - checked-in `cloudseed_smoke.json` render coverage
+  - checked-in `cloudseed_smoke.json` render coverage, including the arp path
 - `braids` promoted to a first-class supported hosted app with:
   - a portable `DaisyBraidsCore` shared wrapper
   - a six-model percussion-first subset:
@@ -175,6 +197,33 @@ Implemented `0.2.0` additions:
     the current DaisyHost menu surfacing `Osc` / `Filter` page switching
   - utility actions for `Audition`, `Init Patch`, `Stereo Sim`, and `Panic`
   - checked-in `vasynth_smoke.json` render coverage
+- `polyosc` promoted to a first-class supported hosted app with:
+  - a portable `DaisyPolyOscCore` shared wrapper for `patch/PolyOsc`
+  - Patch K1-K3 oscillator frequency controls, K4 global frequency offset,
+    encoder waveform selection, outputs 1-3 as individual oscillators, and
+    output 4 as the host stereo mix source
+  - Field K1-K4 mirroring the Patch controls and Field K5 mapped to `waveform`
+    through the existing board-control mapping path
+  - checked-in `polyosc_smoke.json` and
+    `field_polyosc_surface_smoke.json` render coverage
+- `subharmoniq` promoted to a first-class supported hosted app and Field
+  firmware target with:
+  - a portable `DaisySubharmoniqCore` shared wrapper
+  - six oscillator sources, two four-step sequencers, four integer rhythm
+    dividers, quantize modes, and Round 1 SVF-style low-pass filtering
+  - Field K1-K8 page controls, A/B key sequencer/rhythm/transport actions,
+    SW1/SW2 pseudo-encoder menu navigation, CV/Gate/MIDI mappings, OLED, LEDs,
+    and CV OUT sequencer monitors in `field/SubharmoniqField`
+  - `field/DaisyHostController` firmware that sends standard USB MIDI for
+    DaisyHost control: K1-K8 as CC 20-27, CV1-CV4 as CC 28-31, A1-B8 as notes
+    60-75, and SW1/SW2 as momentary CC 80/81
+  - DaisyHost Field UI refinements for SW1/SW2 navigation, X/C keyboard
+    shortcuts, parameter labels under K1-K8, octave-aligned keyboard display,
+    CV/Gate trace cues, and top-grouped audio/gate/MIDI artwork
+  - playable-default tuning for the internal-clock path plus pickup-style
+    Field knob startup so K1-K8 do not overwrite safe defaults until moved
+  - host tests, Field firmware `make`, QAE validation, and ST-Link flashing
+    passing on 2026-04-26; manual hardware validation remains pending
 - `multidelay` now also exposes named `Blend`, `Space`, and `Regen`
   MetaControllers through the shared menu/drawer path
 - app-aware top-panel control labels and persisted app selection
@@ -225,16 +274,24 @@ Implemented `0.2.0` additions:
     construction
 - `DaisyHostRender` CLI target and Python dataset sweep orchestration under
   `training/`
+- Adapter-pipeline v0 tooling:
+  - `tools/generate_field_adapter.py` generates a Daisy Field firmware adapter
+    from a checked-in shared-core spec
+  - `tools/adapter_specs/field_multidelay.json` is the first golden spec
+  - `tools/audit_firmware_portability.py` classifies existing firmware as
+    `portable-core-ready`, `needs-core-extraction`, or `not-supported-by-v0`
 
 Non-goals for v1:
 
 - full STM32/libDaisy emulation
+- arbitrary libDaisy firmware source translation into DaisyHost
 - Patch SM / Pod / custom board runtime support
 - freeform or arbitrary multi-node rack graph editing inside one plugin
 - mixed-board racks
 - general Field firmware parity beyond the first `field/MultiDelay` adapter,
-  full real hardware voltage validation, Field-specific app ergonomics, and
-  DAW/VST3 manual validation
+  full real hardware voltage validation, `field/DaisyHostController` USB MIDI
+  hardware validation, Field-specific app ergonomics, and DAW/VST3 manual
+  validation
 
 The abstractions are node-scoped so future work can compose multiple boards in a
 single host without redesigning IDs or state formats.
@@ -259,7 +316,7 @@ The underlying raw commands are still:
 
 ```sh
 cmake -S . -B build
-cmake --build build --config Release --target unit_tests DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
+cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir build -C Release --output-on-failure
 ```
 
@@ -268,6 +325,11 @@ smoke tests:
 
 - `DaisyHostStandaloneSmoke`
 - `DaisyHostRenderSmoke`
+- `DaisyHostCliListApps`
+- `DaisyHostCliDescribeApp`
+- `DaisyHostCliDescribeBoard`
+- `DaisyHostCliValidateScenario`
+- `DaisyHostCliRender`
 
 The smoke harness lives at `tests/run_smoke.py`. If you run the raw
 MSBuild-backed commands directly instead of the wrapper, sanitize `Path` /
@@ -281,13 +343,16 @@ Checked-in render smoke scenarios now include:
 - `training/examples/braids_smoke.json`
 - `training/examples/harmoniqs_smoke.json`
 - `training/examples/vasynth_smoke.json`
+- `training/examples/polyosc_smoke.json`
 - `training/examples/field_cloudseed_shell_smoke.json`
 - `training/examples/field_vasynth_native_controls_smoke.json`
 - `training/examples/field_extended_surface_smoke.json`
 - `training/examples/field_node_target_surface_smoke.json`
+- `training/examples/field_polyosc_surface_smoke.json`
 
 Outputs:
 
+- `DaisyHostCLI.exe`
 - `DaisyHost Hub.exe`
 - `DaisyHostRender.exe`
 - `DaisyHost Patch.vst3`
@@ -298,10 +363,11 @@ Outputs:
 
 Current local verification caveat:
 
-- the wrapper-driven full host gate reran green on 2026-04-25 after the
-  Field ergonomics polish and board-generic UI cleanup:
-  `cmd /c build_host.cmd` passed and `ctest` passed `159/159`
-  (the prior Field refinement closeout gate passed `155/155`)
+- the wrapper-driven full host gate reran green on 2026-04-26 during the
+  TF12 verification/build hardening pass: `cmd /c build_host.cmd` passed and
+  `ctest` passed `202/202`; the direct DaisyHostCLI agent/CI adoption checks
+  also passed. Older `168/168`, `196/196`, and `197/197` results are retained
+  only as dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
@@ -311,8 +377,26 @@ Current local verification caveat:
   launch planning, and selected-node Field render evidence are covered. Sprint
   F3 also adds `field/MultiDelay` as the first Daisy Field firmware adapter;
   it builds and flashes through ST-Link, but the hands-on audio/control/CV
-  checklist is still pending. Mixed-board racks, DAW-side manual validation,
-  and broader Field firmware/hardware parity remain follow-on work.
+  checklist is still pending. Adapter-pipeline v0 now generates
+  `field/MultiDelayGenerated` from a JSON spec and proves it with build plus
+  QAE validation; generated-adapter flashing was not run in that pass.
+  Mixed-board racks, DAW-side manual validation, arbitrary firmware import, and
+  broader Field firmware/hardware parity remain follow-on work.
+
+Agent/CI CLI adoption sequence from `DaisyHost/` after a Release build:
+
+```bat
+build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json
+build\Release\DaisyHostCLI.exe list-apps --json
+build\Release\DaisyHostCLI.exe describe-app cloudseed --json
+build\Release\DaisyHostCLI.exe describe-board daisy_field --json
+build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json
+build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay --json
+build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json
+```
+
+Add new CLI commands only after a real agent or CI workflow proves a missing
+offline operation.
 
 ## Architecture
 
@@ -356,4 +440,9 @@ Current local verification caveat:
   `CHANGELOG.md`: local project guidance, roadmap/order tracking, skill
   validation, and verification history
 
-The firmware adapter remains in [patch/MultiDelay/MultiDelay.cpp](../patch/MultiDelay/MultiDelay.cpp).
+Firmware adapters currently include the Patch reference in
+[patch/MultiDelay/MultiDelay.cpp](../patch/MultiDelay/MultiDelay.cpp), the
+first Field adapter in
+[field/MultiDelay/MultiDelay.cpp](../field/MultiDelay/MultiDelay.cpp), and the
+generated Field adapter proof in
+[field/MultiDelayGenerated/MultiDelay.cpp](../field/MultiDelayGenerated/MultiDelay.cpp).

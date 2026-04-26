@@ -1,0 +1,61 @@
+{
+  "app_id": "multidelay",
+  "display_name": "MultiDelay",
+  "target_name": "MultiDelay",
+  "board_id": "daisy_field",
+  "core": {
+    "header": "daisyhost/apps/MultiDelayCore.h",
+    "class_name": "MultiDelayCore",
+    "source": "../../DaisyHost/src/apps/MultiDelayCore.cpp",
+    "namespace": "daisyhost::apps",
+    "node_id": "node0",
+    "uses_sdram_delay_storage": true,
+    "delay_count_symbol": "MultiDelayCore::kDelayCount"
+  },
+  "makefile": {
+    "libdaisy_dir": "../../libDaisy",
+    "daisysp_dir": "../../DaisySP",
+    "include_dir": "../../DaisyHost/include",
+    "opt": "-Os"
+  },
+  "audio": {
+    "block_size": 48,
+    "input_channels": 1,
+    "output_channels": 2
+  },
+  "controls": {
+    "knobs": [
+      {"label": "K1", "target": "node0/control/ctrl_1", "behavior": "MultiDelay dry/wet mix"},
+      {"label": "K2", "target": "node0/control/ctrl_2", "behavior": "Primary delay control"},
+      {"label": "K3", "target": "node0/control/ctrl_3", "behavior": "Secondary delay control"},
+      {"label": "K4", "target": "node0/control/ctrl_4", "behavior": "Feedback"},
+      {"label": "K5", "target": "node0/param/delay_tertiary", "behavior": "Tertiary delay control"},
+      {"label": "K6-K8", "target": "", "behavior": "Unused in this first generated adapter"}
+    ],
+    "cv_inputs": [
+      {"label": "CV1", "target": "node0/port/cv_in_1", "behavior": "Tertiary delay CV input"},
+      {"label": "CV2-CV4", "target": "", "behavior": "Unused in this first generated adapter"}
+    ],
+    "cv_outputs": [
+      {"label": "CV OUT 1", "source": "K5", "behavior": "Mirrors K5 as `0..5V`"},
+      {"label": "CV OUT 2", "source": "0V", "behavior": "Held at `0V`"}
+    ],
+    "switches": [
+      {"label": "SW1", "target": "node0/menu/input/fire_impulse", "behavior": "Fires the MultiDelay impulse utility"},
+      {"label": "SW2", "target": "oled_page", "behavior": "Toggles OLED between app display and Field hardware status"}
+    ]
+  },
+  "validation_checklist": [
+    "ST-Link detects the connected Daisy Field.",
+    "`make program` flashes successfully.",
+    "Audio input 1 reaches audio outputs 1/2 with a delay effect.",
+    "K1-K5 audibly affect the documented parameters.",
+    "K6-K8 do not unexpectedly affect DSP.",
+    "CV1 affects tertiary delay.",
+    "CV OUT 1 changes over `0..5V` with K5.",
+    "CV OUT 2 remains `0V`.",
+    "SW1 fires the impulse utility.",
+    "SW2 toggles the OLED status page without changing DSP state.",
+    "Knob LEDs, key LEDs, switch LEDs, and OLED update without audio dropouts."
+  ]
+}

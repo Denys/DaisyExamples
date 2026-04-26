@@ -53,6 +53,19 @@ std::string ParameterIdForControlId(const std::string& controlId)
     return parameterId;
 }
 
+std::string LowerCopy(std::string text)
+{
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return text;
+}
+
+bool ContainsText(const std::string& haystack, const std::string& needle)
+{
+    return haystack.find(needle) != std::string::npos;
+}
+
 BoardSurfaceBinding MakeUnavailableBinding(const std::string& controlId,
                                            const std::string& label)
 {
@@ -60,16 +73,6 @@ BoardSurfaceBinding MakeUnavailableBinding(const std::string& controlId,
     binding.controlId = controlId;
     binding.label     = label;
     return binding;
-}
-
-bool IsUtilitySection(const MenuSection& section)
-{
-    std::string haystack = section.id + " " + section.title;
-    std::transform(haystack.begin(),
-                   haystack.end(),
-                   haystack.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return haystack.find("util") != std::string::npos;
 }
 
 std::string MakeFieldLedId(const std::string& nodeId,
@@ -90,6 +93,103 @@ void AssignPortBinding(BoardSurfaceBinding& binding,
     binding.available  = true;
     binding.targetKind = targetKind;
     binding.targetId   = targetId;
+}
+
+bool IsPublicControllableParameter(const ParameterDescriptor& parameter,
+                                   bool includeMenuEditable)
+{
+    return parameter.automatable
+           || (includeMenuEditable && parameter.menuEditable);
+}
+
+struct RankedParameter
+{
+    const ParameterDescriptor* parameter   = nullptr;
+    std::size_t                sourceIndex = 0;
+};
+
+std::unordered_set<std::string>
+BuildMirroredParameterIds(const HostedAppPatchBindings& patchBindings)
+{
+    std::unordered_set<std::string> mirroredParameterIds;
+    for(std::size_t index = 0; index < patchBindings.knobControlIds.size();
+        ++index)
+    {
+        const auto& targetId = patchBindings.knobControlIds[index];
+        if(targetId.empty())
+        {
+            continue;
+        }
+
+        mirroredParameterIds.insert(targetId);
+        if(!patchBindings.knobParameterIds[index].empty())
+        {
+            mirroredParameterIds.insert(patchBindings.knobParameterIds[index]);
+        }
+        else
+        {
+            mirroredParameterIds.insert(ParameterIdForControlId(targetId));
+        }
+    }
+
+    for(std::size_t index = 0; index < patchBindings.fieldKnobControlIds.size();
+        ++index)
+    {
+        const auto& controlId = patchBindings.fieldKnobControlIds[index];
+        if(!controlId.empty())
+        {
+            mirroredParameterIds.insert(controlId);
+            if(!patchBindings.fieldKnobParameterIds[index].empty())
+            {
+                mirroredParameterIds.insert(
+                    patchBindings.fieldKnobParameterIds[index]);
+            }
+            else
+            {
+                mirroredParameterIds.insert(ParameterIdForControlId(controlId));
+            }
+        }
+
+        if(!patchBindings.fieldKnobParameterIds[index].empty())
+        {
+            mirroredParameterIds.insert(patchBindings.fieldKnobParameterIds[index]);
+        }
+    }
+
+    return mirroredParameterIds;
+}
+
+std::vector<RankedParameter> BuildRankedPublicParameters(
+    const std::vector<ParameterDescriptor>& parameters,
+    const std::unordered_set<std::string>&  excludedParameterIds,
+    bool                                    includeMenuEditable)
+{
+    std::vector<RankedParameter> rankedParameters;
+    rankedParameters.reserve(parameters.size());
+    for(std::size_t index = 0; index < parameters.size(); ++index)
+    {
+        const auto& parameter = parameters[index];
+        if(!IsPublicControllableParameter(parameter, includeMenuEditable)
+           || excludedParameterIds.count(parameter.id) > 0)
+        {
+            continue;
+        }
+        rankedParameters.push_back({&parameter, index});
+    }
+
+    std::sort(rankedParameters.begin(),
+              rankedParameters.end(),
+              [](const RankedParameter& lhs, const RankedParameter& rhs) {
+                  if(lhs.parameter->importanceRank
+                     != rhs.parameter->importanceRank)
+                  {
+                      return lhs.parameter->importanceRank
+                             < rhs.parameter->importanceRank;
+                  }
+                  return lhs.sourceIndex < rhs.sourceIndex;
+              });
+
+    return rankedParameters;
 }
 } // namespace
 
@@ -162,84 +262,299 @@ int DaisyFieldKeyToMidiNote(std::size_t zeroBasedIndex, int keyboardOctave)
     return ((clampedOctave + 1) * 12) + static_cast<int>(zeroBasedIndex);
 }
 
+std::vector<BoardSurfaceBinding> BuildDaisyFieldPublicParameterList(
+    const HostedAppPatchBindings&,
+    const std::vector<ParameterDescriptor>& parameters)
+{
+    const std::unordered_set<std::string> noExclusions;
+    const auto rankedParameters
+        = BuildRankedPublicParameters(parameters, noExclusions, true);
+
+    std::vector<BoardSurfaceBinding> bindings;
+    bindings.reserve(rankedParameters.size());
+    for(std::size_t index = 0; index < rankedParameters.size(); ++index)
+    {
+        const auto& parameter = *rankedParameters[index].parameter;
+        BoardSurfaceBinding binding;
+        binding.controlId   = "field/public_parameter/"
+                            + std::to_string(index + 1);
+        binding.label       = "P" + std::to_string(index + 1);
+        binding.detailLabel = parameter.label;
+        binding.targetKind  = BoardSurfaceTargetKind::kParameter;
+        binding.targetId    = parameter.id;
+        binding.available   = true;
+        bindings.push_back(binding);
+    }
+
+    return bindings;
+}
+
+std::vector<BoardSurfaceBinding> BuildDaisyFieldCvTargetOptions(
+    const DaisyFieldControlMapping& mapping,
+    const std::string&              latchedTargetId)
+{
+    std::vector<BoardSurfaceBinding> options;
+    options.reserve(kDaisyFieldKnobCount + 2);
+    options.push_back(MakeUnavailableBinding("", "App CV In"));
+    options.back().detailLabel = "Unassigned";
+
+    bool foundLatched = latchedTargetId.empty();
+    for(std::size_t index = 0; index < mapping.knobs.size(); ++index)
+    {
+        const auto& knob = mapping.knobs[index];
+        if(!knob.available
+           || (knob.targetKind != BoardSurfaceTargetKind::kControl
+               && knob.targetKind != BoardSurfaceTargetKind::kParameter)
+           || !IsDaisyFieldCvTargetSafe(knob))
+        {
+            continue;
+        }
+
+        BoardSurfaceBinding option = knob;
+        option.label = "K" + std::to_string(index + 1);
+        option.detailLabel = option.label
+                             + (knob.detailLabel.empty()
+                                    ? std::string()
+                                    : " " + knob.detailLabel);
+        options.push_back(option);
+        foundLatched = foundLatched || knob.targetId == latchedTargetId;
+    }
+
+    if(!foundLatched && IsDaisyFieldCvTargetIdSafe(latchedTargetId))
+    {
+        BoardSurfaceBinding latched;
+        latched.available   = true;
+        latched.label       = "Latched";
+        latched.detailLabel = "Latched K target";
+        latched.targetKind  = BoardSurfaceTargetKind::kControl;
+        latched.targetId    = latchedTargetId;
+        options.push_back(latched);
+    }
+
+    return options;
+}
+
+std::vector<BoardSurfaceBinding> BuildDaisyFieldCvTargetOptions(
+    const DaisyFieldControlMapping& defaultMapping,
+    const DaisyFieldControlMapping& alternativeMapping,
+    const std::string&              latchedTargetId)
+{
+    std::vector<BoardSurfaceBinding> options;
+    options.reserve((kDaisyFieldKnobCount * 2) + 2);
+    options.push_back(MakeUnavailableBinding("", "App CV In"));
+    options.back().detailLabel = "Unassigned";
+
+    std::unordered_set<std::string> seenTargetIds;
+    bool foundLatched = latchedTargetId.empty();
+
+    auto appendMapping = [&](const DaisyFieldControlMapping& mapping,
+                             const char*                     suffix) {
+        for(std::size_t index = 0; index < mapping.knobs.size(); ++index)
+        {
+            const auto& knob = mapping.knobs[index];
+            if(!knob.available
+               || (knob.targetKind != BoardSurfaceTargetKind::kControl
+                   && knob.targetKind != BoardSurfaceTargetKind::kParameter)
+               || !IsDaisyFieldCvTargetSafe(knob)
+               || seenTargetIds.count(knob.targetId) > 0)
+            {
+                continue;
+            }
+
+            seenTargetIds.insert(knob.targetId);
+            BoardSurfaceBinding option = knob;
+            option.label = "K" + std::to_string(index + 1) + suffix;
+            option.detailLabel = option.label
+                                 + (knob.detailLabel.empty()
+                                        ? std::string()
+                                        : " " + knob.detailLabel);
+            options.push_back(option);
+            foundLatched = foundLatched || knob.targetId == latchedTargetId;
+        }
+    };
+
+    appendMapping(defaultMapping, ".1");
+    appendMapping(alternativeMapping, ".2");
+
+    if(!foundLatched && IsDaisyFieldCvTargetIdSafe(latchedTargetId))
+    {
+        BoardSurfaceBinding latched;
+        latched.available   = true;
+        latched.label       = "Latched";
+        latched.detailLabel = "Latched K target";
+        latched.targetKind  = BoardSurfaceTargetKind::kControl;
+        latched.targetId    = latchedTargetId;
+        options.push_back(latched);
+    }
+
+    return options;
+}
+
+bool IsDaisyFieldCvTargetSafe(const BoardSurfaceBinding& binding)
+{
+    if(!binding.available
+       || (binding.targetKind != BoardSurfaceTargetKind::kControl
+           && binding.targetKind != BoardSurfaceTargetKind::kParameter))
+    {
+        return false;
+    }
+
+    if(!IsDaisyFieldCvTargetIdSafe(binding.targetId))
+    {
+        return false;
+    }
+
+    const auto detail = LowerCopy(binding.detailLabel + " " + binding.label);
+    if(ContainsText(detail, "input mix") || detail == "mix"
+       || ContainsText(detail, " output") || ContainsText(detail, "volume"))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsDaisyFieldCvTargetIdSafe(const std::string& targetId)
+{
+    if(targetId.empty())
+    {
+        return false;
+    }
+
+    const auto id = LowerCopy(targetId);
+    if(ContainsText(id, "bypass") || ContainsText(id, "mute")
+       || ContainsText(id, "enabled") || ContainsText(id, "input_mix")
+       || ContainsText(id, "global_input") || ContainsText(id, "/control/mix")
+       || ContainsText(id, "/param/mix") || ContainsText(id, "dry_out")
+       || ContainsText(id, "early_out") || ContainsText(id, "late_out")
+       || ContainsText(id, "/output") || ContainsText(id, "level")
+       || ContainsText(id, "volume"))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool ShouldForwardDaisyFieldCvInput(const std::string& latchedTargetId)
+{
+    return latchedTargetId.empty();
+}
+
+DaisyFieldDrawerPage StepDaisyFieldDrawerPage(DaisyFieldDrawerPage page,
+                                               int                  delta)
+{
+    constexpr int kPageCount = 3;
+    int current = static_cast<int>(page);
+    if(current < 0 || current >= kPageCount)
+    {
+        current = 0;
+    }
+
+    int next = (current + delta) % kPageCount;
+    if(next < 0)
+    {
+        next += kPageCount;
+    }
+    return static_cast<DaisyFieldDrawerPage>(next);
+}
+
 DaisyFieldControlMapping BuildDaisyFieldControlMapping(
     const HostedAppPatchBindings&           patchBindings,
     const std::vector<ParameterDescriptor>& parameters,
     const MenuModel&                        menu,
     int                                     keyboardOctave,
-    const std::string&                      nodeId)
+    const std::string&                      nodeId,
+    DaisyFieldKnobLayoutMode                knobLayoutMode)
 {
+    (void)menu;
     DaisyFieldControlMapping mapping;
 
-    std::unordered_set<std::string> mirroredParameterIds;
-    for(std::size_t index = 0; index < 4; ++index)
+    const auto mirroredParameterIds = BuildMirroredParameterIds(patchBindings);
+
+    for(std::size_t index = 0; index < kDaisyFieldKnobCount; ++index)
     {
         const std::string label = "K" + std::to_string(index + 1);
         auto&             knob  = mapping.knobs[index];
         knob = MakeUnavailableBinding(MakeDaisyFieldKnobControlId(nodeId, index),
                                       label);
-        knob.detailLabel = patchBindings.knobDetailLabels[index];
+    }
 
-        const auto& targetId = patchBindings.knobControlIds[index];
-        if(!targetId.empty())
+    if(knobLayoutMode == DaisyFieldKnobLayoutMode::kPatchPagePlusExtras)
+    {
+        const bool hasFieldKnobOverride = std::any_of(
+            patchBindings.fieldKnobControlIds.begin(),
+            patchBindings.fieldKnobControlIds.end(),
+            [](const std::string& id) { return !id.empty(); })
+                                          || std::any_of(
+                                              patchBindings.fieldKnobParameterIds.begin(),
+                                              patchBindings.fieldKnobParameterIds.end(),
+                                              [](const std::string& id) {
+                                                  return !id.empty();
+                                              });
+
+        if(hasFieldKnobOverride)
         {
-            knob.available  = true;
-            knob.targetKind = BoardSurfaceTargetKind::kControl;
-            knob.targetId   = targetId;
-            mirroredParameterIds.insert(targetId);
-            if(!patchBindings.knobParameterIds[index].empty())
+            for(std::size_t index = 0; index < kDaisyFieldKnobCount; ++index)
             {
-                mirroredParameterIds.insert(patchBindings.knobParameterIds[index]);
+                auto& knob = mapping.knobs[index];
+                knob.detailLabel = patchBindings.fieldKnobDetailLabels[index];
+                if(!patchBindings.fieldKnobControlIds[index].empty())
+                {
+                    knob.available  = true;
+                    knob.targetKind = BoardSurfaceTargetKind::kControl;
+                    knob.targetId   = patchBindings.fieldKnobControlIds[index];
+                }
+                else if(!patchBindings.fieldKnobParameterIds[index].empty())
+                {
+                    knob.available  = true;
+                    knob.targetKind = BoardSurfaceTargetKind::kParameter;
+                    knob.targetId   = patchBindings.fieldKnobParameterIds[index];
+                }
             }
-            else
+        }
+        else
+        {
+            for(std::size_t index = 0; index < 4; ++index)
             {
-                mirroredParameterIds.insert(ParameterIdForControlId(targetId));
+                auto& knob       = mapping.knobs[index];
+                knob.detailLabel = patchBindings.knobDetailLabels[index];
+
+                const auto& targetId = patchBindings.knobControlIds[index];
+                if(!targetId.empty())
+                {
+                    knob.available  = true;
+                    knob.targetKind = BoardSurfaceTargetKind::kControl;
+                    knob.targetId   = targetId;
+                }
             }
         }
     }
+    const auto rankedParameters
+        = BuildRankedPublicParameters(
+            parameters,
+            mirroredParameterIds,
+            knobLayoutMode
+                == DaisyFieldKnobLayoutMode::kControllableParameters);
 
-    struct RankedParameter
+    const std::size_t firstParameterKnob
+        = knobLayoutMode == DaisyFieldKnobLayoutMode::kControllableParameters
+              ? 0
+              : 4;
+    for(std::size_t index = firstParameterKnob; index < kDaisyFieldKnobCount;
+        ++index)
     {
-        const ParameterDescriptor* parameter = nullptr;
-        std::size_t                sourceIndex = 0;
-    };
-
-    std::vector<RankedParameter> rankedParameters;
-    rankedParameters.reserve(parameters.size());
-    for(std::size_t index = 0; index < parameters.size(); ++index)
-    {
-        const auto& parameter = parameters[index];
-        if(!parameter.automatable || mirroredParameterIds.count(parameter.id) > 0)
+        if(mapping.knobs[index].available)
         {
             continue;
         }
-        rankedParameters.push_back({&parameter, index});
-    }
-
-    std::sort(rankedParameters.begin(),
-              rankedParameters.end(),
-              [](const RankedParameter& lhs, const RankedParameter& rhs) {
-                  if(lhs.parameter->importanceRank != rhs.parameter->importanceRank)
-                  {
-                      return lhs.parameter->importanceRank
-                             < rhs.parameter->importanceRank;
-                  }
-                  return lhs.sourceIndex < rhs.sourceIndex;
-              });
-
-    for(std::size_t index = 4; index < kDaisyFieldKnobCount; ++index)
-    {
-        const std::string label = "K" + std::to_string(index + 1);
-        auto&             knob  = mapping.knobs[index];
-        knob = MakeUnavailableBinding(MakeDaisyFieldKnobControlId(nodeId, index),
-                                      label);
-
-        const std::size_t rankedIndex = index - 4;
+        const std::size_t rankedIndex = index - firstParameterKnob;
         if(rankedIndex >= rankedParameters.size())
         {
             continue;
         }
 
+        auto&       knob      = mapping.knobs[index];
         const auto& parameter = *rankedParameters[rankedIndex].parameter;
         knob.available       = true;
         knob.targetKind      = BoardSurfaceTargetKind::kParameter;
@@ -254,7 +569,7 @@ DaisyFieldControlMapping BuildDaisyFieldControlMapping(
             MakeDaisyFieldCvOutputControlId(nodeId, index),
             "CV OUT " + std::to_string(index + 1));
 
-        const auto& sourceKnob = mapping.knobs[4 + index];
+        const auto& sourceKnob = mapping.knobs[firstParameterKnob + index];
         if(sourceKnob.available
            && sourceKnob.targetKind == BoardSurfaceTargetKind::kParameter)
         {
@@ -265,34 +580,19 @@ DaisyFieldControlMapping BuildDaisyFieldControlMapping(
         }
     }
 
-    std::vector<const MenuItem*> utilityItems;
-    for(const auto& section : menu.sections)
-    {
-        if(!IsUtilitySection(section))
-        {
-            continue;
-        }
-        for(const auto& item : section.items)
-        {
-            if(item.editable && item.actionKind == MenuItemActionKind::kMomentary)
-            {
-                utilityItems.push_back(&item);
-            }
-        }
-    }
+    const std::array<std::pair<const char*, const char*>, kDaisyFieldSwitchCount>
+        navigationTargets = {{{"back", "Back"}, {"forward", "Forward"}}};
 
     for(std::size_t index = 0; index < kDaisyFieldSwitchCount; ++index)
     {
         auto& sw = mapping.switches[index];
         sw       = MakeUnavailableBinding(MakeDaisyFieldSwitchControlId(nodeId, index),
                                     "SW" + std::to_string(index + 1));
-        if(index < utilityItems.size())
-        {
-            sw.available   = true;
-            sw.targetKind  = BoardSurfaceTargetKind::kMenuItem;
-            sw.targetId    = utilityItems[index]->id;
-            sw.detailLabel = utilityItems[index]->label;
-        }
+        sw.available   = true;
+        sw.targetKind  = BoardSurfaceTargetKind::kMenuItem;
+        sw.targetId    = nodeId + "/menu/navigation/"
+                       + navigationTargets[index].first;
+        sw.detailLabel = navigationTargets[index].second;
     }
 
     for(std::size_t index = 0; index < kDaisyFieldCvInputCount; ++index)
@@ -318,8 +618,17 @@ DaisyFieldControlMapping BuildDaisyFieldControlMapping(
         key           = MakeUnavailableBinding(MakeDaisyFieldKeyControlId(nodeId, index),
                                      FieldKeyLabel(index));
         key.available = true;
-        key.targetKind = BoardSurfaceTargetKind::kMidiNote;
-        key.midiNote   = DaisyFieldKeyToMidiNote(index, keyboardOctave);
+        if(!patchBindings.fieldKeyMenuItemIds[index].empty())
+        {
+            key.targetKind = BoardSurfaceTargetKind::kMenuItem;
+            key.targetId   = patchBindings.fieldKeyMenuItemIds[index];
+            key.detailLabel = patchBindings.fieldKeyDetailLabels[index];
+        }
+        else
+        {
+            key.targetKind = BoardSurfaceTargetKind::kMidiNote;
+            key.midiNote   = DaisyFieldKeyToMidiNote(index, keyboardOctave);
+        }
     }
 
     for(std::size_t index = 0; index < kDaisyFieldKeyCount; ++index)
@@ -365,12 +674,14 @@ DaisyFieldControlMapping BuildDaisyFieldControlMapping(
     const HostedAppPatchBindings&           patchBindings,
     const std::vector<ParameterDescriptor>& parameters,
     int                                     keyboardOctave,
-    const std::string&                      nodeId)
+    const std::string&                      nodeId,
+    DaisyFieldKnobLayoutMode                knobLayoutMode)
 {
     return BuildDaisyFieldControlMapping(patchBindings,
                                          parameters,
                                          MenuModel{},
                                          keyboardOctave,
-                                         nodeId);
+                                         nodeId,
+                                         knobLayoutMode);
 }
 } // namespace daisyhost

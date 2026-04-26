@@ -93,6 +93,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     juce::String GetFieldKnobLabel(std::size_t index) const;
     juce::String GetFieldKnobDetailLabel(std::size_t index) const;
     std::string GetFieldKnobControlId(std::size_t index) const;
+    std::string GetFieldKnobTargetId(std::size_t index) const;
     void SetFieldKnobValue(std::size_t index, float normalizedValue);
     int  GetFieldKeyMidiNote(std::size_t index) const;
     bool GetFieldKeyPressed(std::size_t index) const;
@@ -114,6 +115,11 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     void  SetCvManualVoltage(std::size_t index, float volts);
     int   GetCvSourceMode(std::size_t index) const;
     void  SetCvSourceMode(std::size_t index, int mode);
+    int   GetFieldCvTargetSelection(std::size_t index) const;
+    int   GetFieldCvTargetOptionCount(std::size_t index) const;
+    juce::String GetFieldCvTargetOptionLabel(std::size_t index,
+                                             int         optionIndex) const;
+    void  SetFieldCvTargetSelection(std::size_t index, int optionIndex);
     int   GetCvWaveform(std::size_t index) const;
     void  SetCvWaveform(std::size_t index, int waveform);
     float GetCvFrequencyHz(std::size_t index) const;
@@ -134,6 +140,12 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     daisyhost::DisplayModel GetDisplayModelSnapshot() const;
     daisyhost::MenuModel GetMenuModelSnapshot() const;
     std::vector<daisyhost::ParameterDescriptor> GetParameterSnapshot() const;
+    std::vector<daisyhost::BoardSurfaceBinding>
+    GetFieldPublicParameterBindings() const;
+    int GetFieldDrawerPage() const;
+    juce::String GetFieldDrawerPageLabel(int page) const;
+    void SetFieldDrawerPage(int page);
+    void StepFieldDrawerPage(int delta);
     daisyhost::EffectiveHostStateSnapshot GetEffectiveHostStateSnapshot() const;
     juce::MidiKeyboardState& GetVirtualKeyboardState();
     bool  GetComputerKeyboardEnabled() const;
@@ -176,6 +188,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
         std::array<bool, daisyhost::kDaisyFieldSwitchCount> fieldSwitchPressed{};
         std::array<float, 4>                       cvValues{};
         std::array<float, 4>                       cvVoltages{};
+        std::array<std::string, 4>                 cvTargetIds{};
         std::array<bool, 2>                        gateValues{};
         std::array<bool, 2>                        previousGateValues{};
         std::array<float, 4>                       audioInputPeaks{};
@@ -277,6 +290,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::atomic<bool>                 encoderPressed_;
     std::array<std::atomic<float>, 4> cvValues_;
     std::array<std::atomic<float>, 4> cvVoltages_;
+    std::array<std::string, 4>        cvTargetIds_;
     std::array<std::atomic<bool>, 2>  gateValues_;
     std::array<std::atomic<float>, 4> audioInputPeaks_;
     std::array<std::atomic<float>, 4> audioOutputPeaks_;
@@ -286,6 +300,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     daisyhost::MidiNotePreview        midiNotePreview_;
     std::atomic<bool>                 computerKeyboardEnabled_;
     std::atomic<int>                  computerKeyboardOctave_;
+    std::atomic<int>                  fieldDrawerPage_{0};
     bool                              didApplyStartupTestInputPolicy_ = false;
     bool                              hasRestoredTestInputMode_       = false;
     std::atomic<int>                  testInputMode_;

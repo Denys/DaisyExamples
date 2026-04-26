@@ -1,3 +1,5 @@
+#include <array>
+
 #include <gtest/gtest.h>
 
 #include "daisyhost/apps/CloudSeedCore.h"
@@ -43,9 +45,10 @@ TEST(CloudSeedCoreTest, ExposesMetadataCapabilitiesAndDefaultSpacePage)
     ASSERT_FALSE(menu.sections.empty());
     const auto* root = FindSection(menu, "node0/menu/root");
     ASSERT_NE(root, nullptr);
-    ASSERT_EQ(root->items.size(), 5u);
+    ASSERT_EQ(root->items.size(), 6u);
     EXPECT_NE(FindSection(menu, "node0/menu/pages"), nullptr);
     EXPECT_NE(FindSection(menu, "node0/menu/macros"), nullptr);
+    EXPECT_NE(FindSection(menu, "node0/menu/arp"), nullptr);
     EXPECT_NE(FindSection(menu, "node0/menu/program"), nullptr);
     EXPECT_NE(FindSection(menu, "node0/menu/utilities"), nullptr);
     EXPECT_NE(FindSection(menu, "node0/menu/info"), nullptr);
@@ -172,7 +175,7 @@ TEST(CloudSeedCoreTest, PageSwitchUpdatesKnobLabelsAndControlRouting)
     core.Prepare(48000.0, 48);
     core.ResetToDefaultState(5u);
 
-    core.SetMenuItemValue("node0/menu/pages/page", 1.0f);
+    core.SetMenuItemValue("node0/menu/pages/page", 0.33333334f);
 
     const auto bindings = core.GetPatchBindings();
     EXPECT_EQ(bindings.knobDetailLabels[0], "Pre-Delay");
@@ -187,6 +190,106 @@ TEST(CloudSeedCoreTest, PageSwitchUpdatesKnobLabelsAndControlRouting)
     EXPECT_TRUE(mixValue.hasValue);
     EXPECT_NEAR(preDelayValue.value, 0.68f, 0.0001f);
     EXPECT_NE(mixValue.value, preDelayValue.value);
+}
+
+TEST(CloudSeedCoreTest, AppMenuPagesIncludeArpAndAdvancedFieldKnobPage)
+{
+    daisyhost::apps::CloudSeedCore core("node0");
+    core.Prepare(48000.0, 48);
+    core.ResetToDefaultState(5u);
+
+    const auto* pagesSection = FindSection(core.GetMenuModel(), "node0/menu/pages");
+    ASSERT_NE(pagesSection, nullptr);
+    ASSERT_GE(pagesSection->items.size(), 2u);
+    EXPECT_EQ(pagesSection->items[1].valueText, "Space");
+
+    core.SetMenuItemValue("node0/menu/pages/page", 0.6666667f);
+    auto bindings = core.GetPatchBindings();
+    EXPECT_EQ(bindings.knobDetailLabels[0], "Arp Enable");
+    EXPECT_EQ(bindings.knobDetailLabels[1], "Arp Rate");
+    EXPECT_EQ(bindings.knobDetailLabels[2], "Pattern");
+    EXPECT_EQ(bindings.knobDetailLabels[3], "Target");
+    EXPECT_EQ(bindings.fieldKnobDetailLabels[0], "Arp Enable");
+    EXPECT_EQ(bindings.fieldKnobDetailLabels[4], "Arp Depth");
+    EXPECT_TRUE(bindings.fieldKnobParameterIds[5].empty());
+
+    core.SetMenuItemValue("node0/menu/pages/page", 1.0f);
+    bindings = core.GetPatchBindings();
+    EXPECT_EQ(bindings.knobDetailLabels[0], "Low Freq");
+    EXPECT_EQ(bindings.knobDetailLabels[1], "High Freq");
+    EXPECT_EQ(bindings.knobDetailLabels[2], "Cutoff");
+    EXPECT_EQ(bindings.knobDetailLabels[3], "Low Gain");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[0], "node0/param/eq_low_freq");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[1], "node0/param/eq_high_freq");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[2], "node0/param/eq_cutoff");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[3], "node0/param/eq_low_gain");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[4], "node0/param/eq_high_gain");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[5], "node0/param/eq_cross_seed");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[6], "node0/param/seed_diffusion");
+    EXPECT_EQ(bindings.fieldKnobParameterIds[7], "node0/param/seed_delay");
+
+    core.SetControl(bindings.fieldKnobControlIds[0], 0.68f);
+    const auto eqLow = core.GetParameterValue("node0/param/eq_low_freq");
+    const auto inputMix = core.GetParameterValue("node0/param/global_input_mix");
+    ASSERT_TRUE(eqLow.hasValue);
+    ASSERT_TRUE(inputMix.hasValue);
+    EXPECT_NEAR(eqLow.value, 0.68f, 0.0001f);
+    EXPECT_NE(eqLow.value, inputMix.value);
+}
+
+TEST(CloudSeedCoreTest, ArpMenuControlsUpdateStateAndEffectiveRouting)
+{
+    daisyhost::apps::CloudSeedCore core("node0");
+    core.Prepare(48000.0, 48);
+    core.ResetToDefaultState(29u);
+
+    const auto* arpSection = FindSection(core.GetMenuModel(), "node0/menu/arp");
+    ASSERT_NE(arpSection, nullptr);
+    ASSERT_EQ(arpSection->items.size(), 6u);
+    EXPECT_EQ(arpSection->items[1].id, "node0/menu/arp/enabled");
+    EXPECT_EQ(arpSection->items[2].id, "node0/menu/arp/rate");
+    EXPECT_EQ(arpSection->items[3].id, "node0/menu/arp/pattern");
+    EXPECT_EQ(arpSection->items[4].id, "node0/menu/arp/target");
+    EXPECT_EQ(arpSection->items[5].id, "node0/menu/arp/depth");
+
+    ASSERT_TRUE(core.SetParameterValue("node0/param/mix", 0.40f));
+    ASSERT_TRUE(core.SetParameterValue("node0/param/size", 0.40f));
+    core.SetMenuItemValue("node0/menu/arp/enabled", 1.0f);
+    core.SetMenuItemValue("node0/menu/arp/rate", 0.0f);
+    core.SetMenuItemValue("node0/menu/arp/pattern", 0.0f);
+    core.SetMenuItemValue("node0/menu/arp/target", 0.0f);
+    core.SetMenuItemValue("node0/menu/arp/depth", 0.40f);
+
+    const auto arpEnabled = core.GetParameterValue("node0/param/arp_enabled");
+    const auto arpDepth = core.GetParameterValue("node0/param/arp_depth");
+    ASSERT_TRUE(arpEnabled.hasValue);
+    ASSERT_TRUE(arpDepth.hasValue);
+    EXPECT_FLOAT_EQ(arpEnabled.value, 1.0f);
+    EXPECT_NEAR(arpDepth.value, 0.40f, 0.0001f);
+
+    const auto storedMix = core.GetParameterValue("node0/param/mix");
+    const auto effectiveMix = core.GetEffectiveParameterValue("node0/param/mix");
+    ASSERT_TRUE(storedMix.hasValue);
+    ASSERT_TRUE(effectiveMix.hasValue);
+    EXPECT_FLOAT_EQ(storedMix.value, 0.40f);
+    EXPECT_GT(effectiveMix.value, storedMix.value);
+
+    std::array<float, 48> inputLeft{};
+    std::array<float, 48> inputRight{};
+    std::array<float, 48> outputLeft{};
+    std::array<float, 48> outputRight{};
+    std::array<const float*, 2> inputChannels = {inputLeft.data(), inputRight.data()};
+    std::array<float*, 2> outputChannels = {outputLeft.data(), outputRight.data()};
+    for(int block = 0; block < 40; ++block)
+    {
+        core.Process({inputChannels.data(), inputChannels.size()},
+                     {outputChannels.data(), outputChannels.size()},
+                     inputLeft.size());
+    }
+
+    const auto effectiveSize = core.GetEffectiveParameterValue("node0/param/size");
+    ASSERT_TRUE(effectiveSize.hasValue);
+    EXPECT_GT(effectiveSize.value, storedMix.value);
 }
 
 TEST(CloudSeedCoreTest, UtilitiesAndEffectiveStateRemainVisible)

@@ -67,13 +67,63 @@ std::string OnOffText(float normalizedValue)
 
 std::string FormatPageText(DaisyCloudSeedPage page)
 {
-    return page == DaisyCloudSeedPage::kMotion ? "Motion" : "Space";
+    switch(page)
+    {
+        case DaisyCloudSeedPage::kSpace: return "Space";
+        case DaisyCloudSeedPage::kMotion: return "Motion";
+        case DaisyCloudSeedPage::kArp: return "Arp";
+        case DaisyCloudSeedPage::kAdvanced: return "Advanced";
+    }
+    return "Space";
+}
+
+int PageIndex(DaisyCloudSeedPage page)
+{
+    return static_cast<int>(page);
+}
+
+DaisyCloudSeedPage PageFromNormalized(float normalizedValue)
+{
+    return static_cast<DaisyCloudSeedPage>(
+        ClampInt(static_cast<int>(std::round(Clamp01(normalizedValue) * 3.0f)),
+                 0,
+                 3));
 }
 
 std::string FormatPerformanceValue(float normalizedValue)
 {
     return std::to_string(static_cast<int>(std::round(Clamp01(normalizedValue) * 100.0f)))
            + "%";
+}
+
+int QuantizedIndex(float normalizedValue, int stepCount)
+{
+    if(stepCount <= 1)
+    {
+        return 0;
+    }
+    return ClampInt(static_cast<int>(std::round(Clamp01(normalizedValue)
+                                               * static_cast<float>(stepCount - 1))),
+                    0,
+                    stepCount - 1);
+}
+
+std::string FormatArpRateText(float normalizedValue)
+{
+    static constexpr std::array<const char*, 4> kLabels
+        = {{"1/32", "1/16", "1/8", "1/4"}};
+    return kLabels[static_cast<std::size_t>(QuantizedIndex(normalizedValue, 4))];
+}
+
+std::string FormatArpPatternText(float normalizedValue)
+{
+    static constexpr std::array<const char*, 3> kLabels = {{"Up", "Down", "Pend"}};
+    return kLabels[static_cast<std::size_t>(QuantizedIndex(normalizedValue, 3))];
+}
+
+std::string FormatArpTargetText(float normalizedValue)
+{
+    return normalizedValue >= 0.5f ? "Motion" : "Space";
 }
 } // namespace
 
@@ -115,11 +165,27 @@ HostedAppPatchBindings CloudSeedCore::GetPatchBindings() const
     const auto pageBinding = sharedCore_.GetActivePageBinding();
     for(std::size_t i = 0; i < pageBinding.parameterIds.size(); ++i)
     {
+        if(pageBinding.parameterIds[i].empty())
+        {
+            continue;
+        }
         bindings.knobControlIds[i]
             = MakeControlId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobParameterIds[i]
             = MakeParameterId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobDetailLabels[i] = pageBinding.parameterLabels[i];
+    }
+    for(std::size_t i = 0; i < pageBinding.fieldParameterIds.size(); ++i)
+    {
+        if(pageBinding.fieldParameterIds[i].empty())
+        {
+            continue;
+        }
+        bindings.fieldKnobControlIds[i]
+            = MakeControlId(nodeId_, pageBinding.fieldParameterIds[i]);
+        bindings.fieldKnobParameterIds[i]
+            = MakeParameterId(nodeId_, pageBinding.fieldParameterIds[i]);
+        bindings.fieldKnobDetailLabels[i] = pageBinding.fieldParameterLabels[i];
     }
     bindings.encoderControlId       = MakeEncoderControlId(nodeId_);
     bindings.encoderButtonControlId = MakeEncoderButtonControlId(nodeId_);
@@ -544,8 +610,27 @@ void CloudSeedCore::SetMenuItemValue(const std::string& itemId,
     }
     else if(itemId == MakeMenuItemId(nodeId_, "pages", "page"))
     {
-        sharedCore_.SetActivePage(clamped >= 0.5f ? DaisyCloudSeedPage::kMotion
-                                                  : DaisyCloudSeedPage::kSpace);
+        sharedCore_.SetActivePage(PageFromNormalized(clamped));
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "arp", "enabled"))
+    {
+        sharedCore_.SetParameterValue("arp_enabled", clamped);
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "arp", "rate"))
+    {
+        sharedCore_.SetParameterValue("arp_rate", clamped);
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "arp", "pattern"))
+    {
+        sharedCore_.SetParameterValue("arp_pattern", clamped);
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "arp", "target"))
+    {
+        sharedCore_.SetParameterValue("arp_target", clamped);
+    }
+    else if(itemId == MakeMenuItemId(nodeId_, "arp", "depth"))
+    {
+        sharedCore_.SetParameterValue("arp_depth", clamped);
     }
     else if(itemId == MakeMenuItemId(nodeId_, "program", "program"))
     {
@@ -699,6 +784,7 @@ void CloudSeedCore::BuildMenuModel()
     const auto rootId      = MakeMenuRootSectionId(nodeId_);
     const auto pagesId     = MakeMenuSectionId(nodeId_, "pages");
     const auto macrosId    = MakeMenuSectionId(nodeId_, "macros");
+    const auto arpId       = MakeMenuSectionId(nodeId_, "arp");
     const auto programId   = MakeMenuSectionId(nodeId_, "program");
     const auto utilitiesId = MakeMenuSectionId(nodeId_, "utilities");
     const auto infoId      = MakeMenuSectionId(nodeId_, "info");
@@ -719,6 +805,13 @@ void CloudSeedCore::BuildMenuModel()
          0.0f,
          "",
          macrosId},
+        {MakeMenuItemId(nodeId_, "root", "arp"),
+         "Arp",
+         false,
+         MenuItemActionKind::kEnterSection,
+         0.0f,
+         "",
+         arpId},
         {MakeMenuItemId(nodeId_, "root", "program"),
          "Program",
          false,
@@ -752,7 +845,7 @@ void CloudSeedCore::BuildMenuModel()
          "Page",
          true,
          MenuItemActionKind::kValue,
-         sharedCore_.GetActivePage() == DaisyCloudSeedPage::kMotion ? 1.0f : 0.0f,
+         static_cast<float>(PageIndex(sharedCore_.GetActivePage())) / 3.0f,
          FormatPageText(sharedCore_.GetActivePage()),
          ""},
     };
@@ -790,6 +883,60 @@ void CloudSeedCore::BuildMenuModel()
          MenuItemActionKind::kValue,
          metaControllers_[3].normalizedValue,
          FormatPerformanceValue(metaControllers_[3].normalizedValue),
+         ""},
+    };
+
+    float arpEnabledValue = 0.0f;
+    float arpRateValue = 0.0f;
+    float arpPatternValue = 0.0f;
+    float arpDepthValue = 0.0f;
+    float arpTargetValue = 0.0f;
+    sharedCore_.GetParameterValue("arp_enabled", &arpEnabledValue);
+    sharedCore_.GetParameterValue("arp_rate", &arpRateValue);
+    sharedCore_.GetParameterValue("arp_pattern", &arpPatternValue);
+    sharedCore_.GetParameterValue("arp_depth", &arpDepthValue);
+    sharedCore_.GetParameterValue("arp_target", &arpTargetValue);
+
+    MenuSection& arp = addSection(arpId, "Arp");
+    arp.items = {
+        {MakeMenuItemId(nodeId_, "arp", "back"),
+         "Back",
+         false,
+         MenuItemActionKind::kBack},
+        {MakeMenuItemId(nodeId_, "arp", "enabled"),
+         "Enabled",
+         true,
+         MenuItemActionKind::kValue,
+         arpEnabledValue,
+         OnOffText(arpEnabledValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "arp", "rate"),
+         "Rate",
+         true,
+         MenuItemActionKind::kValue,
+         arpRateValue,
+         FormatArpRateText(arpRateValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "arp", "pattern"),
+         "Pattern",
+         true,
+         MenuItemActionKind::kValue,
+         arpPatternValue,
+         FormatArpPatternText(arpPatternValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "arp", "target"),
+         "Target",
+         true,
+         MenuItemActionKind::kValue,
+         arpTargetValue,
+         FormatArpTargetText(arpTargetValue),
+         ""},
+        {MakeMenuItemId(nodeId_, "arp", "depth"),
+         "Depth",
+         true,
+         MenuItemActionKind::kValue,
+         arpDepthValue,
+         FormatPerformanceValue(arpDepthValue),
          ""},
     };
 
@@ -869,6 +1016,13 @@ void CloudSeedCore::BuildMenuModel()
          0.0f,
          FormatPageText(sharedCore_.GetActivePage()),
          ""},
+        {MakeMenuItemId(nodeId_, "info", "arp"),
+         "Arp",
+         false,
+         MenuItemActionKind::kReadonly,
+         0.0f,
+         OnOffText(arpEnabledValue) + " " + FormatArpTargetText(arpTargetValue),
+         ""},
         {MakeMenuItemId(nodeId_, "info", "seeds"),
          "Seeds",
          false,
@@ -929,11 +1083,14 @@ void CloudSeedCore::BuildDisplay()
         display_.mode  = DisplayMode::kStatus;
         display_.title = "CloudSeed";
         const auto binding = sharedCore_.GetActivePageBinding();
+        float arpEnabledValue = 0.0f;
+        sharedCore_.GetParameterValue("arp_enabled", &arpEnabledValue);
         display_.texts.push_back({0, 0, "CloudSeed", false});
         display_.texts.push_back(
             {0,
              12,
-             binding.pageLabel + " / " + sharedCore_.GetProgramLabel(),
+             binding.pageLabel + " / " + sharedCore_.GetProgramLabel()
+                 + (arpEnabledValue >= 0.5f ? " / Arp" : ""),
              false});
         for(std::size_t index = 0; index < binding.parameterIds.size(); ++index)
         {
@@ -997,6 +1154,7 @@ void CloudSeedCore::ResetMenuState()
     menuSelections_[MakeMenuRootSectionId(nodeId_)]      = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "pages")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "macros")] = 0;
+    menuSelections_[MakeMenuSectionId(nodeId_, "arp")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "program")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "utilities")] = 0;
     menuSelections_[MakeMenuSectionId(nodeId_, "info")] = 0;
@@ -1007,6 +1165,14 @@ float CloudSeedCore::GetMenuStepSize(const std::string& itemId) const
     if(itemId.rfind(nodeId_ + "/menu/macros/", 0) == 0)
     {
         return 0.05f;
+    }
+    if(itemId == MakeMenuItemId(nodeId_, "arp", "depth"))
+    {
+        return 0.05f;
+    }
+    if(itemId == MakeMenuItemId(nodeId_, "pages", "page"))
+    {
+        return 1.0f / 3.0f;
     }
     return 1.0f;
 }

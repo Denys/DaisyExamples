@@ -41,6 +41,8 @@ add_library(daisyhost_core STATIC
     src/DaisyBraidsCore.cpp
     src/DaisyCloudSeedCore.cpp
     src/DaisyHarmoniqsCore.cpp
+    src/DaisyPolyOscCore.cpp
+    src/DaisySubharmoniqCore.cpp
     src/DaisyVASynthCore.cpp
     src/EffectiveHostStateSnapshot.cpp
     src/HostSessionState.cpp
@@ -58,6 +60,8 @@ add_library(daisyhost_core STATIC
     src/apps/CloudSeedCore.cpp
     src/apps/HarmoniqsCore.cpp
     src/apps/MultiDelayCore.cpp
+    src/apps/PolyOscCore.cpp
+    src/apps/SubharmoniqCore.cpp
     src/apps/TorusCore.cpp
     src/apps/VASynthCore.cpp
     ../third_party/BraidsCore/braids/analog_oscillator.cc
@@ -138,6 +142,34 @@ add_executable(DaisyHostRender
 target_link_libraries(DaisyHostRender
     PRIVATE
         daisyhost_render
+)
+
+add_library(daisyhost_cli STATIC
+    src/CliPayloads.cpp
+)
+
+target_include_directories(daisyhost_cli
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+)
+
+target_compile_features(daisyhost_cli PUBLIC cxx_std_17)
+
+target_link_libraries(daisyhost_cli
+    PUBLIC
+        daisyhost_core
+        juce::juce_core
+)
+
+add_executable(DaisyHostCLI
+    tools/cli_app.cpp
+)
+
+target_link_libraries(DaisyHostCLI
+    PRIVATE
+        daisyhost_cli
+        daisyhost_render
+        juce::juce_core
 )
 
 juce_add_gui_app(DaisyHostHub
@@ -242,14 +274,17 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_board_profile.cpp
     tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp
+    tests/test_cli_payloads.cpp
     tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
     tests/test_daisy_harmoniqs_core.cpp
+    tests/test_daisy_polyosc_core.cpp
     tests/test_daisy_vasynth_core.cpp
     tests/test_effective_host_state_snapshot.cpp
     tests/test_midi_event_tracker.cpp
     tests/test_hub_support.cpp
     tests/test_host_automation_bridge.cpp
+    tests/test_host_modulation.cpp
     tests/test_host_session_state.cpp
     tests/test_host_startup_policy.cpp
     tests/test_harmoniqs_core.cpp
@@ -257,8 +292,10 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_midi_note_preview.cpp
     tests/test_multidelay_core.cpp
     tests/test_parameter_parity.cpp
+    tests/test_polyosc_core.cpp
     tests/test_signal_generator.cpp
     tests/test_standalone_ui_policy.cpp
+    tests/test_subharmoniq_core.cpp
     tests/test_test_input_signal.cpp
     tests/test_render_runtime.cpp
     tests/test_torus_core.cpp
@@ -292,6 +329,7 @@ add_custom_command(
 
 target_link_libraries(unit_tests
     PRIVATE
+        daisyhost_cli
         daisyhost_hub_core
         daisyhost_render
         GTest::gtest
@@ -328,9 +366,60 @@ add_test(
         --config $<CONFIG>
 )
 
+add_test(
+    NAME DaisyHostCliListApps
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        list-apps
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliDescribeApp
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        describe-app
+        multidelay
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliDescribeBoard
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        describe-board
+        daisy_field
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliValidateScenario
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        validate-scenario
+        ${PROJECT_SOURCE_DIR}/training/examples/multidelay_smoke.json
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliRender
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        render
+        ${PROJECT_SOURCE_DIR}/training/examples/multidelay_smoke.json
+        --output-dir
+        ${PROJECT_BINARY_DIR}/cli_smoke/multidelay
+        --json
+)
+
 set_tests_properties(
     DaisyHostStandaloneSmoke
     DaisyHostRenderSmoke
+    DaisyHostCliListApps
+    DaisyHostCliDescribeApp
+    DaisyHostCliDescribeBoard
+    DaisyHostCliValidateScenario
+    DaisyHostCliRender
     PROPERTIES
         LABELS "smoke"
         RUN_SERIAL TRUE

@@ -1,6 +1,6 @@
 # DaisyHost Field Project Tracker
 
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 Use this file as the Field-specific tracker for DaisyHost. It keeps
 `daisy_field` host implementation work, validation work, and deferred hardware
@@ -9,12 +9,18 @@ scope separate from the broader DaisyHost workstream portfolio.
 ## Current Field Status
 
 Manager explanation: Daisy Field is already implemented as an automatically
-tested host-side DaisyHost board surface, and Sprint F3 now adds the first
-hardware-facing firmware adapter. The new `field/MultiDelay` adapter moves the
-project from host-only simulation toward real Field proof by reusing the same
-shared `MultiDelayCore` regression fixture on Daisy Field hardware. The adapter
-builds and flashes through ST-Link; the remaining step before calling it fully
-hardware-validated is the hands-on audio/control/CV checklist.
+tested host-side DaisyHost board surface, Sprint F3 added both the first
+hardware-facing firmware adapter and the first semi-automatic adapter pipeline,
+the 2026-04-26 SubharmoniqField pass adds the first new Field-first
+instrument built around a new portable DaisyHost core, and the
+2026-04-26 DaisyHostController pass adds a standard USB MIDI controller
+firmware path for controlling DaisyHost from real Field hardware.
+The hand-written `field/MultiDelay` adapter proves real Field firmware can reuse
+the shared `MultiDelayCore`; the generated `field/MultiDelayGenerated` adapter
+proves that the same pattern can now be produced from a checked-in spec. The
+hand-written MultiDelay adapter and SubharmoniqField are ST-Link
+flash-verified, while the generated adapter remains build/QAE-verified only
+until an explicit flash pass is requested and run.
 
 - `daisy_patch` remains the default board.
 - `daisy_field` is supported through the existing board factory seam.
@@ -37,13 +43,70 @@ hardware-validated is the hands-on audio/control/CV checklist.
   - ST-Link flash/verify succeeded on 2026-04-25
   - manual Field audio/control/CV checklist remains pending until performed on
     the connected hardware
+- First adapter pipeline:
+  - `tools/generate_field_adapter.py` emits a Daisy Field firmware project from
+    `tools/adapter_specs/field_multidelay.json`
+  - `field/MultiDelayGenerated` builds and passes QAE validation on 2026-04-25
+  - `tools/audit_firmware_portability.py` classifies existing Field firmware as
+    `portable-core-ready`, `needs-core-extraction`, or `not-supported-by-v0`
+  - generated adapter flash and manual hardware validation remain pending
+- New Field-first portable-core instrument:
+  - `DaisyHost/DaisySubharmoniqCore` and `apps::SubharmoniqCore` implement
+    the first-class hosted `subharmoniq` app
+  - `field/SubharmoniqField` builds against the shared portable core and maps
+    Field K1-K8, A/B keys, SW1/SW2 pseudo-encoder navigation, CV/Gate, MIDI,
+    OLED, LEDs, and CV outputs to the Round 1 Subharmonicon-inspired model
+  - 2026-04-26 audible-default follow-up changed the core from a barely
+    nonzero one-sample trigger to a host-tested playable envelope/output path,
+    and changed the Field adapter to pickup-style knob startup
+  - firmware `make`, QAE validation, and ST-Link `make program` flash/verify
+    passed on 2026-04-26
+  - the manual Field hardware checklist remains pending
+- DaisyHost USB MIDI controller firmware:
+  - `field/DaisyHostController` is a controller-only Field firmware target;
+    it sends K1-K8 as CC 20-27, CV1-CV4 as CC 28-31, A1-B8 as notes 60-75,
+    and SW1/SW2 as momentary CC 80/81 on MIDI channel 1
+  - the target uses libDaisy `MidiUsbHandler`, has no audio callback, and is
+    intended to drive DaisyHost through its existing MIDI input, tracker, and
+    CC learn paths rather than a custom protocol
+  - firmware `make`, QAE validation, and ST-Link `make program` flash/verify
+    passed on 2026-04-26
+  - user manual check on 2026-04-26 confirmed knobs, buttons, and keys display
+    correctly on the Field screen
+  - USB MIDI enumeration, DaisyHost MIDI learn, and computer-side MIDI
+    validation remain pending
 - Latest full DaisyHost host gate from this checkout:
-  - `cmd /c build_host.cmd`: passed on 2026-04-25
-  - Release `ctest`: passed, `159/159`
+  - `cmd /c build_host.cmd`: passed on 2026-04-26
+  - Release `ctest`: passed, `202/202`
+  - DaisyHostCLI agent/CI adoption checks passed directly; older host-gate
+    counts remain historical only.
 
 ## Separate Validation Todo
 
 This item is intentionally outside the implementation sprint backlog.
+
+### DaisyHostController Hardware / MIDI Validation
+
+Status: To do
+
+Goal:
+
+- Flash `field/DaisyHostController` and prove real Daisy Field USB MIDI control
+  reaches DaisyHost standalone and, later, the VST3 through a DAW.
+
+Manual validation checklist:
+
+- `make program` flashes successfully through ST-Link. Passed on 2026-04-26
+  with OpenOCD `** Verified OK **`.
+- Local Field OLED feedback shows K1-K8 knob moves, SW1/SW2 button presses,
+  and A1-B8 key events. Passed by user report on 2026-04-26.
+- The computer sees the Daisy Field as a USB MIDI device.
+- DaisyHost standalone can enable the device in `Settings...`.
+- DaisyHost MIDI tracker shows K1-K8 CC 20-27, CV1-CV4 CC 28-31, A1-B8 notes
+  60-75, and SW1/SW2 momentary CC 80/81.
+- DaisyHost MIDI learn can bind at least one Field knob to a hosted-app
+  control and move that parameter.
+- No stuck notes, repeated idle CC flooding, or OLED/LED stalls are observed.
 
 ### Field DAW / VST3 Validation
 
@@ -308,7 +371,62 @@ hardware-validated until audio input/output, K1-K5, K6-K8 no-op behavior, CV1,
 CV OUT 1/2 voltage behavior, SW1, SW2, LEDs, OLED, and audio-dropout checks are
 performed and recorded.
 
-### Sprint F4: Field Automation Expansion Decision
+### Sprint F4: HW/App Adapter Pipeline v0
+
+Status: Implemented on 2026-04-25 for the `MultiDelay` golden target; generated
+adapter is build/QAE-verified, not flash-verified.
+
+Manager explanation: this turns the F3 hand-written adapter into a repeatable
+pattern. It does not translate arbitrary firmware. It generates Daisy Field
+adapter glue around portable DaisyHost shared cores and gives existing firmware
+projects a read-only portability audit.
+
+Goal:
+
+- Generate a Daisy Field firmware adapter from a checked-in DaisyHost app spec.
+- Keep `MultiDelay` as the only v0 golden target.
+- Audit existing firmware projects for shared-core readiness without rewriting
+  them.
+
+Implemented result:
+
+- `tools/generate_field_adapter.py` reads a JSON spec and emits:
+  - `Makefile`
+  - `<App>.cpp`
+  - `README.md`
+  - `CONTROLS.md`
+- `tools/adapter_specs/field_multidelay.json` captures the v0 MultiDelay Field
+  adapter contract.
+- `tools/audit_firmware_portability.py` reports:
+  - `portable-core-ready`
+  - `needs-core-extraction`
+  - `not-supported-by-v0`
+- `field/MultiDelayGenerated` was generated and built as proof of the pipeline.
+
+Verification:
+
+```powershell
+py -3 -m pytest -q tests/test_field_adapter_generator.py -p no:cacheprovider
+py -3 tools/generate_field_adapter.py --spec tools/adapter_specs/field_multidelay.json --out ..\field\MultiDelayGenerated
+cd ..\field\MultiDelayGenerated
+make
+$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .
+cd ..\..\DaisyHost
+cmake --build build --config Debug --target unit_tests
+ctest --test-dir build -C Debug --output-on-failure -R "(MultiDelayCoreTest|BoardControlMappingTest|RenderRuntimeTest)"
+cmd /c build_host.cmd
+```
+
+Result: passed on 2026-04-25. Pytest passed `3/3`; generated firmware `make`
+passed with FLASH `121376 B` / `92.60%`; QAE passed with `0 error(s), 0
+warning(s)`; targeted Debug CTest passed `52/52`; full host wrapper gate passed
+with Release `ctest` `159/159`.
+
+Caveat: `make program` was not run for `field/MultiDelayGenerated` because the
+plan marked generated-adapter flashing optional and firmware flashing is a
+hardware side effect. Generated adapter status is build/QAE-verified only.
+
+### Sprint F5: Field Automation Expansion Decision
 
 Manager explanation: this is a DAW/product decision sprint, not a small mapping
 cleanup. DaisyHost currently has a stable five-slot DAW bridge; expanding Field
@@ -353,6 +471,44 @@ ctest --test-dir build -C Debug --output-on-failure -R "(HostAutomationBridgeTes
 cmd /c build_host.cmd
 ```
 
+### Sprint F6: SubharmoniqField Hardware Validation And Filter Round 2
+
+Status: Round 1 build/QAE/ST-Link flash-verified on 2026-04-26; no-audio root
+causes fixed in the portable core and Field startup adapter; manual hardware
+validation and Round 2 filter modes pending.
+
+Manager explanation: SubharmoniqField is now a real firmware target and hosted
+app, but it should not be described as hardware-validated until the hands-on
+checklist passes. The current build now includes an internal tempo clock plus
+louder envelope/output defaults, so `B7` play can
+trigger audible host-tested envelopes without first receiving external MIDI
+clock or Gate In pulses. Field K1-K8 also use pickup-style startup so low
+physical knob positions do not immediately mute the patch.
+
+Goal:
+
+- Flash `field/SubharmoniqField` through ST-Link. Done on 2026-04-26 with
+  OpenOCD `** Verified OK **`.
+- Complete the manual audio/control/CV/MIDI checklist in
+  `field/SubharmoniqField/CONTROLS.md`.
+- Only after Round 1 hardware behavior is stable, implement the planned Filter
+  page switch between `SVF LPF`, `SVF BPF`, and ladder-style `LPF`.
+
+Verification:
+
+```powershell
+cd ..\field\SubharmoniqField
+make
+$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .
+make program
+```
+
+Result: `make` passed as up to date, QAE passed with `0 error(s),
+0 warning(s)`, and `make program` passed on 2026-04-26. OpenOCD detected
+STLINK `V3J7M2`, target voltage `3.263618`, programmed
+`build/SubharmoniqField.elf`, reported `** Verified OK **`, and reset the
+target.
+
 ## Explicitly Out Of Scope Until Separately Approved
 
 - mixed-board racks
@@ -365,7 +521,7 @@ cmd /c build_host.cmd
 ## Next Safe Starting Point
 
 Start with the separate DAW / VST3 validation todo if the goal is release
-confidence in the plugin path. Start with Sprint F3 only when real Field
-hardware and firmware validation time are available. Start a new Field
-ergonomics sprint only if it has a concrete tested workflow beyond the F1/F2
-host-side cleanup already landed.
+confidence in the plugin path. Start with Sprint F6 if the goal is
+SubharmoniqField hardware proof or the Round 2 filter-mode expansion. Start a
+new Field ergonomics sprint only if it has a concrete tested workflow beyond
+the F1/F2 host-side cleanup already landed.
