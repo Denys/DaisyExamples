@@ -673,4 +673,30 @@ TEST(BoardControlMappingTest, SubharmoniqFieldKeysMapToDedicatedPerformanceActio
     EXPECT_EQ(mapping.keys[15].detailLabel, "Reset");
     EXPECT_EQ(mapping.keys[15].targetId, "node0/menu/field_keys/b8");
 }
+
+TEST(BoardControlMappingTest, FieldKeyInteractivityAllowsMidiAndMenuActions)
+{
+    const daisyhost::HostedAppPatchBindings           defaultBindings;
+    const std::vector<daisyhost::ParameterDescriptor> parameters;
+    const auto midiMapping = daisyhost::BuildDaisyFieldControlMapping(
+        defaultBindings, parameters, 4, "node0");
+    EXPECT_TRUE(daisyhost::IsDaisyFieldKeyInteractive(midiMapping.keys[0]));
+
+    const auto app = MakeApp("subharmoniq", "node0");
+    ASSERT_NE(app, nullptr);
+    const auto menuMapping = daisyhost::BuildDaisyFieldControlMapping(
+        app->GetPatchBindings(), app->GetParameters(), app->GetMenuModel(), 4, "node0");
+    ASSERT_EQ(menuMapping.keys[14].targetKind,
+              daisyhost::BoardSurfaceTargetKind::kMenuItem);
+    ASSERT_EQ(menuMapping.keys[14].midiNote, -1);
+    EXPECT_TRUE(daisyhost::IsDaisyFieldKeyInteractive(menuMapping.keys[14]));
+
+    auto unavailable = menuMapping.keys[14];
+    unavailable.available = false;
+    EXPECT_FALSE(daisyhost::IsDaisyFieldKeyInteractive(unavailable));
+
+    auto missingTarget = menuMapping.keys[14];
+    missingTarget.targetId.clear();
+    EXPECT_FALSE(daisyhost::IsDaisyFieldKeyInteractive(missingTarget));
+}
 } // namespace

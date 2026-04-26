@@ -45,6 +45,7 @@ add_library(daisyhost_core STATIC
     src/DaisySubharmoniqCore.cpp
     src/DaisyVASynthCore.cpp
     src/EffectiveHostStateSnapshot.cpp
+    src/HostModulation.cpp
     src/HostSessionState.cpp
     src/HostStartupPolicy.cpp
     src/HostAutomationBridge.cpp

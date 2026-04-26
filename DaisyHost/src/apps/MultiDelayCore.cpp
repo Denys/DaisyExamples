@@ -184,6 +184,24 @@ MultiDelayCore::MultiDelayCore(const std::string& nodeId)
                             true,
                             true},
     };
+    parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
+        .nativeMaximum = 100.0f;
+    parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
+        .nativeDefault = 50.0f;
+    parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
+        .nativePrecision = 0;
+    for(const auto index : {ParameterIndex::kDelayPrimary,
+                           ParameterIndex::kDelaySecondary,
+                           ParameterIndex::kDelayTertiary})
+    {
+        auto& parameter = parameters_[static_cast<std::size_t>(index)];
+        parameter.nativeMaximum = static_cast<float>(kMaxDelaySamples);
+        parameter.nativePrecision = 0;
+    }
+    parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
+        .nativeMaximum = 100.0f;
+    parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
+        .nativePrecision = 0;
     const float defaultRegen = std::max(
         0.0f,
         std::min((parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
@@ -529,6 +547,31 @@ bool MultiDelayCore::SetParameterValue(const std::string& parameterId,
         normalizedValue,
         ParameterSource::kMenu);
     return true;
+}
+
+bool MultiDelayCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                                float normalizedValue)
+{
+    auto* parameter = FindParameterById(parameterId);
+    if(parameter == nullptr)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    UpdateMappedStateFromEffectiveParameters();
+    UpdateDisplay();
+    return true;
+}
+
+void MultiDelayCore::ClearEffectiveParameterOverrides()
+{
+    for(auto& parameter : parameters_)
+    {
+        parameter.effectiveNormalizedValue = parameter.normalizedValue;
+    }
+    UpdateMappedStateFromEffectiveParameters();
+    UpdateDisplay();
 }
 
 ParameterValueLookup MultiDelayCore::GetControlValue(
@@ -1117,30 +1160,34 @@ void MultiDelayCore::UpdateMappedStateFromParameters()
         parameter.effectiveNormalizedValue = parameter.normalizedValue;
     }
 
+    UpdateMappedStateFromEffectiveParameters();
+    UpdateMetaControllersFromParameters();
+}
+
+void MultiDelayCore::UpdateMappedStateFromEffectiveParameters()
+{
     delays_[0].targetDelay = MapLogControl(
         parameters_[static_cast<std::size_t>(ParameterIndex::kDelayPrimary)]
-            .normalizedValue,
+            .effectiveNormalizedValue,
         static_cast<float>(sampleRate_ * 0.05),
         static_cast<float>(kMaxDelaySamples));
     delays_[1].targetDelay = MapLogControl(
         parameters_[static_cast<std::size_t>(ParameterIndex::kDelaySecondary)]
-            .normalizedValue,
+            .effectiveNormalizedValue,
         static_cast<float>(sampleRate_ * 0.05),
         static_cast<float>(kMaxDelaySamples));
     delays_[2].targetDelay = MapLogControl(
         parameters_[static_cast<std::size_t>(ParameterIndex::kDelayTertiary)]
-            .normalizedValue,
+            .effectiveNormalizedValue,
         static_cast<float>(sampleRate_ * 0.05),
         static_cast<float>(kMaxDelaySamples));
 
     feedback_ = parameters_[static_cast<std::size_t>(ParameterIndex::kFeedback)]
-                    .normalizedValue;
+                    .effectiveNormalizedValue;
     dryWetPercent_ = static_cast<int>(std::round(
         parameters_[static_cast<std::size_t>(ParameterIndex::kDryWet)]
-            .normalizedValue
+            .effectiveNormalizedValue
         * 100.0f));
-
-    UpdateMetaControllersFromParameters();
 }
 
 void MultiDelayCore::UpdateMetaControllersFromParameters()

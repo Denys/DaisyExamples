@@ -373,6 +373,31 @@ TEST(MultiDelayCoreTest, SupportsDirectParameterAccessAndRejectsUnknownIds)
     EXPECT_NEAR(requestedAfterUnknown.value, 0.8f, 0.0001f);
 }
 
+TEST(MultiDelayCoreTest, EffectiveParameterOverrideDoesNotOverwriteBaseValue)
+{
+    daisyhost::apps::MultiDelayCore core("node0");
+    core.Prepare(48000.0, 64);
+    core.ResetToDefaultState(0);
+
+    ASSERT_TRUE(core.SetParameterValue("node0/param/dry_wet", 0.25f));
+    ASSERT_TRUE(core.SetEffectiveParameterValue("node0/param/dry_wet", 0.75f));
+
+    const auto base = core.GetParameterValue("node0/param/dry_wet");
+    const auto effective = core.GetEffectiveParameterValue("node0/param/dry_wet");
+    ASSERT_TRUE(base.hasValue);
+    ASSERT_TRUE(effective.hasValue);
+    EXPECT_FLOAT_EQ(base.value, 0.25f);
+    EXPECT_FLOAT_EQ(effective.value, 0.75f);
+    EXPECT_EQ(core.GetDryWetPercent(), 75);
+
+    core.ClearEffectiveParameterOverrides();
+    const auto restoredEffective
+        = core.GetEffectiveParameterValue("node0/param/dry_wet");
+    ASSERT_TRUE(restoredEffective.hasValue);
+    EXPECT_FLOAT_EQ(restoredEffective.value, 0.25f);
+    EXPECT_EQ(core.GetDryWetPercent(), 25);
+}
+
 TEST(MultiDelayCoreTest, CanResetCaptureAndRestoreCanonicalParameterState)
 {
     daisyhost::apps::MultiDelayCore source("node0");

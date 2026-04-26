@@ -564,6 +564,25 @@ bool DaisySubharmoniqCore::SetParameterValue(const char* parameterId,
     return true;
 }
 
+bool DaisySubharmoniqCore::SetEffectiveParameterValue(
+    const std::string& parameterId,
+    float              normalizedValue)
+{
+    return SetEffectiveParameterValue(parameterId.c_str(), normalizedValue);
+}
+
+bool DaisySubharmoniqCore::SetEffectiveParameterValue(const char* parameterId,
+                                                      float normalizedValue)
+{
+    auto* parameter = impl_->FindMutable(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 bool DaisySubharmoniqCore::GetParameterValue(const std::string& parameterId,
                                              float*             normalizedValue) const
 {
@@ -580,7 +599,13 @@ bool DaisySubharmoniqCore::GetEffectiveParameterValue(
     const std::string& parameterId,
     float*             normalizedValue) const
 {
-    return GetParameterValue(parameterId, normalizedValue);
+    const auto* parameter = impl_->Find(parameterId);
+    if(parameter == nullptr || normalizedValue == nullptr)
+    {
+        return false;
+    }
+    *normalizedValue = parameter->effectiveNormalizedValue;
+    return true;
 }
 
 bool DaisySubharmoniqCore::TriggerMomentaryAction(const std::string& actionId)

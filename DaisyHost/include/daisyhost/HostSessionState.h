@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "daisyhost/HostModulation.h"
 #include "daisyhost/MidiLearnMap.h"
 
 namespace daisyhost
@@ -22,6 +23,14 @@ struct HostSessionRoute
     std::string destPortId;
 };
 
+struct HostSessionModulationLaneState
+{
+    std::string        nodeId;
+    std::string        parameterId;
+    int                slotIndex = 0;
+    HostModulationLane lane;
+};
+
 struct HostSessionState
 {
     std::string                             appId;
@@ -37,6 +46,7 @@ struct HostSessionState
     std::uint32_t                          randomSeed = 0;
     std::vector<HostSessionNodeState>      nodes;
     std::vector<HostSessionRoute>          routes;
+    std::vector<HostSessionModulationLaneState> modulationLanes;
 
     std::string Serialize() const;
     static HostSessionState Deserialize(const std::string& text);

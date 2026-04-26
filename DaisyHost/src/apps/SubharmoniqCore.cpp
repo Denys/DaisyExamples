@@ -326,6 +326,19 @@ bool SubharmoniqCore::SetParameterValue(const std::string& parameterId,
     return changed;
 }
 
+bool SubharmoniqCore::SetEffectiveParameterValue(
+    const std::string& parameterId,
+    float              normalizedValue)
+{
+    const bool changed = sharedCore_.SetEffectiveParameterValue(
+        StripParameterId(parameterId), normalizedValue);
+    if(changed)
+    {
+        RefreshSnapshots();
+    }
+    return changed;
+}
+
 ParameterValueLookup SubharmoniqCore::GetControlValue(
     const std::string& controlId) const
 {

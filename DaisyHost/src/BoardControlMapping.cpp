@@ -441,6 +441,26 @@ bool ShouldForwardDaisyFieldCvInput(const std::string& latchedTargetId)
     return latchedTargetId.empty();
 }
 
+bool IsDaisyFieldKeyInteractive(const BoardSurfaceBinding& binding)
+{
+    if(!binding.available)
+    {
+        return false;
+    }
+
+    if(binding.targetKind == BoardSurfaceTargetKind::kMidiNote)
+    {
+        return binding.midiNote >= 0;
+    }
+
+    if(binding.targetKind == BoardSurfaceTargetKind::kMenuItem)
+    {
+        return !binding.targetId.empty();
+    }
+
+    return false;
+}
+
 DaisyFieldDrawerPage StepDaisyFieldDrawerPage(DaisyFieldDrawerPage page,
                                                int                  delta)
 {

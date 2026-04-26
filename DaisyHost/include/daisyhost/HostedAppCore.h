@@ -92,6 +92,10 @@ struct ParameterDescriptor
     bool          automatable     = false;
     bool          stateful        = false;
     bool          menuEditable    = false;
+    float         nativeMinimum   = 0.0f;
+    float         nativeMaximum   = 1.0f;
+    float         nativeDefault   = 0.0f;
+    int           nativePrecision = 2;
 };
 
 struct MetaControllerDescriptor
@@ -173,6 +177,18 @@ class HostedAppCore
     virtual bool SetParameterValue(const std::string& parameterId,
                                    float              normalizedValue)
         = 0;
+    virtual bool SetEffectiveParameterValue(const std::string&,
+                                            float)
+    {
+        return false;
+    }
+    virtual void ClearEffectiveParameterOverrides()
+    {
+        for(const auto& parameter : GetParameters())
+        {
+            SetEffectiveParameterValue(parameter.id, parameter.normalizedValue);
+        }
+    }
     virtual ParameterValueLookup GetControlValue(
         const std::string& controlId) const = 0;
     virtual ParameterValueLookup GetParameterValue(

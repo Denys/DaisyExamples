@@ -265,6 +265,23 @@ bool BraidsCore::SetParameterValue(const std::string& parameterId,
     return applied;
 }
 
+bool BraidsCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                            float normalizedValue)
+{
+    const std::string suffix = StripParameterId(parameterId);
+    if(suffix.empty())
+    {
+        return false;
+    }
+    const bool applied
+        = sharedCore_.SetEffectiveParameterValue(suffix, normalizedValue);
+    if(applied)
+    {
+        RefreshSnapshots();
+    }
+    return applied;
+}
+
 ParameterValueLookup BraidsCore::GetControlValue(const std::string& controlId) const
 {
     const auto pageBinding = sharedCore_.GetActivePageBinding();

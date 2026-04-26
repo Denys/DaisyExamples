@@ -518,6 +518,20 @@ bool DaisyBraidsCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool DaisyBraidsCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                                 float normalizedValue)
+{
+    auto* parameter = impl_->FindParameter(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    impl_->ConfigureOscillator();
+    return true;
+}
+
 bool DaisyBraidsCore::GetParameterValue(const std::string& parameterId,
                                         float*             normalizedValue) const
 {

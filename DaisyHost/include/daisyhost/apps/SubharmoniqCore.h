@@ -34,6 +34,8 @@ class SubharmoniqCore : public HostedAppCore
     void TickUi(double deltaMs) override;
     bool SetParameterValue(const std::string& parameterId,
                            float              normalizedValue) override;
+    bool SetEffectiveParameterValue(const std::string& parameterId,
+                                    float normalizedValue) override;
     ParameterValueLookup GetControlValue(
         const std::string& controlId) const override;
     ParameterValueLookup GetParameterValue(

@@ -178,6 +178,65 @@ TEST(HostSessionStateTest, VersionFiveRoundTripsFieldBoardIdWithoutChangingRackS
     ASSERT_EQ(restored.routes.size(), 2u);
 }
 
+TEST(HostSessionStateTest, VersionSixRoundTripsModulationLanes)
+{
+    daisyhost::HostSessionState state;
+    state.boardId = "daisy_field";
+    state.nodes.push_back({"node0", "cloudseed", 456u});
+
+    daisyhost::HostSessionModulationLaneState cvLane;
+    cvLane.nodeId     = "node0";
+    cvLane.parameterId = "node0/param/mix";
+    cvLane.slotIndex  = 0;
+    cvLane.lane.enabled = true;
+    cvLane.lane.source = daisyhost::HostModulationSource::kCv2;
+    cvLane.lane.cvTargetMinimum = -20.0f;
+    cvLane.lane.cvTargetMaximum = 35.0f;
+    state.modulationLanes.push_back(cvLane);
+
+    daisyhost::HostSessionModulationLaneState lfoLane;
+    lfoLane.nodeId     = "node0";
+    lfoLane.parameterId = "node0/param/mix";
+    lfoLane.slotIndex  = 1;
+    lfoLane.lane.enabled = false;
+    lfoLane.lane.source = daisyhost::HostModulationSource::kLfo4;
+    lfoLane.lane.bipolarDepth = 12.5f;
+    state.modulationLanes.push_back(lfoLane);
+
+    const auto serialized = state.Serialize();
+    EXPECT_NE(serialized.find("version 6\n"), std::string::npos);
+
+    const auto restored = daisyhost::HostSessionState::Deserialize(serialized);
+
+    ASSERT_EQ(restored.modulationLanes.size(), 2u);
+    EXPECT_EQ(restored.modulationLanes[0].nodeId, "node0");
+    EXPECT_EQ(restored.modulationLanes[0].parameterId, "node0/param/mix");
+    EXPECT_EQ(restored.modulationLanes[0].slotIndex, 0);
+    EXPECT_TRUE(restored.modulationLanes[0].lane.enabled);
+    EXPECT_EQ(restored.modulationLanes[0].lane.source,
+              daisyhost::HostModulationSource::kCv2);
+    EXPECT_FLOAT_EQ(restored.modulationLanes[0].lane.cvTargetMinimum, -20.0f);
+    EXPECT_FLOAT_EQ(restored.modulationLanes[0].lane.cvTargetMaximum, 35.0f);
+    EXPECT_FALSE(restored.modulationLanes[1].lane.enabled);
+    EXPECT_EQ(restored.modulationLanes[1].lane.source,
+              daisyhost::HostModulationSource::kLfo4);
+    EXPECT_FLOAT_EQ(restored.modulationLanes[1].lane.bipolarDepth, 12.5f);
+}
+
+TEST(HostSessionStateTest, LegacySessionsDeserializeWithNoModulationLanes)
+{
+    const std::string versionFiveText
+        = "version 5\n"
+          "board daisy_field\n"
+          "node node0 cloudseed 456\n"
+          "param node0/param/mix 0.25\n";
+
+    const auto restored = daisyhost::HostSessionState::Deserialize(versionFiveText);
+
+    EXPECT_TRUE(restored.modulationLanes.empty());
+    EXPECT_FLOAT_EQ(restored.parameterValues.at("node0/param/mix"), 0.25f);
+}
+
 TEST(HostSessionStateTest, FieldKnobControlValuesRoundTripWithoutPatchAliases)
 {
     daisyhost::HostSessionState state;

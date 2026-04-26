@@ -60,6 +60,8 @@ class DaisyCloudSeedCore
 
     void ResetToDefaultState(std::uint32_t seed = 0);
     bool SetParameterValue(const std::string& parameterId, float normalizedValue);
+    bool SetEffectiveParameterValue(const std::string& parameterId,
+                                    float normalizedValue);
     bool GetParameterValue(const std::string& parameterId,
                            float*             normalizedValue) const;
     bool GetEffectiveParameterValue(const std::string& parameterId,

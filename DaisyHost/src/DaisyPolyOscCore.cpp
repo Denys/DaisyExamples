@@ -231,6 +231,19 @@ bool DaisyPolyOscCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool DaisyPolyOscCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                                  float normalizedValue)
+{
+    auto* parameter = impl_->FindMutable(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 bool DaisyPolyOscCore::GetParameterValue(const std::string& parameterId,
                                          float*             normalizedValue) const
 {
@@ -247,7 +260,13 @@ bool DaisyPolyOscCore::GetEffectiveParameterValue(
     const std::string& parameterId,
     float*             normalizedValue) const
 {
-    return GetParameterValue(parameterId, normalizedValue);
+    const auto* parameter = impl_->Find(parameterId);
+    if(parameter == nullptr || normalizedValue == nullptr)
+    {
+        return false;
+    }
+    *normalizedValue = parameter->effectiveNormalizedValue;
+    return true;
 }
 
 const DaisyPolyOscParameter* DaisyPolyOscCore::FindParameter(

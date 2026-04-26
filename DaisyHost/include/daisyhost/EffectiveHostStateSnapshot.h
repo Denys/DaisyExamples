@@ -6,6 +6,7 @@
 
 #include "daisyhost/HostAutomationBridge.h"
 #include "daisyhost/BoardControlMapping.h"
+#include "daisyhost/HostModulation.h"
 
 namespace daisyhost
 {
@@ -87,6 +88,31 @@ struct EffectiveHostRouteSnapshot
     std::string destPortId;
 };
 
+struct EffectiveHostModulationLaneSnapshot
+{
+    int                  slotIndex = 0;
+    bool                 enabled = false;
+    HostModulationSource source = HostModulationSource::kNone;
+    float                cvTargetMinimum = 0.0f;
+    float                cvTargetMaximum = 1.0f;
+    float                bipolarDepth = 0.0f;
+    float                liveSourceValue = 0.0f;
+    float                nativeContribution = 0.0f;
+};
+
+struct EffectiveHostModulationDestinationSnapshot
+{
+    std::string nodeId;
+    std::string parameterId;
+    std::string parameterLabel;
+    std::string unitLabel;
+    float       baseNativeValue = 0.0f;
+    float       resultNativeValue = 0.0f;
+    float       resultNormalizedValue = 0.0f;
+    bool        clamped = false;
+    std::vector<EffectiveHostModulationLaneSnapshot> lanes;
+};
+
 struct EffectiveHostFieldCvOutputSnapshot
 {
     std::string id;
@@ -148,6 +174,8 @@ struct EffectiveHostStateSnapshot
     std::array<EffectiveHostGateInputSnapshot, 2> gateInputs{};
     EffectiveHostAudioInputSnapshot audioInput;
     EffectiveHostFieldSurfaceSnapshot fieldSurface;
+    std::string selectedModulationDestinationId;
+    std::vector<EffectiveHostModulationDestinationSnapshot> modulationDestinations;
 };
 
 EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
@@ -167,5 +195,8 @@ EffectiveHostStateSnapshot BuildEffectiveHostStateSnapshot(
     const std::array<HostGateInputState, 2>& gateInputs,
     const HostAudioInputState&               audioInput,
     const std::vector<MetaControllerDescriptor>& metaControllers = {},
-    const EffectiveHostFieldSurfaceSnapshot& fieldSurface = {});
+    const EffectiveHostFieldSurfaceSnapshot& fieldSurface = {},
+    const std::string& selectedModulationDestinationId = {},
+    const std::vector<EffectiveHostModulationDestinationSnapshot>&
+        modulationDestinations = {});
 } // namespace daisyhost

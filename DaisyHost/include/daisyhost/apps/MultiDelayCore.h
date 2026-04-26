@@ -42,6 +42,9 @@ class MultiDelayCore : public HostedAppCore
     void TickUi(double deltaMs) override;
     bool SetParameterValue(const std::string& parameterId,
                            float              normalizedValue) override;
+    bool SetEffectiveParameterValue(const std::string& parameterId,
+                                    float normalizedValue) override;
+    void ClearEffectiveParameterOverrides() override;
     ParameterValueLookup GetControlValue(
         const std::string& controlId) const override;
     ParameterValueLookup GetParameterValue(
@@ -139,6 +142,7 @@ class MultiDelayCore : public HostedAppCore
     const MetaControllerDescriptor* FindMetaControllerById(
         const std::string& controllerId) const;
     void  UpdateMappedStateFromParameters();
+    void  UpdateMappedStateFromEffectiveParameters();
     void  UpdateMetaControllersFromParameters();
     float DeriveMetaControllerValue(MetaControllerIndex index) const;
     void  SyncMenuModel();

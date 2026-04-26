@@ -143,6 +143,22 @@ juce::String GetRackTopologyLabel(int preset)
     }
 }
 
+int ComboIdForModulationSource(daisyhost::HostModulationSource source)
+{
+    return static_cast<int>(source) + 1;
+}
+
+daisyhost::HostModulationSource ModulationSourceForComboId(int comboId)
+{
+    const int sourceIndex = comboId - 1;
+    if(sourceIndex < static_cast<int>(daisyhost::HostModulationSource::kNone)
+       || sourceIndex > static_cast<int>(daisyhost::HostModulationSource::kLfo4))
+    {
+        return daisyhost::HostModulationSource::kNone;
+    }
+    return static_cast<daisyhost::HostModulationSource>(sourceIndex);
+}
+
 juce::String GetHostedAppDisplayNameForId(const std::string& appId)
 {
     for(const auto& registration : daisyhost::GetHostedAppRegistrations())
@@ -491,6 +507,80 @@ DaisyHostPatchAudioProcessorEditor::DaisyHostPatchAudioProcessorEditor(
         button.setColour(juce::TextButton::textColourOnId, InkColour());
         addAndMakeVisible(button);
         RegisterKeyboardSource(button);
+    }
+
+    for(std::size_t i = 0; i < modulationLaneLabels_.size(); ++i)
+    {
+        modulationLaneLabels_[i].setText("Lane " + juce::String(static_cast<int>(i + 1)),
+                                         juce::dontSendNotification);
+        modulationLaneLabels_[i].setJustificationType(juce::Justification::centredLeft);
+        modulationLaneLabels_[i].setColour(juce::Label::textColourId, TextColour());
+        addAndMakeVisible(modulationLaneLabels_[i]);
+
+        auto& sourceBox = modulationLaneSourceBoxes_[i];
+        sourceBox.addItem("Empty", ComboIdForModulationSource(
+                                       daisyhost::HostModulationSource::kNone));
+        sourceBox.addItem("CV 1", ComboIdForModulationSource(
+                                     daisyhost::HostModulationSource::kCv1));
+        sourceBox.addItem("CV 2", ComboIdForModulationSource(
+                                     daisyhost::HostModulationSource::kCv2));
+        sourceBox.addItem("CV 3", ComboIdForModulationSource(
+                                     daisyhost::HostModulationSource::kCv3));
+        sourceBox.addItem("CV 4", ComboIdForModulationSource(
+                                     daisyhost::HostModulationSource::kCv4));
+        sourceBox.addItem("LFO 1", ComboIdForModulationSource(
+                                      daisyhost::HostModulationSource::kLfo1));
+        sourceBox.addItem("LFO 2", ComboIdForModulationSource(
+                                      daisyhost::HostModulationSource::kLfo2));
+        sourceBox.addItem("LFO 3", ComboIdForModulationSource(
+                                      daisyhost::HostModulationSource::kLfo3));
+        sourceBox.addItem("LFO 4", ComboIdForModulationSource(
+                                      daisyhost::HostModulationSource::kLfo4));
+        sourceBox.onChange = [this, i]() {
+            auto lane = processor_.GetModulationLane(i);
+            lane.source = ModulationSourceForComboId(
+                modulationLaneSourceBoxes_[i].getSelectedId());
+            lane.enabled = lane.source != daisyhost::HostModulationSource::kNone
+                           && modulationLaneEnableButtons_[i].getToggleState();
+            const float amount = static_cast<float>(
+                modulationLaneAmountSliders_[i].getValue());
+            lane.cvTargetMinimum = 0.0f;
+            lane.cvTargetMaximum = amount;
+            lane.bipolarDepth    = amount;
+            processor_.SetModulationLane(i, lane);
+            UpdateModulationLaneUi();
+        };
+        addAndMakeVisible(sourceBox);
+        RegisterKeyboardSource(sourceBox);
+
+        auto& amountSlider = modulationLaneAmountSliders_[i];
+        amountSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+        amountSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 54, 18);
+        amountSlider.setRange(-100.0, 100.0, 0.1);
+        amountSlider.setValue(0.0);
+        amountSlider.addListener(this);
+        amountSlider.setColour(juce::Slider::thumbColourId, AccentColour());
+        amountSlider.setColour(juce::Slider::trackColourId,
+                               PortColour(daisyhost::VirtualPortType::kCv)
+                                   .withAlpha(0.50f));
+        addAndMakeVisible(amountSlider);
+        RegisterKeyboardSource(amountSlider);
+
+        auto& enableButton = modulationLaneEnableButtons_[i];
+        enableButton.setButtonText("On");
+        enableButton.addListener(this);
+        enableButton.setColour(juce::ToggleButton::textColourId, TextColour());
+        addAndMakeVisible(enableButton);
+        RegisterKeyboardSource(enableButton);
+
+        auto& clearButton = modulationLaneClearButtons_[i];
+        clearButton.setButtonText("Clear");
+        clearButton.addListener(this);
+        clearButton.setColour(juce::TextButton::buttonColourId,
+                              DrawerInsetColour());
+        clearButton.setColour(juce::TextButton::textColourOffId, TextColour());
+        addAndMakeVisible(clearButton);
+        RegisterKeyboardSource(clearButton);
     }
 
     encoderPressButton_.setButtonText("PUSH");
@@ -866,6 +956,20 @@ DaisyHostPatchAudioProcessorEditor::~DaisyHostPatchAudioProcessorEditor()
     {
         button.removeListener(this);
     }
+    for(auto& button : fieldDrawerPageButtons_)
+    {
+        button.removeListener(this);
+    }
+    for(auto& button : fieldParameterButtons_)
+    {
+        button.removeListener(this);
+    }
+    for(std::size_t i = 0; i < modulationLaneAmountSliders_.size(); ++i)
+    {
+        modulationLaneAmountSliders_[i].removeListener(this);
+        modulationLaneEnableButtons_[i].removeListener(this);
+        modulationLaneClearButtons_[i].removeListener(this);
+    }
     encoderPressButton_.removeListener(this);
 
     for(auto& slider : cvSliders_)
@@ -1018,6 +1122,19 @@ void DaisyHostPatchAudioProcessorEditor::resized()
         button.setBounds({});
         button.setVisible(fieldBoard && showParameterPage);
     }
+    for(std::size_t i = 0; i < modulationLaneLabels_.size(); ++i)
+    {
+        modulationLaneLabels_[i].setBounds({});
+        modulationLaneSourceBoxes_[i].setBounds({});
+        modulationLaneAmountSliders_[i].setBounds({});
+        modulationLaneEnableButtons_[i].setBounds({});
+        modulationLaneClearButtons_[i].setBounds({});
+        modulationLaneLabels_[i].setVisible(fieldBoard && showParameterPage);
+        modulationLaneSourceBoxes_[i].setVisible(fieldBoard && showParameterPage);
+        modulationLaneAmountSliders_[i].setVisible(fieldBoard && showParameterPage);
+        modulationLaneEnableButtons_[i].setVisible(fieldBoard && showParameterPage);
+        modulationLaneClearButtons_[i].setVisible(fieldBoard && showParameterPage);
+    }
 
     rackHeaderLabel_.setVisible(showRackPage);
     rackSelectedNodeLabel_.setVisible(showRackPage);
@@ -1149,7 +1266,8 @@ void DaisyHostPatchAudioProcessorEditor::resized()
 
     if(showParameterPage)
     {
-        auto parameterArea = drawer;
+        auto parameterArea = drawer.removeFromTop(
+            std::min(178, std::max(92, drawer.getHeight() / 2)));
         const int rowHeight = 28;
         for(auto& button : fieldParameterButtons_)
         {
@@ -1160,6 +1278,28 @@ void DaisyHostPatchAudioProcessorEditor::resized()
             }
             button.setBounds(parameterArea.removeFromTop(rowHeight));
             parameterArea.removeFromTop(4);
+        }
+
+        drawer.removeFromTop(10);
+        auto laneArea = drawer;
+        const int laneHeight = 30;
+        for(std::size_t i = 0; i < modulationLaneLabels_.size(); ++i)
+        {
+            if(laneArea.getHeight() < laneHeight)
+            {
+                break;
+            }
+            auto row = laneArea.removeFromTop(laneHeight);
+            modulationLaneLabels_[i].setBounds(row.removeFromLeft(56));
+            modulationLaneSourceBoxes_[i].setBounds(row.removeFromLeft(76));
+            row.removeFromLeft(6);
+            modulationLaneAmountSliders_[i].setBounds(row.removeFromLeft(
+                std::max(90, row.getWidth() - 112)));
+            row.removeFromLeft(6);
+            modulationLaneEnableButtons_[i].setBounds(row.removeFromLeft(42));
+            row.removeFromLeft(6);
+            modulationLaneClearButtons_[i].setBounds(row);
+            laneArea.removeFromTop(5);
         }
     }
 
@@ -2369,7 +2509,7 @@ void DaisyHostPatchAudioProcessorEditor::UpdateFieldControlUi()
         const char row = i < 8 ? 'A' : 'B';
         button.setButtonText(juce::String::charToString(row)
                              + juce::String(static_cast<int>((i % 8) + 1)));
-        button.setEnabled(fieldBoard && processor_.GetFieldKeyMidiNote(i) >= 0);
+        button.setEnabled(fieldBoard && processor_.GetFieldKeyAvailable(i));
         button.setToggleState(processor_.GetFieldKeyPressed(i),
                               juce::dontSendNotification);
     }
@@ -2400,19 +2540,12 @@ void DaisyHostPatchAudioProcessorEditor::UpdateFieldDrawerPageUi()
                               juce::dontSendNotification);
     }
 
-    const auto bindings = processor_.GetFieldPublicParameterBindings();
-    const auto parameters = processor_.GetParameterSnapshot();
-    std::unordered_map<std::string, daisyhost::ParameterDescriptor> parameterById;
-    parameterById.reserve(parameters.size());
-    for(const auto& parameter : parameters)
-    {
-        parameterById[parameter.id] = parameter;
-    }
-
+    const auto destinationCount = processor_.GetModulationDestinationCount();
+    const int selectedDestination = processor_.GetSelectedModulationDestinationIndex();
     for(std::size_t i = 0; i < fieldParameterButtons_.size(); ++i)
     {
         auto& button = fieldParameterButtons_[i];
-        if(i >= bindings.size())
+        if(i >= destinationCount)
         {
             button.setButtonText("");
             button.setEnabled(false);
@@ -2421,47 +2554,52 @@ void DaisyHostPatchAudioProcessorEditor::UpdateFieldDrawerPageUi()
             continue;
         }
 
-        const auto& binding = bindings[i];
-        juce::String text = juce::String(static_cast<int>(i + 1)) + "  "
-                            + juce::String(binding.detailLabel);
-        if(const auto found = parameterById.find(binding.targetId);
-           found != parameterById.end())
-        {
-            const auto& parameter = found->second;
-            text += "  "
-                    + juce::String(parameter.normalizedValue * 100.0f, 0)
-                    + "%";
-            if(!parameter.unitLabel.empty())
-            {
-                text += " " + juce::String(parameter.unitLabel);
-            }
-            text += "  d"
-                    + juce::String(parameter.defaultNormalizedValue * 100.0f,
-                                   0)
-                    + "%";
-        }
-
-        bool mappedToKnob = false;
-        for(std::size_t knobIndex = 0; knobIndex < fieldKnobs_.size();
-            ++knobIndex)
-        {
-            if(processor_.GetFieldKnobTargetId(knobIndex) == binding.targetId)
-            {
-                mappedToKnob = true;
-                break;
-            }
-        }
-
-        button.setButtonText(mappedToKnob ? text + "  K" : text);
-        button.setEnabled(fieldBoard && binding.available);
+        button.setButtonText(juce::String(static_cast<int>(i + 1)) + "  "
+                             + processor_.GetModulationDestinationLabel(i));
+        button.setEnabled(fieldBoard);
         button.setVisible(
             fieldBoard
             && processor_.GetFieldDrawerPage()
                    == static_cast<int>(
                        daisyhost::DaisyFieldDrawerPage::kPublicParameters));
-        button.setToggleState(selectedFieldParameterIndex_
-                                  == static_cast<int>(i),
+        button.setToggleState(selectedDestination == static_cast<int>(i),
                               juce::dontSendNotification);
+    }
+    selectedFieldParameterIndex_ = selectedDestination;
+    UpdateModulationLaneUi();
+}
+
+void DaisyHostPatchAudioProcessorEditor::UpdateModulationLaneUi()
+{
+    const bool showModPage
+        = processor_.IsDaisyFieldBoard()
+          && processor_.GetFieldDrawerPage()
+                 == static_cast<int>(
+                     daisyhost::DaisyFieldDrawerPage::kPublicParameters);
+    for(std::size_t i = 0; i < modulationLaneLabels_.size(); ++i)
+    {
+        const auto lane = processor_.GetModulationLane(i);
+        const bool populated
+            = lane.source != daisyhost::HostModulationSource::kNone;
+        modulationLaneLabels_[i].setText(
+            populated ? "Lane " + juce::String(static_cast<int>(i + 1))
+                      : (i == 0 ? "+ Add" : "Lane "
+                                      + juce::String(static_cast<int>(i + 1))),
+            juce::dontSendNotification);
+        modulationLaneSourceBoxes_[i].setSelectedId(
+            ComboIdForModulationSource(lane.source), juce::dontSendNotification);
+        modulationLaneEnableButtons_[i].setToggleState(lane.enabled,
+                                                       juce::dontSendNotification);
+        modulationLaneAmountSliders_[i].setValue(
+            lane.source >= daisyhost::HostModulationSource::kLfo1
+                ? lane.bipolarDepth
+                : lane.cvTargetMaximum,
+            juce::dontSendNotification);
+        modulationLaneLabels_[i].setVisible(showModPage);
+        modulationLaneSourceBoxes_[i].setVisible(showModPage);
+        modulationLaneAmountSliders_[i].setVisible(showModPage && populated);
+        modulationLaneEnableButtons_[i].setVisible(showModPage && populated);
+        modulationLaneClearButtons_[i].setVisible(showModPage && populated);
     }
 }
 
@@ -2666,6 +2804,21 @@ void DaisyHostPatchAudioProcessorEditor::sliderValueChanged(juce::Slider* slider
         }
     }
 
+    for(std::size_t i = 0; i < modulationLaneAmountSliders_.size(); ++i)
+    {
+        if(slider == &modulationLaneAmountSliders_[i])
+        {
+            auto lane = processor_.GetModulationLane(i);
+            const float amount = static_cast<float>(slider->getValue());
+            lane.cvTargetMinimum = 0.0f;
+            lane.cvTargetMaximum = amount;
+            lane.bipolarDepth    = amount;
+            processor_.SetModulationLane(i, lane);
+            UpdateFieldDrawerPageUi();
+            return;
+        }
+    }
+
     for(std::size_t i = 0; i < cvSliders_.size(); ++i)
     {
         if(slider == &cvSliders_[i])
@@ -2724,9 +2877,31 @@ void DaisyHostPatchAudioProcessorEditor::buttonClicked(juce::Button* button)
     {
         if(button == &fieldParameterButtons_[i])
         {
-            selectedFieldParameterIndex_ = static_cast<int>(i);
+            processor_.SetSelectedModulationDestinationIndex(static_cast<int>(i));
+            selectedFieldParameterIndex_
+                = processor_.GetSelectedModulationDestinationIndex();
             UpdateFieldDrawerPageUi();
             repaint();
+            return;
+        }
+    }
+
+    for(std::size_t i = 0; i < modulationLaneEnableButtons_.size(); ++i)
+    {
+        if(button == &modulationLaneEnableButtons_[i])
+        {
+            auto lane = processor_.GetModulationLane(i);
+            lane.enabled = modulationLaneEnableButtons_[i].getToggleState()
+                           && lane.source
+                                  != daisyhost::HostModulationSource::kNone;
+            processor_.SetModulationLane(i, lane);
+            UpdateFieldDrawerPageUi();
+            return;
+        }
+        if(button == &modulationLaneClearButtons_[i])
+        {
+            processor_.SetModulationLane(i, {});
+            UpdateFieldDrawerPageUi();
             return;
         }
     }

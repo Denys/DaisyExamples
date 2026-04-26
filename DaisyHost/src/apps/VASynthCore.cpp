@@ -249,6 +249,20 @@ bool VASynthCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool VASynthCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                             float normalizedValue)
+{
+    const auto suffix = StripParameterId(parameterId);
+    if(suffix.empty()
+       || !sharedCore_.SetEffectiveParameterValue(suffix, normalizedValue))
+    {
+        return false;
+    }
+
+    RefreshSnapshots();
+    return true;
+}
+
 ParameterValueLookup VASynthCore::GetControlValue(const std::string& controlId) const
 {
     ParameterValueLookup lookup;

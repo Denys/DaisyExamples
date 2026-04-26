@@ -332,6 +332,19 @@ bool DaisyVASynthCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool DaisyVASynthCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                                  float normalizedValue)
+{
+    auto* parameter = impl_->FindMutable(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 bool DaisyVASynthCore::GetParameterValue(const std::string& parameterId,
                                          float*             normalizedValue) const
 {

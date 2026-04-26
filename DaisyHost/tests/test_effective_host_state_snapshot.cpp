@@ -205,6 +205,72 @@ TEST(EffectiveHostStateSnapshotTest, CarriesActiveNodeMetaControllers)
     EXPECT_FALSE(snapshot.metaControllers[1].stateful);
 }
 
+TEST(EffectiveHostStateSnapshotTest, CarriesModulationReadback)
+{
+    const std::vector<daisyhost::ParameterDescriptor> parameters;
+    const daisyhost::HostAutomationSlotBindings       automationSlots{};
+    const std::array<daisyhost::HostCvInputState, 4>  cvInputs{};
+    const std::array<daisyhost::HostGateInputState, 2> gateInputs{};
+    const daisyhost::HostAudioInputState              audioInput{};
+    const daisyhost::HostedAppPatchBindings           patchBindings{};
+    const std::vector<daisyhost::EffectiveHostNodeSummary> nodeSummaries = {
+        {"node0", "cloudseed", "CloudSeed", true, true, true},
+    };
+    const std::vector<daisyhost::EffectiveHostRouteSnapshot> routes;
+
+    daisyhost::EffectiveHostModulationDestinationSnapshot destination;
+    destination.nodeId = "node0";
+    destination.parameterId = "node0/param/mix";
+    destination.parameterLabel = "Mix";
+    destination.unitLabel = "%";
+    destination.baseNativeValue = 50.0f;
+    destination.resultNativeValue = 72.0f;
+    destination.resultNormalizedValue = 0.72f;
+    destination.clamped = false;
+    destination.lanes.push_back({0,
+                                 true,
+                                 daisyhost::HostModulationSource::kCv1,
+                                 0.0f,
+                                 40.0f,
+                                 0.0f,
+                                 0.55f,
+                                 22.0f});
+
+    const auto snapshot = daisyhost::BuildEffectiveHostStateSnapshot(
+        "daisy_field",
+        "node0",
+        1u,
+        "node0",
+        "node0",
+        "cloudseed",
+        "CloudSeed",
+        nodeSummaries,
+        routes,
+        patchBindings,
+        parameters,
+        automationSlots,
+        cvInputs,
+        gateInputs,
+        audioInput,
+        {},
+        {},
+        "node0/param/mix",
+        {destination});
+
+    EXPECT_EQ(snapshot.selectedModulationDestinationId, "node0/param/mix");
+    ASSERT_EQ(snapshot.modulationDestinations.size(), 1u);
+    EXPECT_EQ(snapshot.modulationDestinations[0].parameterId, "node0/param/mix");
+    EXPECT_FLOAT_EQ(snapshot.modulationDestinations[0].baseNativeValue, 50.0f);
+    EXPECT_FLOAT_EQ(snapshot.modulationDestinations[0].resultNativeValue, 72.0f);
+    ASSERT_EQ(snapshot.modulationDestinations[0].lanes.size(), 1u);
+    EXPECT_EQ(snapshot.modulationDestinations[0].lanes[0].source,
+              daisyhost::HostModulationSource::kCv1);
+    EXPECT_FLOAT_EQ(snapshot.modulationDestinations[0].lanes[0].liveSourceValue,
+                    0.55f);
+    EXPECT_FLOAT_EQ(snapshot.modulationDestinations[0].lanes[0].nativeContribution,
+                    22.0f);
+}
+
 TEST(EffectiveHostStateSnapshotTest, CarriesFieldExtendedSurfaceState)
 {
     const std::vector<daisyhost::ParameterDescriptor> parameters;

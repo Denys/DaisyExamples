@@ -219,6 +219,20 @@ bool PolyOscCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool PolyOscCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                             float normalizedValue)
+{
+    const auto suffix = StripParameterId(parameterId);
+    if(suffix.empty()
+       || !sharedCore_.SetEffectiveParameterValue(suffix, normalizedValue))
+    {
+        return false;
+    }
+
+    RefreshSnapshots();
+    return true;
+}
+
 ParameterValueLookup PolyOscCore::GetControlValue(const std::string& controlId) const
 {
     ParameterValueLookup lookup;

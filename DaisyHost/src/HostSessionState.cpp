@@ -73,7 +73,7 @@ void EnsureRackDefaults(HostSessionState* state)
 std::string HostSessionState::Serialize() const
 {
     std::ostringstream stream;
-    stream << "version 5\n";
+    stream << "version 6\n";
     stream << "board " << (boardId.empty() ? "daisy_patch" : boardId) << '\n';
     stream << "selected_node "
            << (selectedNodeId.empty() ? "node0" : selectedNodeId) << '\n';
@@ -124,6 +124,32 @@ std::string HostSessionState::Serialize() const
     for(const auto& route : routes)
     {
         stream << "route " << route.sourcePortId << ' ' << route.destPortId << '\n';
+    }
+
+    std::vector<HostSessionModulationLaneState> lanesToWrite = modulationLanes;
+    std::sort(lanesToWrite.begin(),
+              lanesToWrite.end(),
+              [](const HostSessionModulationLaneState& left,
+                 const HostSessionModulationLaneState& right) {
+                  if(left.nodeId != right.nodeId)
+                  {
+                      return left.nodeId < right.nodeId;
+                  }
+                  if(left.parameterId != right.parameterId)
+                  {
+                      return left.parameterId < right.parameterId;
+                  }
+                  return left.slotIndex < right.slotIndex;
+              });
+    for(const auto& laneState : lanesToWrite)
+    {
+        stream << "modlane " << laneState.nodeId << ' ' << laneState.parameterId
+               << ' ' << laneState.slotIndex << ' '
+               << (laneState.lane.enabled ? 1 : 0) << ' '
+               << HostModulationSourceToString(laneState.lane.source) << ' '
+               << laneState.lane.cvTargetMinimum << ' '
+               << laneState.lane.cvTargetMaximum << ' '
+               << laneState.lane.bipolarDepth << '\n';
     }
 
     stream << midiLearn.Serialize();
@@ -239,6 +265,24 @@ HostSessionState HostSessionState::Deserialize(const std::string& text)
             if(stream >> route.sourcePortId >> route.destPortId)
             {
                 state.routes.push_back(route);
+            }
+            continue;
+        }
+
+        if(tag == "modlane")
+        {
+            HostSessionModulationLaneState laneState;
+            int                           enabled = 0;
+            std::string                   source;
+            if(stream >> laneState.nodeId >> laneState.parameterId
+               >> laneState.slotIndex >> enabled >> source
+               >> laneState.lane.cvTargetMinimum
+               >> laneState.lane.cvTargetMaximum
+               >> laneState.lane.bipolarDepth)
+            {
+                laneState.lane.enabled = enabled != 0;
+                laneState.lane.source  = HostModulationSourceFromString(source);
+                state.modulationLanes.push_back(laneState);
             }
             continue;
         }

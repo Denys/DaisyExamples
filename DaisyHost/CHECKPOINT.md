@@ -119,13 +119,14 @@ Current shell note:
   timeout on an otherwise healthy launch
 - result: the rack freeze gate is no longer blocked in this checkout, the
   Daisy Field board-support shell, host-side Field native controls, Field
-  extended host surface support, host-side `polyosc` app import, and
-  `subharmoniq` hosted app are implemented, native `DaisyHostCLI.exe` is
-  build/gate-verified for agent and CI workflows, the latest host gate passed
-  `202/202`, the first Field firmware adapter (`field/MultiDelay`) is
-  build-verified and ST-Link flash-verified, and `field/SubharmoniqField` is
-  build/QAE/ST-Link flash-verified with host-tested playable defaults; both
-  Field hardware manual checklists remain pending
+  extended host surface support, host-side `polyosc` app import,
+  `subharmoniq` hosted app, and v1 host-side modulation lanes are implemented,
+  native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
+  the latest host gate passed `211/211`, the first Field firmware adapter
+  (`field/MultiDelay`) is build-verified and ST-Link flash-verified, and
+  `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
+  host-tested playable defaults; both Field hardware manual checklists remain
+  pending
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -148,12 +149,12 @@ from `patch/Torus/`.
 
 - Last fully green DaisyHost host build/test verification rerun from this
   checkout: 2026-04-26
-- Verified commands/results in the current 2026-04-26 TF12 verification/build
-  hardening pass:
-  - manager-readable result: TF12 is a documentation and verification adoption
-    slice, not a new CLI command or product-behavior pass. The current truth is
-    the fresh `202/202` full host gate, and older `196/196` and `197/197`
-    results remain dated historical evidence only.
+- Verified commands/results in the current 2026-04-26 modulation-lane
+  architecture pass:
+  - manager-readable result: DaisyHost now has v1 host-side modulation lanes
+    with a fresh `211/211` full host gate. The earlier TF12 `202/202` gate and
+    older `196/196` and `197/197` results remain dated historical evidence
+    only.
   - preflight:
     - `git status --short`: reviewed; checkout is broadly dirty across host,
       docs, firmware, submodules, build outputs, and untracked files
@@ -166,7 +167,7 @@ from `patch/Torus/`.
       - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
         passed
       - `ctest --test-dir build -C Release --output-on-failure`: passed,
-        `202/202`
+        `211/211`
   - direct DaisyHostCLI adoption checks:
     - `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
       passed
@@ -859,9 +860,9 @@ The following paths were verified from this checkout on 2026-04-23:
     `DaisyHost/build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   - `ctest` currently launches unit cases through
     `tests/run_unit_test_payload.py`
-  - historical note: the later TF12 pass supersedes this as current checkout
-    truth with a 2026-04-26 `202/202` gate including the CLI CTest smoke
-    entries
+  - historical note: the later modulation-lane pass supersedes this as current
+    checkout truth with a 2026-04-26 `211/211` gate; the earlier TF12
+    `202/202` gate remains the CLI adoption evidence point
 
 ## Current Hosted Apps
 
@@ -1174,9 +1175,10 @@ Version/change tracking target behavior:
 ## Current Notes
 
 - The last fully green `build_host.cmd` host-gate rerun from this checkout is
-  now the 2026-04-26 TF12 verification/build hardening `202/202` pass.
-- Older `159/159`, `168/168`, `196/196`, and `197/197` counts remain useful as
-  dated historical ledger evidence, but they are not the current checkout gate.
+  now the 2026-04-26 modulation-lane architecture `211/211` pass.
+- Older `159/159`, `168/168`, `196/196`, `197/197`, and `202/202` counts
+  remain useful as dated historical ledger evidence, but they are not the
+  current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path
   discovery by using a wider process-query timeout before declaring a false
   launch timeout.

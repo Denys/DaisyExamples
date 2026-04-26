@@ -965,6 +965,20 @@ bool DaisyCloudSeedCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool DaisyCloudSeedCore::SetEffectiveParameterValue(
+    const std::string& parameterId,
+    float              normalizedValue)
+{
+    auto* parameter = impl_->FindParameter(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 bool DaisyCloudSeedCore::GetParameterValue(const std::string& parameterId,
                                            float*             normalizedValue) const
 {

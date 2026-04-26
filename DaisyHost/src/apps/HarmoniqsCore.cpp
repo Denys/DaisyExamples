@@ -256,6 +256,24 @@ bool HarmoniqsCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool HarmoniqsCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                               float normalizedValue)
+{
+    const auto suffix = StripParameterId(parameterId);
+    if(suffix.empty())
+    {
+        return false;
+    }
+
+    if(!sharedCore_.SetEffectiveParameterValue(suffix, normalizedValue))
+    {
+        return false;
+    }
+
+    RefreshSnapshots();
+    return true;
+}
+
 ParameterValueLookup HarmoniqsCore::GetControlValue(const std::string& controlId) const
 {
     ParameterValueLookup lookup;

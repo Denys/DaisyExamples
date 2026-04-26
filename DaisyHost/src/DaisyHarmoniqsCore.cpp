@@ -256,6 +256,20 @@ bool DaisyHarmoniqsCore::SetParameterValue(const std::string& parameterId,
     return true;
 }
 
+bool DaisyHarmoniqsCore::SetEffectiveParameterValue(
+    const std::string& parameterId,
+    float              normalizedValue)
+{
+    auto* parameter = impl_->FindMutable(parameterId);
+    if(parameter == nullptr || parameter->stepCount > 0)
+    {
+        return false;
+    }
+
+    parameter->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 bool DaisyHarmoniqsCore::GetParameterValue(const std::string& parameterId,
                                            float*             normalizedValue) const
 {

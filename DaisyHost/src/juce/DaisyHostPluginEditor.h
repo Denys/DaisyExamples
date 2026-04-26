@@ -89,6 +89,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void LayoutFieldControls();
     void UpdateFieldControlUi();
     void UpdateFieldDrawerPageUi();
+    void UpdateModulationLaneUi();
     bool IsInteractiveFieldSurfaceControl(const std::string& surfaceId) const;
     void ReleaseComputerKeyboardNotes();
     void UpdateComputerKeyboardUi();
@@ -110,6 +111,16 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     std::array<juce::TextButton, daisyhost::kDaisyFieldSwitchCount> fieldSwitchButtons_;
     std::array<juce::TextButton, 3> fieldDrawerPageButtons_;
     std::array<juce::TextButton, 16> fieldParameterButtons_;
+    std::array<juce::Label, daisyhost::kHostModulationLaneCount>
+        modulationLaneLabels_;
+    std::array<juce::ComboBox, daisyhost::kHostModulationLaneCount>
+        modulationLaneSourceBoxes_;
+    std::array<juce::Slider, daisyhost::kHostModulationLaneCount>
+        modulationLaneAmountSliders_;
+    std::array<juce::ToggleButton, daisyhost::kHostModulationLaneCount>
+        modulationLaneEnableButtons_;
+    std::array<juce::TextButton, daisyhost::kHostModulationLaneCount>
+        modulationLaneClearButtons_;
     juce::TextButton              encoderPressButton_;
     juce::ToggleButton            computerKeyboardToggle_;
     juce::Label                   computerKeyboardLabel_;

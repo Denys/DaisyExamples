@@ -795,6 +795,24 @@ bool TorusCore::SetParameterValue(const std::string& parameterId, float normaliz
     return true;
 }
 
+bool TorusCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                           float normalizedValue)
+{
+    const auto it = std::find_if(
+        impl_->parameters.begin(),
+        impl_->parameters.end(),
+        [&parameterId](const ParameterDescriptor& descriptor) {
+            return descriptor.id == parameterId;
+        });
+    if(it == impl_->parameters.end() || it->stepCount > 0)
+    {
+        return false;
+    }
+
+    it->effectiveNormalizedValue = Clamp01(normalizedValue);
+    return true;
+}
+
 ParameterValueLookup TorusCore::GetControlValue(const std::string& controlId) const
 {
     for(std::size_t i = 0; i < 4; ++i)

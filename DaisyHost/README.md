@@ -364,10 +364,11 @@ Outputs:
 Current local verification caveat:
 
 - the wrapper-driven full host gate reran green on 2026-04-26 during the
-  TF12 verification/build hardening pass: `cmd /c build_host.cmd` passed and
-  `ctest` passed `202/202`; the direct DaisyHostCLI agent/CI adoption checks
-  also passed. Older `168/168`, `196/196`, and `197/197` results are retained
-  only as dated historical evidence.
+  modulation-lane architecture pass: `cmd /c build_host.cmd` passed and
+  `ctest` passed `211/211`; the direct DaisyHostCLI agent/CI adoption checks
+  also passed during the earlier TF12 pass. Older `168/168`, `196/196`,
+  `197/197`, and `202/202` results are retained only as dated historical
+  evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch

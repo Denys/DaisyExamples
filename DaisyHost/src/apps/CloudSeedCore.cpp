@@ -338,6 +338,24 @@ bool CloudSeedCore::SetParameterValue(const std::string& parameterId,
     return changed;
 }
 
+bool CloudSeedCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                               float normalizedValue)
+{
+    const std::string suffix = StripParameterId(parameterId);
+    if(suffix.empty())
+    {
+        return false;
+    }
+
+    const bool changed
+        = sharedCore_.SetEffectiveParameterValue(suffix, normalizedValue);
+    if(changed)
+    {
+        RefreshSnapshots();
+    }
+    return changed;
+}
+
 ParameterValueLookup CloudSeedCore::GetControlValue(const std::string& controlId) const
 {
     const std::string suffix = StripControlId(controlId);

@@ -4,13 +4,36 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- add DaisyHost v1 host-side modulation lanes:
+  - destinations are continuous hosted-app parameters with native min/max,
+    unit, precision, and discrete-target exclusion metadata
+  - each destination supports up to four fixed lanes sourced from `CV 1-4` or
+    `LFO 1-4`, evaluated as native-unit sum plus clamp over the stored base
+    parameter
+  - hosted apps now expose transient effective-parameter override hooks so
+    modulation changes DSP/readback without overwriting knob, menu,
+    automation, or session base values
+  - session persistence moves to `HostSessionState` v6 with `modlane` records
+    while v1-v5 sessions continue to load with no modulation lanes
+  - effective-state snapshots and CLI JSON now report selected modulation
+    destination, lane config, live source value, native contribution,
+    base/result native values, normalized result, and clamped state
+  - Daisy Field drawer pages are renamed `Play`, `Mod`, and `Rack`; `Mod`
+    provides destination selection plus compact source/depth/bypass/clear lane
+    rows
+- fix Daisy Field A/B key buttons becoming disabled for `subharmoniq`:
+  - Field key UI enablement now follows the Field key binding availability
+    contract instead of requiring a MIDI note number
+  - keeps generic apps clickable through MIDI-note bindings while allowing
+    `subharmoniq` A/B keys to remain clickable as sequencer/rhythm/transport
+    menu actions
 - harden TF12 verification and CLI adoption docs:
-  - refresh current checkout verification truth to the 2026-04-26 `202/202`
+  - refresh current checkout verification truth to the 2026-04-26 `211/211`
     `build_host.cmd` gate
   - document the DaisyHostCLI agent/CI smoke sequence using existing commands
     without adding new CLI surface
-  - keep older `159/159`, `168/168`, `196/196`, and `197/197` counts as dated
-    historical evidence only
+  - keep older `159/159`, `168/168`, `196/196`, `197/197`, and `202/202`
+    counts as dated historical evidence only
 - add native `DaisyHostCLI.exe` for agent/CI workflows:
   - discovery commands for hosted apps, board profiles, and test input modes
   - app/board description JSON for scenario generation and control inspection

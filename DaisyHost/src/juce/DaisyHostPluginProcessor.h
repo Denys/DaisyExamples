@@ -96,6 +96,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::string GetFieldKnobTargetId(std::size_t index) const;
     void SetFieldKnobValue(std::size_t index, float normalizedValue);
     int  GetFieldKeyMidiNote(std::size_t index) const;
+    bool GetFieldKeyAvailable(std::size_t index) const;
     bool GetFieldKeyPressed(std::size_t index) const;
     void SetFieldKeyPressed(std::size_t index, bool pressed);
     float GetFieldCvOutputValue(std::size_t index) const;
@@ -142,6 +143,16 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::vector<daisyhost::ParameterDescriptor> GetParameterSnapshot() const;
     std::vector<daisyhost::BoardSurfaceBinding>
     GetFieldPublicParameterBindings() const;
+    std::size_t GetModulationDestinationCount() const;
+    juce::String GetModulationDestinationLabel(std::size_t index) const;
+    int GetSelectedModulationDestinationIndex() const;
+    void SetSelectedModulationDestinationIndex(int index);
+    int GetModulationLaneCount() const;
+    daisyhost::HostModulationLane GetModulationLane(std::size_t slotIndex) const;
+    void SetModulationLane(std::size_t slotIndex,
+                           const daisyhost::HostModulationLane& lane);
+    int GetActiveModulationLaneCountForParameter(
+        const std::string& parameterId) const;
     int GetFieldDrawerPage() const;
     juce::String GetFieldDrawerPageLabel(int page) const;
     void SetFieldDrawerPage(int page);
@@ -209,6 +220,11 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
         std::vector<daisyhost::ParameterDescriptor> latestParameters;
         std::vector<daisyhost::MetaControllerDescriptor> latestMetaControllers;
         daisyhost::HostAutomationSlotBindings      automationSlotBindings{};
+        std::unordered_map<std::string,
+                           std::array<daisyhost::HostModulationLane,
+                                      daisyhost::kHostModulationLaneCount>>
+            modulationLanes;
+        std::string selectedModulationDestinationId;
         std::unordered_map<std::string, float>     pendingMenuValues;
     };
 
@@ -225,6 +241,14 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     void UpdateSelectedBoardProfile();
     void UpdateRackNodeSnapshots(RackNodeState& node);
     void StepRackNodeCvGenerators(RackNodeState& node, double blockDurationSeconds);
+    daisyhost::HostModulationSourceValues BuildModulationSourceValues(
+        const RackNodeState& node) const;
+    void ApplyRackNodeModulation(RackNodeState& node);
+    std::vector<daisyhost::EffectiveHostModulationDestinationSnapshot>
+    BuildModulationSnapshots(const RackNodeState& node) const;
+    std::vector<daisyhost::ParameterDescriptor> GetEligibleModulationDestinations(
+        const RackNodeState& node) const;
+    void EnsureSelectedModulationDestination(RackNodeState& node);
     void ApplyRackNodeVirtualPortStateToCore(
         RackNodeState& node,
         const std::vector<daisyhost::MidiMessageEvent>& midiEvents);
@@ -326,6 +350,11 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::vector<daisyhost::ParameterDescriptor> latestParameters_;
     std::vector<daisyhost::MetaControllerDescriptor> latestMetaControllers_;
     daisyhost::HostAutomationSlotBindings automationSlotBindings_{};
+    std::unordered_map<std::string,
+                       std::array<daisyhost::HostModulationLane,
+                                  daisyhost::kHostModulationLaneCount>>
+        modulationLanes_;
+    std::string selectedModulationDestinationId_;
     mutable std::mutex       midiLearnMutex_;
     daisyhost::MidiLearnMap  midiLearnMap_;
     std::string              learningTargetId_;

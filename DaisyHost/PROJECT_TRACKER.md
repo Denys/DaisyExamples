@@ -12,7 +12,7 @@ Latest fully green host gate from this checkout:
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `202/202`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `211/211`
 - smoke tests included:
   - `DaisyHostStandaloneSmoke`
   - `DaisyHostRenderSmoke`
@@ -21,6 +21,32 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliDescribeBoard`
   - `DaisyHostCliValidateScenario`
   - `DaisyHostCliRender`
+
+Latest implementation iteration:
+
+- Date: 2026-04-26
+- Thread: main integrator
+- Slice: DaisyHost host modulation-lane architecture
+- Affected surfaces:
+  - `HostModulation` helper, `ParameterDescriptor` native metadata, hosted-app
+    effective-parameter overrides, processor rack-node modulation evaluation,
+    `HostSessionState` v6 persistence, effective snapshot/CLI JSON readback,
+    and compact Field `Mod` drawer UI
+- Exact checks run:
+  - `cmake --build build --config Debug --target unit_tests -- /m:1`: passed
+  - `ctest --test-dir build -C Debug --output-on-failure -R "(Modulation|HostSessionState|EffectiveHostStateSnapshot|BoardControlMapping|SignalGenerator|MultiDelayCore)"`: passed, `61/61`
+  - `cmake --build build --config Debug --target DaisyHostPatch_Standalone -- /m:1`: passed
+  - `cmd /c build_host.cmd`: passed after stopping a stale running
+    `DaisyHost Patch` process that locked the Release standalone artifact;
+    Release `ctest` passed `211/211`
+- Notes:
+  - Raw MSBuild needed the local `Path` / `PATH` environment sanitization used
+    in prior DaisyHost verification passes.
+  - Debug standalone build still reports existing JUCE/editor `C4702`
+    unreachable-code warnings.
+  - First wrapper-gate attempt failed with `LNK1104` because a running
+    `DaisyHost Patch.exe` process locked the Release standalone artifact; the
+    rerun passed after stopping that process.
 
 Current decision-useful status:
 
@@ -88,6 +114,20 @@ Current decision-useful status:
   `FIELD_PROJECT_TRACKER.md`.
 - the next forward portfolio is tracked in `WORKSTREAM_TRACKER.md` and mirrored
   below in this file
+- DaisyHost now has a host-side v1 modulation-lane architecture:
+  - destinations are eligible continuous hosted-app parameters
+  - each destination has up to four lane slots
+  - sources are `CV 1-4` and `LFO 1-4`
+  - evaluation is native-unit sum plus clamp over the stored base parameter
+  - hosted apps expose transient effective-parameter override hooks so base
+    values remain controlled by knobs/menu/automation/session
+  - session format is `version 6` with legacy v1-v5 sessions loading with no
+    modulation lanes
+  - snapshots and CLI JSON include selected destination, lanes, live source
+    value, native contribution, base/result native values, normalized result,
+    and clamped status
+  - the Field drawer labels are now `Play`, `Mod`, and `Rack`; `Mod` provides
+    destination selection and compact lane rows
 - TF12 verification/build hardening is implemented as a docs and adoption pass:
   the current build target list includes `DaisyHostCLI`, the documented
   agent/CI CLI sequence passed directly, and no new CLI commands were added.
@@ -240,7 +280,7 @@ the next portfolio remain readable in one file.
 - `WS1` through `WS7` planned milestone scope is complete enough to freeze in
   this checkout.
 - Latest full host gate:
-  `cmd /c build_host.cmd` passed on 2026-04-26 and `ctest` passed `202/202`.
+  `cmd /c build_host.cmd` passed on 2026-04-26 and `ctest` passed `211/211`.
 - Daisy Field board-support shell, host-side Field native controls, and Field
   extended host surface support are now implemented:
   `daisy_field` flows through Hub, session, standalone startup, render, and
@@ -344,7 +384,8 @@ Cross-links:                                                             |
 
 | Date | Thread / agent | Workstream | Files / slice | Tests run | Docs reviewed | Blockers | Handoff |
 |---|---|---|---|---|---|---|---|
-| 2026-04-26 | Local Codex thread | TF12 verification/build hardening adoption slice | `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `WORKSTREAM_TRACKER.md`, `FIELD_PROJECT_TRACKER.md`, `README.md`, `CHANGELOG.md`, `training/README.md`, `SKILL_PLAYBOOK.md` | Green: `git status --short` and `git diff --name-status --` captured the broad dirty checkout; stale-count search reviewed `159/159`, `168/168`, `175/175`, `196/196`, and `197/197`; `cmd /c build_host.cmd` passed with Release `ctest` `202/202`; direct Release CLI checks passed for `doctor`, `list-apps`, `describe-app cloudseed`, `describe-board daisy_field`, `validate-scenario training\examples\multidelay_smoke.json`, `render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay` with checksum `c9c3f665e6a0dd2b`, and `smoke --mode render`; final scoped `git diff --check` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `FIELD_PROJECT_TRACKER.md`, `CHANGELOG.md`, `training/README.md`, `SKILL_PLAYBOOK.md`, current dirty-tree and stale-count searches | Shared checkout remains broadly dirty across host, docs, firmware, submodules, build outputs, and untracked files; TF12 did not revert, stage, delete, or normalize unrelated work. Manual DAW/VST3, computer-side USB MIDI, and hands-on Field hardware validation were not run. | Current verification truth is now `202/202`; DaisyHostCLI agent/CI usage is documented as adoption of existing commands, not a new command-expansion pass. Next safe step is to use the documented CLI sequence from CI/Codex workflows and add commands only after a real automation gap appears. |
+| 2026-04-26 | Local Codex thread | DaisyHost Subharmoniq Field A/B key UI enablement fix | `include/daisyhost/BoardControlMapping.h`, `src/BoardControlMapping.cpp`, `src/juce/DaisyHostPluginProcessor.h`, `src/juce/DaisyHostPluginProcessor.cpp`, `src/juce/DaisyHostPluginEditor.cpp`, `tests/test_board_control_mapping.cpp`, tracking docs | Red: `cmake --build build --config Debug --target unit_tests -- /m:1` failed because `daisyhost::IsDaisyFieldKeyInteractive` did not exist. Green: `cmake --build build --config Debug --target unit_tests -- /m:1` passed; `ctest --test-dir build -C Debug --output-on-failure -R "(BoardControlMappingTest\|SubharmoniqCoreTest\|RenderRuntimeTest.SubharmoniqFieldB7StartsAudioAfterA7RhythmEdit)"` passed `34/34`; `cmake --build build --config Debug --target DaisyHostPatch_Standalone -- /m:1` passed with existing editor C4702 warnings. | `DaisyExamples/AGENTS.md`, `DaisyExamples/LATEST_PROJECTS.md`, `START_FIRMWARE_SESSION.md`, `DaisyHost/AGENTS.md`, `README.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, Field editor/processor/mapping source | No code blocker. Visual standalone click-through was not manually inspected in a visible GUI session; the standalone target compiles the changed editor path. | Root cause: Field key buttons were enabled only when `GetFieldKeyMidiNote(i) >= 0`, so `subharmoniq` menu-action keys with `midiNote == -1` were drawn disabled. The editor now enables keys via the binding interactivity contract, preserving generic MIDI-note keys and enabling `subharmoniq` A/B menu-action keys. |
+| 2026-04-26 | Local Codex thread | TF12 verification/build hardening adoption slice | `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `WORKSTREAM_TRACKER.md`, `FIELD_PROJECT_TRACKER.md`, `README.md`, `CHANGELOG.md`, `training/README.md`, `SKILL_PLAYBOOK.md` | Green: `git status --short` and `git diff --name-status --` captured the broad dirty checkout; stale-count search reviewed `159/159`, `168/168`, `175/175`, `196/196`, and `197/197`; `cmd /c build_host.cmd` passed with Release `ctest` `202/202`; direct Release CLI checks passed for `doctor`, `list-apps`, `describe-app cloudseed`, `describe-board daisy_field`, `validate-scenario training\examples\multidelay_smoke.json`, `render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay` with checksum `c9c3f665e6a0dd2b`, and `smoke --mode render`; final scoped `git diff --check` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `FIELD_PROJECT_TRACKER.md`, `CHANGELOG.md`, `training/README.md`, `SKILL_PLAYBOOK.md`, current dirty-tree and stale-count searches | Shared checkout remains broadly dirty across host, docs, firmware, submodules, build outputs, and untracked files; TF12 did not revert, stage, delete, or normalize unrelated work. Manual DAW/VST3, computer-side USB MIDI, and hands-on Field hardware validation were not run. | At that point the verification truth moved to `202/202`; DaisyHostCLI agent/CI usage is documented as adoption of existing commands, not a new command-expansion pass. Next safe step is to use the documented CLI sequence from CI/Codex workflows and add commands only after a real automation gap appears. |
 | 2026-04-26 | Local Codex thread | DaisyHost Subharmoniq Field key/audio regression coverage | `tests/test_subharmoniq_core.cpp`, `tests/test_render_runtime.cpp`, tracking docs | Green: `cmake --build build --config Debug --target unit_tests` passed; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|RenderRuntimeTest.SubharmoniqFieldB7StartsAudioAfterA7RhythmEdit)"` passed `11/11`, including direct core proof that `A7` then `B7` advances both sequencers and produces finite audio, plus render-runtime proof that `surface_control_set` for `field_key_a_7` then `field_key_b_7` produces non-silent stereo output through the DaisyHost `daisy_field` surface path. | `DaisyExamples/AGENTS.md`, `DaisyExamples/LATEST_PROJECTS.md`, `START_FIRMWARE_SESSION.md`, `field/SubharmoniqField/CONTROLS.md`, `DaisyHost/AGENTS.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, render/core tests and runtime source | No code blocker in the automated host path. This did not include physical button presses or analog audio capture from hardware. | Host-side behavior is now covered: `A7` is a rhythm-assignment key, not a transport key; `B7` starts/stops play and produces audio in both direct app-core and DaisyHost Field surface render paths. Manual hardware confirmation still requires pressing physical `B7` and listening/measuring audio output. |
 | 2026-04-26 | Local Codex thread | SubharmoniqField A/B row correction and DaisyHost Subharmoniq Field-key actions | `include/daisyhost/HostedAppCore.h`, `include/daisyhost/apps/SubharmoniqCore.h`, `src/apps/SubharmoniqCore.cpp`, `src/BoardControlMapping.cpp`, `src/CliPayloads.cpp`, `src/juce/DaisyHostPluginProcessor.cpp`, `src/RenderRuntime.cpp`, `tests/test_board_control_mapping.cpp`, `tests/test_subharmoniq_core.cpp`, `../field/SubharmoniqField/SubharmoniqField.cpp`, `../field/SubharmoniqField/CONTROLS.md`, tracking docs | Red: `cmake --build build --config Debug --target unit_tests` failed because `HostedAppPatchBindings` had no `fieldKeyMenuItemIds` / `fieldKeyDetailLabels` contract. Green: `cmake --build build --config Debug --target unit_tests` passed; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|BoardControlMappingTest\\.SubharmoniqFieldKeysMapToDedicatedPerformanceActions\|BoardControlMappingTest\\.FieldKeysMapChromaticallyFromKeyboardOctave)"` passed `11/11`; `make` from `field/SubharmoniqField` passed with FLASH `126072 B` / `96.19%`; `$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .` passed with `0 error(s), 0 warning(s)`; `make program` passed through OpenOCD with STLINK `V3J7M2`, target voltage `3.274751`, `** Verified OK **`, and target reset; a 2s OpenOCD check halted in Thread mode, not HardFault, then reset/reran the target. | `DaisyExamples/AGENTS.md`, `DaisyExamples/LATEST_PROJECTS.md`, `START_FIRMWARE_SESSION.md`, `field/SubharmoniqField/CONTROLS.md`, `DaisyHost/AGENTS.md`, `README.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md` | No code blocker. Full wrapper host gate and hands-on button/audio validation were not run in this pass. | Physical Field `B7`/`B8` should now toggle play/reset; physical `A7`/`A8` should be rhythm keys again. DaisyHost `subharmoniq` on `daisy_field` now exposes A/B keys as app actions while other hosted apps keep chromatic MIDI key behavior. |
 | 2026-04-26 | Local Codex thread | SubharmoniqField ST-Link flash verification | `../field/SubharmoniqField/README.md`, `../field/SubharmoniqField/CONTROLS.md`, `CHECKPOINT.md`, `FIELD_PROJECT_TRACKER.md`, `PROJECT_TRACKER.md`, `README.md`, `CHANGELOG.md` | Green: `make` from `field/SubharmoniqField` passed as up to date; `$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .` passed with `0 error(s), 0 warning(s)`; `make program` passed through OpenOCD with STLINK `V3J7M2`, target voltage `3.263618`, `** Verified OK **`, and target reset. | `DaisyExamples/AGENTS.md`, `field/SubharmoniqField/README.md`, `field/SubharmoniqField/CONTROLS.md`, `DaisyHost/CHECKPOINT.md`, `DaisyHost/FIELD_PROJECT_TRACKER.md`, `DaisyHost/PROJECT_TRACKER.md`, `DaisyHost/README.md`, `DaisyHost/CHANGELOG.md` | The Field firmware is now build/QAE/ST-Link flash-verified, but manual audio/control/CV/MIDI/OLED/LED validation was not performed by Codex. | Complete the `field/SubharmoniqField/CONTROLS.md` hands-on checklist: B7 start, MIDI note, Gate In clock, K1-K8 pickup/pages, SW1/SW2, A/B keys, CV outs, Gate Out, OLED, LEDs, and audible output level. |
@@ -448,7 +489,7 @@ The D2 source and compiled SVG visualize, in a stacked screen-friendly layout:
 | Function | What it should do | What is current limitations |
 |---|---|---|
 | Documentation alignment | Make local docs agree on what is actually verified in this checkout. | The host gate and direct-entrypoint smoke harness are now rerun from this checkout, but manual DAW/runtime checks and any future firmware parity reruns still need their own dated evidence. |
-| Repeatable checkout verification | Let a fresh checkout rerun the documented validation commands without manual environment repair. | `build_host.cmd` now handles both `Path`-only and duplicate-`PATH` shells, the unit-test payload emits under `build/unit_test_bin/<run-tag>/<config>/`, the latest wrapper-driven Release gate passed `202/202` in this checkout, and the documented DaisyHostCLI agent/CI adoption checks passed directly. |
+| Repeatable checkout verification | Let a fresh checkout rerun the documented validation commands without manual environment repair. | `build_host.cmd` now handles both `Path`-only and duplicate-`PATH` shells, the unit-test payload emits under `build/unit_test_bin/<run-tag>/<config>/`, the latest wrapper-driven Release gate passed `211/211` in this checkout, and the documented DaisyHostCLI agent/CI adoption checks passed directly during the TF12 pass. |
 | DAW and standalone smoke validation | Reconfirm plugin load, GUI behavior, and hub dispatch against current binaries. | Direct-entrypoint standalone startup stability and render smoke are now automated, but DAW-side `VST3` load, exhaustive GUI click-through, and hub manual pass remain intentionally deferred until post-WS7. |
 | DAW automation bridge expansion | Extend the new five-slot bank into richer host labeling, broader parameter coverage, or future app-specific surfaces without breaking saved automation. | W4 now lands the fixed five-slot bridge, but DAW-visible names remain generic and only the top five automatable parameters are surfaced in v1. |
 | Patch firmware parity check | Reconfirm shared-core behavior against `patch/MultiDelay/` and `patch/Torus/` from the current checkout. | Fresh `make` passes are now recorded for both firmware references, but clean rebuilds on Windows still need project-specific handling because `patch/Torus` `make clean` delegates to `rm`. |

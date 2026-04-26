@@ -10,6 +10,7 @@
 #include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/HostAutomationBridge.h"
+#include "daisyhost/HostModulation.h"
 #include "daisyhost/TestInputSignal.h"
 
 namespace daisyhost
@@ -246,6 +247,10 @@ juce::var ParameterVar(const ParameterDescriptor& parameter)
     object->setProperty("automatable", parameter.automatable);
     object->setProperty("stateful", parameter.stateful);
     object->setProperty("menuEditable", parameter.menuEditable);
+    object->setProperty("nativeMinimum", parameter.nativeMinimum);
+    object->setProperty("nativeMaximum", parameter.nativeMaximum);
+    object->setProperty("nativeDefault", parameter.nativeDefault);
+    object->setProperty("nativePrecision", parameter.nativePrecision);
     return juce::var(object.release());
 }
 
@@ -463,6 +468,40 @@ juce::var RouteVar(const EffectiveHostRouteSnapshot& route)
     auto object = std::make_unique<juce::DynamicObject>();
     object->setProperty("sourcePortId", StringVar(route.sourcePortId));
     object->setProperty("destPortId", StringVar(route.destPortId));
+    return juce::var(object.release());
+}
+
+juce::var ModulationLaneVar(const EffectiveHostModulationLaneSnapshot& lane)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("slotIndex", lane.slotIndex);
+    object->setProperty("enabled", lane.enabled);
+    object->setProperty("source",
+                        StringVar(HostModulationSourceToString(lane.source)));
+    object->setProperty("cvTargetMinimum", lane.cvTargetMinimum);
+    object->setProperty("cvTargetMaximum", lane.cvTargetMaximum);
+    object->setProperty("bipolarDepth", lane.bipolarDepth);
+    object->setProperty("liveSourceValue", lane.liveSourceValue);
+    object->setProperty("nativeContribution", lane.nativeContribution);
+    return juce::var(object.release());
+}
+
+juce::var ModulationDestinationVar(
+    const EffectiveHostModulationDestinationSnapshot& destination)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("nodeId", StringVar(destination.nodeId));
+    object->setProperty("parameterId", StringVar(destination.parameterId));
+    object->setProperty("parameterLabel", StringVar(destination.parameterLabel));
+    object->setProperty("unitLabel", StringVar(destination.unitLabel));
+    object->setProperty("baseNativeValue", destination.baseNativeValue);
+    object->setProperty("resultNativeValue", destination.resultNativeValue);
+    object->setProperty("resultNormalizedValue",
+                        destination.resultNormalizedValue);
+    object->setProperty("clamped", destination.clamped);
+    object->setProperty("lanes",
+                        juce::var(VectorVar(destination.lanes,
+                                            ModulationLaneVar)));
     return juce::var(object.release());
 }
 
@@ -845,6 +884,11 @@ std::string SerializeSnapshotPayloadJson(const EffectiveHostStateSnapshot& snaps
     root->setProperty("gateInputs", juce::var(gateInputs));
     root->setProperty("audioInput", AudioInputVar(snapshot.audioInput));
     root->setProperty("fieldSurface", FieldSurfaceVar(snapshot.fieldSurface));
+    root->setProperty("selectedModulationDestinationId",
+                      StringVar(snapshot.selectedModulationDestinationId));
+    root->setProperty("modulationDestinations",
+                      juce::var(VectorVar(snapshot.modulationDestinations,
+                                          ModulationDestinationVar)));
     return ToJson(juce::var(root.release()));
 }
 } // namespace cli

@@ -99,6 +99,8 @@ bool IsDaisyFieldCvTargetIdSafe(const std::string& targetId);
 
 bool ShouldForwardDaisyFieldCvInput(const std::string& latchedTargetId);
 
+bool IsDaisyFieldKeyInteractive(const BoardSurfaceBinding& binding);
+
 DaisyFieldDrawerPage StepDaisyFieldDrawerPage(DaisyFieldDrawerPage page,
                                                int                  delta);
 
