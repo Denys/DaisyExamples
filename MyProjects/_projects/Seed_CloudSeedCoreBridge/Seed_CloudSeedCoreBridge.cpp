@@ -85,6 +85,7 @@ int main(void)
 
     engine.Init(seed.AudioSampleRate());
 
+    seed.StartAdc();
     seed.StartAudio(AudioCallback);
 
     while(true)

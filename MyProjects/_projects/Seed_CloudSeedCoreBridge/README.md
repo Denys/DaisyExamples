@@ -56,25 +56,9 @@ Recommended Field knob map:
 These directly map to the same `ControlModel` used by Seed.
 
 
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-Detailed architecture schematic: see `CLOUDSEED_BLOCK_DIAGRAM.md` for signal flow, expandable DSP primitives/classes, and control ownership.
-=======
 Detailed architecture schematics: see `CLOUDSEED_BLOCK_DIAGRAM.md` (Markdown) and `CLOUDSEED_BLOCK_DIAGRAM.html` (interactive HTML) for signal flow, expandable DSP primitives/classes, and control ownership.
 
 BKS-based parameter grouping reference: `CLOUDSEED_PARAMETER_BREAKDOWN_BKS.md` (derived from `bkshepherd/DaisySeedProjects` `Parameter2`).
->>>>>>> theirs
-=======
-Detailed architecture schematics: see `CLOUDSEED_BLOCK_DIAGRAM.md` (Markdown) and `CLOUDSEED_BLOCK_DIAGRAM.html` (interactive HTML) for signal flow, expandable DSP primitives/classes, and control ownership.
-
-BKS-based parameter grouping reference: `CLOUDSEED_PARAMETER_BREAKDOWN_BKS.md` (derived from `bkshepherd/DaisySeedProjects` `Parameter2`).
->>>>>>> theirs
-=======
-Detailed architecture schematics: see `CLOUDSEED_BLOCK_DIAGRAM.md` (Markdown) and `CLOUDSEED_BLOCK_DIAGRAM.html` (interactive HTML) for signal flow, expandable DSP primitives/classes, and control ownership.
-
-BKS-based parameter grouping reference: `CLOUDSEED_PARAMETER_BREAKDOWN_BKS.md` (derived from `bkshepherd/DaisySeedProjects` `Parameter2`).
->>>>>>> theirs
 
 ## Interactive parameter organization
 

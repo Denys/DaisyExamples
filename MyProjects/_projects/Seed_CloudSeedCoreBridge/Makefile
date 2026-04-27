@@ -6,6 +6,7 @@ CPP_SOURCES = Seed_CloudSeedCoreBridge.cpp
 
 # Use fallback engine by default. Set to 1 after CloudSeedCore import is wired.
 CPPFLAGS += -DUSE_CLOUDSEEDCORE=0
+USE_DAISYSP_LGPL = 1
 
 # Library Locations
 LIBDAISY_DIR = ../../../libDaisy
