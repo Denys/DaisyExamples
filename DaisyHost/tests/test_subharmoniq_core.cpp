@@ -275,6 +275,34 @@ TEST(SubharmoniqCoreTest, HostedWrapperFieldKeyMenuActionsMatchFirmwareControls)
     EXPECT_EQ(core.GetSequencerStepIndex(1), 0);
 }
 
+TEST(SubharmoniqCoreTest, HostedWrapperReportsStatefulFieldKeyLedValues)
+{
+    daisyhost::apps::SubharmoniqCore core("node0");
+    core.Prepare(48000.0, 48);
+    core.ResetToDefaultState(0);
+
+    auto leds = core.GetFieldKeyLedValues();
+    EXPECT_FLOAT_EQ(leds[4], 0.5f);
+    EXPECT_FLOAT_EQ(leds[12], 0.5f);
+    EXPECT_FLOAT_EQ(leds[13], 0.5f);
+    EXPECT_FLOAT_EQ(leds[14], 0.0f);
+
+    core.SetRhythmTarget(0, daisyhost::DaisySubharmoniqRhythmTarget::kSeq1);
+    leds = core.GetFieldKeyLedValues();
+    EXPECT_FLOAT_EQ(leds[4], 0.5f);
+
+    core.SetRhythmTarget(0, daisyhost::DaisySubharmoniqRhythmTarget::kBoth);
+    core.SetQuantizeMode(daisyhost::DaisySubharmoniqQuantizeMode::kTwelveJust);
+    core.SetSeqOctaveRange(5);
+    core.SetMenuItemValue("node0/menu/field_keys/b7", 1.0f);
+    leds = core.GetFieldKeyLedValues();
+    EXPECT_FLOAT_EQ(leds[4], 1.0f);
+    EXPECT_FLOAT_EQ(leds[12], 1.0f);
+    EXPECT_FLOAT_EQ(leds[13], 1.0f);
+    EXPECT_FLOAT_EQ(leds[14], 1.0f);
+    EXPECT_FLOAT_EQ(leds[15], 0.0f);
+}
+
 TEST(SubharmoniqCoreTest, FieldB7StartsAudioAndBothSequencersAfterA7RhythmEdit)
 {
     daisyhost::apps::SubharmoniqCore core("node0");

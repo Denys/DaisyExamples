@@ -200,6 +200,10 @@ class HostedAppCore
         static const std::vector<MetaControllerDescriptor> kEmptyMetaControllers;
         return kEmptyMetaControllers;
     }
+    virtual std::array<float, 16> GetFieldKeyLedValues() const
+    {
+        return {};
+    }
     virtual bool SetMetaControllerValue(const std::string&, float)
     {
         return false;

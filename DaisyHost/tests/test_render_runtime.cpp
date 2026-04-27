@@ -636,6 +636,44 @@ TEST(RenderRuntimeTest, SubharmoniqFieldB7StartsAudioAfterA7RhythmEdit)
               "node0/control/field_key_b_7");
 }
 
+TEST(RenderRuntimeTest, SubharmoniqFieldCutoffSurfaceControlDoesNotMuteAudio)
+{
+    auto scenario = MakeBaseScenario("subharmoniq");
+    scenario.boardId = "daisy_field";
+    scenario.renderConfig.durationSeconds = 1.0;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+
+    daisyhost::RenderTimelineEvent cutoffEvent;
+    cutoffEvent.timeSeconds     = 0.0;
+    cutoffEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    cutoffEvent.controlId       = "node0/control/field_knob_2";
+    cutoffEvent.normalizedValue = 0.0f;
+    scenario.timeline.push_back(cutoffEvent);
+
+    daisyhost::RenderTimelineEvent playEvent;
+    playEvent.timeSeconds     = 0.0;
+    playEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    playEvent.controlId       = "node0/control/field_key_b_7";
+    playEvent.normalizedValue = 1.0f;
+    scenario.timeline.push_back(playEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(result.manifest.channelSummaries.size(), 2u);
+    EXPECT_GT(result.manifest.channelSummaries[0].peak, 0.02f);
+    EXPECT_GT(result.manifest.channelSummaries[1].peak, 0.02f);
+    ASSERT_GT(result.manifest.finalParameterValues.count(
+                  "node0/param/cutoff"),
+              0u);
+    EXPECT_GE(result.manifest.finalParameterValues.at(
+                  "node0/param/cutoff"),
+              0.08f);
+}
+
 TEST(RenderRuntimeTest, FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds)
 {
     daisyhost::RenderScenario scenario;
@@ -1180,6 +1218,56 @@ TEST(RenderRuntimeTest, RejectsAmbiguousMultiNodeImpulseWithoutTargetNodeId)
     daisyhost::RenderResult result;
     EXPECT_FALSE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage));
     EXPECT_NE(errorMessage.find("targetNodeId"), std::string::npos);
+}
+
+TEST(RenderRuntimeTest, ExecutedTimelineReportsResolvedTargetNodes)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.selectedNodeId = "node1";
+    scenario.entryNodeId    = "node0";
+    scenario.outputNodeId   = "node0";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "multidelay", 456u});
+
+    daisyhost::RenderTimelineEvent parameterEvent;
+    parameterEvent.timeSeconds     = 0.0;
+    parameterEvent.type            = daisyhost::RenderTimelineEventType::kParameterSet;
+    parameterEvent.parameterId     = "node0/param/delay_primary";
+    parameterEvent.normalizedValue = 0.25f;
+    scenario.timeline.push_back(parameterEvent);
+
+    daisyhost::RenderTimelineEvent cvEvent;
+    cvEvent.timeSeconds     = 0.0;
+    cvEvent.type            = daisyhost::RenderTimelineEventType::kCvSet;
+    cvEvent.portId          = "node1/port/cv_in_1";
+    cvEvent.normalizedValue = 0.75f;
+    scenario.timeline.push_back(cvEvent);
+
+    daisyhost::RenderTimelineEvent midiEvent;
+    midiEvent.timeSeconds        = 0.0;
+    midiEvent.type               = daisyhost::RenderTimelineEventType::kMidi;
+    midiEvent.midiMessage.status = 0x90;
+    midiEvent.midiMessage.data1  = 60;
+    midiEvent.midiMessage.data2  = 100;
+    scenario.timeline.push_back(midiEvent);
+
+    daisyhost::RenderTimelineEvent menuEvent;
+    menuEvent.timeSeconds     = 0.0;
+    menuEvent.type            = daisyhost::RenderTimelineEventType::kMenuSetItem;
+    menuEvent.menuItemId      = "node1/menu/params/delay_primary";
+    menuEvent.normalizedValue = 0.65f;
+    scenario.timeline.push_back(menuEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_GE(result.manifest.executedTimeline.size(), 4u);
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetNodeId, "node0");
+    EXPECT_EQ(result.manifest.executedTimeline[1].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[2].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[3].targetNodeId, "node1");
 }
 
 TEST(RenderRuntimeTest, RunsReverseTwoNodeAudioChainScenario)

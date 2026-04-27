@@ -40,12 +40,14 @@ add_library(daisyhost_core STATIC
     src/ComputerKeyboardMidi.cpp
     src/DaisyBraidsCore.cpp
     src/DaisyCloudSeedCore.cpp
+    src/DaisyFieldRSPLayout.cpp
     src/DaisyHarmoniqsCore.cpp
     src/DaisyPolyOscCore.cpp
     src/DaisySubharmoniqCore.cpp
     src/DaisyVASynthCore.cpp
     src/EffectiveHostStateSnapshot.cpp
     src/HostModulation.cpp
+    src/HostModulationUiText.cpp
     src/HostSessionState.cpp
     src/HostStartupPolicy.cpp
     src/HostAutomationBridge.cpp
@@ -147,6 +149,7 @@ target_link_libraries(DaisyHostRender
 
 add_library(daisyhost_cli STATIC
     src/CliPayloads.cpp
+    src/GateDiagnostics.cpp
 )
 
 target_include_directories(daisyhost_cli
@@ -276,8 +279,10 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp
     tests/test_cli_payloads.cpp
+    tests/test_gate_diagnostics.cpp
     tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
+    tests/test_daisy_field_rsp_layout.cpp
     tests/test_daisy_harmoniqs_core.cpp
     tests/test_daisy_polyosc_core.cpp
     tests/test_daisy_vasynth_core.cpp
@@ -338,6 +343,13 @@ target_link_libraries(unit_tests
 )
 
 find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
+
+add_test(
+    NAME DaisyHostNextWpSuggester
+    COMMAND
+        ${DAISYHOST_PYTHON_LAUNCHER} -3
+        ${PROJECT_SOURCE_DIR}/tests/test_next_wp_suggester.py
+)
 
 include(GoogleTest)
 

@@ -15,6 +15,7 @@
 #include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/EffectiveHostStateSnapshot.h"
+#include "daisyhost/HostModulationUiText.h"
 #include "daisyhost/HostSessionState.h"
 #include "daisyhost/HubSupport.h"
 #include "daisyhost/LiveRackTopology.h"
@@ -96,6 +97,7 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     std::string GetFieldKnobTargetId(std::size_t index) const;
     void SetFieldKnobValue(std::size_t index, float normalizedValue);
     int  GetFieldKeyMidiNote(std::size_t index) const;
+    juce::String GetFieldKeyDetailLabel(std::size_t index) const;
     bool GetFieldKeyAvailable(std::size_t index) const;
     bool GetFieldKeyPressed(std::size_t index) const;
     void SetFieldKeyPressed(std::size_t index, bool pressed);
@@ -149,6 +151,8 @@ class DaisyHostPatchAudioProcessor : public juce::AudioProcessor
     void SetSelectedModulationDestinationIndex(int index);
     int GetModulationLaneCount() const;
     daisyhost::HostModulationLane GetModulationLane(std::size_t slotIndex) const;
+    daisyhost::HostModulationLaneDisplayText
+    GetModulationLaneDisplayText(std::size_t slotIndex) const;
     void SetModulationLane(std::size_t slotIndex,
                            const daisyhost::HostModulationLane& lane);
     int GetActiveModulationLaneCountForParameter(

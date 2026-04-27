@@ -45,9 +45,9 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::Rectangle<int>
     GetEditorBounds() const;
     juce::Rectangle<int>
-    GetPatchPanelBounds() const;
+    GetBoardPanelBounds() const;
     juce::Rectangle<int>
-    GetPatchPanelContentBounds() const;
+    GetBoardPanelContentBounds() const;
     juce::Rectangle<int>
     GetHostToolsBounds() const;
     juce::Rectangle<float>
@@ -62,7 +62,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void DrawPassiveSurfaceControls(juce::Graphics& g) const;
     void DrawPanelIndicators(juce::Graphics& g) const;
     void DrawPanelTexts(juce::Graphics& g) const;
-    void DrawPatchTraces(juce::Graphics& g) const;
+    void DrawBoardTraces(juce::Graphics& g) const;
     void DrawSeedModule(juce::Graphics& g,
                         const juce::Rectangle<float>& area) const;
     void DrawDisplay(juce::Graphics& g, const juce::Rectangle<float>& area) const;
@@ -90,7 +90,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     void UpdateFieldControlUi();
     void UpdateFieldDrawerPageUi();
     void UpdateModulationLaneUi();
-    bool IsInteractiveFieldSurfaceControl(const std::string& surfaceId) const;
+    bool IsInteractiveExtendedSurfaceControl(const std::string& surfaceId) const;
     void ReleaseComputerKeyboardNotes();
     void UpdateComputerKeyboardUi();
     void ApplyWindowIconIfNeeded();
@@ -108,11 +108,14 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     ControlUi                     dryWet_;
     std::array<ControlUi, daisyhost::kDaisyFieldKnobCount> fieldKnobs_;
     std::array<juce::TextButton, daisyhost::kDaisyFieldKeyCount> fieldKeyButtons_;
+    std::array<juce::Label, 5>     fieldKeyMappingLabels_;
     std::array<juce::TextButton, daisyhost::kDaisyFieldSwitchCount> fieldSwitchButtons_;
     std::array<juce::TextButton, 3> fieldDrawerPageButtons_;
     std::array<juce::TextButton, 16> fieldParameterButtons_;
     std::array<juce::Label, daisyhost::kHostModulationLaneCount>
         modulationLaneLabels_;
+    std::array<juce::Label, daisyhost::kHostModulationLaneCount>
+        modulationLaneDetailLabels_;
     std::array<juce::ComboBox, daisyhost::kHostModulationLaneCount>
         modulationLaneSourceBoxes_;
     std::array<juce::Slider, daisyhost::kHostModulationLaneCount>
@@ -136,6 +139,7 @@ class DaisyHostPatchAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::Label                   rackHeaderLabel_;
     juce::Label                   rackTopologyLabel_;
     juce::Label                   rackSelectedNodeLabel_;
+    juce::Label                   rackTargetHintLabel_;
     std::array<RackNodeUi, 2>     rackNodes_;
     juce::ComboBox                rackTopologyBox_;
     std::array<juce::Rectangle<int>, 2> rackNodeCardBounds_{};

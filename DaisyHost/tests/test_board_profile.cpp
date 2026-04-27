@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <vector>
 
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/apps/MultiDelayCore.h"
@@ -94,6 +95,23 @@ bool RectInsidePanel(const daisyhost::PanelRect& rect)
     return rect.x >= 0.0f && rect.y >= 0.0f && rect.width >= 0.0f
            && rect.height >= 0.0f && rect.x + rect.width <= 1.0f
            && rect.y + rect.height <= 1.0f;
+}
+
+float RightOf(const daisyhost::PanelRect& rect)
+{
+    return rect.x + rect.width;
+}
+
+float BottomOf(const daisyhost::PanelRect& rect)
+{
+    return rect.y + rect.height;
+}
+
+bool Overlaps(const daisyhost::PanelRect& left,
+              const daisyhost::PanelRect& right)
+{
+    return left.x < RightOf(right) && RightOf(left) > right.x
+           && left.y < BottomOf(right) && BottomOf(left) > right.y;
 }
 
 std::size_t CountControls(const daisyhost::BoardProfile& profile,
@@ -353,13 +371,51 @@ TEST(BoardProfileTest, DaisyFieldVisibleProfileTextIsNotPatchOnly)
     EXPECT_FALSE(ContainsTextToken(profile, "PATCH"));
 }
 
-TEST(BoardProfileTest, DaisyFieldProfilePlacesAudioGateAndMidiAtTop)
+TEST(BoardProfileTest, DaisyPatchProfileCarriesEditorSurfacePolicy)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_patch", "nodeA");
+
+    EXPECT_EQ(profile.editorSurface.panelName, "Daisy Patch");
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetLead,
+              "Patch controls target ");
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetScope,
+              "knobs, encoder, CV/gate, test input, menu, and modulation edits follow this selected node.");
+    EXPECT_EQ(profile.editorSurface.computerKeyboardHint, "Enable A/W/S/E");
+    EXPECT_EQ(profile.editorSurface.traceMode,
+              daisyhost::BoardEditorTraceMode::kTopControlCvInputs);
+    EXPECT_FALSE(profile.editorSurface.showsExtendedSurfaceControls);
+    EXPECT_FALSE(profile.editorSurface.showsPanelIndicators);
+}
+
+TEST(BoardProfileTest, DaisyFieldProfileCarriesEditorSurfacePolicy)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    EXPECT_EQ(profile.editorSurface.panelName, "Daisy Field");
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetLead,
+              "Field controls target ");
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetScope,
+              "K/A/B/SW, CV, drawer, and modulation edits follow this selected node.");
+    EXPECT_EQ(profile.editorSurface.computerKeyboardHint,
+              "Enable A/W/S/E  X/C=SW");
+    EXPECT_EQ(profile.editorSurface.traceMode,
+              daisyhost::BoardEditorTraceMode::kNativeCvInputsAndGateDisplay);
+    EXPECT_TRUE(profile.editorSurface.showsExtendedSurfaceControls);
+    EXPECT_TRUE(profile.editorSurface.showsPanelIndicators);
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetLead.find("Patch"),
+              std::string::npos);
+    EXPECT_EQ(profile.editorSurface.selectedNodeTargetScope.find("Patch"),
+              std::string::npos);
+}
+
+TEST(BoardProfileTest, DaisyFieldProfilePlacesAudioAndMidiAtTop)
 {
     const daisyhost::BoardProfile profile
         = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
 
     std::size_t topAudio = 0;
-    std::size_t topGate = 0;
     std::size_t topMidi = 0;
     std::size_t bottomCv = 0;
 
@@ -369,11 +425,6 @@ TEST(BoardProfileTest, DaisyFieldProfilePlacesAudioGateAndMidiAtTop)
            && port.panelBounds.y < 0.32f)
         {
             ++topAudio;
-        }
-        if(port.type == daisyhost::VirtualPortType::kGate
-           && port.panelBounds.y < 0.32f)
-        {
-            ++topGate;
         }
         if(port.type == daisyhost::VirtualPortType::kMidi
            && port.panelBounds.y < 0.32f)
@@ -388,9 +439,61 @@ TEST(BoardProfileTest, DaisyFieldProfilePlacesAudioGateAndMidiAtTop)
     }
 
     EXPECT_EQ(topAudio, 4u);
-    EXPECT_EQ(topGate, 2u);
     EXPECT_EQ(topMidi, 2u);
     EXPECT_EQ(bottomCv, 6u);
+}
+
+TEST(BoardProfileTest, DaisyFieldProfileCarriesReadableKeyMappingLegend)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    EXPECT_TRUE(HasText(profile, "Key mappings (A/B)"));
+    EXPECT_FALSE(ContainsTextToken(profile, "app key actions"));
+    EXPECT_FALSE(ContainsTextToken(profile, "B1-B6"));
+}
+
+TEST(BoardProfileTest, DaisyFieldExternalControlSignalsUseTwoHardwareRows)
+{
+    const daisyhost::BoardProfile profile
+        = daisyhost::CreateBoardProfile("daisy_field", "nodeA");
+
+    std::vector<daisyhost::VirtualPort> topExternalSignals;
+    std::vector<daisyhost::VirtualPort> bottomExternalSignals;
+
+    for(const auto& port : profile.ports)
+    {
+        const bool externalControlSignal =
+            port.type == daisyhost::VirtualPortType::kCv
+            || port.type == daisyhost::VirtualPortType::kGate;
+        if(!externalControlSignal)
+        {
+            continue;
+        }
+
+        if(port.panelBounds.y > 0.80f && port.panelBounds.y < 0.875f)
+        {
+            topExternalSignals.push_back(port);
+        }
+        if(port.panelBounds.y >= 0.875f)
+        {
+            bottomExternalSignals.push_back(port);
+        }
+    }
+
+    EXPECT_EQ(topExternalSignals.size(), 4u);
+    EXPECT_EQ(bottomExternalSignals.size(), 4u);
+    for(const auto& row : {topExternalSignals, bottomExternalSignals})
+    {
+        for(std::size_t left = 0; left < row.size(); ++left)
+        {
+            for(std::size_t right = left + 1; right < row.size(); ++right)
+            {
+                EXPECT_FALSE(Overlaps(row[left].panelBounds,
+                                      row[right].panelBounds));
+            }
+        }
+    }
 }
 
 TEST(BoardProfileTest, DaisyPatchProfileExposesFinalSurfaceControlHierarchy)

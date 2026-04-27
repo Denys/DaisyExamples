@@ -63,6 +63,9 @@ float ParameterNormalizedToNative(const ParameterDescriptor& parameter,
                                   float normalizedValue);
 float ParameterNativeToNormalized(const ParameterDescriptor& parameter,
                                   float nativeValue);
+float ApplyDaisyFieldExternalControlSafetyFloor(
+    const ParameterDescriptor& parameter,
+    float                      normalizedValue);
 HostModulationEvaluation EvaluateHostModulation(
     const ParameterDescriptor& parameter,
     const std::array<HostModulationLane, kHostModulationLaneCount>& lanes,

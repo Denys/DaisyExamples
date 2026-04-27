@@ -114,7 +114,8 @@ internals:
     - four operator-facing audio-only topology presets:
       `node0_only`, `node1_only`, `node0_to_node1`, `node1_to_node0`
     - a visible two-node rack header with per-node app selectors and role
-      labels
+      labels, clearer topology direction copy, and selected-node target hints
+      for Patch and Field boards
     - a board-id-based factory seam with `daisy_patch` as the default board
       and `daisy_field` supported as a host-side Field surface
 - Headless rendering:
@@ -127,6 +128,11 @@ internals:
     and optional compatibility menu actions
   - optional `nodes[]` / `routes[]` contracts now allow internal two-node audio
     render proofs while keeping legacy single-app scenarios valid
+  - render manifests and CLI render-result JSON now include node-targeted
+    debug readback for resolved timeline target nodes, render nodes, and routes
+  - CLI `snapshot --json` and `render --json` also include an additive
+    `debugState` object for board/selected-node identity, entry/output role
+    labels, routes, selected-node target cues, and render timeline target counts
   - `training/render_dataset.py` expands sweep jobs into multiple run folders
     and writes a `dataset_index.json`
 - Launcher hub:
@@ -162,6 +168,9 @@ Implemented `0.2.0` additions:
   mirror/About flow
 - `Saw` added as a test input
 - standalone default test input restored to `Host In`
+- WS8 rack UX polish for the existing two-node rack: clearer role labels,
+  selected-node feedback, topology direction copy, and Patch/Field copy that
+  makes live control targeting explicit
 - multi-app host plumbing with `multidelay` as the default app and `torus` as
   app #2
 - `cloudseed` promoted to a first-class supported hosted app with:
@@ -360,15 +369,18 @@ Outputs:
 - `unit_tests` target, currently emitted as a payload under
   `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   and launched through `tests/run_unit_test_payload.py`
+- `tools/suggest_next_wp.py` reads `WORKSTREAM_TRACKER.md` and prints the next
+  recommended work package, runner-up, overlap risk, explicit waits, and first
+  safe implementation slice for WP closeouts
 
 Current local verification caveat:
 
-- the wrapper-driven full host gate reran green on 2026-04-26 during the
-  modulation-lane architecture pass: `cmd /c build_host.cmd` passed and
-  `ctest` passed `211/211`; the direct DaisyHostCLI agent/CI adoption checks
-  also passed during the earlier TF12 pass. Older `168/168`, `196/196`,
-  `197/197`, and `202/202` results are retained only as dated historical
-  evidence.
+- the wrapper-driven full host gate reran green on 2026-04-27 during the
+  next-WP recommender workflow: `cmd /c build_host.cmd` passed and `ctest`
+  passed `233/233`, including `DaisyHostNextWpSuggester`, standalone, render,
+  and CLI smoke tests. Older `168/168`, `196/196`, `197/197`, `202/202`,
+  `211/211`, `216/216`, and `232/232` results are retained only as dated
+  historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
@@ -396,8 +408,18 @@ build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --
 build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json
 ```
 
+The `snapshot --json` and `render --json` payloads include `debugState` for
+compact external rack diagnostics without adding a separate command.
+
 Add new CLI commands only after a real agent or CI workflow proves a missing
 offline operation.
+
+After completing a WP/workstream, run the repo-local next-WP recommender and
+copy its decision into the `PROJECT_TRACKER.md` handoff:
+
+```bat
+py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
+```
 
 ## Architecture
 

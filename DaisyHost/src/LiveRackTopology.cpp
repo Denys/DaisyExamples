@@ -1,5 +1,6 @@
 #include "daisyhost/LiveRackTopology.h"
 
+#include <algorithm>
 #include <set>
 #include <utility>
 
@@ -9,6 +10,8 @@ namespace
 {
 constexpr const char* kNode0Id = "node0";
 constexpr const char* kNode1Id = "node1";
+constexpr const char* kUnsupportedCurrentContractError
+    = "unsupported live rack topology shape for the current two-node audio contract";
 
 using CanonicalRoute = std::pair<std::string, std::string>;
 
@@ -155,72 +158,15 @@ bool TryMatchSerialPreset(const LiveRackTopologyConfig& config,
            && MakeCanonicalRoutes(config.routes) == MakeCanonicalRoutes(expected.routes);
 }
 
-bool ValidateRouteSet(const LiveRackTopologyConfig& config, std::string* errorMessage)
+LiveRackAudioRouteEndpoint MakeEndpoint(const std::string& nodeId,
+                                        const std::string& portId,
+                                        int                channel)
 {
-    if(config.routes.empty())
-    {
-        if(config.entryNodeId == config.outputNodeId)
-        {
-            return true;
-        }
-
-        if(errorMessage != nullptr)
-        {
-            *errorMessage
-                = "unsupported live rack topology shape for this sprint";
-        }
-        return false;
-    }
-
-    if(config.routes.size() != 2u || MakeCanonicalRoutes(config.routes).size() != 2u)
-    {
-        if(errorMessage != nullptr)
-        {
-            *errorMessage
-                = "Live rack serial topologies require exactly two distinct stereo audio routes";
-        }
-        return false;
-    }
-
-    for(const auto& route : config.routes)
-    {
-        std::string sourceNodeId;
-        std::string destNodeId;
-        int         sourceChannel = 0;
-        int         destChannel   = 0;
-        if(!TryParseAudioSourcePort(route.sourcePortId, &sourceNodeId, &sourceChannel)
-           || !TryParseAudioDestPort(route.destPortId, &destNodeId, &destChannel))
-        {
-            if(errorMessage != nullptr)
-            {
-                *errorMessage
-                    = "Live rack currently supports audio routes only";
-            }
-            return false;
-        }
-
-        if(sourceNodeId == destNodeId || sourceChannel != destChannel)
-        {
-            if(errorMessage != nullptr)
-            {
-                *errorMessage
-                    = "unsupported live rack topology shape for this sprint";
-            }
-            return false;
-        }
-    }
-
-    if(TryMatchSerialPreset(config, LiveRackTopologyPreset::kNode0ToNode1)
-       || TryMatchSerialPreset(config, LiveRackTopologyPreset::kNode1ToNode0))
-    {
-        return true;
-    }
-
-    if(errorMessage != nullptr)
-    {
-        *errorMessage = "unsupported live rack topology shape for this sprint";
-    }
-    return false;
+    LiveRackAudioRouteEndpoint endpoint;
+    endpoint.nodeId       = nodeId;
+    endpoint.portId       = portId;
+    endpoint.channelIndex = static_cast<std::size_t>(channel - 1);
+    return endpoint;
 }
 } // namespace
 
@@ -257,8 +203,54 @@ LiveRackTopologyConfig BuildLiveRackTopologyConfig(LiveRackTopologyPreset preset
     return config;
 }
 
+std::string GetLiveRackTopologyDisplayLabel(LiveRackTopologyPreset preset)
+{
+    switch(preset)
+    {
+        case LiveRackTopologyPreset::kNode0Only: return "Node 0 only";
+        case LiveRackTopologyPreset::kNode1Only: return "Node 1 only";
+        case LiveRackTopologyPreset::kNode0ToNode1: return "Node 0 feeds Node 1";
+        case LiveRackTopologyPreset::kNode1ToNode0: return "Node 1 feeds Node 0";
+    }
+
+    return "Node 0 only";
+}
+
+std::string GetLiveRackNodeRoleDisplayLabel(LiveRackTopologyPreset preset,
+                                            const std::string&      nodeId,
+                                            bool                   selected)
+{
+    const auto config = BuildLiveRackTopologyConfig(preset);
+    std::string role;
+    if(nodeId == config.entryNodeId && nodeId == config.outputNodeId)
+    {
+        role = "Entry + output";
+    }
+    else if(nodeId == config.entryNodeId)
+    {
+        role = "Audio entry";
+    }
+    else if(nodeId == config.outputNodeId)
+    {
+        role = "Audio output";
+    }
+    else
+    {
+        role = "Not in route";
+    }
+
+    return selected ? "Selected - " + role : role;
+}
+
 bool ValidateLiveRackTopologyConfig(const LiveRackTopologyConfig& config,
                                     std::string*                  errorMessage)
+{
+    return TryBuildLiveRackRoutePlan(config, nullptr, errorMessage);
+}
+
+bool TryBuildLiveRackRoutePlan(const LiveRackTopologyConfig& config,
+                               LiveRackRoutePlan*           plan,
+                               std::string*                 errorMessage)
 {
     if(!IsSupportedNodeId(config.entryNodeId) || !IsSupportedNodeId(config.outputNodeId))
     {
@@ -270,7 +262,100 @@ bool ValidateLiveRackTopologyConfig(const LiveRackTopologyConfig& config,
         return false;
     }
 
-    return ValidateRouteSet(config, errorMessage);
+    LiveRackRoutePlan candidate;
+    candidate.config = config;
+
+    if(config.routes.empty())
+    {
+        if(config.entryNodeId == config.outputNodeId)
+        {
+            candidate.processingOrder.push_back(config.entryNodeId);
+            if(plan != nullptr)
+            {
+                *plan = std::move(candidate);
+            }
+            return true;
+        }
+
+        if(errorMessage != nullptr)
+        {
+            *errorMessage = kUnsupportedCurrentContractError;
+        }
+        return false;
+    }
+
+    if(config.routes.size() != 2u || MakeCanonicalRoutes(config.routes).size() != 2u)
+    {
+        if(errorMessage != nullptr)
+        {
+            *errorMessage
+                = "Live rack serial topologies require exactly two distinct stereo audio routes";
+        }
+        return false;
+    }
+
+    for(const auto& route : config.routes)
+    {
+        std::string sourceNodeId;
+        std::string destNodeId;
+        int         sourceChannel = 0;
+        int         destChannel   = 0;
+        if(!TryParseAudioSourcePort(route.sourcePortId, &sourceNodeId, &sourceChannel)
+           || !TryParseAudioDestPort(route.destPortId, &destNodeId, &destChannel))
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage = "Live rack currently supports audio routes only";
+            }
+            return false;
+        }
+
+        if(sourceNodeId == destNodeId || sourceChannel != destChannel)
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage = kUnsupportedCurrentContractError;
+            }
+            return false;
+        }
+
+        LiveRackResolvedAudioRoute resolvedRoute;
+        resolvedRoute.source
+            = MakeEndpoint(sourceNodeId, route.sourcePortId, sourceChannel);
+        resolvedRoute.destination
+            = MakeEndpoint(destNodeId, route.destPortId, destChannel);
+        candidate.audioRoutes.push_back(std::move(resolvedRoute));
+    }
+
+    if(TryMatchSerialPreset(config, LiveRackTopologyPreset::kNode0ToNode1)
+       || TryMatchSerialPreset(config, LiveRackTopologyPreset::kNode1ToNode0))
+    {
+        candidate.processingOrder.push_back(config.entryNodeId);
+        candidate.processingOrder.push_back(config.outputNodeId);
+        std::sort(candidate.audioRoutes.begin(),
+                  candidate.audioRoutes.end(),
+                  [](const LiveRackResolvedAudioRoute& left,
+                     const LiveRackResolvedAudioRoute& right) {
+                      if(left.destination.channelIndex
+                         != right.destination.channelIndex)
+                      {
+                          return left.destination.channelIndex
+                                 < right.destination.channelIndex;
+                      }
+                      return left.destination.portId < right.destination.portId;
+                  });
+        if(plan != nullptr)
+        {
+            *plan = std::move(candidate);
+        }
+        return true;
+    }
+
+    if(errorMessage != nullptr)
+    {
+        *errorMessage = kUnsupportedCurrentContractError;
+    }
+    return false;
 }
 
 bool TryInferLiveRackTopologyPreset(const LiveRackTopologyConfig& config,

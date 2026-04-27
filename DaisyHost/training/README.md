@@ -49,8 +49,10 @@ DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHo
 ```
 
 Use `DaisyHostCLI` as a thin offline facade for reproducible agent/CI
-inspection and render validation; defer new commands until a real workflow
-proves a missing automation operation.
+inspection and render validation. The existing `snapshot --json` and
+`render --json` payloads include additive `debugState` readback for compact
+board, selected-node, route, and role diagnostics; defer new commands until a
+real workflow proves a missing automation operation.
 
 ## Automated Smoke Harness
 

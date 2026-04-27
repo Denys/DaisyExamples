@@ -1,6 +1,7 @@
 #include "daisyhost/HostModulation.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 
 namespace daisyhost
@@ -37,6 +38,18 @@ std::size_t SourceIndex(HostModulationSource source)
                - static_cast<std::size_t>(HostModulationSource::kLfo1);
     }
     return 0;
+}
+
+bool IsCutoffLikeParameterId(const std::string& id)
+{
+    std::string lower;
+    lower.reserve(id.size());
+    for(char ch : id)
+    {
+        lower.push_back(static_cast<char>(
+            std::tolower(static_cast<unsigned char>(ch))));
+    }
+    return lower.find("cutoff") != std::string::npos;
 }
 } // namespace
 
@@ -97,6 +110,19 @@ float ParameterNativeToNormalized(const ParameterDescriptor& parameter,
         return 0.0f;
     }
     return Clamp01((nativeValue - parameter.nativeMinimum) / range);
+}
+
+float ApplyDaisyFieldExternalControlSafetyFloor(
+    const ParameterDescriptor& parameter,
+    float                      normalizedValue)
+{
+    constexpr float kCutoffSafetyFloor = 0.08f;
+    const float clamped = Clamp01(normalizedValue);
+    if(IsCutoffLikeParameterId(parameter.id))
+    {
+        return std::max(kCutoffSafetyFloor, clamped);
+    }
+    return clamped;
 }
 
 HostModulationEvaluation EvaluateHostModulation(

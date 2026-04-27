@@ -2,7 +2,7 @@
 
 ## Snapshot
 
-- Date: 2026-04-26
+- Date: 2026-04-27
 - Workspace: `DaisyHost/`
 - Current CMake version in source: `0.2.0`
 - Active refresh target: `0.2.0`
@@ -11,9 +11,10 @@
   second app, first-class `CloudSeed`, `Braids`, `Harmoniqs`, `VA Synth`,
   `PolyOsc`, and `Subharmoniq` support, named MetaControllers for
   `multidelay` and `cloudseed`, plus a
-  visible two-node live rack, board factory seam, Field board-support shell,
-  host-side Field native controls, Field extended host surface support,
-  forward/reverse two-node audio-chain proof paths, and the first
+  visible two-node live rack, WS8 rack UX productionization, board factory
+  seam, Field board-support shell, host-side Field native controls, Field
+  extended host surface support, forward/reverse two-node audio-chain proof
+  paths, and the first
   flash-verified Daisy Field firmware adapter under `field/MultiDelay`, plus
   adapter-pipeline v0 tooling that generates a build/QAE-verified
   `field/MultiDelayGenerated` adapter from a JSON spec, and a
@@ -92,6 +93,7 @@ ctest --test-dir build -C Release --output-on-failure
 
 `ctest` now includes:
 
+- `DaisyHostNextWpSuggester`
 - `unit_tests`
 - `DaisyHostStandaloneSmoke`
 - `DaisyHostRenderSmoke`
@@ -107,7 +109,7 @@ Current shell note:
   `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
 - `ctest` launches unit cases through `tests/run_unit_test_payload.py`, which
   receives that payload path and attempts to run a fresh temporary copy
-- the wrapper-driven full host gate reran green on 2026-04-26, so the current
+- the wrapper-driven full host gate reran green on 2026-04-27, so the current
   baseline in this checkout is again a fully green Release host gate rather
   than only partial smoke/debug proof
 - after local Debug rebuilds, direct `ctest -C Debug -R ...` can still point at
@@ -120,13 +122,41 @@ Current shell note:
 - result: the rack freeze gate is no longer blocked in this checkout, the
   Daisy Field board-support shell, host-side Field native controls, Field
   extended host surface support, host-side `polyosc` app import,
-  `subharmoniq` hosted app, and v1 host-side modulation lanes are implemented,
+  `subharmoniq` hosted app, v1 host-side modulation lanes, and WS8 rack UX
+  productionization are implemented,
   native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
-  the latest host gate passed `211/211`, the first Field firmware adapter
+  the latest host gate passed `232/232`, the first Field firmware adapter
   (`field/MultiDelay`) is build-verified and ST-Link flash-verified, and
   `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
   host-tested playable defaults; both Field hardware manual checklists remain
   pending
+- later on 2026-04-27, TF10 added a shared live-rack route-plan contract and
+  routed render/live processing through it; targeted Debug route/render/session
+  checks passed, and the later TF11 closeout reran the full wrapper gate green
+  at `227/227`
+- later on 2026-04-27, TF10 was hardened and closed as a foundation contract:
+  validation-only route-plan builds, accepted-config copying, failed-plan
+  preservation, and durable two-node audio unsupported-shape errors are now
+  covered by targeted tests. Manager-readable result: DaisyHost has one tested
+  routing rulebook for today's rack; `WS9` remains responsible for any new
+  user-facing route presets or semantics. The full wrapper gate reran green at
+  `230/230`.
+- earlier on 2026-04-27, TF11 added the first node-targeted event readback slice:
+  render manifests now record resolved `targetNodeId` for inferred
+  parameter/CV/gate/menu/surface events and selected-node MIDI events, and CLI
+  render-result JSON exposes `nodes`, `routes`, and `executedTimeline` debug
+  readback. The TF11 targeted tests passed, Debug and Release `ctest` both
+  passed `227/227`, and `cmd /c build_host.cmd` passed with Release `ctest`
+  `227/227`; the later TF10 hardening gate supersedes that as current checkout
+  truth at `230/230`.
+- later on 2026-04-27, WS10 added the first external debug-surface slice:
+  existing `DaisyHostCLI snapshot --json` and `render --json` outputs now
+  include additive `debugState` readback for board, selected node,
+  entry/output role labels, routes, selected-node target cues, and render
+  timeline target counts. The WS10 targeted tests passed, the affected Debug
+  subset passed `76/76`, and `cmd /c build_host.cmd` passed with Release
+  `ctest` `232/232`, superseding the TF10 hardening gate as current checkout
+  truth.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -148,18 +178,123 @@ from `patch/Torus/`.
 ## Last Recorded Runtime Verification
 
 - Last fully green DaisyHost host build/test verification rerun from this
-  checkout: 2026-04-26
-- Verified commands/results in the current 2026-04-26 modulation-lane
-  architecture pass:
-  - manager-readable result: DaisyHost now has v1 host-side modulation lanes
-    with a fresh `211/211` full host gate. The earlier TF12 `202/202` gate and
-    older `196/196` and `197/197` results remain dated historical evidence
-    only.
+  checkout: 2026-04-27
+- Verified commands/results in the current 2026-04-27 repo-wide next-WP
+  recommendation workflow:
+  - manager-readable result: DaisyHost now has a checked repo-local
+    recommendation tool for choosing the next suitable WP after closeout from
+    `WORKSTREAM_TRACKER.md` truth.
+  - targeted checks:
+    - `py -3 tests\test_next_wp_suggester.py`: failed before implementation
+      because `tools/suggest_next_wp.py` was missing, then passed `2 tests`
+    - `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`:
+      recommended `TF9 - Board-generic editor surface`, runner-up
+      `TF14 - CLI gate diagnostics`, low overlap risk when limited to
+      board/editor metadata and existing Patch/Field behavior, explicit waits
+      `WS9`, `WS11`, `WS12`, `WS13`, `TF17`, and `TF18`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "DaisyHostNextWpSuggester"`:
+      passed, `1/1`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying Release `ctest --test-dir build -C Release --output-on-failure`:
+      passed, `233/233`
+  - caveats:
+    - no DaisyHost runtime behavior, route semantic, editor layout, firmware,
+      Field hardware validation, mixed-board behavior, or DAW/VST3 manual
+      validation changed or was claimed
+- Verified commands/results in the earlier 2026-04-27 WS10 external debug
+  surface first slice:
+  - manager-readable result: existing CLI JSON now exposes compact external
+    debug state for selected-node rack diagnostics without adding a new CLI
+    command or changing routing behavior.
+  - targeted checks:
+    - `ctest --test-dir build -C Debug --output-on-failure -R "CliPayloadsTest"`:
+      failed `2/8` before the production edit because `debugState` was absent,
+      then passed `8/8`
+    - direct Debug CLI checks for `snapshot --app multidelay --board daisy_field --selected-node node0 --json`
+      and `render training\examples\field_node_target_surface_smoke.json --output-dir build\cli_smoke\ws10_field_node_debug --json`:
+      passed and returned `debugState`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(CliPayloadsTest|RenderRuntimeTest|EffectiveHostStateSnapshotTest|HostSessionStateTest|LiveRackTopologyTest)"`:
+      passed, `76/76`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying Release `ctest --test-dir build -C Release --output-on-failure`:
+      passed, `232/232`
+  - caveats:
+    - no new CLI command, route preset, route semantic, topology preset,
+      mixed-board behavior, firmware change, Field hardware validation, or
+      DAW/VST3 manual validation was added or claimed
+- Verified commands/results in the earlier 2026-04-27 TF10 routing-contract
+  hardening pass:
+  - manager-readable result: DaisyHost now has one tested routing rulebook for
+    today's two-node audio rack. This closes TF10 as foundation work and leaves
+    new routing choices to `WS9`.
+  - targeted checks:
+    - `ctest --test-dir build -C Debug --output-on-failure -R "LiveRackTopology"`:
+      failed `1/17` before the production edit because unsupported-shape errors
+      still used sprint-era wording, then passed `17/17` after the contract
+      wording update
+    - `ctest --test-dir build -C Debug --output-on-failure -R "RenderRuntime|HostSessionState|EffectiveHostStateSnapshot"`:
+      passed, `51/51`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying Release `ctest --test-dir build -C Release --output-on-failure`:
+      passed, `230/230`
+  - caveats:
+    - no new route presets, graph editor, non-audio routes, larger rack graphs,
+      scenario/session schema changes, firmware changes, Field hardware
+      validation, or DAW/VST3 manual validation were added or claimed
+- Verified commands/results in the earlier 2026-04-27 TF11 node-targeted
+  event/readback pass:
+  - manager-readable result: DaisyHost render/debug surfaces now report
+    resolved target-node identity for node-scoped timeline events and expose
+    render `nodes`, `routes`, and `executedTimeline` through CLI render-result
+    JSON without changing routing semantics; the full host gate passed
+    `227/227`, later superseded by the TF10 hardening `230/230` gate.
+  - targeted checks:
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(RenderRuntimeTest.ExecutedTimelineReportsResolvedTargetNodes|CliPayloadsTest.RenderPayloadIncludesNodeDebugReadback)"`:
+      passed, `2/2`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(RenderRuntimeTest|CliPayloadsTest|HostSessionStateTest|EffectiveHostStateSnapshotTest|LiveRackTopologyTest)"`:
+      passed, `71/71`
+    - `ctest --test-dir build -C Debug --output-on-failure`:
+      passed, `227/227`
+  - full host gate:
+    - `cmd /c build_host.cmd`: passed
+    - underlying Release `ctest --test-dir build -C Release --output-on-failure`:
+      passed, `227/227`
+  - caveats:
+    - two earlier wrapper attempts failed only because stale standalone smoke
+      processes were already running; those processes were stopped before the
+      final successful wrapper run
+    - no routing presets, mixed-board racks, DAW automation, firmware adapters,
+      Field hardware validation, or DAW/VST3 manual validation were added or
+      claimed
+- Verified commands/results in the current 2026-04-27 WS8 rack UX
+  productionization pass:
+  - manager-readable result: DaisyHost now has clearer operator-facing
+    two-node rack labels, selected-node context, topology direction copy, and
+    Patch/Field selected-node target hints with a fresh `216/216` full host
+    gate. The later TF10 hardening pass supersedes this as current checkout
+    truth with a `230/230` full host gate; the earlier TF11 `227/227`,
+    modulation-lane `211/211`, TF12 `202/202`, and older `196/196` and
+    `197/197` results remain dated historical evidence only.
   - preflight:
     - `git status --short`: reviewed; checkout is broadly dirty across host,
       docs, firmware, submodules, build outputs, and untracked files
-    - `git diff --name-status --`: reviewed; TF12 did not revert, stage,
+    - `git diff --name-status --`: reviewed; WS8 did not revert, stage,
       delete, or normalize unrelated work
+  - targeted Debug checks:
+    - normalized-env `cmake --build build --config Debug --target unit_tests -- /m:1`:
+      passed after red proof for missing rack display helpers
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(LiveRackTopologyTest|HostSessionStateTest|EffectiveHostStateSnapshotTest|BoardProfileTest|BoardControlMappingTest|RenderRuntimeTest)"`:
+      passed, `96/96`
+    - normalized-env `cmake --build build --config Debug --target DaisyHostPatch_Standalone -- /m:1`:
+      passed
+    - `ctest --test-dir build -C Debug --output-on-failure -R "(DaisyFieldRSPLayoutTest|BoardProfileTest|BoardControlMappingTest|RenderRuntimeTest)"`:
+      passed, `69/69`
+  - explicit Release render smoke:
+    - `py -3 tests/run_smoke.py --mode render --build-dir build --source-dir . --config Release --timeout-seconds 120`:
+      passed for all current render smoke scenarios
   - full host gate:
     - `cmd /c build_host.cmd`: passed
     - underlying host-gate steps executed by the wrapper:
@@ -167,25 +302,14 @@ from `patch/Torus/`.
       - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`:
         passed
       - `ctest --test-dir build -C Release --output-on-failure`: passed,
-        `211/211`
-  - direct DaisyHostCLI adoption checks:
-    - `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
-      passed
-    - `build\Release\DaisyHostCLI.exe list-apps --json`: passed
-    - `build\Release\DaisyHostCLI.exe describe-app cloudseed --json`: passed
-    - `build\Release\DaisyHostCLI.exe describe-board daisy_field --json`:
-      passed
-    - `build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json`:
-      passed
-    - `build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay --json`:
-      passed, audio checksum `c9c3f665e6a0dd2b`
-    - `build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json`:
-      passed
+        `216/216`
   - caveats:
-    - no new DaisyHostCLI commands were added
-    - manual DAW/VST3 validation, standalone icon visibility, computer-side USB
-      MIDI validation, and hands-on Field audio/control/CV validation were not
-      run
+    - WS8 did not add routing presets, mixed-board racks, DAW automation
+      changes, firmware adapters, or new state models
+    - manual visible GUI inspection, DAW/VST3 validation, standalone icon
+      visibility, computer-side USB MIDI validation, generated-adapter
+      flashing, real CV voltage measurement, and hands-on Field
+      audio/control/CV validation were not run
 - Verified commands/results in the current 2026-04-26 DaisyHostCLI pass:
   - manager-readable result: `DaisyHostCLI.exe` now exposes native agent/CI
     commands for app/board/input discovery, app/board JSON descriptions,
@@ -860,9 +984,10 @@ The following paths were verified from this checkout on 2026-04-23:
     `DaisyHost/build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   - `ctest` currently launches unit cases through
     `tests/run_unit_test_payload.py`
-  - historical note: the later modulation-lane pass supersedes this as current
-    checkout truth with a 2026-04-26 `211/211` gate; the earlier TF12
-    `202/202` gate remains the CLI adoption evidence point
+  - historical note: the later TF10 routing-contract hardening pass supersedes
+    this as current checkout truth with a 2026-04-27 `230/230` gate; the TF11
+    `227/227`, WS8 `216/216`, modulation-lane `211/211`, and TF12 `202/202`
+    gates remain dated historical evidence
 
 ## Current Hosted Apps
 
@@ -1175,8 +1300,8 @@ Version/change tracking target behavior:
 ## Current Notes
 
 - The last fully green `build_host.cmd` host-gate rerun from this checkout is
-  now the 2026-04-26 modulation-lane architecture `211/211` pass.
-- Older `159/159`, `168/168`, `196/196`, `197/197`, and `202/202` counts
+  now the 2026-04-27 TF11 node-targeted readback `227/227` pass.
+- Older `159/159`, `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, and `216/216` counts
   remain useful as dated historical ledger evidence, but they are not the
   current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path

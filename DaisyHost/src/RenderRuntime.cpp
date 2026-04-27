@@ -21,6 +21,7 @@
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/BoardProfile.h"
+#include "daisyhost/HostModulation.h"
 #include "daisyhost/LiveRackTopology.h"
 
 namespace daisyhost
@@ -1365,6 +1366,63 @@ bool ValidateRouteGraph(const std::vector<RenderRoute>&                 routes,
     return true;
 }
 
+bool ValidateRoutePlanPorts(
+    const LiveRackRoutePlan&                                routePlan,
+    const std::unordered_map<std::string, PortDescriptor>& ports,
+    std::string*                                           errorMessage)
+{
+    for(const auto& route : routePlan.audioRoutes)
+    {
+        const auto sourceIt = ports.find(route.source.portId);
+        const auto destIt   = ports.find(route.destination.portId);
+        if(sourceIt == ports.end() || destIt == ports.end())
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage = "Unknown route port id";
+            }
+            return false;
+        }
+
+        const auto& source = sourceIt->second;
+        const auto& dest   = destIt->second;
+        if(source.type != VirtualPortType::kAudio
+           || dest.type != VirtualPortType::kAudio)
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage
+                    = "Multi-node render currently supports audio routes only";
+            }
+            return false;
+        }
+        if(source.direction != PortDirection::kOutput
+           || dest.direction != PortDirection::kInput)
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage = "Route directions must be output -> input";
+            }
+            return false;
+        }
+        if(source.nodeId != route.source.nodeId
+           || dest.nodeId != route.destination.nodeId
+           || source.channelIndex
+                  != static_cast<int>(route.source.channelIndex)
+           || dest.channelIndex
+                  != static_cast<int>(route.destination.channelIndex))
+        {
+            if(errorMessage != nullptr)
+            {
+                *errorMessage = "Route port descriptors do not match the live rack plan";
+            }
+            return false;
+        }
+    }
+
+    return true;
+}
+
 std::size_t FindPrimaryNodeIndex(const std::vector<ResolvedRenderNode>& nodes)
 {
     for(std::size_t index = 0; index < nodes.size(); ++index)
@@ -1380,6 +1438,7 @@ std::size_t FindPrimaryNodeIndex(const std::vector<ResolvedRenderNode>& nodes)
 bool ResolveMultiNodeScenario(const RenderScenario& scenario,
                               std::vector<ResolvedRenderNode>* nodes,
                               std::unordered_map<std::string, PortDescriptor>* ports,
+                              LiveRackRoutePlan* routePlan,
                               std::string* errorMessage)
 {
     if(nodes == nullptr || ports == nullptr)
@@ -1497,9 +1556,20 @@ bool ResolveMultiNodeScenario(const RenderScenario& scenario,
         return false;
     }
 
-    if(!ValidateLiveRackTopologyConfig(MakeLiveRackTopologyConfig(scenario), errorMessage))
+    LiveRackRoutePlan candidateRoutePlan;
+    if(!TryBuildLiveRackRoutePlan(MakeLiveRackTopologyConfig(scenario),
+                                  &candidateRoutePlan,
+                                  errorMessage))
     {
         return false;
+    }
+    if(!ValidateRoutePlanPorts(candidateRoutePlan, *ports, errorMessage))
+    {
+        return false;
+    }
+    if(routePlan != nullptr)
+    {
+        *routePlan = std::move(candidateRoutePlan);
     }
 
     return true;
@@ -1584,13 +1654,17 @@ bool ApplyFieldSurfaceControlBinding(HostedAppCore&            app,
                                      const BoardSurfaceBinding& binding,
                                      float                     normalizedValue)
 {
+    ParameterDescriptor safetyDescriptor;
+    safetyDescriptor.id = binding.targetId;
+    const float safeValue = ApplyDaisyFieldExternalControlSafetyFloor(
+        safetyDescriptor, normalizedValue);
     switch(binding.targetKind)
     {
         case BoardSurfaceTargetKind::kControl:
-            app.SetControl(binding.targetId, normalizedValue);
+            app.SetControl(binding.targetId, safeValue);
             return true;
         case BoardSurfaceTargetKind::kParameter:
-            return app.SetParameterValue(binding.targetId, normalizedValue);
+            return app.SetParameterValue(binding.targetId, safeValue);
         case BoardSurfaceTargetKind::kMenuItem:
             if(normalizedValue >= 0.5f)
             {
@@ -1635,6 +1709,7 @@ EffectiveHostFieldSurfaceSnapshot BuildFieldSurfaceSnapshotForRender(
     EffectiveHostFieldSurfaceSnapshot snapshot;
     const auto mapping = BuildDaisyFieldControlMapping(
         bindings, app.GetParameters(), app.GetMenuModel(), 4, nodeId);
+    const auto fieldKeyLedValues = app.GetFieldKeyLedValues();
 
     for(std::size_t index = 0; index < mapping.cvOutputs.size(); ++index)
     {
@@ -1674,8 +1749,10 @@ EffectiveHostFieldSurfaceSnapshot BuildFieldSurfaceSnapshotForRender(
         if(index < kDaisyFieldKeyCount)
         {
             led.normalizedValue
-                = activeMidiNotes.count(mapping.keys[index].midiNote) > 0 ? 1.0f
-                                                                          : 0.0f;
+                = std::max(activeMidiNotes.count(mapping.keys[index].midiNote) > 0
+                               ? 1.0f
+                               : 0.0f,
+                           std::clamp(fieldKeyLedValues[index], 0.0f, 1.0f));
         }
         else if(index < kDaisyFieldKeyCount + kDaisyFieldSwitchCount)
         {
@@ -1721,6 +1798,50 @@ std::size_t ResolveSurfaceControlNodeIndex(
         *errorMessage = "Unknown targetNodeId in timeline: " + nodeId;
     }
     return nodeIndex;
+}
+
+std::string ResolveTimelineEventTargetNodeIdForReadback(
+    const RenderTimelineEvent&            event,
+    const RenderScenario&                 scenario,
+    const std::vector<ResolvedRenderNode>& nodes)
+{
+    if(!event.targetNodeId.empty())
+    {
+        return event.targetNodeId;
+    }
+
+    std::size_t nodeIndex = nodes.size();
+    switch(event.type)
+    {
+        case RenderTimelineEventType::kParameterSet:
+            nodeIndex = FindNodeIndexForQualifiedId(nodes, event.parameterId);
+            break;
+        case RenderTimelineEventType::kCvSet:
+        case RenderTimelineEventType::kGateSet:
+            nodeIndex = FindNodeIndexForQualifiedId(nodes, event.portId);
+            break;
+        case RenderTimelineEventType::kMenuSetItem:
+            nodeIndex = FindNodeIndexForQualifiedId(nodes, event.menuItemId);
+            break;
+        case RenderTimelineEventType::kSurfaceControlSet:
+            nodeIndex
+                = ResolveSurfaceControlNodeIndex(event, scenario, nodes, nullptr);
+            break;
+        case RenderTimelineEventType::kMidi:
+        case RenderTimelineEventType::kAudioInputConfig:
+        case RenderTimelineEventType::kImpulse:
+        case RenderTimelineEventType::kMenuRotate:
+        case RenderTimelineEventType::kMenuPress:
+            nodeIndex = ResolveEventNodeIndex(event, scenario, nodes, nullptr);
+            break;
+    }
+
+    if(nodeIndex < nodes.size())
+    {
+        return nodes[nodeIndex].config.nodeId;
+    }
+
+    return {};
 }
 
 struct TimelineEventWithIndex
@@ -2268,7 +2389,8 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
 {
     std::vector<ResolvedRenderNode>                 nodes;
     std::unordered_map<std::string, PortDescriptor> ports;
-    if(!ResolveMultiNodeScenario(scenario, &nodes, &ports, errorMessage))
+    LiveRackRoutePlan                               routePlan;
+    if(!ResolveMultiNodeScenario(scenario, &nodes, &ports, &routePlan, errorMessage))
     {
         return false;
     }
@@ -2281,8 +2403,8 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
 
     const std::size_t primaryIndex    = FindPrimaryNodeIndex(nodes);
     const std::size_t selectedIndex   = FindNodeIndexById(nodes, scenario.selectedNodeId);
-    const std::size_t entryNodeIndex  = FindNodeIndexById(nodes, scenario.entryNodeId);
-    const std::size_t outputNodeIndex = FindNodeIndexById(nodes, scenario.outputNodeId);
+    const std::size_t entryNodeIndex  = FindNodeIndexById(nodes, routePlan.config.entryNodeId);
+    const std::size_t outputNodeIndex = FindNodeIndexById(nodes, routePlan.config.outputNodeId);
     if(primaryIndex >= nodes.size() || selectedIndex >= nodes.size()
        || entryNodeIndex >= nodes.size() || outputNodeIndex >= nodes.size())
     {
@@ -2290,13 +2412,6 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
         {
             *errorMessage = "Rack globals reference an unknown node";
         }
-        return false;
-    }
-
-    LiveRackTopologyPreset topologyPreset = LiveRackTopologyPreset::kNode0Only;
-    if(!TryInferLiveRackTopologyPreset(
-           MakeLiveRackTopologyConfig(scenario), &topologyPreset, errorMessage))
-    {
         return false;
     }
 
@@ -2347,8 +2462,8 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
     result->manifest.appId             = nodes[primaryIndex].config.appId;
     result->manifest.boardId           = scenario.boardId;
     result->manifest.selectedNodeId    = scenario.selectedNodeId;
-    result->manifest.entryNodeId       = scenario.entryNodeId;
-    result->manifest.outputNodeId      = scenario.outputNodeId;
+    result->manifest.entryNodeId       = routePlan.config.entryNodeId;
+    result->manifest.outputNodeId      = routePlan.config.outputNodeId;
     result->manifest.appDisplayName    = nodes[primaryIndex].app->GetAppDisplayName();
     result->manifest.renderConfig      = scenario.renderConfig;
     result->manifest.frameCount        = totalFrames;
@@ -2404,7 +2519,10 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
                      == currentFrame)
         {
             const auto& event = sortedEvents[eventIndex].event;
-            result->manifest.executedTimeline.push_back(event);
+            auto executedEvent = event;
+            executedEvent.targetNodeId
+                = ResolveTimelineEventTargetNodeIdForReadback(event, scenario, nodes);
+            result->manifest.executedTimeline.push_back(executedEvent);
 
             switch(event.type)
             {
@@ -2575,27 +2693,9 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
             break;
         }
 
-        std::array<std::size_t, 2> processingOrder = {primaryIndex, outputNodeIndex};
-        switch(topologyPreset)
+        for(const auto& nodeId : routePlan.processingOrder)
         {
-            case LiveRackTopologyPreset::kNode0Only:
-                processingOrder = {FindNodeIndexById(nodes, "node0"), nodes.size()};
-                break;
-            case LiveRackTopologyPreset::kNode1Only:
-                processingOrder = {FindNodeIndexById(nodes, "node1"), nodes.size()};
-                break;
-            case LiveRackTopologyPreset::kNode0ToNode1:
-                processingOrder = {FindNodeIndexById(nodes, "node0"),
-                                   FindNodeIndexById(nodes, "node1")};
-                break;
-            case LiveRackTopologyPreset::kNode1ToNode0:
-                processingOrder = {FindNodeIndexById(nodes, "node1"),
-                                   FindNodeIndexById(nodes, "node0")};
-                break;
-        }
-
-        for(const auto nodeIndex : processingOrder)
-        {
+            const auto nodeIndex = FindNodeIndexById(nodes, nodeId);
             if(nodeIndex >= nodes.size())
             {
                 continue;
@@ -2660,33 +2760,27 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
             }
             else
             {
-                for(const auto& route : scenario.routes)
+                for(const auto& route : routePlan.audioRoutes)
                 {
-                    const auto sourcePort = ports.at(route.sourcePortId);
-                    const auto destPort   = ports.at(route.destPortId);
-                    if(destPort.nodeId != node.config.nodeId)
+                    if(route.destination.nodeId != node.config.nodeId)
                     {
                         continue;
                     }
 
-                    const auto sourceNodeIt = std::find_if(
-                        nodes.begin(),
-                        nodes.end(),
-                        [&sourcePort](const ResolvedRenderNode& candidate) {
-                            return candidate.config.nodeId == sourcePort.nodeId;
-                        });
-                    if(sourceNodeIt == nodes.end())
+                    const auto sourceNodeIndex = FindNodeIndexById(
+                        nodes, route.source.nodeId);
+                    if(sourceNodeIndex >= nodes.size())
                     {
                         continue;
                     }
 
-                    const auto sourceNodeIndex = static_cast<std::size_t>(
-                        std::distance(nodes.begin(), sourceNodeIt));
-                    std::copy_n(nodeOutputs[sourceNodeIndex][sourcePort.channelIndex].begin(),
+                    std::copy_n(nodeOutputs[sourceNodeIndex][route.source.channelIndex].begin(),
                                 static_cast<std::ptrdiff_t>(segmentFrames),
-                                routedInputs[nodeIndex][destPort.channelIndex].begin());
-                    inputPointers[destPort.channelIndex]
-                        = routedInputs[nodeIndex][destPort.channelIndex].data();
+                                routedInputs[nodeIndex]
+                                            [route.destination.channelIndex]
+                                                .begin());
+                    inputPointers[route.destination.channelIndex]
+                        = routedInputs[nodeIndex][route.destination.channelIndex].data();
                 }
             }
 
@@ -3284,7 +3378,12 @@ bool RunRenderScenario(const RenderScenario& scenario,
                      == currentFrame)
         {
             const auto& event = sortedEvents[eventIndex].event;
-            result->manifest.executedTimeline.push_back(event);
+            auto executedEvent = event;
+            if(executedEvent.targetNodeId.empty())
+            {
+                executedEvent.targetNodeId = "node0";
+            }
+            result->manifest.executedTimeline.push_back(executedEvent);
 
             switch(event.type)
             {

@@ -156,6 +156,14 @@ BoardProfile MakeDaisyPatchProfile(const std::string& nodeId)
     profile.boardId     = "daisy_patch";
     profile.nodeId      = nodeId;
     profile.displayName = "Daisy Patch";
+    profile.editorSurface.panelName              = "Daisy Patch";
+    profile.editorSurface.selectedNodeTargetLead = "Patch controls target ";
+    profile.editorSurface.selectedNodeTargetScope =
+        "knobs, encoder, CV/gate, test input, menu, and modulation edits follow this selected node.";
+    profile.editorSurface.computerKeyboardHint = "Enable A/W/S/E";
+    profile.editorSurface.traceMode = BoardEditorTraceMode::kTopControlCvInputs;
+    profile.editorSurface.showsExtendedSurfaceControls = false;
+    profile.editorSurface.showsPanelIndicators         = false;
 
     profile.controls.push_back(MakeControl(
         apps::MultiDelayCore::MakeKnobControlId(nodeId, 1),
@@ -415,6 +423,15 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
     profile.boardId     = "daisy_field";
     profile.nodeId      = nodeId;
     profile.displayName = "Daisy Field";
+    profile.editorSurface.panelName              = "Daisy Field";
+    profile.editorSurface.selectedNodeTargetLead = "Field controls target ";
+    profile.editorSurface.selectedNodeTargetScope =
+        "K/A/B/SW, CV, drawer, and modulation edits follow this selected node.";
+    profile.editorSurface.computerKeyboardHint = "Enable A/W/S/E  X/C=SW";
+    profile.editorSurface.traceMode =
+        BoardEditorTraceMode::kNativeCvInputsAndGateDisplay;
+    profile.editorSurface.showsExtendedSurfaceControls = true;
+    profile.editorSurface.showsPanelIndicators         = true;
 
     profile.display.id          = nodeId + "/display/oled";
     profile.display.nodeId      = nodeId;
@@ -447,9 +464,16 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
     profile.decorations.push_back(MakeDecoration(
         nodeId + "/decoration/field_io_row",
         nodeId,
-        "CV I/O",
+        "CV / GATE I/O",
         PanelDecorationKind::kAudioSection,
-        {0.48f, 0.84f, 0.46f, 0.11f},
+        {0.48f, 0.805f, 0.46f, 0.15f},
+        0.02f));
+    profile.decorations.push_back(MakeDecoration(
+        nodeId + "/decoration/field_key_mapping",
+        nodeId,
+        "KEY MAP",
+        PanelDecorationKind::kCvBay,
+        {0.015f, 0.835f, 0.43f, 0.12f},
         0.02f));
     profile.decorations.push_back(MakeDecoration(
         nodeId + "/decoration/field_midi_gate",
@@ -497,11 +521,18 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
                                      TextAlignment::kCenter));
     profile.texts.push_back(MakeText(nodeId + "/text/io",
                                      nodeId,
-                                     "CV IN / CV OUT",
-                                     {0.54f, 0.825f, 0.34f, 0.03f},
+                                     "CV / Gate I/O",
+                                     {0.54f, 0.805f, 0.34f, 0.03f},
                                      11.0f,
                                      false,
                                      TextAlignment::kCenter));
+    profile.texts.push_back(MakeText(nodeId + "/text/key_mapping_title",
+                                     nodeId,
+                                     "Key mappings (A/B)",
+                                     {0.025f, 0.845f, 0.18f, 0.025f},
+                                     10.0f,
+                                     true,
+                                     TextAlignment::kLeft));
 
     for(std::size_t row = 0; row < 2; ++row)
     {
@@ -623,33 +654,33 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
 
     for(std::size_t i = 1; i <= 4; ++i)
     {
-        const float x = 0.49f + static_cast<float>(i - 1) * 0.075f;
+        const float x = 0.51f + static_cast<float>(i - 1) * 0.080f;
         profile.ports.push_back(MakePort(nodeId + "/port/field_cv_in_"
                                              + std::to_string(i),
                                          nodeId,
                                          "CV IN " + std::to_string(i),
                                          VirtualPortType::kCv,
                                          PortDirection::kInput,
-                                         {x, 0.88f, 0.05f, 0.045f}));
+                                         {x, 0.835f, 0.052f, 0.046f}));
     }
 
     for(std::size_t i = 1; i <= 2; ++i)
     {
-        const float x = 0.79f + static_cast<float>(i - 1) * 0.075f;
+        const float x = 0.70f + static_cast<float>(i - 1) * 0.080f;
         profile.ports.push_back(MakePort(nodeId + "/port/field_cv_out_"
                                              + std::to_string(i),
                                          nodeId,
                                          "CV OUT " + std::to_string(i),
                                          VirtualPortType::kCv,
                                          PortDirection::kOutput,
-                                         {x, 0.88f, 0.05f, 0.045f}));
+                                         {x, 0.895f, 0.052f, 0.046f}));
         profile.indicators.push_back(MakeIndicator(
             nodeId + "/indicator/field_cv_out_" + std::to_string(i),
             nodeId,
             nodeId + "/port/field_cv_out_" + std::to_string(i),
             "CV OUT " + std::to_string(i),
             PanelIndicatorKind::kCvOutput,
-            {x, 0.855f, 0.05f, 0.018f}));
+            {x, 0.872f, 0.052f, 0.018f}));
     }
 
     profile.ports.push_back(MakePort(nodeId + "/port/field_gate_in_1",
@@ -657,25 +688,25 @@ BoardProfile MakeDaisyFieldProfile(const std::string& nodeId)
                                      "GATE IN",
                                      VirtualPortType::kGate,
                                      PortDirection::kInput,
-                                     {0.815f, 0.260f, 0.045f, 0.040f}));
+                                     {0.51f, 0.895f, 0.052f, 0.046f}));
     profile.indicators.push_back(MakeIndicator(nodeId + "/led/field_gate_in",
                                                nodeId,
                                                nodeId + "/control/field_gate_in",
                                                "Gate In",
                                                PanelIndicatorKind::kLed,
-                                               {0.828f, 0.235f, 0.020f, 0.017f}));
+                                               {0.526f, 0.872f, 0.020f, 0.017f}));
     profile.ports.push_back(MakePort(nodeId + "/port/field_gate_out_1",
                                      nodeId,
                                      "GATE OUT",
                                      VirtualPortType::kGate,
                                      PortDirection::kOutput,
-                                     {0.875f, 0.260f, 0.045f, 0.040f}));
+                                     {0.61f, 0.895f, 0.052f, 0.046f}));
     profile.indicators.push_back(MakeIndicator(nodeId + "/led/field_gate_out",
                                                nodeId,
                                                nodeId + "/port/gate_out_1",
                                                "Gate Out",
                                                PanelIndicatorKind::kLed,
-                                               {0.888f, 0.235f, 0.020f, 0.017f}));
+                                               {0.626f, 0.872f, 0.020f, 0.017f}));
     profile.ports.push_back(MakePort(nodeId + "/port/field_midi_in_1",
                                      nodeId,
                                      "MIDI IN",

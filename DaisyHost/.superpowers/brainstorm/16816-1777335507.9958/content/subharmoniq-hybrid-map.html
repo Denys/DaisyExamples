@@ -1,0 +1,66 @@
+<h2>Subharmoniq A+B Hybrid Control Map</h2>
+<p class="subtitle">A = hardware-faithful functional pages. B = performance-first sequencer hub. This hybrid keeps A/B keys stable while pages change the K1-K8 knob layer.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Permanent Field Layer: A/B Keys Always Feel Like Subharmonicon Performance Controls</div>
+  <div class="mockup-body">
+    <div style="display:grid; grid-template-columns:repeat(8, minmax(64px,1fr)); gap:8px; text-align:center; font-size:13px;">
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>A1</b><br>Seq1 Step1<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>A2</b><br>Seq1 Step2<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>A3</b><br>Seq1 Step3<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>A4</b><br>Seq1 Step4<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #ffb45c; border-radius:6px;"><b>A5</b><br>Rhythm1<br><span style="color:#ffb45c">Off / S1 / S2 / Both</span></div>
+      <div style="padding:10px; border:2px solid #ffb45c; border-radius:6px;"><b>A6</b><br>Rhythm2<br><span style="color:#ffb45c">Off / S1 / S2 / Both</span></div>
+      <div style="padding:10px; border:2px solid #ffb45c; border-radius:6px;"><b>A7</b><br>Rhythm3<br><span style="color:#ffb45c">Off / S1 / S2 / Both</span></div>
+      <div style="padding:10px; border:2px solid #ffb45c; border-radius:6px;"><b>A8</b><br>Rhythm4<br><span style="color:#ffb45c">Off / S1 / S2 / Both</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>B1</b><br>Seq2 Step1<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>B2</b><br>Seq2 Step2<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>B3</b><br>Seq2 Step3<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #7fb8ff; border-radius:6px;"><b>B4</b><br>Seq2 Step4<br><span style="color:#7fb8ff">active LED</span></div>
+      <div style="padding:10px; border:2px solid #b7f07a; border-radius:6px;"><b>B5</b><br>Quantize<br><span style="color:#b7f07a">Off/ET/JI</span></div>
+      <div style="padding:10px; border:2px solid #b7f07a; border-radius:6px;"><b>B6</b><br>Seq Oct<br><span style="color:#b7f07a">1 / 2 / 5</span></div>
+      <div style="padding:10px; border:2px solid #b7f07a; border-radius:6px;"><b>B7</b><br>Play/Stop<br><span style="color:#b7f07a">on when playing</span></div>
+      <div style="padding:10px; border:2px solid #b7f07a; border-radius:6px;"><b>B8</b><br>Reset<br><span style="color:#b7f07a">lit while held</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Default Page: SEQ/RHY Hub</div>
+    <div class="mockup-body">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">
+        <div class="placeholder">K1 S1 Step1</div><div class="placeholder">K2 S1 Step2</div><div class="placeholder">K3 S1 Step3</div><div class="placeholder">K4 S1 Step4</div>
+        <div class="placeholder">K5 S2 Step1</div><div class="placeholder">K6 S2 Step2</div><div class="placeholder">K7 S2 Step3</div><div class="placeholder">K8 S2 Step4</div>
+      </div>
+      <p><b>Status strip:</b> Rh divs 1-4, rhythm targets, Quantize, Seq Oct, playing state, Seq1/Seq2 current step.</p>
+      <p><b>Long-press/edit path:</b> step focus opens Seq Assign: OSC / SUB1 / SUB2 for that sequencer.</p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Sound Pages: Hardware-Faithful Knob Layers</div>
+    <div class="mockup-body">
+      <p><b>VCO:</b> VCO1, VCO2, V1 Sub1, V1 Sub2, V2 Sub1, V2 Sub2, Quantize, Seq Oct.</p>
+      <p><b>VCF:</b> Cutoff, Resonance, VCF EG Amt, VCF Attack, VCF Decay, Drive, Output, Tempo.</p>
+      <p><b>VCA/Mix:</b> six source levels plus VCA Attack/Decay or Output/Drive depending available core controls.</p>
+      <p><b>Rule:</b> K1-K8 changes per page; A/B keys stay performance-stable.</p>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="stable-ab" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Stable A/B Keys Across Pages</h3>
+      <p>Recommended. Lower cognitive load: the button matrix is always sequencer/rhythm/transport, while knobs follow the selected page.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="page-sensitive-ab" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Page-Sensitive A/B Keys</h3>
+      <p>More functions exposed directly, but the same physical key means different things on VCO, VCF, VCA, and Seq pages.</p>
+    </div>
+  </div>
+</div>

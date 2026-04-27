@@ -154,6 +154,18 @@ Required verification before handoff:
   and affected slice in `PROJECT_TRACKER.md`. If a skill was materially used or
   re-evaluated, also update `SKILL_PLAYBOOK.md`. No iteration is complete
   without test evidence.
+- Every planned or completed WP must include manager-readable explanation
+  alongside technical detail. Record what is being implemented or what was
+  done, why it matters, what remains, and what is explicitly out of scope so a
+  non-specialist can track progress without knowing the internals.
+- After a WP/workstream implementation is complete enough for handoff, run the
+  next-WP recommender and record the recommended WP, runner-up, explicit waits,
+  and first safe slice in the `PROJECT_TRACKER.md` handoff:
+
+```sh
+py -3 tools/suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
+```
+
 - For code changes, follow test-first discipline: write a failing test first,
   verify the failure, implement the minimal change, rerun targeted tests, then
   update the tracker/docs.
@@ -202,6 +214,12 @@ from `../patch/MultiDelay/` and/or `../patch/Torus/` as appropriate.
   an explicit integration step.
 - Every handoff must include the tests run, docs reviewed, blockers, and the
   next safe starting point.
+- Every handoff must also include the manager-readable explanation for the WP:
+  done/implemented, why it matters, remaining work, and explicit non-goals.
+- For WP closeouts, "next safe starting point" must include the recommender's
+  decision-ready next WP, runner-up, waits, dependency reason, overlap risk, and
+  first safe implementation slice. If the recommender output conflicts with
+  human judgment, record both and explain which source won.
 - If a planned edit touches another active slice, stop and coordinate in
   `PROJECT_TRACKER.md` before changing the file.
 

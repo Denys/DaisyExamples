@@ -41,6 +41,23 @@ enum class PanelIndicatorKind
     kGateOutput,
 };
 
+enum class BoardEditorTraceMode
+{
+    kTopControlCvInputs,
+    kNativeCvInputsAndGateDisplay,
+};
+
+struct BoardEditorSurfaceSpec
+{
+    std::string          panelName;
+    std::string          selectedNodeTargetLead;
+    std::string          selectedNodeTargetScope;
+    std::string          computerKeyboardHint;
+    BoardEditorTraceMode traceMode = BoardEditorTraceMode::kTopControlCvInputs;
+    bool                 showsExtendedSurfaceControls = false;
+    bool                 showsPanelIndicators         = false;
+};
+
 struct ControlSpec
 {
     std::string id;
@@ -112,6 +129,7 @@ struct BoardProfile
     std::vector<ControlSpec> controls;
     std::vector<VirtualPort> ports;
     DisplaySpec              display;
+    BoardEditorSurfaceSpec   editorSurface;
     std::vector<PanelControlSlotSpec> surfaceControls;
     std::vector<PanelDecorationSpec>  decorations;
     std::vector<PanelTextSpec>        texts;

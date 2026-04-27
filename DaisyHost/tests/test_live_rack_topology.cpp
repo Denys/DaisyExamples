@@ -109,6 +109,146 @@ TEST(LiveRackTopologyTest, ValidatesSupportedShapes)
         << errorMessage;
 }
 
+TEST(LiveRackTopologyTest, BuildsRoutePlansForAllCurrentPresets)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode0Only),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+    ASSERT_EQ(plan.processingOrder.size(), 1u);
+    EXPECT_EQ(plan.processingOrder[0], "node0");
+    EXPECT_TRUE(plan.audioRoutes.empty());
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode1Only),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+    ASSERT_EQ(plan.processingOrder.size(), 1u);
+    EXPECT_EQ(plan.processingOrder[0], "node1");
+    EXPECT_TRUE(plan.audioRoutes.empty());
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode0ToNode1),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+    ASSERT_EQ(plan.processingOrder.size(), 2u);
+    EXPECT_EQ(plan.processingOrder[0], "node0");
+    EXPECT_EQ(plan.processingOrder[1], "node1");
+    ASSERT_EQ(plan.audioRoutes.size(), 2u);
+    EXPECT_EQ(plan.audioRoutes[0].source.nodeId, "node0");
+    EXPECT_EQ(plan.audioRoutes[0].source.portId, "node0/port/audio_out_1");
+    EXPECT_EQ(plan.audioRoutes[0].source.channelIndex, 0u);
+    EXPECT_EQ(plan.audioRoutes[0].destination.nodeId, "node1");
+    EXPECT_EQ(plan.audioRoutes[0].destination.portId, "node1/port/audio_in_1");
+    EXPECT_EQ(plan.audioRoutes[0].destination.channelIndex, 0u);
+    EXPECT_EQ(plan.audioRoutes[1].source.channelIndex, 1u);
+    EXPECT_EQ(plan.audioRoutes[1].destination.channelIndex, 1u);
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode1ToNode0),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+    ASSERT_EQ(plan.processingOrder.size(), 2u);
+    EXPECT_EQ(plan.processingOrder[0], "node1");
+    EXPECT_EQ(plan.processingOrder[1], "node0");
+    ASSERT_EQ(plan.audioRoutes.size(), 2u);
+    EXPECT_EQ(plan.audioRoutes[0].source.nodeId, "node1");
+    EXPECT_EQ(plan.audioRoutes[0].destination.nodeId, "node0");
+}
+
+TEST(LiveRackTopologyTest, SortsRoutePlansByDestinationChannel)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        MakeConfig("node0",
+                   "node1",
+                   {MakeRoute("node0/port/audio_out_2", "node1/port/audio_in_2"),
+                    MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_1")}),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(plan.audioRoutes.size(), 2u);
+    EXPECT_EQ(plan.audioRoutes[0].destination.channelIndex, 0u);
+    EXPECT_EQ(plan.audioRoutes[1].destination.channelIndex, 1u);
+}
+
+TEST(LiveRackTopologyTest, SupportsValidationOnlyRoutePlanBuilds)
+{
+    std::string errorMessage;
+    EXPECT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode0ToNode1),
+        nullptr,
+        &errorMessage))
+        << errorMessage;
+}
+
+TEST(LiveRackTopologyTest, CopiesAcceptedConfigIntoRoutePlan)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+    const auto                   config = MakeConfig(
+        "node0",
+        "node1",
+        {MakeRoute("node0/port/audio_out_2", "node1/port/audio_in_2"),
+         MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_1")});
+
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(config, &plan, &errorMessage))
+        << errorMessage;
+
+    EXPECT_EQ(plan.config.entryNodeId, config.entryNodeId);
+    EXPECT_EQ(plan.config.outputNodeId, config.outputNodeId);
+    ASSERT_EQ(plan.config.routes.size(), config.routes.size());
+    EXPECT_EQ(plan.config.routes[0].sourcePortId, config.routes[0].sourcePortId);
+    EXPECT_EQ(plan.config.routes[0].destPortId, config.routes[0].destPortId);
+    EXPECT_EQ(plan.config.routes[1].sourcePortId, config.routes[1].sourcePortId);
+    EXPECT_EQ(plan.config.routes[1].destPortId, config.routes[1].destPortId);
+}
+
+TEST(LiveRackTopologyTest, LeavesExistingRoutePlanUnchangedOnFailure)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+    ASSERT_TRUE(daisyhost::TryBuildLiveRackRoutePlan(
+        daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode0Only),
+        &plan,
+        &errorMessage))
+        << errorMessage;
+
+    const auto originalConfigEntry = plan.config.entryNodeId;
+    const auto originalConfigOutput = plan.config.outputNodeId;
+    const auto originalOrder = plan.processingOrder;
+    const auto originalRouteCount = plan.audioRoutes.size();
+
+    EXPECT_FALSE(daisyhost::TryBuildLiveRackRoutePlan(
+        MakeConfig("node0",
+                   "node1",
+                   {MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_2"),
+                    MakeRoute("node0/port/audio_out_2", "node1/port/audio_in_1")}),
+        &plan,
+        &errorMessage));
+
+    EXPECT_EQ(plan.config.entryNodeId, originalConfigEntry);
+    EXPECT_EQ(plan.config.outputNodeId, originalConfigOutput);
+    EXPECT_EQ(plan.processingOrder, originalOrder);
+    EXPECT_EQ(plan.audioRoutes.size(), originalRouteCount);
+}
+
 TEST(LiveRackTopologyTest, RejectsUnknownNodeIds)
 {
     std::string errorMessage;
@@ -130,6 +270,20 @@ TEST(LiveRackTopologyTest, RejectsPartialStereoRouteSets)
     EXPECT_NE(errorMessage.find("exactly two"), std::string::npos);
 }
 
+TEST(LiveRackTopologyTest, RejectsDuplicateRoutePlans)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+    EXPECT_FALSE(daisyhost::TryBuildLiveRackRoutePlan(
+        MakeConfig("node0",
+                   "node1",
+                   {MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_1"),
+                    MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_1")}),
+        &plan,
+        &errorMessage));
+    EXPECT_NE(errorMessage.find("exactly two"), std::string::npos);
+}
+
 TEST(LiveRackTopologyTest, RejectsNonAudioRoutes)
 {
     std::string errorMessage;
@@ -142,13 +296,40 @@ TEST(LiveRackTopologyTest, RejectsNonAudioRoutes)
     EXPECT_NE(errorMessage.find("audio routes only"), std::string::npos);
 }
 
-TEST(LiveRackTopologyTest, RejectsShapesThatDoNotMatchSprintPresets)
+TEST(LiveRackTopologyTest, RejectsCrossChannelAndSameNodeRoutePlans)
+{
+    daisyhost::LiveRackRoutePlan plan;
+    std::string                  errorMessage;
+
+    EXPECT_FALSE(daisyhost::TryBuildLiveRackRoutePlan(
+        MakeConfig("node0",
+                   "node1",
+                   {MakeRoute("node0/port/audio_out_1", "node1/port/audio_in_2"),
+                    MakeRoute("node0/port/audio_out_2", "node1/port/audio_in_1")}),
+        &plan,
+        &errorMessage));
+    EXPECT_NE(errorMessage.find("unsupported"), std::string::npos);
+
+    errorMessage.clear();
+    EXPECT_FALSE(daisyhost::TryBuildLiveRackRoutePlan(
+        MakeConfig("node0",
+                   "node1",
+                   {MakeRoute("node0/port/audio_out_1", "node0/port/audio_in_1"),
+                    MakeRoute("node0/port/audio_out_2", "node1/port/audio_in_2")}),
+        &plan,
+        &errorMessage));
+    EXPECT_NE(errorMessage.find("unsupported"), std::string::npos);
+}
+
+TEST(LiveRackTopologyTest, RejectsShapesOutsideCurrentTwoNodeAudioContract)
 {
     std::string errorMessage;
     EXPECT_FALSE(daisyhost::ValidateLiveRackTopologyConfig(
         MakeConfig("node0", "node1", {}),
         &errorMessage));
-    EXPECT_NE(errorMessage.find("unsupported"), std::string::npos);
+    EXPECT_NE(errorMessage.find("current two-node audio contract"),
+              std::string::npos);
+    EXPECT_EQ(errorMessage.find("sprint"), std::string::npos);
 
     errorMessage.clear();
     EXPECT_FALSE(daisyhost::TryInferLiveRackTopologyPreset(
@@ -158,6 +339,56 @@ TEST(LiveRackTopologyTest, RejectsShapesThatDoNotMatchSprintPresets)
                     MakeRoute("node1/port/audio_out_2", "node0/port/audio_in_2")}),
         nullptr,
         &errorMessage));
-    EXPECT_NE(errorMessage.find("unsupported"), std::string::npos);
+    EXPECT_NE(errorMessage.find("current two-node audio contract"),
+              std::string::npos);
+    EXPECT_EQ(errorMessage.find("sprint"), std::string::npos);
+}
+
+TEST(LiveRackTopologyTest, DescribesTopologyPresetsForOperatorUi)
+{
+    EXPECT_EQ(daisyhost::GetLiveRackTopologyDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0Only),
+              "Node 0 only");
+    EXPECT_EQ(daisyhost::GetLiveRackTopologyDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode1Only),
+              "Node 1 only");
+    EXPECT_EQ(daisyhost::GetLiveRackTopologyDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0ToNode1),
+              "Node 0 feeds Node 1");
+    EXPECT_EQ(daisyhost::GetLiveRackTopologyDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode1ToNode0),
+              "Node 1 feeds Node 0");
+}
+
+TEST(LiveRackTopologyTest, DescribesNodeRolesWithSelectedState)
+{
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0Only, "node0", true),
+              "Selected - Entry + output");
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0Only, "node1", false),
+              "Not in route");
+
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0ToNode1,
+                  "node0",
+                  true),
+              "Selected - Audio entry");
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode0ToNode1,
+                  "node1",
+                  false),
+              "Audio output");
+
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode1ToNode0,
+                  "node0",
+                  false),
+              "Audio output");
+    EXPECT_EQ(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+                  daisyhost::LiveRackTopologyPreset::kNode1ToNode0,
+                  "node1",
+                  true),
+              "Selected - Audio entry");
 }
 } // namespace

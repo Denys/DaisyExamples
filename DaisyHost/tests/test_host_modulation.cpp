@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "daisyhost/AppRegistry.h"
+#include "daisyhost/HostModulationUiText.h"
 #include "daisyhost/HostModulation.h"
 
 namespace
@@ -84,6 +85,62 @@ TEST(HostModulationTest, IgnoresBypassedEmptyAndDiscreteLanes)
     discrete.stepCount = 4;
     EXPECT_FALSE(daisyhost::IsHostModulationTargetEligible(discrete));
     EXPECT_TRUE(daisyhost::IsHostModulationTargetEligible(continuous));
+}
+
+TEST(HostModulationTest, FieldExternalCutoffTargetsKeepAudibleSafetyFloor)
+{
+    daisyhost::ParameterDescriptor cutoff;
+    cutoff.id              = "node0/param/cutoff";
+    cutoff.normalizedValue = 0.0f;
+    cutoff.nativeMinimum   = 0.0f;
+    cutoff.nativeMaximum   = 1.0f;
+
+    EXPECT_FLOAT_EQ(daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+                        cutoff, 0.0f),
+                    0.08f);
+    EXPECT_FLOAT_EQ(daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+                        cutoff, 0.2f),
+                    0.2f);
+
+    daisyhost::ParameterDescriptor output = cutoff;
+    output.id = "node0/param/output";
+    EXPECT_FLOAT_EQ(daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+                        output, 0.0f),
+                    0.0f);
+}
+
+TEST(HostModulationTest, FormatsModulationLaneWithDestinationAndReadback)
+{
+    daisyhost::HostModulationLane lane;
+    lane.enabled         = true;
+    lane.source          = daisyhost::HostModulationSource::kCv3;
+    lane.cvTargetMinimum = -0.25f;
+    lane.cvTargetMaximum = 0.75f;
+
+    daisyhost::EffectiveHostModulationDestinationSnapshot snapshot;
+    snapshot.parameterLabel    = "Cutoff .1";
+    snapshot.unitLabel         = "";
+    snapshot.baseNativeValue   = 0.42f;
+    snapshot.resultNativeValue = 0.61f;
+    snapshot.clamped           = true;
+    snapshot.lanes.push_back(
+        {0,
+         true,
+         daisyhost::HostModulationSource::kCv3,
+         -0.25f,
+         0.75f,
+         0.0f,
+         0.50f,
+         0.19f});
+
+    const auto text = daisyhost::BuildHostModulationLaneDisplayText(
+        0, "Cutoff .1", lane, &snapshot);
+    EXPECT_NE(text.title.find("Lane 1"), std::string::npos);
+    EXPECT_NE(text.title.find("CV 3"), std::string::npos);
+    EXPECT_NE(text.title.find("Cutoff .1"), std::string::npos);
+    EXPECT_NE(text.detail.find("Base 0.42"), std::string::npos);
+    EXPECT_NE(text.detail.find("Result 0.61"), std::string::npos);
+    EXPECT_NE(text.detail.find("clamped"), std::string::npos);
 }
 
 TEST(HostModulationTest, HostedAppsKeepBaseValuesWhenEffectiveValueChanges)

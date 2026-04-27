@@ -7,6 +7,7 @@
 #include <juce_core/juce_core.h>
 
 #include "daisyhost/CliPayloads.h"
+#include "daisyhost/GateDiagnostics.h"
 #include "daisyhost/RenderRuntime.h"
 
 namespace
@@ -34,6 +35,7 @@ void PrintUsage()
         << "  render <scenario.json> --output-dir <directory> [--json]\n"
         << "  snapshot --app <appId> --board <boardId> [--selected-node node0] [--json]\n"
         << "  smoke --mode render|standalone|all --build-dir <dir> --source-dir <dir> [--config Release] [--json]\n"
+        << "  gate --source-dir <dir> --build-dir <dir> [--config Release] [--skip-configure] [--skip-build] [--skip-tests] [--json]\n"
         << "  doctor --build-dir <dir> [--source-dir <dir>] [--config Release] [--json]\n";
 }
 
@@ -132,51 +134,206 @@ std::string BuildCommandLine(const std::vector<std::string>& command)
     return result;
 }
 
+struct ExternalCommandResult
+{
+    int         exitCode = -1;
+    std::string commandLine;
+    std::string output;
+    bool        started = false;
+};
+
+ExternalCommandResult RunExternalCommand(
+    const std::vector<std::string>& command)
+{
+    ExternalCommandResult result;
+    result.commandLine = BuildCommandLine(command);
+    const auto capturedCommandLine = result.commandLine + " 2>&1";
+
+#if defined(_WIN32)
+    FILE* pipe = _popen(capturedCommandLine.c_str(), "r");
+#else
+    FILE* pipe = popen(capturedCommandLine.c_str(), "r");
+#endif
+    if(pipe == nullptr)
+    {
+        return result;
+    }
+
+    result.started = true;
+    char buffer[4096];
+    while(fgets(buffer, sizeof(buffer), pipe) != nullptr)
+    {
+        result.output += buffer;
+    }
+
+#if defined(_WIN32)
+    result.exitCode = _pclose(pipe);
+#else
+    result.exitCode = pclose(pipe);
+#endif
+    return result;
+}
+
 int RunSmokeCommand(const std::vector<std::string>& command,
                     bool                            jsonOutput)
 {
-    const auto commandLine = BuildCommandLine(command) + " 2>&1";
-    std::string output;
-
-#if defined(_WIN32)
-    FILE* pipe = _popen(commandLine.c_str(), "r");
-#else
-    FILE* pipe = popen(commandLine.c_str(), "r");
-#endif
-    if(pipe == nullptr)
+    const auto result = RunExternalCommand(command);
+    if(!result.started)
     {
         std::cerr << "Failed to start smoke command\n";
         return kRuntimeFailure;
     }
 
-    char buffer[4096];
-    while(fgets(buffer, sizeof(buffer), pipe) != nullptr)
-    {
-        output += buffer;
-    }
-
-#if defined(_WIN32)
-    const int exitCode = _pclose(pipe);
-#else
-    const int exitCode = pclose(pipe);
-#endif
-
     if(jsonOutput)
     {
         auto root = std::make_unique<juce::DynamicObject>();
-        root->setProperty("ok", exitCode == 0);
-        root->setProperty("exitCode", exitCode);
-        root->setProperty("command", juce::String(BuildCommandLine(command)));
-        root->setProperty("output", juce::String(output));
+        root->setProperty("ok", result.exitCode == 0);
+        root->setProperty("exitCode", result.exitCode);
+        root->setProperty("command", juce::String(result.commandLine));
+        root->setProperty("output", juce::String(result.output));
         std::cout << juce::JSON::toString(juce::var(root.release()), true)
                   << '\n';
     }
     else
     {
-        std::cout << output;
+        std::cout << result.output;
     }
 
-    return exitCode == 0 ? kSuccess : kRuntimeFailure;
+    return result.exitCode == 0 ? kSuccess : kRuntimeFailure;
+}
+
+bool IsSupportedConfig(const std::string& config)
+{
+    return config == "Debug" || config == "Release"
+           || config == "RelWithDebInfo" || config == "MinSizeRel";
+}
+
+void PrintGateTextSummary(const daisyhost::GateDiagnosticsResult& result)
+{
+    std::cout << result.outputTail;
+    if(!result.outputTail.empty() && result.outputTail.back() != '\n')
+    {
+        std::cout << '\n';
+    }
+    std::cout << (result.ok ? "gate passed" : "gate failed") << '\n';
+    for(const auto& blocker : result.blockers)
+    {
+        std::cout << blocker.kind << ": " << blocker.hint << '\n';
+    }
+}
+
+int RunGate(const std::vector<std::string>& args)
+{
+    const bool jsonOutput = HasFlag(args, "--json");
+    std::string sourceDirText;
+    std::string buildDirText;
+    std::string config = "Release";
+
+    if(!ReadOption(args, "--source-dir", &sourceDirText)
+       || sourceDirText.empty())
+    {
+        std::cerr << "gate requires --source-dir <dir>\n";
+        return kUsageError;
+    }
+    if(!ReadOption(args, "--build-dir", &buildDirText)
+       || buildDirText.empty())
+    {
+        std::cerr << "gate requires --build-dir <dir>\n";
+        return kUsageError;
+    }
+    ReadOption(args, "--config", &config);
+    if(!IsSupportedConfig(config))
+    {
+        std::cerr << "gate requires --config Debug|Release|RelWithDebInfo|MinSizeRel\n";
+        return kUsageError;
+    }
+
+    const auto sourceDir = std::filesystem::path(sourceDirText);
+    const auto scriptPath = sourceDir / "build_host.cmd";
+    daisyhost::GateDiagnosticsOptions options;
+    options.sourceDir = sourceDirText;
+    options.buildDir = buildDirText;
+    options.config = config;
+
+    std::vector<std::string> gateCommand{
+#if defined(_WIN32)
+        "cmd",
+        "/c",
+        "call",
+        scriptPath.string(),
+#else
+        scriptPath.string(),
+#endif
+        "-Configuration",
+        config,
+        "-BuildDir",
+        buildDirText,
+    };
+    if(HasFlag(args, "--skip-configure"))
+    {
+        gateCommand.emplace_back("-SkipConfigure");
+    }
+    if(HasFlag(args, "--skip-build"))
+    {
+        gateCommand.emplace_back("-SkipBuild");
+    }
+    if(HasFlag(args, "--skip-tests"))
+    {
+        gateCommand.emplace_back("-SkipTests");
+    }
+
+    const auto commandLine = BuildCommandLine(gateCommand);
+    if(!std::filesystem::exists(scriptPath))
+    {
+        const auto diagnostics = daisyhost::BuildGateDiagnostics(
+            options,
+            commandLine,
+            1,
+            "Missing build_host.cmd at " + scriptPath.string());
+        if(jsonOutput)
+        {
+            std::cout << daisyhost::SerializeGateDiagnosticsPayloadJson(
+                             diagnostics)
+                      << '\n';
+        }
+        else
+        {
+            PrintGateTextSummary(diagnostics);
+        }
+        return kRuntimeFailure;
+    }
+
+    const auto result = RunExternalCommand(gateCommand);
+    if(!result.started)
+    {
+        const auto diagnostics = daisyhost::BuildGateDiagnostics(
+            options, commandLine, 1, "Failed to start gate command");
+        if(jsonOutput)
+        {
+            std::cout << daisyhost::SerializeGateDiagnosticsPayloadJson(
+                             diagnostics)
+                      << '\n';
+        }
+        else
+        {
+            PrintGateTextSummary(diagnostics);
+        }
+        return kRuntimeFailure;
+    }
+
+    const auto diagnostics = daisyhost::BuildGateDiagnostics(
+        options, result.commandLine, result.exitCode, result.output);
+    if(jsonOutput)
+    {
+        std::cout << daisyhost::SerializeGateDiagnosticsPayloadJson(diagnostics)
+                  << '\n';
+    }
+    else
+    {
+        PrintGateTextSummary(diagnostics);
+    }
+
+    return diagnostics.ok ? kSuccess : kRuntimeFailure;
 }
 
 juce::var DoctorItem(const std::string& description,
@@ -488,6 +645,11 @@ int main(int argc, char* argv[])
     if(command == "doctor")
     {
         return RunDoctor(args);
+    }
+
+    if(command == "gate")
+    {
+        return RunGate(args);
     }
 
     std::cerr << "Unknown command: " << command << '\n';

@@ -367,6 +367,51 @@ ParameterValueLookup SubharmoniqCore::GetEffectiveParameterValue(
     return {};
 }
 
+std::array<float, 16> SubharmoniqCore::GetFieldKeyLedValues() const
+{
+    std::array<float, 16> leds{};
+
+    if(sharedCore_.IsPlaying())
+    {
+        const int seq1Step = sharedCore_.GetSequencerStepIndex(0);
+        const int seq2Step = sharedCore_.GetSequencerStepIndex(1);
+        if(seq1Step >= 0 && seq1Step < 4)
+        {
+            leds[static_cast<std::size_t>(seq1Step)] = 1.0f;
+        }
+        if(seq2Step >= 0 && seq2Step < 4)
+        {
+            leds[8u + static_cast<std::size_t>(seq2Step)] = 1.0f;
+        }
+    }
+
+    for(std::size_t rhythm = 0; rhythm < 4; ++rhythm)
+    {
+        switch(sharedCore_.GetRhythmTarget(rhythm))
+        {
+            case DaisySubharmoniqRhythmTarget::kOff: leds[4u + rhythm] = 0.0f; break;
+            case DaisySubharmoniqRhythmTarget::kSeq1:
+            case DaisySubharmoniqRhythmTarget::kSeq2: leds[4u + rhythm] = 0.5f; break;
+            case DaisySubharmoniqRhythmTarget::kBoth: leds[4u + rhythm] = 1.0f; break;
+        }
+    }
+
+    switch(sharedCore_.GetQuantizeMode())
+    {
+        case DaisySubharmoniqQuantizeMode::kOff: leds[12] = 0.0f; break;
+        case DaisySubharmoniqQuantizeMode::kTwelveEqual:
+        case DaisySubharmoniqQuantizeMode::kEightEqual: leds[12] = 0.5f; break;
+        case DaisySubharmoniqQuantizeMode::kTwelveJust:
+        case DaisySubharmoniqQuantizeMode::kEightJust: leds[12] = 1.0f; break;
+    }
+
+    const int octaveRange = sharedCore_.GetSeqOctaveRange();
+    leds[13] = octaveRange <= 1 ? 0.0f : (octaveRange == 2 ? 0.5f : 1.0f);
+    leds[14] = sharedCore_.IsPlaying() ? 1.0f : 0.0f;
+    leds[15] = 0.0f;
+    return leds;
+}
+
 void SubharmoniqCore::ResetToDefaultState(std::uint32_t seed)
 {
     sharedCore_.ResetToDefaultState(seed);

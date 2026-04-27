@@ -4,6 +4,64 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- require manager-readable WP explanations in DaisyHost planning and closeout:
+  - future WP plans, workstream table updates, and completion handoffs must
+    state what is being implemented or was done, why it matters, what remains,
+    and what is explicitly out of scope
+- add the repo-local next-WP recommendation workflow:
+  - add `tools/suggest_next_wp.py` to read `WORKSTREAM_TRACKER.md` and print
+    the next recommended work package, runner-up, overlap risk, explicit waits,
+    and first safe implementation slice after WP closeout
+  - wire the recommender into CTest as `DaisyHostNextWpSuggester`
+  - update handoff workflow docs so completed WPs record the recommender result
+    in `PROJECT_TRACKER.md`
+  - verify with direct Python tests, the registered CTest, and full
+    `cmd /c build_host.cmd` passing Release `ctest` `233/233`
+- add the first WS10 external debug-surface slice:
+  - existing `DaisyHostCLI snapshot --json` and `render --json` outputs now
+    include additive `debugState` readback for board id, selected node,
+    entry/output role labels, routes, selected-node target cues, and render
+    timeline target counts
+  - keep CLI syntax, routing presets, route validation, scenario/session
+    schemas, firmware, hardware, and DAW/VST3 validation scope unchanged
+  - verify with red/green `CliPayloadsTest`, direct Debug CLI snapshot/render
+    checks, a broader Debug contract subset, and full `cmd /c build_host.cmd`
+    passing Release `ctest` `232/232`
+- add the initial TF11 node-targeted event/readback slice:
+  - render manifests now report resolved `targetNodeId` values for inferred
+    parameter, CV/gate, menu, surface-control, and selected-node MIDI timeline
+    events without changing routing presets or route validation semantics
+  - CLI render-result JSON now includes render `nodes`, `routes`, and
+    `executedTimeline` debug readback alongside the existing summary fields
+  - verify with targeted TF11 Debug tests, broader Debug render/CLI/session/
+    snapshot/topology coverage, full Debug `ctest`, and full
+    `cmd /c build_host.cmd` passing Release `ctest` `227/227`, then the later
+    TF10 hardening gate passing `230/230`
+- complete the TF10 live-rack routing-contract foundation:
+  - add shared `LiveRackRoutePlan` construction with resolved audio endpoints,
+    deterministic processing order, and route-plan validation for the existing
+    four frozen topology presets
+  - route offline render and live processor audio chaining through the shared
+    route plan while keeping scenario/session shapes and user-facing presets
+    unchanged
+  - harden the contract with validation-only, accepted-config, failed-plan
+    preservation, and durable unsupported-shape wording tests
+  - verify with targeted Debug topology, render-runtime, session, and snapshot
+    checks plus full `cmd /c build_host.cmd` passing Release `ctest`
+    `230/230`
+  - keep new route presets, graph editing, larger rack graphs, and non-audio
+    route semantics deferred to explicit `WS9` scope
+- productionize the existing two-node rack UX for WS8:
+  - keep the four existing audio-only topology presets and add clearer
+    operator-facing topology labels/direction copy
+  - replace ambiguous node role text with selected-node-aware role labels for
+    audio entry, audio output, combined entry/output, and inactive routing
+  - add compact selected-node/per-node context and board-aware Patch/Field copy
+    explaining that live controls, drawer pages, CV/gate, Field K/A/B/SW
+    controls, and modulation edits target the selected rack node
+  - verify with red/green rack helper coverage, targeted Debug rack/session/
+    snapshot/board/render tests, focused Field/RSP status tests, Release render
+    smoke, and the full `cmd /c build_host.cmd` gate passing `216/216`
 - add DaisyHost v1 host-side modulation lanes:
   - destinations are continuous hosted-app parameters with native min/max,
     unit, precision, and discrete-target exclusion metadata
@@ -28,8 +86,8 @@ Canonical change tracker for `DaisyHost`.
     `subharmoniq` A/B keys to remain clickable as sequencer/rhythm/transport
     menu actions
 - harden TF12 verification and CLI adoption docs:
-  - refresh current checkout verification truth to the 2026-04-26 `211/211`
-    `build_host.cmd` gate
+  - record the 2026-04-26 modulation-lane verification truth as the then-current
+    `211/211` `build_host.cmd` gate
   - document the DaisyHostCLI agent/CI smoke sequence using existing commands
     without adding new CLI surface
   - keep older `159/159`, `168/168`, `196/196`, `197/197`, and `202/202`

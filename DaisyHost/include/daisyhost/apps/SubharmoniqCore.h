@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
@@ -42,6 +43,7 @@ class SubharmoniqCore : public HostedAppCore
         const std::string& parameterId) const override;
     ParameterValueLookup GetEffectiveParameterValue(
         const std::string& parameterId) const override;
+    std::array<float, 16> GetFieldKeyLedValues() const override;
     void ResetToDefaultState(std::uint32_t seed = 0) override;
     std::unordered_map<std::string, float> CaptureStatefulParameterValues()
         const override;

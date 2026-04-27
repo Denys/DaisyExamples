@@ -155,13 +155,18 @@ bool ApplySurfaceBinding(daisyhost::HostedAppCore&              core,
                          const daisyhost::BoardSurfaceBinding& binding,
                          float                                normalizedValue)
 {
+    daisyhost::ParameterDescriptor safetyDescriptor;
+    safetyDescriptor.id = binding.targetId;
+    const float safeValue
+        = daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+            safetyDescriptor, normalizedValue);
     switch(binding.targetKind)
     {
         case daisyhost::BoardSurfaceTargetKind::kControl:
-            core.SetControl(binding.targetId, normalizedValue);
+            core.SetControl(binding.targetId, safeValue);
             return true;
         case daisyhost::BoardSurfaceTargetKind::kParameter:
-            return core.SetParameterValue(binding.targetId, normalizedValue);
+            return core.SetParameterValue(binding.targetId, safeValue);
         case daisyhost::BoardSurfaceTargetKind::kMenuItem:
             core.SetMenuItemValue(binding.targetId, normalizedValue);
             return true;
@@ -672,8 +677,15 @@ void DaisyHostPatchAudioProcessor::ApplyRackNodeModulation(RackNodeState& node)
             });
         if(hasActiveLane)
         {
+            float normalizedValue = evaluation.resultNormalizedValue;
+            if(IsDaisyFieldBoard())
+            {
+                normalizedValue
+                    = daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+                        parameter, normalizedValue);
+            }
             node.core->SetEffectiveParameterValue(
-                parameter.id, evaluation.resultNormalizedValue);
+                parameter.id, normalizedValue);
         }
     }
 }
@@ -714,15 +726,28 @@ DaisyHostPatchAudioProcessor::BuildModulationSnapshots(
             continue;
         }
 
+        float resultNormalizedValue = evaluation.resultNormalizedValue;
+        if(IsDaisyFieldBoard())
+        {
+            resultNormalizedValue
+                = daisyhost::ApplyDaisyFieldExternalControlSafetyFloor(
+                    parameter, resultNormalizedValue);
+        }
+
         daisyhost::EffectiveHostModulationDestinationSnapshot snapshot;
         snapshot.nodeId                = node.nodeId;
         snapshot.parameterId           = parameter.id;
         snapshot.parameterLabel        = parameter.label;
         snapshot.unitLabel             = parameter.unitLabel;
         snapshot.baseNativeValue       = evaluation.baseNativeValue;
-        snapshot.resultNativeValue     = evaluation.resultNativeValue;
-        snapshot.resultNormalizedValue = evaluation.resultNormalizedValue;
-        snapshot.clamped               = evaluation.clamped;
+        snapshot.resultNativeValue
+            = daisyhost::ParameterNormalizedToNative(parameter,
+                                                     resultNormalizedValue);
+        snapshot.resultNormalizedValue = resultNormalizedValue;
+        snapshot.clamped
+            = evaluation.clamped
+              || std::abs(resultNormalizedValue - evaluation.resultNormalizedValue)
+                     > 0.0001f;
         for(std::size_t index = 0; index < lanes.size(); ++index)
         {
             if(!lanes[index].enabled
@@ -948,6 +973,13 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
 
     const double blockDurationSeconds = static_cast<double>(numSamples) / getSampleRate();
     const auto topologyConfig = daisyhost::BuildLiveRackTopologyConfig(rackTopologyPreset_);
+    daisyhost::LiveRackRoutePlan routePlan;
+    if(!daisyhost::TryBuildLiveRackRoutePlan(topologyConfig, &routePlan, nullptr))
+    {
+        routePlan.config          = daisyhost::BuildLiveRackTopologyConfig(
+            daisyhost::LiveRackTopologyPreset::kNode0Only);
+        routePlan.processingOrder = {"node0"};
+    }
     auto findNodeIndex = [this](const std::string& nodeId) -> std::size_t {
         for(std::size_t index = 0; index < rackNodes_.size(); ++index)
         {
@@ -958,8 +990,8 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
         return rackNodes_.size();
     };
-    const std::size_t entryNodeIndex  = findNodeIndex(topologyConfig.entryNodeId);
-    const std::size_t outputNodeIndex = findNodeIndex(topologyConfig.outputNodeId);
+    const std::size_t entryNodeIndex  = findNodeIndex(routePlan.config.entryNodeId);
+    const std::size_t outputNodeIndex = findNodeIndex(routePlan.config.outputNodeId);
 
     for(std::size_t index = 0; index < rackNodes_.size(); ++index)
     {
@@ -1057,22 +1089,22 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
         else
         {
-            for(const auto& route : topologyConfig.routes)
+            for(const auto& route : routePlan.audioRoutes)
             {
-                const bool targetsNode = route.destPortId.rfind(node.nodeId + "/", 0) == 0;
-                if(!targetsNode)
+                if(route.destination.nodeId != node.nodeId)
                 {
                     continue;
                 }
 
                 const std::size_t sourceNodeIndex
-                    = route.sourcePortId.rfind("node1/", 0) == 0 ? 1u : 0u;
-                const std::size_t sourceChannel
-                    = route.sourcePortId.find("audio_out_2") != std::string::npos ? 1u : 0u;
-                const std::size_t destChannel
-                    = route.destPortId.find("audio_in_2") != std::string::npos ? 1u : 0u;
-                inputPtrs[destChannel]
-                    = rackOutputs[sourceNodeIndex].getReadPointer(static_cast<int>(sourceChannel));
+                    = findNodeIndex(route.source.nodeId);
+                if(sourceNodeIndex >= rackNodes_.size())
+                {
+                    continue;
+                }
+                inputPtrs[route.destination.channelIndex]
+                    = rackOutputs[sourceNodeIndex].getReadPointer(
+                        static_cast<int>(route.source.channelIndex));
             }
         }
 
@@ -1102,28 +1134,17 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     };
 
     std::vector<daisyhost::MidiMessageEvent> selectedMidiEvents = ToMidiEvents(midiMessages);
-    switch(rackTopologyPreset_)
+    const std::vector<daisyhost::MidiMessageEvent> emptyMidiEvents;
+    for(const auto& nodeId : routePlan.processingOrder)
     {
-        case daisyhost::LiveRackTopologyPreset::kNode0Only:
-            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            break;
-        case daisyhost::LiveRackTopologyPreset::kNode1Only:
-            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            break;
-        case daisyhost::LiveRackTopologyPreset::kNode0ToNode1:
-            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            break;
-        case daisyhost::LiveRackTopologyPreset::kNode1ToNode0:
-            processNode(1, selectedRackNodeIndex_ == 1 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            processNode(0, selectedRackNodeIndex_ == 0 ? selectedMidiEvents
-                                                        : std::vector<daisyhost::MidiMessageEvent>{});
-            break;
+        const auto nodeIndex = findNodeIndex(nodeId);
+        if(nodeIndex >= rackNodes_.size())
+        {
+            continue;
+        }
+        processNode(nodeIndex,
+                    selectedRackNodeIndex_ == nodeIndex ? selectedMidiEvents
+                                                        : emptyMidiEvents);
     }
 
     SyncSelectedNodeStateFromRack();
@@ -1515,19 +1536,10 @@ juce::String DaisyHostPatchAudioProcessor::GetRackNodeRoleLabel(std::size_t inde
     }
 
     const auto nodeId = rackNodes_[index].nodeId;
-    switch(rackTopologyPreset_)
-    {
-        case daisyhost::LiveRackTopologyPreset::kNode0Only:
-            return nodeId == "node0" ? "Entry" : "Inactive";
-        case daisyhost::LiveRackTopologyPreset::kNode1Only:
-            return nodeId == "node1" ? "Entry" : "Inactive";
-        case daisyhost::LiveRackTopologyPreset::kNode0ToNode1:
-            return nodeId == "node0" ? "Entry" : "Output";
-        case daisyhost::LiveRackTopologyPreset::kNode1ToNode0:
-            return nodeId == "node1" ? "Entry" : "Output";
-    }
-
-    return {};
+    return juce::String(daisyhost::GetLiveRackNodeRoleDisplayLabel(
+        rackTopologyPreset_,
+        nodeId,
+        index == selectedRackNodeIndex_));
 }
 
 float DaisyHostPatchAudioProcessor::GetTopControlValue(std::size_t index) const
@@ -1626,6 +1638,27 @@ int DaisyHostPatchAudioProcessor::GetFieldKeyMidiNote(std::size_t index) const
         return -1;
     }
     return mapping.keys[index].midiNote;
+}
+
+juce::String DaisyHostPatchAudioProcessor::GetFieldKeyDetailLabel(
+    std::size_t index) const
+{
+    const auto mapping = BuildActiveFieldControlMapping();
+    if(index >= mapping.keys.size())
+    {
+        return {};
+    }
+
+    const auto& key = mapping.keys[index];
+    if(!key.detailLabel.empty())
+    {
+        return key.detailLabel;
+    }
+    if(key.midiNote >= 0)
+    {
+        return "MIDI " + juce::String(key.midiNote);
+    }
+    return key.label;
 }
 
 bool DaisyHostPatchAudioProcessor::GetFieldKeyAvailable(std::size_t index) const
@@ -2238,6 +2271,54 @@ daisyhost::HostModulationLane DaisyHostPatchAudioProcessor::GetModulationLane(
     return {};
 }
 
+daisyhost::HostModulationLaneDisplayText
+DaisyHostPatchAudioProcessor::GetModulationLaneDisplayText(
+    std::size_t slotIndex) const
+{
+    std::lock_guard<std::recursive_mutex> coreLock(coreStateMutex_);
+    const auto& node = GetSelectedRackNode();
+    if(slotIndex >= daisyhost::kHostModulationLaneCount
+       || node.selectedModulationDestinationId.empty())
+    {
+        return daisyhost::BuildHostModulationLaneDisplayText(
+            slotIndex, {}, {}, nullptr);
+    }
+
+    daisyhost::HostModulationLane lane;
+    if(const auto it = node.modulationLanes.find(
+           node.selectedModulationDestinationId);
+       it != node.modulationLanes.end())
+    {
+        lane = it->second[slotIndex];
+    }
+
+    std::string destinationLabel;
+    const auto destinations = GetEligibleModulationDestinations(node);
+    if(const auto it = std::find_if(
+           destinations.begin(),
+           destinations.end(),
+           [&node](const daisyhost::ParameterDescriptor& parameter) {
+               return parameter.id == node.selectedModulationDestinationId;
+           });
+       it != destinations.end())
+    {
+        destinationLabel = it->label;
+    }
+
+    const auto snapshots = BuildModulationSnapshots(node);
+    const auto snapshotIt = std::find_if(
+        snapshots.begin(),
+        snapshots.end(),
+        [&node](const daisyhost::EffectiveHostModulationDestinationSnapshot& snapshot) {
+            return snapshot.parameterId == node.selectedModulationDestinationId;
+        });
+    return daisyhost::BuildHostModulationLaneDisplayText(
+        slotIndex,
+        destinationLabel,
+        lane,
+        snapshotIt != snapshots.end() ? &(*snapshotIt) : nullptr);
+}
+
 void DaisyHostPatchAudioProcessor::SetModulationLane(
     std::size_t slotIndex,
     const daisyhost::HostModulationLane& lane)
@@ -2326,6 +2407,9 @@ DaisyHostPatchAudioProcessor::BuildFieldSurfaceSnapshot() const
 
     const auto mapping = BuildActiveFieldControlMapping();
     const auto nodeId  = GetSelectedRackNode().nodeId;
+    const auto fieldKeyLedValues
+        = core_ != nullptr ? core_->GetFieldKeyLedValues()
+                           : std::array<float, daisyhost::kDaisyFieldKeyCount>{};
     for(std::size_t index = 0; index < mapping.cvOutputs.size(); ++index)
     {
         const auto& binding = mapping.cvOutputs[index];
@@ -2386,7 +2470,9 @@ DaisyHostPatchAudioProcessor::BuildFieldSurfaceSnapshot() const
         led.label           = binding.label;
         if(index < daisyhost::kDaisyFieldKeyCount)
         {
-            led.normalizedValue = fieldKeyPressed_[index].load() ? 1.0f : 0.0f;
+            led.normalizedValue = std::max(
+                fieldKeyPressed_[index].load() ? 1.0f : 0.0f,
+                std::clamp(fieldKeyLedValues[index], 0.0f, 1.0f));
         }
         else if(index < daisyhost::kDaisyFieldKeyCount + daisyhost::kDaisyFieldSwitchCount)
         {

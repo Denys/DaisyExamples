@@ -395,11 +395,177 @@ juce::Array<juce::var> VectorVar(const std::vector<Item>& values, Mapper mapper)
     return array;
 }
 
+juce::var DebugNodeVar(const std::string& nodeId,
+                       const std::string& appId,
+                       const std::string& appDisplayName,
+                       bool               selected,
+                       bool               entryNode,
+                       bool               outputNode);
+juce::var DebugControlTargetsVar(const std::string& selectedNodeId);
+
 juce::var ChannelSummaryVar(const RenderChannelSummary& summary)
 {
     auto object = std::make_unique<juce::DynamicObject>();
     object->setProperty("peak", summary.peak);
     object->setProperty("rms", summary.rms);
+    return juce::var(object.release());
+}
+
+juce::var RenderFloatMapVar(const std::map<std::string, float>& values)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    for(const auto& entry : values)
+    {
+        object->setProperty(juce::Identifier(entry.first), entry.second);
+    }
+    return juce::var(object.release());
+}
+
+juce::var RenderBoolMapVar(const std::map<std::string, bool>& values)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    for(const auto& entry : values)
+    {
+        object->setProperty(juce::Identifier(entry.first), entry.second);
+    }
+    return juce::var(object.release());
+}
+
+juce::var RenderNodeSummaryVar(const RenderNodeResultSummary& node)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("nodeId", StringVar(node.nodeId));
+    object->setProperty("appId", StringVar(node.appId));
+    object->setProperty("appDisplayName", StringVar(node.appDisplayName));
+    object->setProperty("seed", static_cast<juce::int64>(node.seed));
+    object->setProperty("initialParameterValues",
+                        RenderFloatMapVar(node.initialParameterValues));
+    object->setProperty("finalParameterValues",
+                        RenderFloatMapVar(node.finalParameterValues));
+    object->setProperty("finalEffectiveParameterValues",
+                        RenderFloatMapVar(node.finalEffectiveParameterValues));
+    object->setProperty("finalCvInputs", RenderFloatMapVar(node.finalCvInputs));
+    object->setProperty("finalGateInputs", RenderBoolMapVar(node.finalGateInputs));
+    return juce::var(object.release());
+}
+
+juce::var RenderRouteVar(const RenderRoute& route)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("sourcePortId", StringVar(route.sourcePortId));
+    object->setProperty("destPortId", StringVar(route.destPortId));
+    return juce::var(object.release());
+}
+
+juce::var RenderDebugStateVar(const RenderResultManifest& manifest)
+{
+    auto root = std::make_unique<juce::DynamicObject>();
+    root->setProperty("boardId", StringVar(manifest.boardId));
+    root->setProperty("selectedNodeId", StringVar(manifest.selectedNodeId));
+    root->setProperty("entryNodeId", StringVar(manifest.entryNodeId));
+    root->setProperty("outputNodeId", StringVar(manifest.outputNodeId));
+
+    juce::Array<juce::var> nodes;
+    for(const auto& node : manifest.nodes)
+    {
+        const bool selected   = node.nodeId == manifest.selectedNodeId;
+        const bool entryNode  = node.nodeId == manifest.entryNodeId;
+        const bool outputNode = node.nodeId == manifest.outputNodeId;
+        nodes.add(DebugNodeVar(node.nodeId,
+                               node.appId,
+                               node.appDisplayName,
+                               selected,
+                               entryNode,
+                               outputNode));
+    }
+    root->setProperty("nodes", juce::var(nodes));
+    root->setProperty("routes",
+                      juce::var(VectorVar(manifest.routes, RenderRouteVar)));
+    root->setProperty("controlTargets",
+                      DebugControlTargetsVar(manifest.selectedNodeId));
+
+    int resolvedTargetEventCount = 0;
+    for(const auto& event : manifest.executedTimeline)
+    {
+        if(!event.targetNodeId.empty())
+        {
+            ++resolvedTargetEventCount;
+        }
+    }
+
+    auto timeline = std::make_unique<juce::DynamicObject>();
+    timeline->setProperty(
+        "executedEventCount",
+        static_cast<int>(manifest.executedTimeline.size()));
+    timeline->setProperty("resolvedTargetEventCount", resolvedTargetEventCount);
+    root->setProperty("timeline", juce::var(timeline.release()));
+    return juce::var(root.release());
+}
+
+juce::var RenderTimelineEventVar(const RenderTimelineEvent& event)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("timeSeconds", event.timeSeconds);
+    object->setProperty("type",
+                        StringVar(GetRenderTimelineEventTypeName(event.type)));
+    if(!event.targetNodeId.empty())
+    {
+        object->setProperty("targetNodeId", StringVar(event.targetNodeId));
+    }
+
+    switch(event.type)
+    {
+        case RenderTimelineEventType::kParameterSet:
+            object->setProperty("parameterId", StringVar(event.parameterId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+        case RenderTimelineEventType::kCvSet:
+            object->setProperty("portId", StringVar(event.portId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+        case RenderTimelineEventType::kGateSet:
+            object->setProperty("portId", StringVar(event.portId));
+            object->setProperty("gate", event.gateValue);
+            break;
+        case RenderTimelineEventType::kMidi:
+            object->setProperty("status",
+                                static_cast<int>(event.midiMessage.status));
+            object->setProperty("data1",
+                                static_cast<int>(event.midiMessage.data1));
+            object->setProperty("data2",
+                                static_cast<int>(event.midiMessage.data2));
+            break;
+        case RenderTimelineEventType::kAudioInputConfig:
+            if(event.hasAudioMode)
+            {
+                object->setProperty(
+                    "mode",
+                    StringVar(GetRenderAudioInputModeName(event.audioMode)));
+            }
+            if(event.hasAudioLevel)
+            {
+                object->setProperty("level", event.audioLevel);
+            }
+            if(event.hasAudioFrequency)
+            {
+                object->setProperty("frequencyHz", event.audioFrequencyHz);
+            }
+            break;
+        case RenderTimelineEventType::kImpulse: break;
+        case RenderTimelineEventType::kMenuRotate:
+            object->setProperty("delta", event.menuDelta);
+            break;
+        case RenderTimelineEventType::kMenuPress: break;
+        case RenderTimelineEventType::kMenuSetItem:
+            object->setProperty("itemId", StringVar(event.menuItemId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+        case RenderTimelineEventType::kSurfaceControlSet:
+            object->setProperty("controlId", StringVar(event.controlId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+    }
+
     return juce::var(object.release());
 }
 
@@ -469,6 +635,95 @@ juce::var RouteVar(const EffectiveHostRouteSnapshot& route)
     object->setProperty("sourcePortId", StringVar(route.sourcePortId));
     object->setProperty("destPortId", StringVar(route.destPortId));
     return juce::var(object.release());
+}
+
+std::string DebugRoleLabel(bool selected, bool entryNode, bool outputNode)
+{
+    std::string role;
+    if(entryNode && outputNode)
+    {
+        role = "Entry + output";
+    }
+    else if(entryNode)
+    {
+        role = "Audio entry";
+    }
+    else if(outputNode)
+    {
+        role = "Audio output";
+    }
+    else
+    {
+        role = "Not in route";
+    }
+
+    return selected ? "Selected - " + role : role;
+}
+
+juce::var DebugNodeVar(const std::string& nodeId,
+                       const std::string& appId,
+                       const std::string& appDisplayName,
+                       bool               selected,
+                       bool               entryNode,
+                       bool               outputNode)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("nodeId", StringVar(nodeId));
+    object->setProperty("appId", StringVar(appId));
+    object->setProperty("appDisplayName", StringVar(appDisplayName));
+    object->setProperty("selected", selected);
+    object->setProperty("entryNode", entryNode);
+    object->setProperty("outputNode", outputNode);
+    object->setProperty("roleLabel",
+                        StringVar(DebugRoleLabel(selected, entryNode, outputNode)));
+    return juce::var(object.release());
+}
+
+juce::var DebugControlTargetsVar(const std::string& selectedNodeId)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("liveControlsTargetNodeId", StringVar(selectedNodeId));
+    object->setProperty("cvGateTargetNodeId", StringVar(selectedNodeId));
+    object->setProperty("modulationTargetNodeId", StringVar(selectedNodeId));
+    object->setProperty("fieldSurfaceTargetNodeId", StringVar(selectedNodeId));
+    object->setProperty("liveControlsCue",
+                        StringVar("Live controls target selected node "
+                                  + selectedNodeId));
+    object->setProperty("cvGateCue",
+                        StringVar("CV and gate controls target selected node "
+                                  + selectedNodeId));
+    object->setProperty("modulationCue",
+                        StringVar("Modulation controls target selected node "
+                                  + selectedNodeId));
+    object->setProperty("fieldSurfaceCue",
+                        StringVar("Field surface controls target selected node "
+                                  + selectedNodeId));
+    return juce::var(object.release());
+}
+
+juce::var SnapshotDebugStateVar(const EffectiveHostStateSnapshot& snapshot)
+{
+    auto root = std::make_unique<juce::DynamicObject>();
+    root->setProperty("boardId", StringVar(snapshot.boardId));
+    root->setProperty("selectedNodeId", StringVar(snapshot.selectedNodeId));
+    root->setProperty("entryNodeId", StringVar(snapshot.entryNodeId));
+    root->setProperty("outputNodeId", StringVar(snapshot.outputNodeId));
+
+    juce::Array<juce::var> nodes;
+    for(const auto& node : snapshot.nodeSummaries)
+    {
+        nodes.add(DebugNodeVar(node.nodeId,
+                               node.appId,
+                               node.appDisplayName,
+                               node.selected,
+                               node.entryNode,
+                               node.outputNode));
+    }
+    root->setProperty("nodes", juce::var(nodes));
+    root->setProperty("routes", juce::var(VectorVar(snapshot.routes, RouteVar)));
+    root->setProperty("controlTargets",
+                      DebugControlTargetsVar(snapshot.selectedNodeId));
+    return juce::var(root.release());
 }
 
 juce::var ModulationLaneVar(const EffectiveHostModulationLaneSnapshot& lane)
@@ -756,6 +1011,16 @@ std::string SerializeRenderResultPayloadJson(const RenderResultManifest& manifes
     root->setProperty("channelSummaries",
                       juce::var(VectorVar(manifest.channelSummaries,
                                           ChannelSummaryVar)));
+    root->setProperty("nodes",
+                      juce::var(VectorVar(manifest.nodes,
+                                          RenderNodeSummaryVar)));
+    root->setProperty("routes",
+                      juce::var(VectorVar(manifest.routes,
+                                          RenderRouteVar)));
+    root->setProperty("executedTimeline",
+                      juce::var(VectorVar(manifest.executedTimeline,
+                                          RenderTimelineEventVar)));
+    root->setProperty("debugState", RenderDebugStateVar(manifest));
     return ToJson(juce::var(root.release()));
 }
 
@@ -889,6 +1154,7 @@ std::string SerializeSnapshotPayloadJson(const EffectiveHostStateSnapshot& snaps
     root->setProperty("modulationDestinations",
                       juce::var(VectorVar(snapshot.modulationDestinations,
                                           ModulationDestinationVar)));
+    root->setProperty("debugState", SnapshotDebugStateVar(snapshot));
     return ToJson(juce::var(root.release()));
 }
 } // namespace cli
