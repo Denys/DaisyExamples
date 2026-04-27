@@ -237,7 +237,8 @@ std::vector<GateBlockerDiagnostic> ClassifyBlockers(
            && ContainsCaseSensitive(line, "PATH")
            && (ContainsCaseSensitive(line, "duplicate")
                || ContainsCaseSensitive(line, "Env:")
-               || ContainsCaseSensitive(line, "environment")))
+               || ContainsCaseSensitive(line, "environment")
+               || ContainsCaseSensitive(line, "Key in dictionary")))
         {
             AddBlocker(&blockers, "duplicate-path-env", line);
         }

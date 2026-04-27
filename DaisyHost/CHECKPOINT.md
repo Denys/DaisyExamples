@@ -2,7 +2,7 @@
 
 ## Snapshot
 
-- Date: 2026-04-27
+- Date: 2026-04-28
 - Workspace: `DaisyHost/`
 - Current CMake version in source: `0.2.0`
 - Active refresh target: `0.2.0`
@@ -109,7 +109,7 @@ Current shell note:
   `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
 - `ctest` launches unit cases through `tests/run_unit_test_payload.py`, which
   receives that payload path and attempts to run a fresh temporary copy
-- the wrapper-driven full host gate reran green on 2026-04-27, so the current
+- the wrapper-driven full host gate reran green on 2026-04-28, so the current
   baseline in this checkout is again a fully green Release host gate rather
   than only partial smoke/debug proof
 - after local Debug rebuilds, direct `ctest -C Debug -R ...` can still point at
@@ -125,8 +125,11 @@ Current shell note:
   `subharmoniq` hosted app, v1 host-side modulation lanes, and WS8 rack UX
   productionization are implemented,
   native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
-  the latest host gate passed `232/232`, the first Field firmware adapter
-  (`field/MultiDelay`) is build-verified and ST-Link flash-verified, and
+  the latest host gate passed `244/244`, TF9 board-generic editor surface
+  policy is complete and profile-backed for Patch and Field, TF14 CLI gate
+  diagnostics exists as a structured `gate --json` wrapper, the first Field
+  firmware adapter (`field/MultiDelay`) is build-verified and ST-Link
+  flash-verified, and
   `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
   host-tested playable defaults; both Field hardware manual checklists remain
   pending
@@ -157,6 +160,21 @@ Current shell note:
   subset passed `76/76`, and `cmd /c build_host.cmd` passed with Release
   `ctest` `232/232`, superseding the TF10 hardening gate as current checkout
   truth.
+- on 2026-04-28, TF9 closed the board-generic editor surface foundation:
+  editor-facing panel names, selected-node hints, keyboard hints, trace mode,
+  indicator visibility, and extended-surface visibility now come from
+  `BoardProfile` for `daisy_patch` and `daisy_field`. Manager-readable result:
+  DaisyHost still presents the same supported Patch and Field behavior, but
+  board-specific editor policy is centralized in the board profile instead of
+  scattered through Patch-shaped UI branches. The final wrapper gate passed
+  with Release `ctest` `243/243`.
+- on 2026-04-28, TF14 added `DaisyHostCLI gate --json` as a thin structured
+  wrapper over `build_host.cmd`: it reports configure/build/ctest phases,
+  target names, CTest totals, capped output tail, and conservative known
+  blocker classifications without changing build semantics. Direct
+  `gate --json` passed with CTest `244/244`, and a final `cmd /c build_host.cmd`
+  rerun also passed `244/244`, superseding earlier gate counts as current
+  checkout truth.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -178,8 +196,64 @@ from `patch/Torus/`.
 ## Last Recorded Runtime Verification
 
 - Last fully green DaisyHost host build/test verification rerun from this
-  checkout: 2026-04-27
-- Verified commands/results in the current 2026-04-27 repo-wide next-WP
+  checkout: 2026-04-28
+- Verified commands/results in the current 2026-04-28 TF14 CLI gate diagnostics
+  workflow:
+  - manager-readable result: DaisyHostCLI now provides a structured full-gate
+    evidence command for agent/CI handoff while preserving `build_host.cmd` as
+    the build authority.
+  - targeted checks:
+    - red `cmake --build build --config Debug --target unit_tests`: failed
+      before implementation on missing `daisyhost/GateDiagnostics.h`
+    - normalized-env Debug `unit_tests` build passed
+    - `ctest --test-dir build -C Debug --output-on-failure -R "GateDiagnostics|CliPayloads"`:
+      passed, `17/17`
+    - normalized-env Release `DaisyHostCLI unit_tests` build passed
+    - `build\Release\DaisyHostCLI.exe gate --source-dir . --build-dir build --config Release --json`:
+      passed with JSON `ok: true`, all phases passed, no blockers, and CTest
+      `244/244`
+  - full host gate:
+    - first `cmd /c build_host.cmd`: failed with transient Release payload-copy
+      `PermissionError` in the first three tests after build completed
+    - rerun `cmd /c build_host.cmd`: passed with Release `ctest` `244/244`
+  - caveats:
+    - no `doctor` expansion, GUI automation, live plugin control, DAW/VST3
+      validation, firmware flashing, generic shell/git wrapping, route
+      semantics, or Field hardware validation was added or claimed
+- Verified commands/results in the earlier 2026-04-28 TF9 board-generic editor
+  surface completion:
+  - manager-readable result: board-specific editor policy for supported Patch
+    and Field surfaces now lives in `BoardProfile`, so future board-surface
+    work can use one source-backed contract instead of adding more
+    Patch-shaped editor branches.
+  - targeted checks:
+    - red `cmake --build build --config Debug --target unit_tests`: failed
+      before implementation on missing `BoardProfile::editorSurface` and
+      `BoardEditorTraceMode`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "BoardProfile|BoardControlMapping|DaisyFieldRSPLayout"`:
+      passed, `41/41`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "BoardProfile|BoardControlMapping|DaisyFieldRSPLayout|HostSessionState|EffectiveHostStateSnapshot"`:
+      passed, `59/59`
+    - normalized-env Debug `DaisyHostPatch_Standalone` build passed after the
+      raw MSBuild command hit the known duplicate `Path` / `PATH` issue
+    - `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --timeout-seconds 60`:
+      passed for Patch/Torus and Field/Torus
+    - `build\Release\DaisyHostCLI.exe describe-board daisy_patch --json` and
+      `build\Release\DaisyHostCLI.exe describe-board daisy_field --json`:
+      passed
+  - full host gate:
+    - first wrapper run hit a locked Release VST3 artifact from a stale
+      headless `DaisyHostCLI` process; after stopping it, one rerun saw
+      transient payload-copy permission errors in two `PolyOscCore` tests
+    - focused `PolyOscCoreTest` rerun passed `6/6`
+    - full Release `ctest --test-dir build -C Release --output-on-failure`
+      passed, `243/243`
+    - final `cmd /c build_host.cmd` passed with Release `ctest` `243/243`
+  - caveats:
+    - no new board, routing preset, graph editor, firmware behavior,
+      mixed-board rack behavior, Field hardware validation, manual GUI
+      screenshot review, or DAW/VST3 manual validation was added or claimed
+- Verified commands/results in the earlier 2026-04-27 repo-wide next-WP
   recommendation workflow:
   - manager-readable result: DaisyHost now has a checked repo-local
     recommendation tool for choosing the next suitable WP after closeout from

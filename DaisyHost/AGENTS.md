@@ -20,6 +20,21 @@ editing `DaisyHost/`.
    touch another slice's files unless the user explicitly reassigns ownership
    or an integrator asks for a conflict-resolution edit.
 
+## Manager-Language Planning And Closeout
+
+- Lead DaisyHost planning and completion notes in manager terms before
+  implementation detail.
+- During planning, state what needs to be implemented, why it matters, what it
+  unlocks, what depends on it, what is out of scope, and what evidence will
+  prove it is done.
+- During implementation closeout, state what was implemented, why it matters,
+  what changed for users/agents/CI, what remains, what was explicitly not
+  claimed, and the verification evidence.
+- Technical details still belong in the tracker, but they support the decision
+  story rather than replacing it.
+- If a plan or handoff is only understandable by reading file names, class
+  names, or test names, rewrite it before treating the iteration as handed off.
+
 ## Workspace Map
 
 - `include/daisyhost/`: shared host-side interfaces and data models
@@ -156,8 +171,9 @@ Required verification before handoff:
   without test evidence.
 - Every planned or completed WP must include manager-readable explanation
   alongside technical detail. Record what is being implemented or what was
-  done, why it matters, what remains, and what is explicitly out of scope so a
-  non-specialist can track progress without knowing the internals.
+  done, why it matters, what it unlocks, what remains, and what is explicitly
+  out of scope so a non-specialist can track progress without knowing the
+  internals.
 - After a WP/workstream implementation is complete enough for handoff, run the
   next-WP recommender and record the recommended WP, runner-up, explicit waits,
   and first safe slice in the `PROJECT_TRACKER.md` handoff:

@@ -4,6 +4,34 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- add TF14 CLI gate diagnostics:
+  - add `DaisyHostCLI.exe gate --source-dir <dir> --build-dir <dir>
+    [--config Release] [--skip-configure] [--skip-build] [--skip-tests]
+    --json` as a thin wrapper over `build_host.cmd`
+  - emit structured JSON with configure/build/ctest phase status, expected
+    gate targets, CTest totals and failed-test names, capped output tail, and
+    conservative known-blocker classifications such as locked artifacts,
+    duplicate `Path` / `PATH`, missing includes, missing members, CTest
+    failures, and unknown runtime failures
+  - keep build semantics, `doctor`, smoke, GUI/live plugin behavior,
+    DAW/VST3 validation, firmware flashing, and generic shell/git wrapping out
+    of TF14 scope
+  - verify with red/green `GateDiagnostics` tests, direct `gate --json`
+    evidence passing CTest `244/244`, and final `cmd /c build_host.cmd`
+    passing Release `ctest` `244/244`
+- complete the TF9 board-generic editor surface foundation:
+  - add board-editor surface policy to `BoardProfile` for panel name,
+    selected-node hint copy, keyboard hint copy, trace mode, indicator
+    visibility, and extended-surface visibility
+  - populate existing `daisy_patch` and `daisy_field` profiles and refactor
+    the JUCE editor to consume profile metadata with board-neutral helper names
+  - keep supported Patch and Field behavior unchanged while deferring new
+    boards, routing presets, graph editing, firmware/hardware validation, and
+    DAW/VST3 validation
+  - verify with red/green `BoardProfile` tests, targeted Debug CTest,
+    normalized-env Debug standalone build, Debug standalone smoke, CLI
+    `describe-board` checks, and final `cmd /c build_host.cmd` passing Release
+    `ctest` `243/243`
 - require manager-readable WP explanations in DaisyHost planning and closeout:
   - future WP plans, workstream table updates, and completion handoffs must
     state what is being implemented or was done, why it matters, what remains,

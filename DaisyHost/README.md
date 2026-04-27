@@ -375,12 +375,12 @@ Outputs:
 
 Current local verification caveat:
 
-- the wrapper-driven full host gate reran green on 2026-04-27 during the
-  next-WP recommender workflow: `cmd /c build_host.cmd` passed and `ctest`
-  passed `233/233`, including `DaisyHostNextWpSuggester`, standalone, render,
+- the wrapper-driven full host gate reran green on 2026-04-28 during the TF14
+  CLI gate-diagnostics workflow: `cmd /c build_host.cmd` passed and `ctest`
+  passed `244/244`, including `DaisyHostNextWpSuggester`, standalone, render,
   and CLI smoke tests. Older `168/168`, `196/196`, `197/197`, `202/202`,
-  `211/211`, `216/216`, and `232/232` results are retained only as dated
-  historical evidence.
+  `211/211`, `216/216`, `232/232`, and `233/233` results are retained only as
+  dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
@@ -400,6 +400,7 @@ Agent/CI CLI adoption sequence from `DaisyHost/` after a Release build:
 
 ```bat
 build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json
+build\Release\DaisyHostCLI.exe gate --source-dir . --build-dir build --config Release --json
 build\Release\DaisyHostCLI.exe list-apps --json
 build\Release\DaisyHostCLI.exe describe-app cloudseed --json
 build\Release\DaisyHostCLI.exe describe-board daisy_field --json

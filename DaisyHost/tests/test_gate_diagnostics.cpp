@@ -63,6 +63,21 @@ TEST(GateDiagnosticsTest, ClassifiesMissingMemberFailures)
     EXPECT_EQ(result.blockers[0].kind, "missing-member");
 }
 
+TEST(GateDiagnosticsTest, ClassifiesDuplicatePathEnvironmentFailures)
+{
+    const std::string output
+        = "error MSB6001: Invalid command line switch for \"CL.exe\". "
+          "System.ArgumentException: Item has already been added. Key in "
+          "dictionary: 'Path'  Key being added: 'PATH'\n";
+
+    const auto result = daisyhost::BuildGateDiagnostics(
+        kOptions, "cmd /c build_host.cmd", 1, output);
+
+    ASSERT_FALSE(result.ok);
+    ASSERT_EQ(result.blockers.size(), 1u);
+    EXPECT_EQ(result.blockers[0].kind, "duplicate-path-env");
+}
+
 TEST(GateDiagnosticsTest, ParsesCtestSummaryAndFailedTests)
 {
     const std::string output

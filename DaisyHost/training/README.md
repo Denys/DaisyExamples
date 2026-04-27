@@ -40,6 +40,7 @@ contracts for automation:
 
 ```sh
 DaisyHost/build/Release/DaisyHostCLI.exe doctor --build-dir DaisyHost/build --source-dir DaisyHost --config Release --json
+DaisyHost/build/Release/DaisyHostCLI.exe gate --source-dir DaisyHost --build-dir DaisyHost/build --config Release --json
 DaisyHost/build/Release/DaisyHostCLI.exe list-apps --json
 DaisyHost/build/Release/DaisyHostCLI.exe describe-app cloudseed --json
 DaisyHost/build/Release/DaisyHostCLI.exe describe-board daisy_field --json
@@ -51,8 +52,9 @@ DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHo
 Use `DaisyHostCLI` as a thin offline facade for reproducible agent/CI
 inspection and render validation. The existing `snapshot --json` and
 `render --json` payloads include additive `debugState` readback for compact
-board, selected-node, route, and role diagnostics; defer new commands until a
-real workflow proves a missing automation operation.
+board, selected-node, route, and role diagnostics, and `gate --json` wraps the
+existing host gate with structured phase, CTest, and blocker evidence; defer
+new commands until a real workflow proves a missing automation operation.
 
 ## Automated Smoke Harness
 
