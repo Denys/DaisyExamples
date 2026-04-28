@@ -231,7 +231,9 @@ from `../patch/MultiDelay/` and/or `../patch/Torus/` as appropriate.
 - Every handoff must include the tests run, docs reviewed, blockers, and the
   next safe starting point.
 - Every handoff must also include the manager-readable explanation for the WP:
-  done/implemented, why it matters, remaining work, and explicit non-goals.
+  done/implemented or planned implementation, why it matters, what it unlocks,
+  dependency/blocker state, remaining work, explicit non-goals, evidence, and
+  next safe starting point.
 - For WP closeouts, "next safe starting point" must include the recommender's
   decision-ready next WP, runner-up, waits, dependency reason, overlap risk, and
   first safe implementation slice. If the recommender output conflicts with

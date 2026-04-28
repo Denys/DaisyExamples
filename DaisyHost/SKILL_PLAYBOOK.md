@@ -13,6 +13,11 @@ Use this file for DaisyHost skill-related activities:
 `PROJECT_TRACKER.md` records that a skill was used in an iteration.
 `SKILL_PLAYBOOK.md` records how well the skill actually performed.
 
+Skill notes should follow the DaisyHost manager-language rule: summarize what
+the skill changed for planning or implementation, why it mattered, what it
+unlocked, what friction or blockers remained, and what evidence supports reuse
+before diving into detailed file/test evidence.
+
 ## UF Definitions
 
 - `Expected UF`:

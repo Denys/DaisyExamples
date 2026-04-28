@@ -35,6 +35,15 @@ and per-iteration testing ledger for DaisyHost.
 - `CHANGELOG.md`: canonical durable release and workflow policy history
 - `README.md`: workspace overview and local-doc entrypoint
 
+## Manager-Language Rule
+
+Future DaisyHost WP plans and closeouts should be readable before technical
+context is understood: state what needs implementation or what was implemented,
+why it matters, what it unlocks, what depends on it, what remains blocked, what
+is explicitly out of scope, what evidence proves it, and the next safe starting
+point. File names, class names, and test names are supporting evidence, not the
+handoff itself.
+
 ## DaisyBrain NotebookLM Notebook
 
 Curated repo knowledge notebook created for Daisy and DaisyExamples

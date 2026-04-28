@@ -82,9 +82,11 @@ Current baseline:
   tracked in `FIELD_PROJECT_TRACKER.md`.
 - Every implementation start still needs a per-iteration claim in
   `PROJECT_TRACKER.md`.
-- Every WP plan, workstream-table update, and completion handoff must include
-  manager-readable explanation: what is being implemented or was done, why it
-  matters, what remains, and what is explicitly out of scope.
+- Every WP plan, workstream-table update, and completion handoff must lead in
+  manager terms before technical detail: what needs to be implemented or was
+  implemented, why it matters, what it unlocks, what depends on it, what
+  remains blocked, what is explicitly out of scope, and what evidence proves
+  the work is done.
 - CLI usefulness tiers:
   `Essential` = needed to keep agent/CI verification reliable,
   `Useful` = repeated workflow improvement, `Nice-to-have` = defer until

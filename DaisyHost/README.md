@@ -24,6 +24,11 @@ and update the other tracking files when their truth changed.
 the post-WS7 parallel workstreams and is mirrored back into
 `PROJECT_TRACKER.md`.
 
+For every WP plan or closeout, lead with a manager-readable summary before file
+or test detail: what needs implementation or what was implemented, why it
+matters, what it unlocks, what depends on it, what remains blocked, what is out
+of scope, what evidence proves it, and the next safe starting point.
+
 If the task depends on skill selection, reusable workflow choice, or
 `Expected UF` / `Observed UF` updates, also read
 [SKILL_PLAYBOOK.md](SKILL_PLAYBOOK.md).

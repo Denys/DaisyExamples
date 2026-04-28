@@ -4,6 +4,14 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- expand the manager-readable planning and closeout rule across DaisyHost memory
+  docs:
+  - future WP plans and handoffs must start with what needs implementation or
+    what was implemented, why it matters, what it unlocks, dependencies or
+    blockers, out-of-scope boundaries, proof required or collected, and the next
+    safe starting point
+  - keep class names, file names, and test names as supporting evidence rather
+    than the main decision story
 - add TF14 CLI gate diagnostics:
   - add `DaisyHostCLI.exe gate --source-dir <dir> --build-dir <dir>
     [--config Release] [--skip-configure] [--skip-build] [--skip-tests]

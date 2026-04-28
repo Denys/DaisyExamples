@@ -6,6 +6,16 @@ Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
 testing evidence, parallel-thread coordination, and next steps stay explicit.
 
+## Manager-Language Rule
+
+Future DaisyHost planning and closeout must lead in manager terms before file,
+class, or test detail. Plans should state what needs to be implemented, why it
+matters, what it unlocks, what depends on it, what is out of scope, and what
+evidence will prove it is done. Closeouts should state what was implemented,
+why it matters, what changed for users/agents/CI, what remains blocked or
+unclaimed, what was explicitly out of scope, the verification evidence, and the
+next safe starting point.
+
 Latest fully green host gate from this checkout:
 
 - `cmd /c build_host.cmd`: passed on 2026-04-28
@@ -24,6 +34,45 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliRender`
 
 Latest implementation iteration:
+
+- Date: 2026-04-28
+- Thread: Local Codex thread
+- Slice: Manager-language planning and closeout persistence
+- Manager-readable result:
+  - Done: the "manager terms first" rule is now persisted across the local
+    agent rules, portfolio tracker, project ledger, checkpoint, changelog,
+    skill playbook, and README entrypoint.
+  - Why it matters: future WP plans and handoffs should be understandable to a
+    manager before they require file names, class names, or test names.
+  - What it unlocks: each future plan can explain what needs implementation
+    and why; each closeout can explain what was implemented, what changed for
+    users/agents/CI, what remains, what was not claimed, and what evidence
+    proves the status.
+  - Next: use this structure for `TF15` and later WP planning/closeout; keep
+    this pass docs-only and do not infer new runtime, hardware, DAW, firmware,
+    or CLI behavior from it.
+- Affected surfaces:
+  - `AGENTS.md` durable local rule for planning, handoff, and completion
+  - `README.md` workspace entrypoint guidance
+  - `WORKSTREAM_TRACKER.md` portfolio-rule wording
+  - `PROJECT_TRACKER.md` source-of-truth manager-language rule and ledger
+  - `CHECKPOINT.md` durable memory note
+  - `CHANGELOG.md` durable workflow-history note
+  - `SKILL_PLAYBOOK.md` skill-evidence wording rule
+- Exact checks run:
+  - Docs consistency:
+    `Select-String -Path AGENTS.md,README.md,WORKSTREAM_TRACKER.md,PROJECT_TRACKER.md,CHECKPOINT.md,CHANGELOG.md,SKILL_PLAYBOOK.md -Pattern "Manager-Language|manager-readable|manager terms|what needs to be implemented|what was implemented|why it matters|what it unlocks|out of scope|next safe starting point"`:
+    passed and found the rule across the high-priority docs.
+  - Whitespace check:
+    `git diff --check -- AGENTS.md README.md WORKSTREAM_TRACKER.md PROJECT_TRACKER.md CHECKPOINT.md CHANGELOG.md SKILL_PLAYBOOK.md`:
+    passed with LF/CRLF warnings only.
+- Notes:
+  - Docs-only process update; no runtime/build/DAW/VST3/USB MIDI/Field
+    hardware/firmware validation was required or run.
+  - Existing dirty work across code, docs, submodules, and untracked files was
+    preserved.
+
+Previous implementation iteration:
 
 - Date: 2026-04-28
 - Thread: Local Codex thread
@@ -589,8 +638,12 @@ Every implementation iteration must record:
 - manager-readable explanation:
   - what is being implemented or what was done
   - why it matters
+  - what it unlocks
+  - what depends on it or blocks it
   - what remains
   - what is explicitly out of scope
+  - what evidence proves the claim
+  - what the next safe starting point is
 - exact tests, builds, or checks run
 - result
 - blockers and handoff
@@ -904,6 +957,7 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 
 | Date | Thread / agent | Workstream | Files / slice | Tests run | Docs reviewed | Blockers | Handoff |
 |---|---|---|---|---|---|---|---|
+| 2026-04-28 | Local Codex thread | Manager-language planning and closeout persistence | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Docs consistency `Select-String` over the touched high-priority docs found the manager-language rule terms; scoped `git diff --check -- AGENTS.md README.md WORKSTREAM_TRACKER.md PROJECT_TRACKER.md CHECKPOINT.md CHANGELOG.md SKILL_PLAYBOOK.md` passed with LF/CRLF warnings only. | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Docs-only process update; no runtime/build/DAW/VST3/USB MIDI/Field hardware/firmware validation was required or run. Existing dirty code/docs/submodule/untracked work was preserved. | Manager-readable result: DaisyHost plans must now say what needs implementation and why before technical detail; closeouts must say what was implemented, why it matters, what it unlocks, what remains, what was not claimed, evidence, and the next safe starting point. Next safe starting point remains `TF15` doctor source/build readiness expansion. |
 | 2026-04-28 | Local Codex thread | TF14 CLI gate diagnostics | `include/daisyhost/GateDiagnostics.h`, `src/GateDiagnostics.cpp`, `tools/cli_app.cpp`, `tests/test_gate_diagnostics.cpp`, `CMakeLists.txt`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `daisyhost/GateDiagnostics.h`; green: normalized-env Debug `unit_tests` built; `ctest --test-dir build -C Debug --output-on-failure -R "GateDiagnostics\|CliPayloads"` passed `17/17`; normalized-env Release `DaisyHostCLI unit_tests` built; direct Release `gate --json` passed with phases passed/passed/passed and CTest `244/244`; final `cmd /c build_host.cmd` passed Release `ctest` `244/244`; scoped `git diff --check` passed with LF/CRLF warnings only; next-WP recommender selected `TF15`, runner-up `TF12`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | A raw Debug CLI build initially hit the known duplicate `Path` / `PATH` MSBuild issue; normalized-env rerun passed. One diagnostic run classified a transient standalone `LNK1104` as `locked-artifact`; a standalone wrapper run later hit transient unit-payload `PermissionError`; final reruns passed. | Manager-readable result: TF14 is complete as a thin `gate --json` diagnostic wrapper over `build_host.cmd`. Next safe starting point is `TF15` doctor source/build readiness expansion; do not expand TF14 into GUI automation, live plugin control, DAW/VST3 validation, firmware flashing, or generic shell/git wrapping. |
 | 2026-04-28 | Local Codex thread | TF9 board-generic editor surface completion closeout | `include/daisyhost/BoardProfile.h`, `src/BoardProfile.cpp`, `src/juce/DaisyHostPluginEditor.*`, `tests/test_board_profile.cpp`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `BoardProfile::editorSurface` / `BoardEditorTraceMode`; green: targeted Debug board checks passed `41/41`; broader affected Debug checks passed `59/59`; normalized-env Debug standalone build passed; Debug standalone smoke passed for Patch/Torus and Field/Torus; Release CLI `describe-board` checks passed for Patch and Field; after transient locked-artifact and payload-copy reruns, final `cmd /c build_host.cmd` passed Release `ctest` `243/243`. | `AGENTS.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Existing dirty work spans editor/profile/docs/submodules and was preserved. No new board, routing preset, graph editor, firmware behavior, Field hardware claim, mixed-board rack behavior, manual GUI screenshot review, or DAW/VST3 validation is in scope. | Manager-readable result: TF9 is complete because board-facing editor policy now lives in `BoardProfile` for existing Patch and Field boards, while the editor consumes that policy without changing supported behavior. Next safe starting point is `TF15` doctor source/build readiness expansion or explicit `WS11` scenario workflow planning, not more TF9 implementation. |
 | 2026-04-28 | Local Codex thread | TF9 board-generic editor surface completion claim | `include/daisyhost/BoardProfile.h`, `src/BoardProfile.cpp`, `src/juce/DaisyHostPluginEditor.*`, `tests/test_board_profile.cpp`, tracker/checkpoint/changelog docs after verification | Pre-implementation claim only; red/green evidence is superseded by the closeout row above. | `AGENTS.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, current dirty diff | Existing dirty work spans editor/profile/docs/submodules and must be preserved. No new board, routing preset, graph editor, firmware behavior, Field hardware claim, mixed-board rack behavior, or DAW/VST3 validation is in scope. | Active package is bounded to manager-readable TF9 completion: move remaining editor-facing board text/layout/rendering policy into board-profile metadata for existing `daisy_patch` and `daisy_field`, then prove Patch/Field behavior remains compatible through targeted tests and the full host gate. |
