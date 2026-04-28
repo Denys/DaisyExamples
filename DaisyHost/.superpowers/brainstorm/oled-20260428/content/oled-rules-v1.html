@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daisy Field OLED Rules</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111820;
+      --panel: #1b242d;
+      --ink: #edf4f7;
+      --muted: #aab6bf;
+      --line: #56636e;
+      --accent: #efa33e;
+      --blue: #68b8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    h2 { margin: 0 0 10px; font-size: 18px; }
+    p { margin: 0; color: var(--muted); }
+    code { color: #ffffff; background: #26323d; padding: 1px 5px; border-radius: 4px; }
+    .intro { margin-bottom: 24px; max-width: 980px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(260px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      background: var(--panel);
+      min-height: 100%;
+    }
+    .oled {
+      min-height: 160px;
+      padding: 14px;
+      border: 2px solid #9ca8b3;
+      border-radius: 10px;
+      background: #040709;
+      color: #f5fbff;
+      font: 16px/1.35 Consolas, "Courier New", monospace;
+      white-space: pre;
+    }
+    .oled .muted { color: #9daebb; }
+    .oled .big { display: block; margin-top: 10px; font-size: 29px; line-height: 1.2; color: #fff; }
+    .oled .warn { color: #ffb449; }
+    .bar { margin-top: 14px; height: 8px; border-radius: 99px; background: #26323c; overflow: hidden; }
+    .fill { width: 51%; height: 100%; background: var(--accent); }
+    .body { padding-top: 14px; }
+    .body h2 { color: #fff; }
+    .recommend {
+      margin-top: 22px;
+      border: 1px solid #70808e;
+      border-radius: 10px;
+      padding: 18px;
+      background: #17212a;
+      max-width: 1120px;
+    }
+    .recommend ul { margin: 10px 0 0; padding-left: 22px; color: var(--muted); }
+    .recommend li { margin: 6px 0; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Daisy Field OLED Rules: first pass</h1>
+    <p>Local-file fallback view. Compare the three OLED interaction models and answer in Codex chat.</p>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="oled"><span class="muted">Subharmoniq Rhythm</span>
+Stop   Quant 12-JI
+S1:1   S2:1
+
+R1/S1  R2/S2
+R3/Both R4/Off
+
+SW1&lt;- SW2-&gt;</div>
+      <div class="body">
+        <h2>A. Expanded Status</h2>
+        <p>Always show abbreviations with context. Stable, but edits still compete for OLED space.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="oled"><span class="muted">K8 Cutoff</span>
+<span class="big">1.84 kHz</span><div class="bar"><div class="fill"></div></div>
+returns to status after 2.0s</div>
+      <div class="body">
+        <h2>B. Touch Zoom</h2>
+        <p>Default status stays compact. Any knob/key/menu action temporarily takes over with name, value, and meaning.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="oled"><span class="muted">B7 Play</span>
+<span class="big">Running</span>
+Step S1:2  S2:2
+Q: 12-note Just
+<span class="warn">Audio monitor: active</span></div>
+      <div class="body">
+        <h2>C. Performance Confirm</h2>
+        <p>Like Touch Zoom, but button actions also show musical consequence and audio/run state.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="recommend">
+    <h2>Recommended baseline: B plus selected C details</h2>
+    <ul>
+      <li><strong>Meaning:</strong> <code>Q 12-JI</code> means quantize mode is <code>12-note Just Intonation</code>. In status, use <code>Quant 12-JI</code>; in zoom, spell it as <code>12-note Just</code>.</li>
+      <li><strong>Zoom rule:</strong> any K/CV/menu/key interaction owns the OLED for 2.0 seconds after the last change.</li>
+      <li><strong>Knob example:</strong> <code>K8 Cutoff</code>, large current frequency, normalized bar, then return to status.</li>
+      <li><strong>Button example:</strong> <code>B7 Play</code>, large <code>Running</code> or <code>Stopped</code>, with current step and quantize context.</li>
+      <li><strong>Audio bug rule:</strong> if output energy collapses while playing and not intentionally muted, show <code>Audio: silent</code> and add a regression test for the exact trigger path.</li>
+    </ul>
+  </section>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿---
+---
 title: Community 14 - Hub support launch plans and activity dispatch
 community_id: 14
 node_count: 33

@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daisy Field Expansion Board Layout</title>
+  <style>
+    :root {
+      --bg: #f3f0e8;
+      --ink: #202522;
+      --muted: #686e66;
+      --line: #2a312d;
+      --panel: #d8d1bf;
+      --panel-dark: #bcb39e;
+      --copper: #c06c35;
+      --green: #2f6f53;
+      --red: #b34239;
+      --blue: #2d638c;
+      --yellow: #d2a331;
+      --shadow: rgba(40, 36, 28, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(32, 37, 34, 0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(32, 37, 34, 0.045) 1px, transparent 1px),
+        var(--bg);
+      background-size: 24px 24px;
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 24px auto 40px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(34px, 5vw, 64px);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 720px;
+    }
+
+    .badge {
+      border: 2px solid var(--line);
+      padding: 10px 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      box-shadow: 5px 5px 0 var(--line);
+      background: #fffaf0;
+      white-space: nowrap;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .board-wrap {
+      padding: 18px;
+      border: 3px solid var(--line);
+      background: #fff8e9;
+      box-shadow: 9px 9px 0 var(--shadow);
+    }
+
+    .board {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      min-height: 470px;
+      border: 4px solid var(--line);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.4), transparent 12%),
+        linear-gradient(145deg, #ded8c7, var(--panel));
+      overflow: hidden;
+    }
+
+    .board::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px dashed rgba(42, 49, 45, 0.32);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .mount {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border: 3px solid var(--line);
+      border-radius: 50%;
+      background: #f9f3e5;
+      box-shadow: inset 0 0 0 4px var(--panel-dark);
+    }
+
+    .m1 { left: 22px; top: 22px; }
+    .m2 { right: 22px; top: 22px; }
+    .m3 { left: 22px; bottom: 22px; }
+    .m4 { right: 22px; bottom: 22px; }
+
+    .label {
+      position: absolute;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .strip {
+      position: absolute;
+      top: 66px;
+      width: 29%;
+      height: 56px;
+    }
+
+    .strip.pitch { left: 8%; }
+    .strip.mod { right: 8%; }
+
+    .strip .rail {
+      position: absolute;
+      inset: 18px 0 0;
+      border: 3px solid var(--line);
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, var(--red), var(--yellow), var(--green));
+      box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .strip.mod .rail {
+      background: linear-gradient(90deg, var(--blue), var(--green), var(--yellow));
+    }
+
+    .strip .ticks {
+      position: absolute;
+      inset: 23px 18px 12px;
+      display: flex;
+      justify-content: space-between;
+      opacity: 0.75;
+    }
+
+    .strip .ticks span {
+      width: 2px;
+      background: rgba(32, 37, 34, 0.55);
+    }
+
+    .button {
+      position: absolute;
+      width: 72px;
+      height: 42px;
+      border: 3px solid var(--line);
+      border-radius: 7px;
+      background: #f8f0da;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      box-shadow: 0 5px 0 var(--line);
+    }
+
+    .button.small {
+      width: 66px;
+      height: 38px;
+      font-size: 12px;
+    }
+
+    .button.mode {
+      background: #e8eadc;
+    }
+
+    .button.transport {
+      background: #e7eef1;
+    }
+
+    .button.utility {
+      background: #f0dfc2;
+    }
+
+    .led {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--line);
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45), 0 0 10px rgba(47, 111, 83, 0.45);
+    }
+
+    .encoder {
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      transform: translate(-50%, -50%);
+      width: 150px;
+      height: 150px;
+      border: 4px solid var(--line);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #fff6e5 0 12%, transparent 13%),
+        radial-gradient(circle, #d2c4a9 0 34%, #9f947f 35% 52%, #6f685d 53% 100%);
+      box-shadow: 0 9px 0 var(--line), inset 0 0 0 10px rgba(255, 255, 255, 0.22);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #fff9ee;
+      font-weight: 900;
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .encoder::before {
+      content: "";
+      position: absolute;
+      inset: -17px;
+      border: 2px dotted rgba(42, 49, 45, 0.55);
+      border-radius: 50%;
+    }
+
+    .uc {
+      position: absolute;
+      left: 50%;
+      bottom: 48px;
+      transform: translateX(-50%);
+      width: 190px;
+      height: 78px;
+      border: 3px solid var(--line);
+      border-radius: 6px;
+      background: #24312d;
+      color: #eaf2e7;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 0 6px 0 var(--line);
+    }
+
+    .uc::before,
+    .uc::after {
+      content: "";
+      position: absolute;
+      top: 9px;
+      bottom: 9px;
+      width: 10px;
+      background: repeating-linear-gradient(0deg, #d6c08d 0 5px, transparent 5px 10px);
+    }
+
+    .uc::before { left: -13px; }
+    .uc::after { right: -13px; }
+
+    .header-block {
+      position: absolute;
+      right: 54px;
+      bottom: 58px;
+      width: 105px;
+      height: 56px;
+      border: 3px solid var(--line);
+      border-radius: 4px;
+      background: #efe6d1;
+      font-size: 10px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      box-shadow: 0 5px 0 var(--line);
+    }
+
+    .connector-pins {
+      position: absolute;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      left: 8px;
+      right: 8px;
+      bottom: 7px;
+    }
+
+    .connector-pins span {
+      height: 7px;
+      background: var(--copper);
+      border: 1px solid var(--line);
+    }
+
+    .legend {
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      border: 3px solid var(--line);
+      background: #fff8e9;
+      padding: 14px;
+      box-shadow: 6px 6px 0 var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 7px 6px;
+      border-bottom: 1px solid rgba(42, 49, 45, 0.18);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+
+    .schematic {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .node {
+      border: 2px solid var(--line);
+      border-radius: 6px;
+      padding: 9px;
+      background: #f8f0da;
+    }
+
+    .arrow {
+      text-align: center;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .parts {
+      grid-column: 1 / -1;
+    }
+
+    .parts table {
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      header,
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      .badge {
+        width: max-content;
+      }
+
+      .board {
+        min-height: 620px;
+        aspect-ratio: 4 / 5;
+      }
+
+      .strip {
+        width: 37%;
+      }
+
+      .button {
+        width: 62px;
+        height: 38px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Daisy Field Expansion Board</h1>
+        <div class="subtitle">Control-surface v1: one menu encoder, fourteen panel buttons, two analog performance strips, sixteen status LEDs, STM32F411 controller, and an I2C link back to Daisy Field.</div>
+      </div>
+      <div class="badge">Layout draft v1</div>
+    </header>
+
+    <section class="content">
+      <div class="board-wrap">
+        <div class="board" aria-label="Graphical board layout">
+          <div class="mount m1"></div>
+          <div class="mount m2"></div>
+          <div class="mount m3"></div>
+          <div class="mount m4"></div>
+
+          <div class="strip pitch">
+            <div class="label" style="left: 0; top: 0;">Pitch strip / SP-L-0100</div>
+            <div class="rail"></div>
+            <div class="ticks"><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+
+          <div class="strip mod">
+            <div class="label" style="left: 0; top: 0;">Mod strip / SP-L-0100</div>
+            <div class="rail"></div>
+            <div class="ticks"><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+
+          <div class="button utility" style="left: 8%; top: 29%;">OCT-</div>
+          <div class="button utility" style="left: 19%; top: 29%;">OCT+</div>
+          <div class="button utility" style="left: 30%; top: 29%;">SHIFT</div>
+
+          <div class="button small mode" style="left: 8%; top: 43%;">OSC</div>
+          <div class="button small mode" style="left: 19%; top: 43%;">FILT</div>
+          <div class="button small mode" style="left: 30%; top: 43%;">ENV</div>
+          <div class="button small mode" style="left: 8%; top: 56%;">LFO</div>
+          <div class="button small mode" style="left: 19%; top: 56%;">FX</div>
+          <div class="button small mode" style="left: 30%; top: 56%;">SEQ</div>
+
+          <div class="encoder">PUSH<br>ENCODER<br><span style="font-size: 10px;">MENU / SELECT</span></div>
+
+          <div class="button transport" style="right: 9%; top: 28%;">BACK</div>
+          <div class="button transport" style="right: 9%; top: 41%;">TAP</div>
+          <div class="button transport" style="right: 9%; top: 54%;">REC</div>
+          <div class="button transport" style="right: 19%; top: 54%;">PLAY</div>
+          <div class="button transport" style="right: 9%; top: 67%;">STOP</div>
+
+          <div class="led" style="left: 9%; top: 37%;"></div>
+          <div class="led" style="left: 20%; top: 37%; background: var(--yellow);"></div>
+          <div class="led" style="left: 31%; top: 37%; background: var(--red);"></div>
+          <div class="led" style="left: 9%; top: 51%;"></div>
+          <div class="led" style="left: 20%; top: 51%; background: var(--blue);"></div>
+          <div class="led" style="left: 31%; top: 51%; background: var(--yellow);"></div>
+          <div class="led" style="left: 9%; top: 64%;"></div>
+          <div class="led" style="left: 20%; top: 64%; background: var(--blue);"></div>
+          <div class="led" style="left: 31%; top: 64%; background: var(--yellow);"></div>
+
+          <div class="led" style="right: 10%; top: 36%; background: var(--red);"></div>
+          <div class="led" style="right: 10%; top: 49%; background: var(--yellow);"></div>
+          <div class="led" style="right: 10%; top: 62%;"></div>
+          <div class="led" style="right: 20%; top: 62%; background: var(--blue);"></div>
+          <div class="led" style="right: 10%; top: 75%; background: var(--red);"></div>
+          <div class="led" style="right: 25%; bottom: 51px; background: var(--blue);"></div>
+          <div class="led" style="right: 25%; bottom: 72px;"></div>
+
+          <div class="uc">STM32F411<br>BLACK PILL<br><span style="font-size: 10px;">control coprocessor</span></div>
+
+          <div class="header-block">
+            DAISY I2C<br>SDA SCL 3V3<br>GND INT RST
+            <div class="connector-pins"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="legend">
+        <div class="card">
+          <h2>Control Count</h2>
+          <table>
+            <tr><th>Control</th><th>Qty</th></tr>
+            <tr><td>Push rotary encoder</td><td>1</td></tr>
+            <tr><td>Encoder push switch</td><td>1</td></tr>
+            <tr><td>Momentary panel buttons</td><td>14</td></tr>
+            <tr><td>Analog performance strips</td><td>2</td></tr>
+            <tr><td>Status LEDs</td><td>16</td></tr>
+            <tr><td>Daisy harness pins</td><td>6</td></tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Signal Path</h2>
+          <div class="schematic">
+            <div class="node">Buttons, strips, encoder</div>
+            <div class="arrow">↓ local debounce / smoothing</div>
+            <div class="node">STM32F411 state register map</div>
+            <div class="arrow">↓ I2C target + INT line</div>
+            <div class="node">Daisy Field firmware</div>
+            <div class="arrow">↓ LED commands</div>
+            <div class="node">PCA9685 + panel LEDs</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Panel Zones</h2>
+          <table>
+            <tr><th>Zone</th><th>Purpose</th></tr>
+            <tr><td>Top</td><td>Pitch and modulation performance strips</td></tr>
+            <tr><td>Left</td><td>Octave, shift, synth edit pages</td></tr>
+            <tr><td>Center</td><td>Primary menu/value encoder</td></tr>
+            <tr><td>Right</td><td>Back, tap, record, play, stop</td></tr>
+            <tr><td>Bottom</td><td>MCU, programming, Daisy I2C harness</td></tr>
+          </table>
+        </div>
+      </aside>
+
+      <section class="card parts">
+        <h2>Suggested Components</h2>
+        <table>
+          <tr><th>Function</th><th>Qty</th><th>Manufacturer / MPN</th><th>Placement</th></tr>
+          <tr><td>Control MCU</td><td>1</td><td>WeAct STM32F411CEU6 Black Pill or ST STM32F411CEU6TR</td><td>Bottom center</td></tr>
+          <tr><td>Push encoder</td><td>1</td><td>Alps Alpine EC11E15244G1 or Bourns PEC11R series</td><td>Center</td></tr>
+          <tr><td>Panel buttons</td><td>14</td><td>Omron B3F-4055 or E-Switch TL1105AF160Q</td><td>Left/right groups</td></tr>
+          <tr><td>Pitch/mod strips</td><td>2</td><td>Spectra Symbol SP-L-0100-103-3%-MP</td><td>Top left/right</td></tr>
+          <tr><td>LED driver</td><td>1</td><td>NXP PCA9685PW,118</td><td>Near LED bus</td></tr>
+          <tr><td>Optional GPIO expander</td><td>1</td><td>TI TCA9555PWR or Microchip MCP23017-E/SP</td><td>Only if GPIO routing gets tight</td></tr>
+          <tr><td>Optional precision ADC</td><td>1</td><td>TI ADS1115IDGST or Microchip MCP3208-CI/P</td><td>Only if strip ADC noise is unacceptable</td></tr>
+        </table>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

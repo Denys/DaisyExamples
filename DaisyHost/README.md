@@ -129,6 +129,15 @@ internals:
   - `DaisyHostCLI.exe` provides agent/CI-friendly discovery, scenario
     validation, render, snapshot, smoke, and doctor commands around the same
     core contracts
+  - existing `doctor --json` now reports source/build readiness without adding
+    a new command: the stable top-level fields remain
+    `ok`, `buildDir`, `sourceDir`, `config`, and `checks`; each check now adds
+    `category`, `kind`, `severity`, and `hint`; and additive top-level objects
+    report `source`, `build`, `ctest`, `environment`, and `blockers`
+  - doctor readiness covers expected source-root files, build-tree files,
+    generated artifacts including Hub and VST3 outputs, expected CTest
+    registrations including `DaisyHostCliDoctor`, and the duplicate
+    `Path` / `PATH` Windows environment hazard
   - scenarios drive apps through canonical parameter ids, typed Patch ports,
     and optional compatibility menu actions
   - optional `nodes[]` / `routes[]` contracts now allow internal two-node audio
@@ -343,6 +352,7 @@ smoke tests:
 - `DaisyHostCliDescribeApp`
 - `DaisyHostCliDescribeBoard`
 - `DaisyHostCliValidateScenario`
+- `DaisyHostCliDoctor`
 - `DaisyHostCliRender`
 
 The smoke harness lives at `tests/run_smoke.py`. If you run the raw
@@ -380,12 +390,13 @@ Outputs:
 
 Current local verification caveat:
 
-- the wrapper-driven full host gate reran green on 2026-04-28 during the TF14
-  CLI gate-diagnostics workflow: `cmd /c build_host.cmd` passed and `ctest`
-  passed `244/244`, including `DaisyHostNextWpSuggester`, standalone, render,
-  and CLI smoke tests. Older `168/168`, `196/196`, `197/197`, `202/202`,
-  `211/211`, `216/216`, `232/232`, and `233/233` results are retained only as
-  dated historical evidence.
+- the wrapper-driven full host gate last recorded in these docs was the
+  2026-04-28 TF15 doctor-readiness workflow: `cmd /c build_host.cmd` passed
+  and Release `ctest` passed `269/269`, including
+  `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`, and
+  the other CLI smoke tests. Older `168/168`, `196/196`, `197/197`,
+  `202/202`, `211/211`, `216/216`, `232/232`, `233/233`, `243/243`, and
+  `244/244` results are retained only as dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
@@ -413,6 +424,10 @@ build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_sm
 build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay --json
 build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json
 ```
+
+`doctor --json` is a readiness/preflight report, not a gate runner. It does not
+execute the host gate, launch GUI/live-plugin flows, validate a DAW, flash
+firmware, or provide generic shell control.
 
 The `snapshot --json` and `render --json` payloads include `debugState` for
 compact external rack diagnostics without adding a separate command.

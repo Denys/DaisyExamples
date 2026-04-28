@@ -9,6 +9,18 @@
 #include "daisyhost/DaisySubharmoniqCore.h"
 #include "daisyhost/HostedAppCore.h"
 
+#ifndef DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+#if defined(__arm__) || defined(__thumb__)
+#define DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS 0
+#else
+#define DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS 1
+#endif
+#endif
+
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+#include "daisyhost/FieldOledTransient.h"
+#endif
+
 namespace daisyhost
 {
 namespace apps
@@ -112,6 +124,16 @@ class SubharmoniqCore : public HostedAppCore
     void BuildMenuModel();
     void BuildDisplay();
     bool TriggerFieldKeyAction(std::size_t zeroBasedIndex);
+    void RecordParameterZoom(const std::string& parameterId,
+                             float              normalizedValue);
+    void RecordCvZoom(std::size_t       oneBasedIndex,
+                      const std::string& parameterId,
+                      float              normalizedValue);
+    void RecordFieldKeyZoom(std::size_t zeroBasedIndex);
+    void RecordPageZoom();
+    std::string FormatParameterValue(const std::string& parameterId,
+                                     float              normalizedValue) const;
+    std::string FieldKnobLabelForParameter(const std::string& parameterId) const;
     std::string StripParameterId(const std::string& parameterId) const;
     std::string StripControlId(const std::string& controlId) const;
 
@@ -120,6 +142,9 @@ class SubharmoniqCore : public HostedAppCore
     std::vector<ParameterDescriptor>           parameters_;
     MenuModel                                  menu_;
     DisplayModel                               display_;
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    FieldOledTransient                         oledTransient_;
+#endif
     std::unordered_map<std::string, PortValue> portInputs_;
     std::unordered_map<std::string, PortValue> portOutputs_;
     int                                        menuSectionIndex_ = 0;

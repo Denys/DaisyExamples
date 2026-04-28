@@ -22,7 +22,7 @@ Latest fully green host gate from this checkout:
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `244/244`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `269/269`
 - smoke tests included:
   - `DaisyHostNextWpSuggester`
   - `DaisyHostStandaloneSmoke`
@@ -31,9 +31,135 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliDescribeApp`
   - `DaisyHostCliDescribeBoard`
   - `DaisyHostCliValidateScenario`
+  - `DaisyHostCliDoctor`
   - `DaisyHostCliRender`
 
 Latest implementation iteration:
+
+- Date: 2026-04-28
+- Thread: Local Codex thread
+- Slice: TF15 doctor source/build readiness expansion closeout
+- Manager-readable result:
+  - Done: existing `DaisyHostCLI doctor --json` now reports source/build,
+    artifact, CTest-registration, and environment readiness while preserving
+    the previous command and stable top-level JSON fields.
+  - Why it matters: agents and CI can cheaply decide whether the checkout is
+    ready for `gate`, smoke, or targeted CTest before spending time on a full
+    build.
+  - What it unlocks: missing source files, stale build trees, missing Hub/VST3
+    artifacts, missing smoke registrations, unsupported configs, and duplicate
+    Windows `Path` / `PATH` hazards are now visible in one structured payload.
+  - What remains: `gate` is still the command that actually runs
+    `build_host.cmd`; broader verification hardening remains `TF12` scope and
+    adoption workflow proof remains `WS13` scope.
+  - Out of scope: no new CLI command, no full-gate execution inside `doctor`,
+    no GUI automation, live plugin control, DAW/VST3 validation, firmware
+    flashing, product routing changes, or generic shell/git wrapping.
+- Affected surfaces:
+  - `include/daisyhost/DoctorDiagnostics.h`
+  - `src/DoctorDiagnostics.cpp`
+  - `tools/cli_app.cpp`
+  - `tests/test_doctor_diagnostics.cpp`
+  - `CMakeLists.txt`
+  - `README.md`
+  - `training/README.md`
+  - `WORKSTREAM_TRACKER.md`
+  - `CHECKPOINT.md`
+  - `CHANGELOG.md`
+  - `SKILL_PLAYBOOK.md`
+- Exact checks run:
+  - Red: `cmake --build build --config Debug --target unit_tests` failed
+    before implementation on missing `daisyhost/DoctorDiagnostics.h`.
+  - Green helper/CTest: `ctest --test-dir build -C Debug --output-on-failure -R "DoctorDiagnostics|DaisyHostCliDoctor"`
+    passed `9/9`.
+  - Release build: normalized-env `cmake --build build --config Release --target DaisyHostCLI unit_tests -- /m:1`
+    passed.
+  - Direct CLI proof: normalized-env
+    `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`
+    returned `ok: true` with no blockers and expected CTest registrations.
+  - Release focused CTest:
+    `ctest --test-dir build -C Release --output-on-failure -R "DaisyHostCliDoctor|DoctorDiagnostics"`
+    passed `9/9`.
+  - Final gate: `cmd /c build_host.cmd` passed with Release `ctest`
+    `269/269`.
+  - Next-WP recommender:
+    `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    recommended `TF12 - Verification / build hardening`; runner-up was
+    `WS10 - External state / debug surface`; explicit waits remain `WS9`,
+    `WS11`, `WS12`, `WS13`, `TF17`, and `TF18`.
+- Notes:
+  - Existing dirty work is present in `CMakeLists.txt`, Subharmoniq source and
+    tests, `tests/run_smoke.py`, vault files, submodules, and this tracker;
+    TF15 preserved unrelated changes.
+  - A direct doctor run in the unsanitized shell can correctly fail with
+    `duplicate-path-env`; the final proof used the same normalized environment
+    approach as the build wrapper.
+
+Previous implementation iteration:
+
+- Date: 2026-04-28
+- Thread: Local Codex thread
+- Slice: TF8/TF9 Subharmoniq Field performance-control upgrade
+- Manager-readable result:
+  - Done: Subharmoniq now opens on a sequencer-first Field surface, with four
+    performance pages: `Seq/Rhy`, `VCO`, `VCF`, and `VCA/Mix`. Field K1-K8
+    consume the active page binding, while A1-B8 remain globally stable for
+    sequencer steps, rhythm routing, quantize, sequencer octave, play/stop, and
+    reset.
+  - Why it matters: the Field control model now matches the approved
+    sequencer-centered Subharmonicon workflow instead of burying sequence and
+    rhythm control behind the older generic app-page cycle.
+  - What it unlocks: Daisy Field users can keep transport/rhythm/sequence
+    actions under fixed A/B keys while SW1/SW2 page through sound-shaping
+    controls. `Quantize` and `Seq Oct` are now real page-editable host
+    parameters, not dead VCO-page labels.
+  - Out of scope: no firmware, DAW/VST3, hardware-voltage, mixed-board routing,
+    or Patch-board DSP behavior was changed or manually validated.
+- Affected surfaces:
+  - `include/daisyhost/DaisySubharmoniqCore.h`
+  - `src/DaisySubharmoniqCore.cpp`
+  - `src/apps/SubharmoniqCore.cpp`
+  - `tests/test_subharmoniq_core.cpp`
+  - `tests/run_smoke.py`
+  - `PROJECT_TRACKER.md`
+- Exact checks run:
+  - Debug build:
+    `cmake --build build --config Debug --target unit_tests`:
+    passed.
+  - Targeted Debug behavior tests:
+    `ctest --test-dir build -C Debug --output-on-failure -R "(BoardControlMappingTest|SubharmoniqCoreTest|RenderRuntimeTest|HostModulationTest)"`:
+    passed, `75/75`.
+  - Standalone Debug build:
+    `cmake --build build --config Debug --target DaisyHostPatch_Standalone`:
+    passed.
+  - Planned standalone smoke before helper update:
+    `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --timeout-seconds 60`:
+    failed because `tests/run_smoke.py` did not yet accept `--board`.
+  - Updated explicit Field standalone smoke:
+    `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --timeout-seconds 60`:
+    passed for `board=daisy_field`, `app=torus`.
+  - Subharmoniq-specific Field standalone smoke:
+    `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60`:
+    passed.
+- LED-state assumptions:
+  - A1-A4 and B1-B4 light the current sequencer step while playing.
+  - A5-A8 rhythm target LEDs use `0.0 = off`, `0.5 = blink` for one-sequencer
+    routing, and `1.0 = on` for both sequencers.
+  - B5 Quantize uses off for `Off`, blink for equal temperament, and on for
+    just intonation; B6 Seq Oct uses off/blink/on for 1/2/5 octaves; B7 is on
+    while playing; B8 remains off except reset press state handled by the host
+    pressed-key overlay.
+- Notes:
+  - The earlier cutoff/audio-off report is covered by the existing
+    `HostModulationTest.FieldExternalCutoffTargetsKeepAudibleSafetyFloor` and
+    `RenderRuntimeTest.SubharmoniqFieldCutoffSurfaceControlDoesNotMuteAudio`
+    checks in the targeted green run. No new root-cause code change was needed
+    in this iteration because that safety floor was already present in current
+    processor/modulation code.
+  - Manual visual/audio validation in the standalone UI and real Daisy Field
+    hardware validation were not performed.
+
+Previous implementation iteration:
 
 - Date: 2026-04-28
 - Thread: Local Codex thread
@@ -783,7 +909,8 @@ the next portfolio remain readable in one file.
 - `WS1` through `WS7` planned milestone scope is complete enough to freeze in
   this checkout.
 - Latest full host gate:
-  `cmd /c build_host.cmd` passed on 2026-04-28 and `ctest` passed `244/244`.
+  `cmd /c build_host.cmd` passed on 2026-04-28 and Release `ctest` passed
+  `269/269`, including `DaisyHostCliDoctor`.
 - `WS8` rack UX productionization is implemented against the frozen two-node
   rack baseline without changing the four existing audio-only topology
   presets.
@@ -798,7 +925,7 @@ the next portfolio remain readable in one file.
   smoke commands, and the documented agent/CI smoke sequence passed directly.
 - TF10 routing-contract foundation is complete: shared `LiveRackRoutePlan`
   construction is source-backed, targeted-test-backed, and covered by the
-  latest `244/244` full host gate. Manager-readable result: DaisyHost now has
+  latest `269/269` full host gate. Manager-readable result: DaisyHost now has
   one tested routing rulebook for today's two-node audio rack; richer routing
   presets still belong to explicit `WS9` product scope.
 - WS10 now has a first external debug-surface slice: existing
@@ -813,6 +940,13 @@ the next portfolio remain readable in one file.
   the existing `build_host.cmd` gate, reports configure/build/ctest phases,
   CTest totals, stable target names, capped output tail, and conservative
   known-blocker classifications without changing build semantics.
+- TF15 doctor source/build readiness expansion is implemented by extending
+  existing `doctor --json`, not by adding a new command. Manager-readable
+  result: agents and CI can now distinguish source-root readiness, build-tree
+  readiness, artifact readiness, CTest registration readiness, and duplicate
+  `Path` / `PATH` environment hazards before deciding whether to run the gate.
+  Doctor remains a preflight report only; it does not execute the gate, drive
+  GUI/live/DAW workflows, flash firmware, or provide generic shell control.
 - TF9 board-generic editor surface is complete: editor-facing board panel
   names, selected-node hint copy, keyboard hint copy, trace mode, indicator
   visibility, and extended-surface visibility now live in `BoardProfile` for
@@ -835,7 +969,7 @@ the next portfolio remain readable in one file.
 | `WS10` | External state / debug surface | Exposes the effective host state outside the processor for tooling, QA, diagnostics, and demos. | **First slice implemented:** additive CLI `debugState` now exists on `snapshot --json` and `render --json`.<br>Existing snapshot model; clearer node-targeted event rules from `TF11` | `TF11`, `TF12`, `WS8` | `25%` | First external debug-surface slice implemented; no new CLI commands |
 | `WS11` | Hub + scenario workflow upgrade | Turns Hub into a launch surface for curated rack setups, saved scenarios, and repeatable operator flows. | **Blocked / not ready:** board-generic editor dependency is complete, but scenario inventory/readback and Hub workflow scope remain unimplemented.<br>Stable rack UX from `WS8`; board-aware editor foundation from `TF8` / `TF9`; future scenario work from `TF17` / `TF18` | `WS8`, `TF8`, `TF9`, `TF12` | `0%` | Planned after scenario workflow expectations settle |
 | `WS12` | DAW-facing polish | Improves host-facing ergonomics and validates real VST3 behavior after the rack baseline is frozen. | **Blocked / not ready:** rack UX is implemented, but broader DAW-facing validation hardening remains partial.<br>Stable rack UX from `WS8`; verification hardening from `TF12` | `WS8`, `TF12` | `0%` | Planned after `TF12` / manual DAW validation scope settles |
-| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Partly ready:** `TF13` governance and `TF14` gate diagnostics exist; broader adoption should still wait for richer doctor readiness and routine workflow evidence.<br>`TF13`, implemented `TF14`, future `TF15` field evidence | `TF12`, `TF14`, `TF15` | `10%` | Useful; early gate-diagnostics slice available, blocked on `TF15` and adoption evidence |
+| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Partly ready:** `TF13` governance, `TF14` gate diagnostics, and `TF15` doctor readiness now exist; broader adoption should wait for routine workflow evidence.<br>`TF13`, implemented `TF14`, implemented `TF15`, future adoption evidence | `TF12`, `TF14`, `TF15` | `20%` | Useful; gate diagnostics and doctor readiness are available, blocked on repeated adoption evidence |
 
 ### Technical Foundation Workstreams
 
@@ -847,8 +981,8 @@ the next portfolio remain readable in one file.
 | `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | **In progress:** initial render/debug readback slice is source-backed, targeted-test-backed, and covered by the latest full gate.<br>`WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | `60%` | Initial node-target readback slice implemented |
 | `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | **Good to go:** wrapper and smoke harness exist; remaining hardening is incremental.<br>Current wrapper and smoke harness | All workstreams | `40%` | Verification/adoption slice implemented; broader hardening remains |
 | `TF13` | CLI activity logger and scope governance | Adds the lightweight evidence log and usefulness tiers that decide whether new DaisyHostCLI commands are essential, useful, nice-to-have, deferred, or rejected. | **Done:** tracker/docs evidence is sufficient; no runtime dependency.<br>Existing `PROJECT_TRACKER.md` ledger and DaisyHostCLI adoption sequence | `TF12`, `TF14`, `TF15`, docs-only Worker 3 slices | `100%` | Essential; implemented as docs-only governance |
-| `TF14` | CLI gate diagnostics | Adds structured full-gate evidence and known-blocker classification so agents do not manually mine long MSBuild/CTest logs. | **Done:** implemented as a thin wrapper over `build_host.cmd`; richer preflight readiness remains `TF15`, not TF14.<br>`TF13`, `build_host.cmd`, current CTest smoke entries | `TF10`, `TF11`, `TF15` | `100%` | Essential; implemented with `gate --json` phase, CTest, target, blocker, and output-tail diagnostics |
-| `TF15` | Doctor source/build readiness expansion | Extends `doctor --json` beyond artifact existence into environment, source/build readiness, CTest registration, and known Windows path hazards. | **Ready after TF13:** current doctor exists but is intentionally basic.<br>`TF13`, existing `doctor`, CMake/CTest/smoke paths | `TF14`, `TF12` | `10%` | Essential / Useful; basic doctor exists, richer diagnostics planned |
+| `TF14` | CLI gate diagnostics | Adds structured full-gate evidence and known-blocker classification so agents do not manually mine long MSBuild/CTest logs. | **Done:** implemented as a thin wrapper over `build_host.cmd`; source/build preflight readiness is now covered by implemented `TF15`.<br>`TF13`, `build_host.cmd`, current CTest smoke entries | `TF10`, `TF11`, `TF15` | `100%` | Essential; implemented with `gate --json` phase, CTest, target, blocker, and output-tail diagnostics |
+| `TF15` | Doctor source/build readiness expansion | Extends existing `doctor --json` beyond artifact existence into environment, source/build readiness, CTest registration, and known Windows path hazards while preserving existing top-level fields. | **Done:** expanded as a preflight/readiness report, not a gate runner or new command.<br>`TF13`, existing `doctor`, CMake/CTest/smoke paths | `TF14`, `TF12` | `100%` | Essential / Useful; implemented with source/build/ctest/environment/blocker readiness and explicit out-of-scope boundaries |
 | `TF16` | CLI render assertions | Lets CI fail directly on expected checksum, non-silence, route count, node ids, and executed timeline target-node readback. | **Ready but not urgent:** TF11 render-result JSON already exposes the evidence; add assertions only if repeated render-proof gaps appear.<br>`TF11` render debug payloads | `WS10`, `TF11`, `TF14` | `0%` | Useful; planned only after activity-log evidence |
 | `TF17` | Scenario inventory and validation matrix | Lets agents discover checked-in scenarios and app/board/input validation status without manual repo searches. | **Deferred until workflow need is repeated:** scenario parser and examples exist, but Hub/scenario workflow may still change.<br>Training examples and scenario parser | `WS11`, `TF12`, `TF14` | `0%` | Useful; deferred until scenario workflow needs it |
 | `TF18` | Scenario-backed snapshot/readback | Produces effective-state snapshots from actual scenario/rack setup without writing audio. | **Deferred:** render manifests already provide much of this evidence; no-audio scenario inspection must become a repeated need first.<br>`TF11`, future `WS10` external debug surface | `WS10`, `TF16` | `0%` | Nice-to-have; deferred |
@@ -949,6 +1083,7 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 | 2026-04-27 / Local Codex thread | `WS10` | Read selected-node rack/debug context directly from existing `snapshot --json` and `render --json` commands. | Manual correlation of top-level snapshot/render fields, node arrays, routes, and executed timeline. | `missing-payload` | `repeated` | TF11 made raw node/route/timeline data available, but external QA still needed a compact board/selected-node/role/target summary. | Additive `debugState` object on existing CLI JSON payloads, with no new command. | `useful` | `implemented` |
 | 2026-04-27 / Local Codex thread | `TF10` / `TF11` | Summarize full host-gate and targeted verification failures as structured evidence. | Manual reading of `cmd /c build_host.cmd`, MSBuild, and CTest output in tracker rows. | `log-parsing` | `repeated` | TF10 full-gate attempt and TF11 closeout both required interpreting wrapper/CTest output, known dirty-test blockers, stale processes, and Path/PATH behavior. | `TF14` `gate --json` thin wrapper with conservative known-blocker classification. | `essential` | `implement-next` |
 | 2026-04-28 / Local Codex thread | `TF14` | Use `DaisyHostCLI gate --json` as the structured full-gate evidence handoff. | Manual fallback still used once for direct `cmd /c build_host.cmd` parity and rerun proof. | `log-parsing` | `repeated` | `gate --json` returned `ok: true`, phases `passed/passed/passed`, no blockers, and CTest `244/244`; it also classified a transient standalone link lock as `locked-artifact`. | Keep `gate --json`; use activity-log evidence before adding further diagnostics. | `essential` | `implemented` |
+| 2026-04-28 / Local Codex thread | `TF15` | Use `doctor --json` to preflight source/build/CTest/environment readiness before longer verification. | Previously manual checks for source-root files, build-tree setup, generated artifacts, expected CTest smoke registrations, and duplicate `Path` / `PATH` hazards. | `weak-doctor` | `repeated` | TF15 added source/build/ctest/environment/blocker readiness to existing `doctor --json`; direct normalized-env Release `doctor --json` returned `ok: true`, no blockers, and expected CTest registrations; final `cmd /c build_host.cmd` passed Release `ctest` `269/269`. | Keep expanded `doctor --json`; use recurring adoption evidence before adding further CLI surface. | `essential` | `implemented` |
 | 2026-04-27 / Local Codex thread | `TF12` / `TF13` | Use `doctor --json` to decide whether checkout/build/source state is ready before longer verification. | Manual checks of artifact paths, CTest smoke entries, source/build paths, and known Windows environment hazards. | `weak-doctor` | `repeated` | Current `doctor` checks basic artifacts only; it does not explain duplicate `Path` / `PATH`, CTest registration, stale/missing configs, or source/build readiness. | `TF15` doctor source/build readiness expansion. | `essential` | `implement-next` |
 | 2026-04-27 / Local Codex thread | `TF11` | Inspect render proof for node/route/timeline readback. | Direct render manifest and CLI render-result inspection. | `missing-payload` | `first` | TF11 added render-result JSON `nodes`, `routes`, and `executedTimeline`, reducing the immediate need for scenario-backed snapshots. | Keep `TF18` deferred unless no-audio scenario inspection becomes repeated. | `nice-to-have` | `defer` |
 | 2026-04-27 / Local Codex thread | CLI scope governance | Consider GUI/live plugin/DAW/firmware control requests. | Existing manual/standalone/DAW/hardware validation policy remains outside DaisyHostCLI. | `rejected-scope` | `recurring` | Local docs keep DaisyHostCLI as a thin offline facade; manual DAW/VST3, live plugin control, firmware flashing, and GUI automation are environment-heavy or unsafe. | No DaisyHostCLI command; use separate manual or external harnesses if explicitly scoped. | `reject` | `reject` |
@@ -957,7 +1092,8 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 
 | Date | Thread / agent | Workstream | Files / slice | Tests run | Docs reviewed | Blockers | Handoff |
 |---|---|---|---|---|---|---|---|
-| 2026-04-28 | Local Codex thread | Manager-language planning and closeout persistence | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Docs consistency `Select-String` over the touched high-priority docs found the manager-language rule terms; scoped `git diff --check -- AGENTS.md README.md WORKSTREAM_TRACKER.md PROJECT_TRACKER.md CHECKPOINT.md CHANGELOG.md SKILL_PLAYBOOK.md` passed with LF/CRLF warnings only. | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Docs-only process update; no runtime/build/DAW/VST3/USB MIDI/Field hardware/firmware validation was required or run. Existing dirty code/docs/submodule/untracked work was preserved. | Manager-readable result: DaisyHost plans must now say what needs implementation and why before technical detail; closeouts must say what was implemented, why it matters, what it unlocks, what remains, what was not claimed, evidence, and the next safe starting point. Next safe starting point remains `TF15` doctor source/build readiness expansion. |
+| 2026-04-28 | Local Codex thread | TF15 doctor source/build readiness expansion | `include/daisyhost/DoctorDiagnostics.h`, `src/DoctorDiagnostics.cpp`, `tools/cli_app.cpp`, `tests/test_doctor_diagnostics.cpp`, `CMakeLists.txt`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `daisyhost/DoctorDiagnostics.h`; green: Debug `DoctorDiagnostics\|DaisyHostCliDoctor` CTest passed `9/9`; normalized-env Release `DaisyHostCLI unit_tests` built; normalized-env direct Release `doctor --json` returned `ok: true` with no blockers; Release `DaisyHostCliDoctor\|DoctorDiagnostics` CTest passed `9/9`; final `cmd /c build_host.cmd` passed Release `ctest` `269/269`; next-WP recommender selected `TF12`, runner-up `WS10`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Existing unrelated dirty Subharmoniq/vault/submodule/untracked work remains and was preserved. A direct unsanitized doctor run can correctly fail with `duplicate-path-env`; normalized-env proof passed. An accidental parallel Debug/Release build collided on an object lock, then Release reran cleanly. | Manager-readable result: TF15 is complete as a readiness/preflight expansion of existing `doctor --json`, not a new command or gate runner. It tells agents/CI whether the checkout/build tree is ready enough to verify; it does not claim GUI, live plugin, DAW/VST3, firmware flashing, hardware validation, routing changes, or generic shell control. Next safe starting point per recommender is a small `TF12` verification/build-hardening slice; runner-up is `WS10` only if a concrete external-debug consumer needs more. |
+| 2026-04-28 | Local Codex thread | Manager-language planning and closeout persistence | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Docs consistency `Select-String` over the touched high-priority docs found the manager-language rule terms; scoped `git diff --check -- AGENTS.md README.md WORKSTREAM_TRACKER.md PROJECT_TRACKER.md CHECKPOINT.md CHANGELOG.md SKILL_PLAYBOOK.md` passed with LF/CRLF warnings only. | `AGENTS.md`, `README.md`, `WORKSTREAM_TRACKER.md`, `PROJECT_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Docs-only process update; no runtime/build/DAW/VST3/USB MIDI/Field hardware/firmware validation was required or run. Existing dirty code/docs/submodule/untracked work was preserved. | Manager-readable result: DaisyHost plans must now say what needs implementation and why before technical detail; closeouts must say what was implemented, why it matters, what it unlocks, what remains, what was not claimed, evidence, and the next safe starting point. This process rule is now consumed by TF15 and later closeouts. |
 | 2026-04-28 | Local Codex thread | TF14 CLI gate diagnostics | `include/daisyhost/GateDiagnostics.h`, `src/GateDiagnostics.cpp`, `tools/cli_app.cpp`, `tests/test_gate_diagnostics.cpp`, `CMakeLists.txt`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `daisyhost/GateDiagnostics.h`; green: normalized-env Debug `unit_tests` built; `ctest --test-dir build -C Debug --output-on-failure -R "GateDiagnostics\|CliPayloads"` passed `17/17`; normalized-env Release `DaisyHostCLI unit_tests` built; direct Release `gate --json` passed with phases passed/passed/passed and CTest `244/244`; final `cmd /c build_host.cmd` passed Release `ctest` `244/244`; scoped `git diff --check` passed with LF/CRLF warnings only; next-WP recommender selected `TF15`, runner-up `TF12`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | A raw Debug CLI build initially hit the known duplicate `Path` / `PATH` MSBuild issue; normalized-env rerun passed. One diagnostic run classified a transient standalone `LNK1104` as `locked-artifact`; a standalone wrapper run later hit transient unit-payload `PermissionError`; final reruns passed. | Manager-readable result: TF14 is complete as a thin `gate --json` diagnostic wrapper over `build_host.cmd`. Next safe starting point is `TF15` doctor source/build readiness expansion; do not expand TF14 into GUI automation, live plugin control, DAW/VST3 validation, firmware flashing, or generic shell/git wrapping. |
 | 2026-04-28 | Local Codex thread | TF9 board-generic editor surface completion closeout | `include/daisyhost/BoardProfile.h`, `src/BoardProfile.cpp`, `src/juce/DaisyHostPluginEditor.*`, `tests/test_board_profile.cpp`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `BoardProfile::editorSurface` / `BoardEditorTraceMode`; green: targeted Debug board checks passed `41/41`; broader affected Debug checks passed `59/59`; normalized-env Debug standalone build passed; Debug standalone smoke passed for Patch/Torus and Field/Torus; Release CLI `describe-board` checks passed for Patch and Field; after transient locked-artifact and payload-copy reruns, final `cmd /c build_host.cmd` passed Release `ctest` `243/243`. | `AGENTS.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Existing dirty work spans editor/profile/docs/submodules and was preserved. No new board, routing preset, graph editor, firmware behavior, Field hardware claim, mixed-board rack behavior, manual GUI screenshot review, or DAW/VST3 validation is in scope. | Manager-readable result: TF9 is complete because board-facing editor policy now lives in `BoardProfile` for existing Patch and Field boards, while the editor consumes that policy without changing supported behavior. Next safe starting point is `TF15` doctor source/build readiness expansion or explicit `WS11` scenario workflow planning, not more TF9 implementation. |
 | 2026-04-28 | Local Codex thread | TF9 board-generic editor surface completion claim | `include/daisyhost/BoardProfile.h`, `src/BoardProfile.cpp`, `src/juce/DaisyHostPluginEditor.*`, `tests/test_board_profile.cpp`, tracker/checkpoint/changelog docs after verification | Pre-implementation claim only; red/green evidence is superseded by the closeout row above. | `AGENTS.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, current dirty diff | Existing dirty work spans editor/profile/docs/submodules and must be preserved. No new board, routing preset, graph editor, firmware behavior, Field hardware claim, mixed-board rack behavior, or DAW/VST3 validation is in scope. | Active package is bounded to manager-readable TF9 completion: move remaining editor-facing board text/layout/rendering policy into board-profile metadata for existing `daisy_patch` and `daisy_field`, then prove Patch/Field behavior remains compatible through targeted tests and the full host gate. |

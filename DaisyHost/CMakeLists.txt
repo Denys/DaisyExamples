@@ -46,6 +46,7 @@ add_library(daisyhost_core STATIC
     src/DaisySubharmoniqCore.cpp
     src/DaisyVASynthCore.cpp
     src/EffectiveHostStateSnapshot.cpp
+    src/FieldOledTransient.cpp
     src/HostModulation.cpp
     src/HostModulationUiText.cpp
     src/HostSessionState.cpp
@@ -287,6 +288,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_daisy_polyosc_core.cpp
     tests/test_daisy_vasynth_core.cpp
     tests/test_effective_host_state_snapshot.cpp
+    tests/test_field_oled_transient.cpp
     tests/test_midi_event_tracker.cpp
     tests/test_hub_support.cpp
     tests/test_host_automation_bridge.cpp
@@ -308,6 +310,8 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_vasynth_core.cpp
     tests/test_version_info.cpp
 )
+
+find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
 
 add_executable(unit_tests
     ${DAISYHOST_UNIT_TEST_SOURCES}
@@ -341,8 +345,6 @@ target_link_libraries(unit_tests
         GTest::gtest
         GTest::gtest_main
 )
-
-find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
 
 add_test(
     NAME DaisyHostNextWpSuggester

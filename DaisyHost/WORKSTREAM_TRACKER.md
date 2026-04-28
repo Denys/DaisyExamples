@@ -10,7 +10,8 @@ Current baseline:
 - `WS1` through `WS7` planned milestone scope is complete enough to freeze in
   this checkout.
 - Latest full host gate:
-  `cmd /c build_host.cmd` passed on 2026-04-28 and `ctest` passed `244/244`.
+  `cmd /c build_host.cmd` passed on 2026-04-28 and Release `ctest` passed
+  `269/269`, including the new `DaisyHostCliDoctor` smoke entry.
 - `WS8` rack UX productionization is implemented against the frozen two-node
   rack baseline: the four existing audio-only presets are unchanged, and the
   operator-facing rack now has clearer topology direction, selected-node role
@@ -35,14 +36,14 @@ Current baseline:
   smoke commands, and the documented agent/CI smoke sequence passed directly.
 - TF10 routing-contract foundation is complete: shared `LiveRackRoutePlan`
   construction is source-backed, targeted-test-backed, and covered by the
-  latest `244/244` full host gate. Manager-readable result: DaisyHost now has
+  latest `269/269` full host gate. Manager-readable result: DaisyHost now has
   one tested routing rulebook for today's two-node audio rack; richer routing
   presets still belong to explicit `WS9` product scope.
 - TF11 now has an initial node-targeted readback/debug contract slice:
   render manifests report resolved `targetNodeId` for inferred parameter,
   CV/gate, menu, surface, and selected-node MIDI events, and CLI render result
   JSON exposes render `nodes`, `routes`, and `executedTimeline` readback. The
-  slice is covered by targeted Debug tests and the latest `244/244` full host
+  slice is covered by targeted Debug tests and the latest `269/269` full host
   gate.
 - WS10 now has a first external debug-surface slice: existing
   `DaisyHostCLI snapshot --json` and `render --json` outputs include additive
@@ -51,11 +52,18 @@ Current baseline:
   adding new CLI commands or route semantics.
 - TF13 now defines the DaisyHostCLI activity logger and scope governance layer:
   future CLI commands are tracked as evidence-backed automation needs before
-  code-bearing work such as TF14/TF15 starts.
+  code-bearing CLI diagnostics work starts.
 - TF14 CLI gate diagnostics is implemented: `DaisyHostCLI gate --json` wraps
   the existing `build_host.cmd` gate, reports configure/build/ctest phases,
   CTest totals, stable target names, capped output tail, and conservative
   known-blocker classifications without changing build semantics.
+- TF15 doctor source/build readiness expansion is implemented by extending
+  existing `doctor --json`, not by adding a new command. Manager-readable
+  result: agents and CI can now distinguish source-root readiness, build-tree
+  readiness, artifact readiness, CTest registration readiness, and duplicate
+  `Path` / `PATH` environment hazards before deciding whether to run the gate.
+  Doctor remains a preflight report only; it does not execute the gate, drive
+  GUI/live/DAW workflows, flash firmware, or provide generic shell control.
 - TF9 board-generic editor surface is complete: editor-facing board panel
   names, selected-node hint copy, keyboard hint copy, trace mode, indicator
   visibility, and extended-surface visibility now live in `BoardProfile` for
@@ -101,7 +109,7 @@ Current baseline:
 | `WS10` | External state / debug surface | Exposes the effective host state outside the processor for tooling, QA, diagnostics, and demos. | **First slice implemented:** additive CLI `debugState` now exists on `snapshot --json` and `render --json`.<br>Existing snapshot model; clearer node-targeted event rules from `TF11` | `TF11`, `TF12`, `WS8` | `25%` | First external debug-surface slice implemented; no new CLI commands |
 | `WS11` | Hub + scenario workflow upgrade | Turns Hub into a launch surface for curated rack setups, saved scenarios, and repeatable operator flows. | **Blocked / not ready:** board-generic editor dependency is complete, but scenario inventory/readback and Hub workflow scope remain unimplemented.<br>Stable rack UX from `WS8`; board-aware editor foundation from `TF8` / `TF9`; future scenario work from `TF17` / `TF18` | `WS8`, `TF8`, `TF9`, `TF12` | `0%` | Planned after scenario workflow expectations settle |
 | `WS12` | DAW-facing polish | Improves host-facing ergonomics and validates real VST3 behavior after the rack baseline is frozen. | **Blocked / not ready:** rack UX is implemented, but broader DAW-facing validation hardening remains partial.<br>Stable rack UX from `WS8`; verification hardening from `TF12` | `WS8`, `TF12` | `0%` | Planned after `TF12` / manual DAW validation scope settles |
-| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Partly ready:** `TF13` governance and `TF14` gate diagnostics exist; broader adoption should still wait for richer doctor readiness and routine workflow evidence.<br>`TF13`, implemented `TF14`, future `TF15` field evidence | `TF12`, `TF14`, `TF15` | `10%` | Useful; early gate-diagnostics slice available, blocked on `TF15` and adoption evidence |
+| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Partly ready:** `TF13` governance, `TF14` gate diagnostics, and `TF15` doctor readiness now exist; broader adoption should wait for routine workflow evidence.<br>`TF13`, implemented `TF14`, implemented `TF15`, future adoption evidence | `TF12`, `TF14`, `TF15` | `20%` | Useful; gate diagnostics and doctor readiness are available, blocked on repeated adoption evidence |
 
 ## Technical Foundation Workstreams
 
@@ -113,8 +121,8 @@ Current baseline:
 | `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | **In progress:** initial render/debug readback slice is source-backed, targeted-test-backed, and covered by the latest full gate.<br>`WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | `60%` | Initial node-target readback slice implemented |
 | `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | **Good to go:** wrapper and smoke harness exist; remaining hardening is incremental.<br>Current wrapper and smoke harness | All workstreams | `40%` | Verification/adoption slice implemented; broader hardening remains |
 | `TF13` | CLI activity logger and scope governance | Adds the lightweight evidence log and usefulness tiers that decide whether new DaisyHostCLI commands are essential, useful, nice-to-have, deferred, or rejected. | **Done:** tracker/docs evidence is sufficient; no runtime dependency.<br>Existing `PROJECT_TRACKER.md` ledger and DaisyHostCLI adoption sequence | `TF12`, `TF14`, `TF15`, docs-only Worker 3 slices | `100%` | Essential; implemented as docs-only governance |
-| `TF14` | CLI gate diagnostics | Adds structured full-gate evidence and known-blocker classification so agents do not manually mine long MSBuild/CTest logs. | **Done:** implemented as a thin wrapper over `build_host.cmd`; richer preflight readiness remains `TF15`, not TF14.<br>`TF13`, `build_host.cmd`, current CTest smoke entries | `TF10`, `TF11`, `TF15` | `100%` | Essential; implemented with `gate --json` phase, CTest, target, blocker, and output-tail diagnostics |
-| `TF15` | Doctor source/build readiness expansion | Extends `doctor --json` beyond artifact existence into environment, source/build readiness, CTest registration, and known Windows path hazards. | **Ready after TF13:** current doctor exists but is intentionally basic.<br>`TF13`, existing `doctor`, CMake/CTest/smoke paths | `TF14`, `TF12` | `10%` | Essential / Useful; basic doctor exists, richer diagnostics planned |
+| `TF14` | CLI gate diagnostics | Adds structured full-gate evidence and known-blocker classification so agents do not manually mine long MSBuild/CTest logs. | **Done:** implemented as a thin wrapper over `build_host.cmd`; source/build preflight readiness is now covered by implemented `TF15`.<br>`TF13`, `build_host.cmd`, current CTest smoke entries | `TF10`, `TF11`, `TF15` | `100%` | Essential; implemented with `gate --json` phase, CTest, target, blocker, and output-tail diagnostics |
+| `TF15` | Doctor source/build readiness expansion | Extends existing `doctor --json` beyond artifact existence into environment, source/build readiness, CTest registration, and known Windows path hazards while preserving existing top-level fields. | **Done:** expanded as a preflight/readiness report, not a gate runner or new command.<br>`TF13`, existing `doctor`, CMake/CTest/smoke paths | `TF14`, `TF12` | `100%` | Essential / Useful; implemented with source/build/ctest/environment/blocker readiness and explicit out-of-scope boundaries |
 | `TF16` | CLI render assertions | Lets CI fail directly on expected checksum, non-silence, route count, node ids, and executed timeline target-node readback. | **Ready but not urgent:** TF11 render-result JSON already exposes the evidence; add assertions only if repeated render-proof gaps appear.<br>`TF11` render debug payloads | `WS10`, `TF11`, `TF14` | `0%` | Useful; planned only after activity-log evidence |
 | `TF17` | Scenario inventory and validation matrix | Lets agents discover checked-in scenarios and app/board/input validation status without manual repo searches. | **Deferred until workflow need is repeated:** scenario parser and examples exist, but Hub/scenario workflow may still change.<br>Training examples and scenario parser | `WS11`, `TF12`, `TF14` | `0%` | Useful; deferred until scenario workflow needs it |
 | `TF18` | Scenario-backed snapshot/readback | Produces effective-state snapshots from actual scenario/rack setup without writing audio. | **Deferred:** render manifests already provide much of this evidence; no-audio scenario inspection must become a repeated need first.<br>`TF11`, future `WS10` external debug surface | `WS10`, `TF16` | `0%` | Nice-to-have; deferred |
@@ -137,7 +145,7 @@ flowchart LR
   subgraph cli["CLI verification"]
     tf13["TF13 CLI activity log<br/>100%<br/>Governance implemented"]
     tf14["TF14 Gate diagnostics<br/>100%<br/>Implemented"]
-    tf15["TF15 Doctor expansion<br/>10%<br/>Basic doctor exists"]
+    tf15["TF15 Doctor expansion<br/>100%<br/>Implemented preflight"]
     tf16["TF16 Render assertions<br/>0%<br/>Evidence-gated"]
     tf17["TF17 Scenario inventory<br/>0%<br/>Workflow-gated"]
     tf18["TF18 Scenario snapshot<br/>0%<br/>Deferred"]
@@ -149,7 +157,7 @@ flowchart LR
     ws10["WS10 Debug surface<br/>25%<br/>First CLI debugState slice"]
     ws11["WS11 Hub + scenario<br/>0%<br/>Blocked by scenario scope"]
     ws12["WS12 DAW polish<br/>0%<br/>Blocked by partial TF12"]
-    ws13["WS13 CLI-guided QA<br/>10%<br/>Blocked by TF15/adoption"]
+    ws13["WS13 CLI-guided QA<br/>20%<br/>Blocked by adoption evidence"]
   end
 
   tf10 --> ws9
@@ -173,10 +181,11 @@ flowchart LR
   classDef ready fill:#e8f1ff,stroke:#2563eb,color:#10264d,stroke-width:2px
   classDef blocked fill:#fde2e1,stroke:#c2413d,color:#4a1110,stroke-width:2px
 
-  class ws8,tf9,tf10,tf13,tf14 done
+  class ws8,tf9,tf10,tf13,tf14,tf15 done
   class tf8,tf11,tf12,ws10 partial
-  class ws9,tf15,tf16,tf17 ready
-  class ws11,ws12,ws13,tf18 blocked
+  class ws9,tf16,tf17 ready
+  class ws11,ws12,tf18 blocked
+  class ws13 partial
 ```
 
 ```mermaid
@@ -215,10 +224,11 @@ flowchart TD
   classDef ready fill:#e8f1ff,stroke:#2563eb,color:#10264d,stroke-width:2px
   classDef blocked fill:#fde2e1,stroke:#c2413d,color:#4a1110,stroke-width:2px
 
-  class ws8,tf9,tf10,tf13,tf14 done
+  class ws8,tf9,tf10,tf13,tf14,tf15 done
   class tf8,tf11,tf12,ws10 partial
-  class ws9,tf15,tf16,tf17 ready
-  class ws11,ws12,ws13,tf18 blocked
+  class ws9,tf16,tf17 ready
+  class ws11,ws12,tf18 blocked
+  class ws13 partial
 ```
 
 ## ASCII Parallelization View
@@ -264,10 +274,10 @@ py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
 
 Start these first if staffing exists:
 
-- `TF15` if the slice stays limited to doctor source/build readiness and known
-  Windows `Path` / `PATH` diagnostics while preserving existing JSON fields
-- `TF12` as the runner-up for broader verification hardening that does not
-  expand product behavior
+- `TF12` for broader verification hardening that does not expand product
+  behavior and can consume the new TF15 doctor readiness output
+- `WS13` only as an adoption/documented-workflow slice after a repeated
+  workflow need proves the CLI diagnostics are routine, not one-off
 
 Start these after the first joins settle:
 
@@ -276,7 +286,8 @@ Start these after the first joins settle:
 - `WS9` once routing-preset scope is explicit
 - `WS11` once scenario inventory/readback and Hub workflow scope are explicit
 - `WS12` once `TF12` is stable enough for DAW-facing validation
-- `WS13` once `TF14` / `TF15` have proved useful in real agent/CI iterations
+- `WS13` code-bearing expansion only after `TF14` / `TF15` have proved useful
+  in repeated real agent/CI iterations
 - `TF11` can continue as bounded contract-first work for remaining node-event
   hardening; `TF10` is closed as the routing foundation, and `WS9` should own
   any new route semantics
@@ -286,10 +297,11 @@ Start these after the first joins settle:
 - The best product-side next move is no longer basic rack clarity; `WS8` made
   the existing rack easier to inspect, and the next product value is launch,
   scenario, routing, or DAW-facing polish on top of that baseline.
-- The best foundation-side next move is no longer board-generic editor cleanup;
-  `TF9` closed that surface, and `TF14` has a gate-diagnostics slice. The next
-  likely foundation value is doctor/source-readiness expansion (`TF15`), while
-  deferred hardware-facing Field work remains outside TF9.
+- The best foundation-side next move is no longer board-generic editor cleanup
+  or doctor/source-readiness expansion; `TF9` closed the editor surface,
+  `TF14` landed gate diagnostics, and `TF15` landed doctor readiness. The next
+  likely foundation value is broader verification hardening or adoption proof,
+  while deferred hardware-facing Field work remains outside TF9.
 - DaisyHostCLI should grow from logged agent/CI pain: TF13 is the governance
-  layer, TF14 has landed as gate diagnostics, and TF15 is the next
-  code-bearing CLI candidate.
+  layer, TF14 has landed as gate diagnostics, and TF15 has landed as doctor
+  readiness. Further CLI surface should wait for repeated workflow evidence.

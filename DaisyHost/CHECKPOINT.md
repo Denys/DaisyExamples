@@ -134,11 +134,13 @@ Current shell note:
   `subharmoniq` hosted app, v1 host-side modulation lanes, and WS8 rack UX
   productionization are implemented,
   native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
-  the latest host gate passed `244/244`, TF9 board-generic editor surface
-  policy is complete and profile-backed for Patch and Field, TF14 CLI gate
-  diagnostics exists as a structured `gate --json` wrapper, the first Field
-  firmware adapter (`field/MultiDelay`) is build-verified and ST-Link
-  flash-verified, and
+  the latest recorded host gate passed Release `ctest` `269/269`, TF9
+  board-generic editor surface policy is complete and profile-backed for Patch
+  and Field, TF14 CLI gate diagnostics exists as a structured `gate --json`
+  wrapper, TF15 doctor readiness is implemented as an existing-command
+  preflight, the
+  first Field firmware adapter (`field/MultiDelay`) is build-verified and
+  ST-Link flash-verified, and
   `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
   host-tested playable defaults; both Field hardware manual checklists remain
   pending
@@ -159,8 +161,8 @@ Current shell note:
   render-result JSON exposes `nodes`, `routes`, and `executedTimeline` debug
   readback. The TF11 targeted tests passed, Debug and Release `ctest` both
   passed `227/227`, and `cmd /c build_host.cmd` passed with Release `ctest`
-  `227/227`; the later TF10 hardening gate supersedes that as current checkout
-  truth at `230/230`.
+  `227/227`; later TF10 hardening superseded that historical gate with
+  `230/230`.
 - later on 2026-04-27, WS10 added the first external debug-surface slice:
   existing `DaisyHostCLI snapshot --json` and `render --json` outputs now
   include additive `debugState` readback for board, selected node,
@@ -182,8 +184,8 @@ Current shell note:
   target names, CTest totals, capped output tail, and conservative known
   blocker classifications without changing build semantics. Direct
   `gate --json` passed with CTest `244/244`, and a final `cmd /c build_host.cmd`
-  rerun also passed `244/244`, superseding earlier gate counts as current
-  checkout truth.
+  rerun also passed `244/244`; later TF15 superseded that historical gate with
+  Release `ctest` `269/269`.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -226,9 +228,46 @@ from `patch/Torus/`.
       `PermissionError` in the first three tests after build completed
     - rerun `cmd /c build_host.cmd`: passed with Release `ctest` `244/244`
   - caveats:
-    - no `doctor` expansion, GUI automation, live plugin control, DAW/VST3
-      validation, firmware flashing, generic shell/git wrapping, route
-      semantics, or Field hardware validation was added or claimed
+    - TF14 did not add `doctor` expansion, GUI automation, live plugin control,
+      DAW/VST3 validation, firmware flashing, generic shell/git wrapping,
+      route semantics, or Field hardware validation
+    - TF15 later expanded existing `doctor --json` as a readiness preflight
+      without changing this TF14 gate result
+- Verified behavior now recorded for TF15 doctor source/build readiness:
+  - manager-readable result: existing `doctor --json` now tells agents and CI
+    whether the checkout looks ready to build and test before they spend time
+    running the gate. It preserves the existing command and stable top-level
+    fields while adding structured readiness detail.
+  - JSON contract:
+    - stable top-level fields retained: `ok`, `buildDir`, `sourceDir`,
+      `config`, and `checks`
+    - each check now adds `category`, `kind`, `severity`, and `hint`
+    - additive top-level objects now report `source`, `build`, `ctest`,
+      `environment`, and `blockers`
+  - readiness coverage:
+    - source-root files
+    - build-tree files
+    - generated artifacts including Hub and VST3 outputs
+    - expected CTest registrations including `DaisyHostCliDoctor`
+    - duplicate `Path` / `PATH` environment hazard
+  - explicit non-goals:
+    - no host-gate execution inside doctor
+    - no GUI/live-plugin automation
+    - no DAW/VST3 manual validation
+    - no firmware flashing or hardware validation
+    - no generic shell control
+  - verification note:
+    - red `cmake --build build --config Debug --target unit_tests` failed
+      before implementation on missing `daisyhost/DoctorDiagnostics.h`
+    - `ctest --test-dir build -C Debug --output-on-failure -R "DoctorDiagnostics|DaisyHostCliDoctor"`:
+      passed, `9/9`
+    - normalized-env Release `DaisyHostCLI unit_tests` build passed
+    - normalized-env direct `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
+      passed with JSON `ok: true`, no blockers, registered expected CTest
+      entries, and no duplicate `Path` / `PATH` hazard
+    - `ctest --test-dir build -C Release --output-on-failure -R "DaisyHostCliDoctor|DoctorDiagnostics"`:
+      passed, `9/9`
+    - final `cmd /c build_host.cmd`: passed with Release `ctest` `269/269`
 - Verified commands/results in the earlier 2026-04-28 TF9 board-generic editor
   surface completion:
   - manager-readable result: board-specific editor policy for supported Patch
@@ -1067,10 +1106,10 @@ The following paths were verified from this checkout on 2026-04-23:
     `DaisyHost/build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   - `ctest` currently launches unit cases through
     `tests/run_unit_test_payload.py`
-  - historical note: the later TF10 routing-contract hardening pass supersedes
-    this as current checkout truth with a 2026-04-27 `230/230` gate; the TF11
-    `227/227`, WS8 `216/216`, modulation-lane `211/211`, and TF12 `202/202`
-    gates remain dated historical evidence
+  - historical note: TF15 doctor readiness later produced a 2026-04-28
+    `269/269` gate; TF14 `244/244`, TF10 `230/230`, TF11 `227/227`, WS8
+    `216/216`, modulation-lane `211/211`, and TF12 `202/202` remain dated
+    historical evidence, not current checkout gate truth
 
 ## Current Hosted Apps
 
@@ -1382,11 +1421,14 @@ Version/change tracking target behavior:
 
 ## Current Notes
 
-- The last fully green `build_host.cmd` host-gate rerun from this checkout is
-  now the 2026-04-27 TF11 node-targeted readback `227/227` pass.
-- Older `159/159`, `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, and `216/216` counts
-  remain useful as dated historical ledger evidence, but they are not the
-  current checkout gate.
+- The stale 2026-04-27 TF11 `227/227` gate is historical only. The latest
+  recorded full host gate in these docs is the 2026-04-28 TF15
+  `269/269` pass.
+- Older `159/159`, `168/168`, `196/196`, `197/197`, `202/202`, `211/211`,
+  `216/216`, `227/227`, `230/230`, `232/232`, `233/233`, `243/243`, and
+  `244/244`
+  counts remain useful as dated historical ledger evidence, but they are not
+  the current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path
   discovery by using a wider process-query timeout before declaring a false
   launch timeout.

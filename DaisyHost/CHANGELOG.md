@@ -4,6 +4,24 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- expand existing `DaisyHostCLI.exe doctor --json` for TF15 source/build
+  readiness:
+  - preserve the existing command and stable top-level fields `ok`, `buildDir`,
+    `sourceDir`, `config`, and `checks`
+  - add `category`, `kind`, `severity`, and `hint` to each check
+  - add top-level `source`, `build`, `ctest`, `environment`, and `blockers`
+    readiness objects
+  - check expected source-root files, build-tree files, generated artifacts
+    including Hub and VST3 outputs, expected CTest registrations including
+    `DaisyHostCliDoctor`, and the duplicate Windows `Path` / `PATH`
+    environment hazard
+  - keep host-gate execution, GUI/live-plugin automation, DAW validation,
+    firmware flashing, hardware validation, and generic shell control out of
+    doctor scope
+  - verify with red/green `DoctorDiagnostics` tests, direct
+    `doctor --json` evidence passing with no blockers, focused Debug/Release
+    `DaisyHostCliDoctor|DoctorDiagnostics` CTest passing `9/9`, and final
+    `cmd /c build_host.cmd` passing Release `ctest` `269/269`
 - expand the manager-readable planning and closeout rule across DaisyHost memory
   docs:
   - future WP plans and handoffs must start with what needs implementation or

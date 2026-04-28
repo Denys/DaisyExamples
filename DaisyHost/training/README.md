@@ -52,9 +52,21 @@ DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHo
 Use `DaisyHostCLI` as a thin offline facade for reproducible agent/CI
 inspection and render validation. The existing `snapshot --json` and
 `render --json` payloads include additive `debugState` readback for compact
-board, selected-node, route, and role diagnostics, and `gate --json` wraps the
-existing host gate with structured phase, CTest, and blocker evidence; defer
-new commands until a real workflow proves a missing automation operation.
+board, selected-node, route, and role diagnostics. `gate --json` wraps the
+existing host gate with structured phase, CTest, and blocker evidence.
+
+The existing `doctor --json` command is the source/build readiness preflight;
+it is not a new command and does not execute the gate. Its stable top-level
+fields remain `ok`, `buildDir`, `sourceDir`, `config`, and `checks`. Each check
+adds `category`, `kind`, `severity`, and `hint`, while additive top-level
+objects report `source`, `build`, `ctest`, `environment`, and `blockers`.
+Doctor checks expected source-root files, build-tree files, Hub/VST3 and other
+expected artifacts, CTest registrations including `DaisyHostCliDoctor`, and the
+duplicate `Path` / `PATH` Windows environment hazard. GUI/live-plugin control,
+DAW validation, firmware flashing, generic shell control, and gate execution
+remain out of scope for doctor.
+
+Defer new commands until a real workflow proves a missing automation operation.
 
 ## Automated Smoke Harness
 

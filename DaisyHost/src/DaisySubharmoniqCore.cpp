@@ -226,6 +226,49 @@ float JustRatioForSemitone(int semitone)
         8.0f / 5.0f, 5.0f / 3.0f, 9.0f / 5.0f, 15.0f / 8.0f};
     return kRatios[static_cast<std::size_t>(within)] * std::pow(2.0f, octave);
 }
+
+DaisySubharmoniqPage PageFromLegacyOrdinal(int page)
+{
+    switch(page)
+    {
+        case 1: return DaisySubharmoniqPage::kVco;
+        case 2: return DaisySubharmoniqPage::kVcaMix;
+        case 5: return DaisySubharmoniqPage::kVcf;
+        default: return DaisySubharmoniqPage::kSeqRhythm;
+    }
+}
+
+float QuantizeModeToNormalized(DaisySubharmoniqQuantizeMode mode)
+{
+    return static_cast<float>(static_cast<int>(mode)) / 4.0f;
+}
+
+DaisySubharmoniqQuantizeMode QuantizeModeFromNormalized(float normalized)
+{
+    const int index = ClampInt(static_cast<int>(std::round(Clamp01(normalized) * 4.0f)),
+                               0,
+                               4);
+    return static_cast<DaisySubharmoniqQuantizeMode>(index);
+}
+
+float SeqOctaveRangeToNormalized(int octaveRange)
+{
+    if(octaveRange <= 1)
+    {
+        return 0.0f;
+    }
+    return octaveRange <= 2 ? 0.5f : 1.0f;
+}
+
+int SeqOctaveRangeFromNormalized(float normalized)
+{
+    const float clamped = Clamp01(normalized);
+    if(clamped < 0.25f)
+    {
+        return 1;
+    }
+    return clamped < 0.75f ? 2 : 5;
+}
 } // namespace
 
 struct DaisySubharmoniqCore::Impl
@@ -233,7 +276,7 @@ struct DaisySubharmoniqCore::Impl
     double                              sampleRate   = 48000.0;
     std::size_t                         maxBlockSize = DaisySubharmoniqCore::kPreferredBlockSize;
     std::vector<DaisySubharmoniqParameter> parameters = MakeDefaultParameters();
-    DaisySubharmoniqPage                activePage   = DaisySubharmoniqPage::kHome;
+    DaisySubharmoniqPage                activePage   = DaisySubharmoniqPage::kSeqRhythm;
     DaisySubharmoniqQuantizeMode        quantizeMode = DaisySubharmoniqQuantizeMode::kTwelveEqual;
     int                                 seqOctaveRange = 2;
     std::array<std::array<float, DaisySubharmoniqCore::kStepsPerSequencer>,
@@ -513,7 +556,7 @@ void DaisySubharmoniqCore::ResetToDefaultState(std::uint32_t seed)
     impl_->currentSeed = seed;
     impl_->rng.seed(seed);
     impl_->parameters = MakeDefaultParameters();
-    impl_->activePage = DaisySubharmoniqPage::kHome;
+    impl_->activePage = DaisySubharmoniqPage::kSeqRhythm;
     impl_->quantizeMode = DaisySubharmoniqQuantizeMode::kTwelveEqual;
     impl_->seqOctaveRange = 2;
     impl_->rhythmDivisors = {1, 2, 3, 5};
@@ -547,6 +590,22 @@ bool DaisySubharmoniqCore::SetParameterValue(const std::string& parameterId,
 bool DaisySubharmoniqCore::SetParameterValue(const char* parameterId,
                                              float       normalizedValue)
 {
+    if(parameterId == nullptr)
+    {
+        return false;
+    }
+    const std::string parameterKey(parameterId);
+    if(parameterKey == "quantize_mode")
+    {
+        SetQuantizeMode(QuantizeModeFromNormalized(normalizedValue));
+        return true;
+    }
+    if(parameterKey == "seq_oct_range")
+    {
+        SetSeqOctaveRange(SeqOctaveRangeFromNormalized(normalizedValue));
+        return true;
+    }
+
     auto* parameter = impl_->FindMutable(parameterId);
     if(parameter == nullptr)
     {
@@ -586,8 +645,23 @@ bool DaisySubharmoniqCore::SetEffectiveParameterValue(const char* parameterId,
 bool DaisySubharmoniqCore::GetParameterValue(const std::string& parameterId,
                                              float*             normalizedValue) const
 {
+    if(normalizedValue == nullptr)
+    {
+        return false;
+    }
+    if(parameterId == "quantize_mode")
+    {
+        *normalizedValue = QuantizeModeToNormalized(impl_->quantizeMode);
+        return true;
+    }
+    if(parameterId == "seq_oct_range")
+    {
+        *normalizedValue = SeqOctaveRangeToNormalized(impl_->seqOctaveRange);
+        return true;
+    }
+
     const auto* parameter = impl_->Find(parameterId);
-    if(parameter == nullptr || normalizedValue == nullptr)
+    if(parameter == nullptr)
     {
         return false;
     }
@@ -722,6 +796,7 @@ DaisySubharmoniqCore::CaptureStatefulParameterValues() const
         }
     }
     values["state/play"] = impl_->playing ? 1.0f : 0.0f;
+    values["state/page_schema"] = 1.0f;
     values["state/page"] = static_cast<float>(static_cast<int>(impl_->activePage));
     values["state/quantize"] = static_cast<float>(static_cast<int>(impl_->quantizeMode));
     values["state/seq_oct"] = static_cast<float>(impl_->seqOctaveRange);
@@ -738,8 +813,17 @@ void DaisySubharmoniqCore::RestoreStatefulParameterValues(
     const auto page = values.find("state/page");
     if(page != values.end())
     {
-        SetActivePage(static_cast<DaisySubharmoniqPage>(
-            ClampInt(static_cast<int>(std::round(page->second)), 0, 8)));
+        const int rawPage = static_cast<int>(std::round(page->second));
+        const auto schema = values.find("state/page_schema");
+        if(schema != values.end() && schema->second >= 1.0f)
+        {
+            SetActivePage(static_cast<DaisySubharmoniqPage>(
+                ClampInt(rawPage, 0, 3)));
+        }
+        else
+        {
+            SetActivePage(PageFromLegacyOrdinal(rawPage));
+        }
     }
     const auto quantize = values.find("state/quantize");
     if(quantize != values.end())
@@ -780,12 +864,55 @@ DaisySubharmoniqPageBinding DaisySubharmoniqCore::GetActivePageBinding() const
 
     switch(impl_->activePage)
     {
+        case DaisySubharmoniqPage::kHome:
+            set("Home",
+                {"tempo", "cutoff", "resonance", "vca_decay",
+                 "vco1_pitch", "vco2_pitch", "drive", "output"},
+                {"Tempo", "Cutoff", "Res", "VCA Decay",
+                 "VCO 1", "VCO 2", "Drive", "Output"});
+            break;
+        case DaisySubharmoniqPage::kSeqRhythm:
+            set("Seq/Rhy",
+                {"seq1_step1", "seq1_step2", "seq1_step3", "seq1_step4",
+                 "seq2_step1", "seq2_step2", "seq2_step3", "seq2_step4"},
+                {"S1 Step1", "S1 Step2", "S1 Step3", "S1 Step4",
+                 "S2 Step1", "S2 Step2", "S2 Step3", "S2 Step4"});
+            break;
+        case DaisySubharmoniqPage::kVco:
+            set("VCO",
+                {"vco1_pitch", "vco2_pitch", "vco1_sub1_div", "vco1_sub2_div",
+                 "vco2_sub1_div", "vco2_sub2_div", "quantize_mode",
+                 "seq_oct_range"},
+                {"VCO 1", "VCO 2", "VCO1 Sub1", "VCO1 Sub2",
+                 "VCO2 Sub1", "VCO2 Sub2", "Quantize", "Seq Oct"});
+            break;
         case DaisySubharmoniqPage::kVoice:
             set("Voice",
                 {"vco1_pitch", "vco2_pitch", "vco1_sub1_div", "vco2_sub1_div",
                  "vco1_sub2_div", "vco2_sub2_div", "", ""},
                 {"VCO 1", "VCO 2", "VCO1 Sub1", "VCO2 Sub1",
                  "VCO1 Sub2", "VCO2 Sub2", "", ""});
+            break;
+        case DaisySubharmoniqPage::kVcf:
+            set("VCF",
+                {"cutoff", "resonance", "vcf_env_amt", "vcf_attack",
+                 "vcf_decay", "tempo", "drive", "output"},
+                {"Cutoff", "Res", "VCF Env", "VCF Attack",
+                 "VCF Decay", "Tempo", "Drive", "Output"});
+            break;
+        case DaisySubharmoniqPage::kFilter:
+            set("Filter",
+                {"cutoff", "resonance", "vcf_env_amt", "vca_decay",
+                 "vcf_attack", "vcf_decay", "drive", "output"},
+                {"Cutoff", "Res", "VCF Env", "VCA Decay",
+                 "VCF Attack", "VCF Decay", "Drive", "Output"});
+            break;
+        case DaisySubharmoniqPage::kVcaMix:
+            set("VCA/Mix",
+                {"vco1_level", "vco1_sub1_level", "vco1_sub2_level", "vco2_level",
+                 "vco2_sub1_level", "vco2_sub2_level", "vca_decay", "output"},
+                {"VCO1 Lvl", "V1S1 Lvl", "V1S2 Lvl", "VCO2 Lvl",
+                 "V2S1 Lvl", "V2S2 Lvl", "VCA Decay", "Output"});
             break;
         case DaisySubharmoniqPage::kMix:
             set("Mix",
@@ -808,24 +935,18 @@ DaisySubharmoniqPageBinding DaisySubharmoniqCore::GetActivePageBinding() const
                 {"Rhythm 1", "Rhythm 2", "Rhythm 3", "Rhythm 4",
                  "", "", "", ""});
             break;
-        case DaisySubharmoniqPage::kFilter:
-            set("Filter",
-                {"cutoff", "resonance", "vcf_env_amt", "vca_decay",
-                 "vcf_attack", "vcf_decay", "drive", "output"},
-                {"Cutoff", "Res", "VCF Env", "VCA Decay",
-                 "VCF Attack", "VCF Decay", "Drive", "Output"});
-            break;
         case DaisySubharmoniqPage::kPatch:
             set("Patch",
                 {"root_cv", "cutoff_cv", "rhythm_cv", "sub_cv", "", "", "", ""},
-                {"Root CV", "Cut CV", "Rhythm CV", "Sub CV", "", "", "", ""});
+                {"Root CV", "Cutoff CV", "Rhythm CV", "Sub CV", "", "", "", ""});
             break;
-        default:
-            set("Home",
-                {"tempo", "cutoff", "resonance", "vca_decay",
-                 "vco1_pitch", "vco2_pitch", "drive", "output"},
-                {"Tempo", "Cutoff", "Res", "VCA Decay",
-                 "VCO 1", "VCO 2", "Drive", "Output"});
+        case DaisySubharmoniqPage::kMidi:
+            set("MIDI", {"", "", "", "", "", "", "", ""},
+                {"", "", "", "", "", "", "", ""});
+            break;
+        case DaisySubharmoniqPage::kAbout:
+            set("About", {"", "", "", "", "", "", "", ""},
+                {"", "", "", "", "", "", "", ""});
             break;
     }
     return binding;

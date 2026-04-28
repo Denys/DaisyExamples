@@ -11,6 +11,8 @@ namespace apps
 {
 namespace
 {
+constexpr int kSubharmoniqPageCount = 4;
+
 float Clamp01(float value)
 {
     return value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
@@ -94,15 +96,21 @@ std::string FormatPageLabel(DaisySubharmoniqPage page)
 {
     switch(page)
     {
-        case DaisySubharmoniqPage::kVoice: return "Voice";
-        case DaisySubharmoniqPage::kMix: return "Mix";
-        case DaisySubharmoniqPage::kSeq: return "Seq";
-        case DaisySubharmoniqPage::kRhythm: return "Rhythm";
-        case DaisySubharmoniqPage::kFilter: return "Filter";
-        case DaisySubharmoniqPage::kPatch: return "Patch";
-        case DaisySubharmoniqPage::kMidi: return "MIDI";
-        case DaisySubharmoniqPage::kAbout: return "About";
-        default: return "Home";
+        case DaisySubharmoniqPage::kVco: return "VCO";
+        case DaisySubharmoniqPage::kVcf: return "VCF";
+        case DaisySubharmoniqPage::kVcaMix: return "VCA/Mix";
+        default: return "Seq/Rhy";
+    }
+}
+
+std::string FormatRhythmTarget(DaisySubharmoniqRhythmTarget target)
+{
+    switch(target)
+    {
+        case DaisySubharmoniqRhythmTarget::kSeq1: return "S1";
+        case DaisySubharmoniqRhythmTarget::kSeq2: return "S2";
+        case DaisySubharmoniqRhythmTarget::kBoth: return "Both";
+        default: return "Off";
     }
 }
 
@@ -118,6 +126,55 @@ std::string FormatQuantize(DaisySubharmoniqQuantizeMode mode)
     }
 }
 
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+std::string FormatQuantizeDetail(DaisySubharmoniqQuantizeMode mode)
+{
+    switch(mode)
+    {
+        case DaisySubharmoniqQuantizeMode::kOff: return "Off";
+        case DaisySubharmoniqQuantizeMode::kEightEqual: return "8-note Equal";
+        case DaisySubharmoniqQuantizeMode::kTwelveJust: return "12-note Just";
+        case DaisySubharmoniqQuantizeMode::kEightJust: return "8-note Just";
+        default: return "12-note Equal";
+    }
+}
+
+std::string FormatRhythmTargetDetail(DaisySubharmoniqRhythmTarget target)
+{
+    switch(target)
+    {
+        case DaisySubharmoniqRhythmTarget::kSeq1: return "Seq1";
+        case DaisySubharmoniqRhythmTarget::kSeq2: return "Seq2";
+        case DaisySubharmoniqRhythmTarget::kBoth: return "Both";
+        default: return "Off";
+    }
+}
+
+std::string FormatFrequencyFromNormalized(float normalized)
+{
+    const float clamped = Clamp01(normalized);
+    const float hz      = 20.0f * std::pow(1000.0f, clamped);
+    char        buffer[32];
+    if(hz >= 1000.0f)
+    {
+        std::snprintf(buffer, sizeof(buffer), "%.2f kHz", hz / 1000.0f);
+    }
+    else
+    {
+        std::snprintf(buffer, sizeof(buffer), "%.0f Hz", hz);
+    }
+    return std::string(buffer);
+}
+
+std::string FieldKeyName(std::size_t zeroBasedIndex)
+{
+    const char        row = zeroBasedIndex < 8 ? 'A' : 'B';
+    const std::size_t number
+        = zeroBasedIndex < 8 ? zeroBasedIndex + 1 : zeroBasedIndex - 7;
+    return std::string(1, row) + std::to_string(number);
+}
+#endif
+
 std::string FormatPercent(float normalized)
 {
     char buffer[16];
@@ -126,6 +183,24 @@ std::string FormatPercent(float normalized)
                   "%d%%",
                   static_cast<int>(std::round(Clamp01(normalized) * 100.0f)));
     return std::string(buffer);
+}
+
+bool ParameterValueDiffers(const DaisySubharmoniqCore& core,
+                           const std::string&          parameterId,
+                           float                       normalizedValue)
+{
+    float current = 0.0f;
+    return core.GetParameterValue(parameterId, &current)
+           && std::abs(current - normalizedValue) > 0.000001f;
+}
+
+bool EffectiveParameterValueDiffers(const DaisySubharmoniqCore& core,
+                                    const std::string&          parameterId,
+                                    float normalizedValue)
+{
+    float current = 0.0f;
+    return core.GetEffectiveParameterValue(parameterId, &current)
+           && std::abs(current - normalizedValue) > 0.000001f;
 }
 } // namespace
 
@@ -172,6 +247,17 @@ HostedAppPatchBindings SubharmoniqCore::GetPatchBindings() const
         bindings.knobControlIds[i] = MakeControlId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobParameterIds[i] = MakeParameterId(nodeId_, pageBinding.parameterIds[i]);
         bindings.knobDetailLabels[i] = pageBinding.parameterLabels[i];
+    }
+    for(std::size_t i = 0; i < pageBinding.parameterIds.size(); ++i)
+    {
+        if(!pageBinding.parameterIds[i].empty())
+        {
+            bindings.fieldKnobControlIds[i]
+                = MakeControlId(nodeId_, pageBinding.parameterIds[i]);
+            bindings.fieldKnobParameterIds[i]
+                = MakeParameterId(nodeId_, pageBinding.parameterIds[i]);
+        }
+        bindings.fieldKnobDetailLabels[i] = pageBinding.parameterLabels[i];
     }
     bindings.encoderControlId       = MakeEncoderControlId(nodeId_);
     bindings.encoderButtonControlId = MakeEncoderButtonControlId(nodeId_);
@@ -245,8 +331,14 @@ void SubharmoniqCore::SetControl(const std::string& controlId,
     }
 
     const std::string suffix = StripControlId(controlId);
+    const bool shouldRecordZoom
+        = ParameterValueDiffers(sharedCore_, suffix, normalizedValue);
     if(!suffix.empty() && sharedCore_.SetParameterValue(suffix, normalizedValue))
     {
+        if(shouldRecordZoom)
+        {
+            RecordParameterZoom(suffix, normalizedValue);
+        }
         RefreshSnapshots();
     }
 }
@@ -285,19 +377,51 @@ void SubharmoniqCore::SetPortInput(const std::string& portId,
     {
         if(portId == MakeCvInputPortId(nodeId_, 1))
         {
-            sharedCore_.SetParameterValue("root_cv", value.scalar);
+            const bool shouldRecordZoom
+                = ParameterValueDiffers(sharedCore_, "root_cv", value.scalar);
+            if(sharedCore_.SetParameterValue("root_cv", value.scalar))
+            {
+                if(shouldRecordZoom)
+                {
+                    RecordCvZoom(1, "root_cv", value.scalar);
+                }
+            }
         }
         else if(portId == MakeCvInputPortId(nodeId_, 2))
         {
-            sharedCore_.SetParameterValue("cutoff_cv", value.scalar);
+            const bool shouldRecordZoom
+                = ParameterValueDiffers(sharedCore_, "cutoff_cv", value.scalar);
+            if(sharedCore_.SetParameterValue("cutoff_cv", value.scalar))
+            {
+                if(shouldRecordZoom)
+                {
+                    RecordCvZoom(2, "cutoff_cv", value.scalar);
+                }
+            }
         }
         else if(portId == MakeCvInputPortId(nodeId_, 3))
         {
-            sharedCore_.SetParameterValue("rhythm_cv", value.scalar);
+            const bool shouldRecordZoom
+                = ParameterValueDiffers(sharedCore_, "rhythm_cv", value.scalar);
+            if(sharedCore_.SetParameterValue("rhythm_cv", value.scalar))
+            {
+                if(shouldRecordZoom)
+                {
+                    RecordCvZoom(3, "rhythm_cv", value.scalar);
+                }
+            }
         }
         else if(portId == MakeCvInputPortId(nodeId_, 4))
         {
-            sharedCore_.SetParameterValue("sub_cv", value.scalar);
+            const bool shouldRecordZoom
+                = ParameterValueDiffers(sharedCore_, "sub_cv", value.scalar);
+            if(sharedCore_.SetParameterValue("sub_cv", value.scalar))
+            {
+                if(shouldRecordZoom)
+                {
+                    RecordCvZoom(4, "sub_cv", value.scalar);
+                }
+            }
         }
     }
     RefreshSnapshots();
@@ -309,18 +433,29 @@ PortValue SubharmoniqCore::GetPortOutput(const std::string& portId) const
     return it != portOutputs_.end() ? it->second : PortValue{};
 }
 
-void SubharmoniqCore::TickUi(double)
+void SubharmoniqCore::TickUi(double deltaMs)
 {
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    oledTransient_.Tick(deltaMs);
+#else
+    (void)deltaMs;
+#endif
     BuildDisplay();
 }
 
 bool SubharmoniqCore::SetParameterValue(const std::string& parameterId,
                                         float              normalizedValue)
 {
-    const bool changed = sharedCore_.SetParameterValue(
-        StripParameterId(parameterId), normalizedValue);
+    const std::string stripped = StripParameterId(parameterId);
+    const bool shouldRecordZoom
+        = ParameterValueDiffers(sharedCore_, stripped, normalizedValue);
+    const bool changed = sharedCore_.SetParameterValue(stripped, normalizedValue);
     if(changed)
     {
+        if(shouldRecordZoom)
+        {
+            RecordParameterZoom(stripped, normalizedValue);
+        }
         RefreshSnapshots();
     }
     return changed;
@@ -330,10 +465,17 @@ bool SubharmoniqCore::SetEffectiveParameterValue(
     const std::string& parameterId,
     float              normalizedValue)
 {
-    const bool changed = sharedCore_.SetEffectiveParameterValue(
-        StripParameterId(parameterId), normalizedValue);
+    const std::string stripped = StripParameterId(parameterId);
+    const bool shouldRecordZoom
+        = EffectiveParameterValueDiffers(sharedCore_, stripped, normalizedValue);
+    const bool changed
+        = sharedCore_.SetEffectiveParameterValue(stripped, normalizedValue);
     if(changed)
     {
+        if(shouldRecordZoom)
+        {
+            RecordParameterZoom(stripped, normalizedValue);
+        }
         RefreshSnapshots();
     }
     return changed;
@@ -454,8 +596,9 @@ const MenuModel& SubharmoniqCore::GetMenuModel() const
 void SubharmoniqCore::MenuRotate(int delta)
 {
     const auto next = static_cast<int>(sharedCore_.GetActivePage()) + delta;
-    const int wrapped = (next + 9) % 9;
+    const int wrapped = (next + kSubharmoniqPageCount) % kSubharmoniqPageCount;
     sharedCore_.SetActivePage(static_cast<DaisySubharmoniqPage>(wrapped));
+    RecordPageZoom();
     RefreshSnapshots();
 }
 
@@ -470,9 +613,13 @@ void SubharmoniqCore::SetMenuItemValue(const std::string& itemId,
 {
     if(itemId == MakeMenuItemId(nodeId_, "pages", "page"))
     {
-        const int rawPage = static_cast<int>(std::round(Clamp01(normalizedValue) * 8.0f));
-        const int page = rawPage < 0 ? 0 : (rawPage > 8 ? 8 : rawPage);
+        const int rawPage = static_cast<int>(
+            std::round(Clamp01(normalizedValue) * static_cast<float>(kSubharmoniqPageCount - 1)));
+        const int page = rawPage < 0 ? 0 : (rawPage >= kSubharmoniqPageCount
+                                                ? kSubharmoniqPageCount - 1
+                                                : rawPage);
         sharedCore_.SetActivePage(static_cast<DaisySubharmoniqPage>(page));
+        RecordPageZoom();
     }
     else if(itemId == MakeMenuItemId(nodeId_, "transport", "play"))
     {
@@ -495,6 +642,10 @@ void SubharmoniqCore::SetMenuItemValue(const std::string& itemId,
                == MakeMenuItemId(nodeId_, "field_keys", FieldKeyMenuItemSuffix(i)))
             {
                 handled = TriggerFieldKeyAction(i);
+                if(handled)
+                {
+                    RecordFieldKeyZoom(i);
+                }
                 break;
             }
         }
@@ -504,8 +655,14 @@ void SubharmoniqCore::SetMenuItemValue(const std::string& itemId,
             const auto markerPos = itemId.find(marker);
             if(markerPos != std::string::npos)
             {
-                sharedCore_.SetParameterValue(itemId.substr(markerPos + marker.size()),
-                                              normalizedValue);
+                const std::string parameterId = itemId.substr(markerPos + marker.size());
+                const bool shouldRecordZoom
+                    = ParameterValueDiffers(sharedCore_, parameterId, normalizedValue);
+                if(sharedCore_.SetParameterValue(parameterId, normalizedValue)
+                   && shouldRecordZoom)
+                {
+                    RecordParameterZoom(parameterId, normalizedValue);
+                }
             }
         }
     }
@@ -516,12 +673,12 @@ bool SubharmoniqCore::TriggerFieldKeyAction(std::size_t zeroBasedIndex)
 {
     if(zeroBasedIndex < 4)
     {
-        sharedCore_.SetActivePage(DaisySubharmoniqPage::kSeq);
+        sharedCore_.SetActivePage(DaisySubharmoniqPage::kSeqRhythm);
         return true;
     }
     if(zeroBasedIndex >= 8 && zeroBasedIndex < 12)
     {
-        sharedCore_.SetActivePage(DaisySubharmoniqPage::kSeq);
+        sharedCore_.SetActivePage(DaisySubharmoniqPage::kSeqRhythm);
         return true;
     }
     if(zeroBasedIndex >= 4 && zeroBasedIndex < 8)
@@ -530,7 +687,7 @@ bool SubharmoniqCore::TriggerFieldKeyAction(std::size_t zeroBasedIndex)
         sharedCore_.SetRhythmTarget(
             rhythm,
             NextRhythmTarget(sharedCore_.GetRhythmTarget(rhythm)));
-        sharedCore_.SetActivePage(DaisySubharmoniqPage::kRhythm);
+        sharedCore_.SetActivePage(DaisySubharmoniqPage::kSeqRhythm);
         return true;
     }
     if(zeroBasedIndex == 12)
@@ -573,6 +730,7 @@ bool SubharmoniqCore::SetActivePage(DaisySubharmoniqPage page)
     const bool changed = sharedCore_.SetActivePage(page);
     if(changed)
     {
+        RecordPageZoom();
         RefreshSnapshots();
     }
     return changed;
@@ -643,19 +801,47 @@ void SubharmoniqCore::ProcessAudio(float* outputLeft,
 bool SubharmoniqCore::SetParameterValue(const char* parameterId,
                                         float       normalizedValue)
 {
-    return sharedCore_.SetParameterValue(parameterId, normalizedValue);
+    if(parameterId == nullptr)
+    {
+        return false;
+    }
+
+    const bool shouldRecordZoom
+        = ParameterValueDiffers(sharedCore_, parameterId, normalizedValue);
+    const bool changed = sharedCore_.SetParameterValue(parameterId, normalizedValue);
+    if(changed)
+    {
+        if(shouldRecordZoom)
+        {
+            RecordParameterZoom(parameterId, normalizedValue);
+        }
+        RefreshSnapshots();
+    }
+    return changed;
 }
 
 void SubharmoniqCore::SetCvInput(std::size_t oneBasedIndex,
                                  float       normalizedValue)
 {
+    const char* parameterId = nullptr;
     switch(oneBasedIndex)
     {
-        case 1: sharedCore_.SetParameterValue("root_cv", normalizedValue); break;
-        case 2: sharedCore_.SetParameterValue("cutoff_cv", normalizedValue); break;
-        case 3: sharedCore_.SetParameterValue("rhythm_cv", normalizedValue); break;
-        case 4: sharedCore_.SetParameterValue("sub_cv", normalizedValue); break;
-        default: break;
+        case 1: parameterId = "root_cv"; break;
+        case 2: parameterId = "cutoff_cv"; break;
+        case 3: parameterId = "rhythm_cv"; break;
+        case 4: parameterId = "sub_cv"; break;
+        default: return;
+    }
+
+    const bool shouldRecordZoom
+        = ParameterValueDiffers(sharedCore_, parameterId, normalizedValue);
+    if(sharedCore_.SetParameterValue(parameterId, normalizedValue))
+    {
+        if(shouldRecordZoom)
+        {
+            RecordCvZoom(oneBasedIndex, parameterId, normalizedValue);
+        }
+        RefreshSnapshots();
     }
 }
 
@@ -770,7 +956,8 @@ void SubharmoniqCore::BuildMenuModel()
     pageItem.editable = true;
     pageItem.actionKind = MenuItemActionKind::kValue;
     pageItem.normalizedValue
-        = static_cast<float>(static_cast<int>(sharedCore_.GetActivePage())) / 8.0f;
+        = static_cast<float>(static_cast<int>(sharedCore_.GetActivePage()))
+          / static_cast<float>(kSubharmoniqPageCount - 1);
     pageItem.valueText = FormatPageLabel(sharedCore_.GetActivePage());
     pages.items.push_back(pageItem);
     menu_.sections.push_back(pages);
@@ -806,14 +993,11 @@ void SubharmoniqCore::BuildMenuModel()
     }
     menu_.sections.push_back(fieldKeys);
 
-    const std::array<std::pair<const char*, const char*>, 8> pageSections = {{
+    const std::array<std::pair<const char*, const char*>, 5> pageSections = {{
+        {"seq_rhythm", "Seq/Rhy"},
         {"voice", "Voice"},
-        {"mix", "Mix"},
-        {"seq", "Seq"},
-        {"rhythm", "Rhythm"},
         {"filter", "Filter"},
-        {"patch", "Patch"},
-        {"midi", "MIDI"},
+        {"mix", "Mix"},
         {"about", "About"},
     }};
 
@@ -835,7 +1019,13 @@ void SubharmoniqCore::BuildMenuModel()
         {
             for(const auto& parameter : sharedCore_.GetParameters())
             {
-                if(parameter.groupLabel == sectionInfo.second)
+                const bool includeParameter
+                    = (std::string(sectionInfo.first) == "seq_rhythm"
+                       && (parameter.groupLabel == "Seq"
+                           || parameter.groupLabel == "Rhythm"))
+                      || (std::string(sectionInfo.first) != "seq_rhythm"
+                          && parameter.groupLabel == sectionInfo.second);
+                if(includeParameter)
                 {
                     MenuItem item;
                     item.id = MakeMenuItemId(nodeId_, sectionInfo.first, "param/")
@@ -853,6 +1043,183 @@ void SubharmoniqCore::BuildMenuModel()
     }
 }
 
+void SubharmoniqCore::RecordParameterZoom(const std::string& parameterId,
+                                          float              normalizedValue)
+{
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    const std::string knobLabel = FieldKnobLabelForParameter(parameterId);
+    const std::string title     = knobLabel.empty() ? parameterId : knobLabel;
+    oledTransient_.Show({title,
+                         FormatParameterValue(parameterId, normalizedValue),
+                         {"returns after 2.0s"},
+                         false,
+                         true,
+                         normalizedValue});
+#else
+    (void)parameterId;
+    (void)normalizedValue;
+#endif
+}
+
+void SubharmoniqCore::RecordCvZoom(std::size_t       oneBasedIndex,
+                                   const std::string& parameterId,
+                                   float              normalizedValue)
+{
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    static constexpr std::array<const char*, 4> kLabels = {{
+        "Root CV",
+        "Cutoff CV",
+        "Rhythm CV",
+        "Sub CV",
+    }};
+    const std::string label
+        = oneBasedIndex >= 1 && oneBasedIndex <= kLabels.size()
+              ? kLabels[oneBasedIndex - 1]
+              : parameterId;
+    oledTransient_.Show({"CV" + std::to_string(oneBasedIndex) + " " + label,
+                         FormatParameterValue(parameterId, normalizedValue),
+                         {"returns after 2.0s"},
+                         false,
+                         true,
+                         normalizedValue});
+#else
+    (void)oneBasedIndex;
+    (void)parameterId;
+    (void)normalizedValue;
+#endif
+}
+
+void SubharmoniqCore::RecordPageZoom()
+{
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    const auto binding = sharedCore_.GetActivePageBinding();
+    oledTransient_.Show({"Page",
+                         binding.pageLabel,
+                         {"SW1<- SW2->"},
+                         false,
+                         false,
+                         0.0f});
+#endif
+}
+
+void SubharmoniqCore::RecordFieldKeyZoom(std::size_t zeroBasedIndex)
+{
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    const std::string keyName = FieldKeyName(zeroBasedIndex);
+    if(zeroBasedIndex == 12)
+    {
+        oledTransient_.Show(
+            {keyName + " Quantize",
+             FormatQuantizeDetail(sharedCore_.GetQuantizeMode()),
+             {"Quant " + FormatQuantize(sharedCore_.GetQuantizeMode())},
+             false,
+             false,
+             0.0f});
+        return;
+    }
+    if(zeroBasedIndex == 13)
+    {
+        oledTransient_.Show({keyName + " Seq Oct",
+                             std::to_string(sharedCore_.GetSeqOctaveRange())
+                                 + " octave range",
+                             {},
+                             false,
+                             false,
+                             0.0f});
+        return;
+    }
+    if(zeroBasedIndex == 14)
+    {
+        oledTransient_.Show(
+            {keyName + (sharedCore_.IsPlaying() ? " Play" : " Stop"),
+             sharedCore_.IsPlaying() ? "Running" : "Stopped",
+             {"Step S1:"
+                  + std::to_string(sharedCore_.GetSequencerStepIndex(0) + 1)
+                  + " S2:"
+                  + std::to_string(sharedCore_.GetSequencerStepIndex(1) + 1),
+              "Quant: " + FormatQuantizeDetail(sharedCore_.GetQuantizeMode())},
+             false,
+             false,
+             0.0f});
+        return;
+    }
+    if(zeroBasedIndex == 15)
+    {
+        oledTransient_.Show({keyName + " Reset",
+                             "Reset",
+                             {"Steps S1:1 S2:1"},
+                             false,
+                             false,
+                             0.0f});
+        return;
+    }
+    if(zeroBasedIndex >= 4 && zeroBasedIndex < 8)
+    {
+        const std::size_t rhythm = zeroBasedIndex - 4;
+        const auto        target = sharedCore_.GetRhythmTarget(rhythm);
+        const std::string value  = FormatRhythmTargetDetail(target);
+        const std::string detail = target == DaisySubharmoniqRhythmTarget::kBoth
+                                       ? "R" + std::to_string(rhythm + 1)
+                                             + " advances both"
+                                       : "R" + std::to_string(rhythm + 1)
+                                             + " routes to " + value;
+        oledTransient_.Show({keyName + " Rhythm " + std::to_string(rhythm + 1),
+                             value,
+                             {detail},
+                             false,
+                             false,
+                             0.0f});
+        return;
+    }
+
+    oledTransient_.Show({keyName + " " + FieldKeyDetailLabel(zeroBasedIndex),
+                         "Selected",
+                         {"Seq/Rhy"},
+                         false,
+                         false,
+                         0.0f});
+#else
+    (void)zeroBasedIndex;
+#endif
+}
+
+std::string SubharmoniqCore::FormatParameterValue(
+    const std::string& parameterId,
+    float              normalizedValue) const
+{
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    if(parameterId == "cutoff" || parameterId == "cutoff_cv")
+    {
+        return FormatFrequencyFromNormalized(normalizedValue);
+    }
+    if(parameterId == "quantize_mode")
+    {
+        return FormatQuantizeDetail(sharedCore_.GetQuantizeMode());
+    }
+    if(parameterId == "seq_oct_range")
+    {
+        return std::to_string(sharedCore_.GetSeqOctaveRange()) + " octave range";
+    }
+#else
+    (void)parameterId;
+#endif
+    return FormatPercent(normalizedValue);
+}
+
+std::string SubharmoniqCore::FieldKnobLabelForParameter(
+    const std::string& parameterId) const
+{
+    const auto binding = sharedCore_.GetActivePageBinding();
+    for(std::size_t i = 0; i < binding.parameterIds.size(); ++i)
+    {
+        if(binding.parameterIds[i] == parameterId)
+        {
+            return "K" + std::to_string(i + 1) + " " + binding.parameterLabels[i];
+        }
+    }
+    return "";
+}
+
 void SubharmoniqCore::BuildDisplay()
 {
     display_.texts.clear();
@@ -860,6 +1227,14 @@ void SubharmoniqCore::BuildDisplay()
     display_.mode = menu_.isOpen ? DisplayMode::kMenu : DisplayMode::kStatus;
     display_.title = "Subharmoniq";
     ++display_.revision;
+
+#if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
+    if(oledTransient_.IsVisible())
+    {
+        oledTransient_.ApplyToDisplay(display_);
+        return;
+    }
+#endif
 
     const auto binding = sharedCore_.GetActivePageBinding();
     display_.texts.push_back({0, 0, "Subharmoniq " + binding.pageLabel, true});
@@ -869,7 +1244,7 @@ void SubharmoniqCore::BuildDisplay()
                               false});
     display_.texts.push_back({42,
                               10,
-                              "Q " + FormatQuantize(sharedCore_.GetQuantizeMode()),
+                              "Quant " + FormatQuantize(sharedCore_.GetQuantizeMode()),
                               false});
     display_.texts.push_back({0,
                               20,
@@ -877,13 +1252,27 @@ void SubharmoniqCore::BuildDisplay()
                                   + " S2 "
                                   + std::to_string(sharedCore_.GetSequencerStepIndex(1) + 1),
                               false});
-    if(sharedCore_.GetActivePage() == DaisySubharmoniqPage::kFilter)
+    display_.texts.push_back({0,
+                              30,
+                              "R1/"
+                                  + FormatRhythmTarget(sharedCore_.GetRhythmTarget(0))
+                                  + " R2/"
+                                  + FormatRhythmTarget(sharedCore_.GetRhythmTarget(1)),
+                              false});
+    display_.texts.push_back({0,
+                              40,
+                              "R3/"
+                                  + FormatRhythmTarget(sharedCore_.GetRhythmTarget(2))
+                                  + " R4/"
+                                  + FormatRhythmTarget(sharedCore_.GetRhythmTarget(3)),
+                              false});
+    if(sharedCore_.GetActivePage() == DaisySubharmoniqPage::kVcf)
     {
         display_.texts.push_back({0, 52, "R2 SVF/BPF Ladder", false});
     }
     else
     {
-        display_.texts.push_back({0, 52, "SW1<- SW2-> hold+tap OK", false});
+        display_.texts.push_back({0, 52, "Assign A5-A8  SW1<- SW2->", false});
     }
 }
 

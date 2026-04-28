@@ -7,6 +7,7 @@
 #include <juce_core/juce_core.h>
 
 #include "daisyhost/CliPayloads.h"
+#include "daisyhost/DoctorDiagnostics.h"
 #include "daisyhost/GateDiagnostics.h"
 #include "daisyhost/RenderRuntime.h"
 
@@ -336,20 +337,6 @@ int RunGate(const std::vector<std::string>& args)
     return diagnostics.ok ? kSuccess : kRuntimeFailure;
 }
 
-juce::var DoctorItem(const std::string& description,
-                     const std::filesystem::path& path,
-                     bool required)
-{
-    auto object = std::make_unique<juce::DynamicObject>();
-    const bool exists = std::filesystem::exists(path);
-    object->setProperty("description", juce::String(description));
-    object->setProperty("path", juce::String(path.generic_string()));
-    object->setProperty("required", required);
-    object->setProperty("exists", exists);
-    object->setProperty("ok", exists || !required);
-    return juce::var(object.release());
-}
-
 int RunDoctor(const std::vector<std::string>& args)
 {
     const bool jsonOutput = HasFlag(args, "--json");
@@ -364,54 +351,25 @@ int RunDoctor(const std::vector<std::string>& args)
     std::string config = "Release";
     ReadOption(args, "--config", &config);
 
-    const auto buildDir  = std::filesystem::path(buildDirText);
-    const auto sourceDir = std::filesystem::path(sourceDirText);
-
-    juce::Array<juce::var> checks;
-    checks.add(DoctorItem("build directory", buildDir, true));
-    checks.add(DoctorItem("DaisyHostCLI executable",
-                          buildDir / config / "DaisyHostCLI.exe",
-                          true));
-    checks.add(DoctorItem("DaisyHostRender executable",
-                          buildDir / config / "DaisyHostRender.exe",
-                          true));
-    checks.add(DoctorItem("DaisyHost Patch standalone executable",
-                          buildDir / "DaisyHostPatch_artefacts" / config
-                              / "Standalone" / "DaisyHost Patch.exe",
-                          true));
-    checks.add(DoctorItem("smoke script",
-                          sourceDir / "tests" / "run_smoke.py",
-                          true));
-    checks.add(DoctorItem("training examples directory",
-                          sourceDir / "training" / "examples",
-                          true));
-
-    bool ok = true;
-    for(const auto& check : checks)
-    {
-        if(auto* object = check.getDynamicObject())
-        {
-            ok = ok && static_cast<bool>(object->getProperty("ok"));
-        }
-    }
+    daisyhost::DoctorDiagnosticsOptions options;
+    options.sourceDir = sourceDirText;
+    options.buildDir  = buildDirText;
+    options.config    = config;
+    const auto diagnostics = daisyhost::BuildDoctorDiagnostics(options);
 
     if(jsonOutput)
     {
-        auto root = std::make_unique<juce::DynamicObject>();
-        root->setProperty("ok", ok);
-        root->setProperty("buildDir", juce::String(buildDir.generic_string()));
-        root->setProperty("sourceDir", juce::String(sourceDir.generic_string()));
-        root->setProperty("config", juce::String(config));
-        root->setProperty("checks", juce::var(checks));
-        std::cout << juce::JSON::toString(juce::var(root.release()), true)
-                  << '\n';
+        std::cout
+            << daisyhost::SerializeDoctorDiagnosticsPayloadJson(diagnostics)
+            << '\n';
     }
     else
     {
-        std::cout << (ok ? "doctor passed" : "doctor failed") << '\n';
+        std::cout << (diagnostics.ok ? "doctor passed" : "doctor failed")
+                  << '\n';
     }
 
-    return ok ? kSuccess : kRuntimeFailure;
+    return diagnostics.ok ? kSuccess : kRuntimeFailure;
 }
 } // namespace
 

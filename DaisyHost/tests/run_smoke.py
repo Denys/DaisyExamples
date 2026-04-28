@@ -51,6 +51,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--build-dir", required=True)
     parser.add_argument("--source-dir", required=True)
     parser.add_argument("--config", default="Release")
+    parser.add_argument(
+        "--board",
+        choices=("daisy_patch", "daisy_field"),
+        help="Run standalone smoke for only this board.",
+    )
+    parser.add_argument(
+        "--app",
+        default="torus",
+        help="Standalone app id to launch when --board is supplied.",
+    )
     parser.add_argument("--timeout-seconds", type=float, default=60.0)
     return parser.parse_args()
 
@@ -251,7 +261,15 @@ def run_single_standalone_smoke(
     )
 
 
-def run_standalone_smoke(paths: SmokePaths, *, timeout_seconds: float) -> None:
+def run_standalone_smoke(
+    paths: SmokePaths, *, timeout_seconds: float, board_id: str | None = None, app_id: str = "torus"
+) -> None:
+    if board_id is not None:
+        run_single_standalone_smoke(
+            paths, board_id=board_id, app_id=app_id, timeout_seconds=timeout_seconds
+        )
+        return
+
     run_single_standalone_smoke(
         paths, board_id="daisy_patch", app_id="torus", timeout_seconds=timeout_seconds
     )
@@ -615,7 +633,12 @@ def main() -> int:
     paths = resolve_paths(args)
     try:
         if args.mode in ("standalone", "all"):
-            run_standalone_smoke(paths, timeout_seconds=args.timeout_seconds)
+            run_standalone_smoke(
+                paths,
+                timeout_seconds=args.timeout_seconds,
+                board_id=args.board,
+                app_id=args.app,
+            )
         if args.mode in ("render", "all"):
             run_render_smoke(paths, timeout_seconds=args.timeout_seconds)
     except SmokeFailure as exc:

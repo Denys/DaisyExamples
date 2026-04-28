@@ -11,7 +11,11 @@ namespace daisyhost
 {
 enum class DaisySubharmoniqPage
 {
-    kHome = 0,
+    kSeqRhythm = 0,
+    kVco,
+    kVcf,
+    kVcaMix,
+    kHome,
     kVoice,
     kMix,
     kSeq,
@@ -56,7 +60,7 @@ struct DaisySubharmoniqParameter
 
 struct DaisySubharmoniqPageBinding
 {
-    DaisySubharmoniqPage       page = DaisySubharmoniqPage::kHome;
+    DaisySubharmoniqPage       page = DaisySubharmoniqPage::kSeqRhythm;
     std::string                pageLabel;
     std::array<std::string, 8> parameterIds{};
     std::array<std::string, 8> parameterLabels{};
