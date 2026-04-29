@@ -111,6 +111,8 @@ ctest --test-dir build -C Release --output-on-failure
 - `DaisyHostCliDescribeBoard`
 - `DaisyHostCliValidateScenario`
 - `DaisyHostCliRender`
+- `DaisyHostCliRenderAssertions`
+- `DaisyHostCliRenderAssertionsPass`
 
 Current shell note:
 
@@ -134,11 +136,12 @@ Current shell note:
   `subharmoniq` hosted app, v1 host-side modulation lanes, and WS8 rack UX
   productionization are implemented,
   native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
-  the latest recorded host gate passed Release `ctest` `269/269`, TF9
+  the latest recorded host gate passed Release `ctest` `278/278`, TF9
   board-generic editor surface policy is complete and profile-backed for Patch
-  and Field, TF14 CLI gate diagnostics exists as a structured `gate --json`
-  wrapper, TF15 doctor readiness is implemented as an existing-command
-  preflight, the
+  and Field, TF12 automated verification/build hardening is complete, TF14 CLI
+  gate diagnostics exists as a structured `gate --json` wrapper, TF15 doctor
+  readiness is implemented as an existing-command preflight, TF16 render
+  assertions are implemented on existing `DaisyHostCLI render`, the
   first Field firmware adapter (`field/MultiDelay`) is build-verified and
   ST-Link flash-verified, and
   `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
@@ -185,7 +188,9 @@ Current shell note:
   blocker classifications without changing build semantics. Direct
   `gate --json` passed with CTest `244/244`, and a final `cmd /c build_host.cmd`
   rerun also passed `244/244`; later TF15 superseded that historical gate with
-  Release `ctest` `269/269`.
+  Release `ctest` `269/269`; the later non-interactive verification rerun
+  superseded that with Release `ctest` `277/277`; the TF12/TF16 closeout
+  superseded that with Release `ctest` `278/278`.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -208,7 +213,41 @@ from `patch/Torus/`.
 
 - Last fully green DaisyHost host build/test verification rerun from this
   checkout: 2026-04-28
-- Verified commands/results in the current 2026-04-28 TF14 CLI gate diagnostics
+- Verified commands/results in the current 2026-04-29 TF12 closeout and TF16
+  CLI render assertion sprint:
+  - manager-readable result: DaisyHost now has a completed automated
+    verification foundation and render assertions that can make an offline
+    render fail directly on expected evidence. Agents and CI can prove
+    readiness, run the full gate, and verify render output without manually
+    reading JSON.
+  - TF12 evidence:
+    - normalized-env direct `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
+      returned `ok: true`, no blockers, and expected CTest registrations
+    - normalized-env direct `build\Release\DaisyHostCLI.exe gate --source-dir . --build-dir build --config Release --json`:
+      returned `ok: true`, no blockers, and Release CTest `278/278`
+    - final structured gate invoked `cmd /c build_host.cmd` and passed with
+      Release `ctest` `278/278`
+  - TF16 evidence:
+    - red normalized-env Debug build failed before implementation on missing
+      `daisyhost/RenderAssertions.h`
+    - green targeted Debug CTest:
+      `ctest --test-dir build -C Debug --output-on-failure -R "RenderAssertion|CliPayloads|DaisyHostCliRender|DoctorDiagnostics"`
+      passed `22/22`
+    - direct Release render assertion pass returned success with checksum
+      `c9c3f665e6a0dd2b`
+    - direct Release render assertion failure returned validation exit code `2`
+    - direct Release missing-value assertion check returned usage exit code `1`
+  - JSON/CLI contract:
+    - existing `render --json` top-level fields are preserved
+    - assertion requests add an `assertions` object with pass/fail detail
+    - supported flags are `--expect-checksum`, `--expect-non-silent`,
+      `--expect-route-count`, `--expect-node-id`, and
+      `--expect-timeline-target-node`
+  - caveats:
+    - no new CLI command, routing preset, Hub workflow, DAW/VST3 validation,
+      GUI validation, firmware flashing, hardware validation, or live-plugin
+      control was added or claimed
+- Verified commands/results in the earlier 2026-04-28 TF14 CLI gate diagnostics
   workflow:
   - manager-readable result: DaisyHostCLI now provides a structured full-gate
     evidence command for agent/CI handoff while preserving `build_host.cmd` as
@@ -1106,10 +1145,11 @@ The following paths were verified from this checkout on 2026-04-23:
     `DaisyHost/build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
   - `ctest` currently launches unit cases through
     `tests/run_unit_test_payload.py`
-  - historical note: TF15 doctor readiness later produced a 2026-04-28
-    `269/269` gate; TF14 `244/244`, TF10 `230/230`, TF11 `227/227`, WS8
-    `216/216`, modulation-lane `211/211`, and TF12 `202/202` remain dated
-    historical evidence, not current checkout gate truth
+  - historical note: the latest 2026-04-29 TF12/TF16 closeout produced a
+    `278/278` gate; the non-interactive verification rerun `277/277`, TF15
+    `269/269`, TF14 `244/244`, TF10 `230/230`, TF11 `227/227`, WS8
+    `216/216`, modulation-lane `211/211`, and early TF12 `202/202` remain
+    dated historical evidence, not current checkout gate truth
 
 ## Current Hosted Apps
 
@@ -1422,11 +1462,11 @@ Version/change tracking target behavior:
 ## Current Notes
 
 - The stale 2026-04-27 TF11 `227/227` gate is historical only. The latest
-  recorded full host gate in these docs is the 2026-04-28 TF15
-  `269/269` pass.
+  recorded full host gate in these docs is the 2026-04-29 TF12/TF16 closeout
+  `278/278` pass.
 - Older `159/159`, `168/168`, `196/196`, `197/197`, `202/202`, `211/211`,
-  `216/216`, `227/227`, `230/230`, `232/232`, `233/233`, `243/243`, and
-  `244/244`
+  `216/216`, `227/227`, `230/230`, `232/232`, `233/233`, `243/243`,
+  `244/244`, `269/269`, and `277/277`
   counts remain useful as dated historical ledger evidence, but they are not
   the current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path

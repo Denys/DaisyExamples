@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -33,7 +34,7 @@ void PrintUsage()
         << "  describe-board <boardId> [--json]\n"
         << "  list-inputs [--json]\n"
         << "  validate-scenario <scenario.json> [--json]\n"
-        << "  render <scenario.json> --output-dir <directory> [--json]\n"
+        << "  render <scenario.json> --output-dir <directory> [--expect-checksum <hex>] [--expect-non-silent] [--expect-route-count <count>] [--expect-node-id <id>] [--expect-timeline-target-node <id>] [--json]\n"
         << "  snapshot --app <appId> --board <boardId> [--selected-node node0] [--json]\n"
         << "  smoke --mode render|standalone|all --build-dir <dir> --source-dir <dir> [--config Release] [--json]\n"
         << "  gate --source-dir <dir> --build-dir <dir> [--config Release] [--skip-configure] [--skip-build] [--skip-tests] [--json]\n"
@@ -69,6 +70,64 @@ bool ReadOption(const std::vector<std::string>& args,
         }
     }
     return false;
+}
+
+bool IsOptionToken(const std::string& text)
+{
+    return text.rfind("--", 0) == 0;
+}
+
+bool HasMissingOptionValue(const std::vector<std::string>& args,
+                           const std::string&              option)
+{
+    for(std::size_t index = 0; index < args.size(); ++index)
+    {
+        if(args[index] == option
+           && (index + 1 >= args.size() || IsOptionToken(args[index + 1])))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<std::string> ReadOptions(const std::vector<std::string>& args,
+                                     const std::string&              option)
+{
+    std::vector<std::string> values;
+    for(std::size_t index = 0; index < args.size(); ++index)
+    {
+        if(args[index] == option && index + 1 < args.size()
+           && !IsOptionToken(args[index + 1]))
+        {
+            values.push_back(args[index + 1]);
+        }
+    }
+    return values;
+}
+
+bool ParseNonNegativeInt(const std::string& text, int* value)
+{
+    if(text.empty() || value == nullptr)
+    {
+        return false;
+    }
+    std::size_t consumed = 0;
+    try
+    {
+        const long long parsed = std::stoll(text, &consumed, 10);
+        if(consumed != text.size() || parsed < 0
+           || parsed > std::numeric_limits<int>::max())
+        {
+            return false;
+        }
+        *value = static_cast<int>(parsed);
+        return true;
+    }
+    catch(...)
+    {
+        return false;
+    }
 }
 
 std::string QuoteArgument(const std::string& argument)
@@ -220,6 +279,20 @@ void PrintGateTextSummary(const daisyhost::GateDiagnosticsResult& result)
     for(const auto& blocker : result.blockers)
     {
         std::cout << blocker.kind << ": " << blocker.hint << '\n';
+    }
+}
+
+void PrintAssertionFailures(
+    const daisyhost::cli::RenderAssertionReport& report)
+{
+    for(const auto& result : report.results)
+    {
+        if(!result.passed)
+        {
+            std::cerr << result.id << ": " << result.message << " (expected "
+                      << result.expected << ", actual " << result.actual
+                      << ")\n";
+        }
     }
 }
 
@@ -507,6 +580,29 @@ int main(int argc, char* argv[])
             std::cerr << "render requires --output-dir <directory>\n";
             return kUsageError;
         }
+        daisyhost::cli::RenderAssertionOptions assertions;
+        if(HasMissingOptionValue(args, "--expect-checksum")
+           || HasMissingOptionValue(args, "--expect-route-count")
+           || HasMissingOptionValue(args, "--expect-node-id")
+           || HasMissingOptionValue(args, "--expect-timeline-target-node"))
+        {
+            std::cerr << "render assertion options require values\n";
+            return kUsageError;
+        }
+        ReadOption(args, "--expect-checksum", &assertions.expectedChecksum);
+        assertions.expectNonSilent = HasFlag(args, "--expect-non-silent");
+        std::string routeCountText;
+        if(ReadOption(args, "--expect-route-count", &routeCountText)
+           && !ParseNonNegativeInt(routeCountText,
+                                   &assertions.expectedRouteCount))
+        {
+            std::cerr << "render requires --expect-route-count <non-negative integer>\n";
+            return kUsageError;
+        }
+        assertions.expectedNodeIds = ReadOptions(args, "--expect-node-id");
+        assertions.expectedTimelineTargetNodeIds
+            = ReadOptions(args, "--expect-timeline-target-node");
+
         daisyhost::RenderScenario scenario;
         daisyhost::RenderResult   result;
         std::string               error;
@@ -517,16 +613,30 @@ int main(int argc, char* argv[])
             std::cerr << error << '\n';
             return kRuntimeFailure;
         }
+        daisyhost::cli::RenderAssertionReport assertionReport;
+        const bool hasAssertions
+            = daisyhost::cli::HasRenderAssertions(assertions);
+        if(hasAssertions)
+        {
+            assertionReport = daisyhost::cli::EvaluateRenderAssertions(
+                result.manifest, assertions);
+        }
         if(jsonOutput)
         {
-            std::cout
-                << daisyhost::cli::SerializeRenderResultPayloadJson(result.manifest)
-                << '\n';
+            std::cout << daisyhost::cli::SerializeRenderResultPayloadJson(
+                             result.manifest,
+                             hasAssertions ? &assertionReport : nullptr)
+                      << '\n';
         }
         else
         {
             std::cout << "Rendered " << result.manifest.appId << " to "
                       << result.manifest.audioPath << '\n';
+        }
+        if(hasAssertions && !assertionReport.passed)
+        {
+            PrintAssertionFailures(assertionReport);
+            return kValidationFailure;
         }
         return kSuccess;
     }

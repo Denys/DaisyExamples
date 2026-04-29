@@ -4,6 +4,24 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- complete TF12 verification/build hardening and TF16 CLI render assertions:
+  - close TF12 as the current automated verification foundation: `build_host.cmd`,
+    `gate --json`, expanded `doctor --json`, CTest smoke entries, and CLI
+    adoption docs now agree on the latest green host gate
+  - extend existing `DaisyHostCLI.exe render` with assertion flags
+    `--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
+    `--expect-node-id`, and `--expect-timeline-target-node`
+  - preserve existing render JSON top-level fields and add an `assertions`
+    report only when assertion flags are supplied
+  - return validation exit code `2` for assertion mismatches and usage exit
+    code `1` for malformed assertion options
+  - keep new CLI commands, routing presets, Hub workflows, DAW/VST3 validation,
+    firmware flashing, hardware validation, GUI automation, and live-plugin
+    control out of scope
+  - verify with red/green `RenderAssertions` / `CliPayloads` coverage, direct
+    passing and failing Release render assertion checks, `doctor --json`,
+    `gate --json`, and final `cmd /c build_host.cmd` passing Release `ctest`
+    `278/278`
 - expand existing `DaisyHostCLI.exe doctor --json` for TF15 source/build
   readiness:
   - preserve the existing command and stable top-level fields `ok`, `buildDir`,

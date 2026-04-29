@@ -5,6 +5,7 @@
 
 #include "daisyhost/CliPayloads.h"
 #include "daisyhost/HostModulation.h"
+#include "daisyhost/RenderAssertions.h"
 #include "daisyhost/RenderTypes.h"
 
 namespace
@@ -326,5 +327,34 @@ TEST(CliPayloadsTest, RenderPayloadIncludesDebugStateForRackReadback)
     EXPECT_EQ(static_cast<int>(timeline->getProperty("executedEventCount")), 2);
     EXPECT_EQ(static_cast<int>(timeline->getProperty("resolvedTargetEventCount")),
               1);
+}
+
+TEST(CliPayloadsTest, RenderPayloadCanIncludeAssertionReport)
+{
+    daisyhost::RenderResultManifest manifest;
+    manifest.appId         = "multidelay";
+    manifest.audioChecksum = "abcdef";
+
+    daisyhost::cli::RenderAssertionReport report;
+    report.passed = false;
+    report.results.push_back({"checksum", "expected", "actual", false, "checksum mismatch"});
+
+    auto parsed = ParseJson(
+        daisyhost::cli::SerializeRenderResultPayloadJson(manifest, &report));
+    auto* root = parsed.getDynamicObject();
+    ASSERT_NE(root, nullptr);
+    EXPECT_EQ(root->getProperty("audioChecksum").toString(), "abcdef");
+
+    auto* assertions = root->getProperty("assertions").getDynamicObject();
+    ASSERT_NE(assertions, nullptr);
+    EXPECT_FALSE(static_cast<bool>(assertions->getProperty("passed")));
+
+    auto* results = assertions->getProperty("results").getArray();
+    ASSERT_NE(results, nullptr);
+    ASSERT_EQ(results->size(), 1);
+    auto* result = (*results)[0].getDynamicObject();
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->getProperty("id").toString(), "checksum");
+    EXPECT_EQ(result->getProperty("message").toString(), "checksum mismatch");
 }
 } // namespace

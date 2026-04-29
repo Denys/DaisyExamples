@@ -11,6 +11,7 @@
 #include "daisyhost/BoardProfile.h"
 #include "daisyhost/HostAutomationBridge.h"
 #include "daisyhost/HostModulation.h"
+#include "daisyhost/RenderAssertions.h"
 #include "daisyhost/TestInputSignal.h"
 
 namespace daisyhost
@@ -569,6 +570,27 @@ juce::var RenderTimelineEventVar(const RenderTimelineEvent& event)
     return juce::var(object.release());
 }
 
+juce::var RenderAssertionResultVar(const RenderAssertionResult& result)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("id", StringVar(result.id));
+    object->setProperty("expected", StringVar(result.expected));
+    object->setProperty("actual", StringVar(result.actual));
+    object->setProperty("passed", result.passed);
+    object->setProperty("message", StringVar(result.message));
+    return juce::var(object.release());
+}
+
+juce::var RenderAssertionReportVar(const RenderAssertionReport& report)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("passed", report.passed);
+    object->setProperty("results",
+                        juce::var(VectorVar(report.results,
+                                            RenderAssertionResultVar)));
+    return juce::var(object.release());
+}
+
 juce::var AutomationSlotVar(const EffectiveHostAutomationSlotSnapshot& slot)
 {
     auto object = std::make_unique<juce::DynamicObject>();
@@ -997,7 +1019,9 @@ std::string SerializeInputsPayloadJson()
     return ToJson(juce::var(root.release()));
 }
 
-std::string SerializeRenderResultPayloadJson(const RenderResultManifest& manifest)
+std::string SerializeRenderResultPayloadJson(
+    const RenderResultManifest& manifest,
+    const RenderAssertionReport* assertions)
 {
     auto root = std::make_unique<juce::DynamicObject>();
     root->setProperty("appId", StringVar(manifest.appId));
@@ -1021,6 +1045,10 @@ std::string SerializeRenderResultPayloadJson(const RenderResultManifest& manifes
                       juce::var(VectorVar(manifest.executedTimeline,
                                           RenderTimelineEventVar)));
     root->setProperty("debugState", RenderDebugStateVar(manifest));
+    if(assertions != nullptr)
+    {
+        root->setProperty("assertions", RenderAssertionReportVar(*assertions));
+    }
     return ToJson(juce::var(root.release()));
 }
 

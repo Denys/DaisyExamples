@@ -71,7 +71,9 @@ void PopulateReadyTree(TempTree& tree)
               "add_test([=[DaisyHostStandaloneSmoke]=] \"py\")\n"
               "add_test([=[DaisyHostRenderSmoke]=] \"py\")\n"
               "add_test([=[DaisyHostCliDoctor]=] \"DaisyHostCLI\")\n"
-              "add_test([=[DaisyHostCliRender]=] \"DaisyHostCLI\")\n");
+              "add_test([=[DaisyHostCliRender]=] \"DaisyHostCLI\")\n"
+              "add_test([=[DaisyHostCliRenderAssertions]=] \"DaisyHostCLI\")\n"
+              "add_test([=[DaisyHostCliRenderAssertionsPass]=] \"DaisyHostCLI\")\n");
     tree.directory(tree.build() / "Release");
     tree.file(tree.build() / "Release" / "DaisyHostCLI.exe");
     tree.file(tree.build() / "Release" / "DaisyHostRender.exe");
@@ -155,6 +157,14 @@ TEST(DoctorDiagnosticsTest, SerializesBackwardCompatibleReadyPayload)
     EXPECT_TRUE(root->hasProperty("ctest"));
     EXPECT_TRUE(root->hasProperty("environment"));
     EXPECT_TRUE(root->hasProperty("blockers"));
+    EXPECT_NE(std::find(result.ctest.expectedTests.begin(),
+                        result.ctest.expectedTests.end(),
+                        "DaisyHostCliRenderAssertions"),
+              result.ctest.expectedTests.end());
+    EXPECT_NE(std::find(result.ctest.expectedTests.begin(),
+                        result.ctest.expectedTests.end(),
+                        "DaisyHostCliRenderAssertionsPass"),
+              result.ctest.expectedTests.end());
 }
 
 TEST(DoctorDiagnosticsTest, MissingCMakeListsReportsSourceFailure)

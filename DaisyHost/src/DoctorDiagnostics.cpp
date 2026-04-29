@@ -166,7 +166,9 @@ std::vector<std::string> ExpectedCTestNames()
             "DaisyHostStandaloneSmoke",
             "DaisyHostRenderSmoke",
             "DaisyHostCliDoctor",
-            "DaisyHostCliRender"};
+            "DaisyHostCliRender",
+            "DaisyHostCliRenderAssertions",
+            "DaisyHostCliRenderAssertionsPass"};
 }
 
 std::string ReadFileIfPresent(const std::filesystem::path& path)

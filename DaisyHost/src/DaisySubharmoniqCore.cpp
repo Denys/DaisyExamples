@@ -818,7 +818,9 @@ void DaisySubharmoniqCore::RestoreStatefulParameterValues(
         if(schema != values.end() && schema->second >= 1.0f)
         {
             SetActivePage(static_cast<DaisySubharmoniqPage>(
-                ClampInt(rawPage, 0, 3)));
+                ClampInt(rawPage,
+                         0,
+                         static_cast<int>(DaisySubharmoniqPage::kAbout))));
         }
         else
         {
@@ -830,6 +832,11 @@ void DaisySubharmoniqCore::RestoreStatefulParameterValues(
     {
         SetQuantizeMode(static_cast<DaisySubharmoniqQuantizeMode>(
             ClampInt(static_cast<int>(std::round(quantize->second)), 0, 4)));
+    }
+    const auto seqOctave = values.find("state/seq_oct");
+    if(seqOctave != values.end())
+    {
+        SetSeqOctaveRange(static_cast<int>(std::round(seqOctave->second)));
     }
 }
 

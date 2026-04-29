@@ -391,12 +391,14 @@ Outputs:
 Current local verification caveat:
 
 - the wrapper-driven full host gate last recorded in these docs was the
-  2026-04-28 TF15 doctor-readiness workflow: `cmd /c build_host.cmd` passed
-  and Release `ctest` passed `269/269`, including
-  `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`, and
-  the other CLI smoke tests. Older `168/168`, `196/196`, `197/197`,
-  `202/202`, `211/211`, `216/216`, `232/232`, `233/233`, `243/243`, and
-  `244/244` results are retained only as dated historical evidence.
+  2026-04-29 TF12/TF16 closeout: `cmd /c build_host.cmd`
+  passed and Release `ctest` passed `278/278`, including
+  `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`,
+  `DaisyHostCliRenderAssertions`, `DaisyHostCliRenderAssertionsPass`, and the
+  other CLI smoke tests. Older
+  `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, `216/216`,
+  `232/232`, `233/233`, `243/243`, `244/244`, and `269/269` results are
+  retained only as dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
   timeout on an otherwise healthy launch
@@ -421,7 +423,7 @@ build\Release\DaisyHostCLI.exe list-apps --json
 build\Release\DaisyHostCLI.exe describe-app cloudseed --json
 build\Release\DaisyHostCLI.exe describe-board daisy_field --json
 build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json
-build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf12_multidelay --json
+build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf16_multidelay --expect-non-silent --expect-timeline-target-node node0 --json
 build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json
 ```
 
@@ -431,6 +433,11 @@ firmware, or provide generic shell control.
 
 The `snapshot --json` and `render --json` payloads include `debugState` for
 compact external rack diagnostics without adding a separate command.
+`render --json` also accepts optional assertion flags
+`--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
+`--expect-node-id`, and `--expect-timeline-target-node`; when supplied, the
+payload adds an `assertions` report and returns validation exit code `2` if the
+expected render evidence does not match.
 
 Add new CLI commands only after a real agent or CI workflow proves a missing
 offline operation.

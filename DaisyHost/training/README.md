@@ -45,7 +45,7 @@ DaisyHost/build/Release/DaisyHostCLI.exe list-apps --json
 DaisyHost/build/Release/DaisyHostCLI.exe describe-app cloudseed --json
 DaisyHost/build/Release/DaisyHostCLI.exe describe-board daisy_field --json
 DaisyHost/build/Release/DaisyHostCLI.exe validate-scenario DaisyHost/training/examples/multidelay_smoke.json --json
-DaisyHost/build/Release/DaisyHostCLI.exe render DaisyHost/training/examples/multidelay_smoke.json --output-dir DaisyHost/build/cli_smoke/tf12_multidelay --json
+DaisyHost/build/Release/DaisyHostCLI.exe render DaisyHost/training/examples/multidelay_smoke.json --output-dir DaisyHost/build/cli_smoke/tf16_multidelay --expect-non-silent --expect-timeline-target-node node0 --json
 DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHost/build --source-dir DaisyHost --config Release --json
 ```
 
@@ -54,6 +54,10 @@ inspection and render validation. The existing `snapshot --json` and
 `render --json` payloads include additive `debugState` readback for compact
 board, selected-node, route, and role diagnostics. `gate --json` wraps the
 existing host gate with structured phase, CTest, and blocker evidence.
+`render --json` can also fail directly on expected render evidence with
+`--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
+`--expect-node-id`, and `--expect-timeline-target-node`; assertion requests add
+an `assertions` report and return validation exit code `2` on mismatch.
 
 The existing `doctor --json` command is the source/build readiness preflight;
 it is not a new command and does not execute the gate. Its stable top-level

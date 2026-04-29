@@ -150,7 +150,9 @@ target_link_libraries(DaisyHostRender
 
 add_library(daisyhost_cli STATIC
     src/CliPayloads.cpp
+    src/DoctorDiagnostics.cpp
     src/GateDiagnostics.cpp
+    src/RenderAssertions.cpp
 )
 
 target_include_directories(daisyhost_cli
@@ -280,6 +282,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_cloudseed_core.cpp
     tests/test_computer_keyboard_midi.cpp
     tests/test_cli_payloads.cpp
+    tests/test_doctor_diagnostics.cpp
     tests/test_gate_diagnostics.cpp
     tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
@@ -306,6 +309,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_subharmoniq_core.cpp
     tests/test_test_input_signal.cpp
     tests/test_render_runtime.cpp
+    tests/test_render_assertions.cpp
     tests/test_torus_core.cpp
     tests/test_vasynth_core.cpp
     tests/test_version_info.cpp
@@ -417,6 +421,20 @@ add_test(
 )
 
 add_test(
+    NAME DaisyHostCliDoctor
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        doctor
+        --build-dir
+        ${PROJECT_BINARY_DIR}
+        --source-dir
+        ${PROJECT_SOURCE_DIR}
+        --config
+        $<CONFIG>
+        --json
+)
+
+add_test(
     NAME DaisyHostCliRender
     COMMAND
         $<TARGET_FILE:DaisyHostCLI>
@@ -427,6 +445,34 @@ add_test(
         --json
 )
 
+add_test(
+    NAME DaisyHostCliRenderAssertions
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        render
+        ${PROJECT_SOURCE_DIR}/training/examples/multidelay_smoke.json
+        --output-dir
+        ${PROJECT_BINARY_DIR}/cli_smoke/render_assertions
+        --expect-checksum
+        definitely-not-the-checksum
+        --json
+)
+set_tests_properties(DaisyHostCliRenderAssertions PROPERTIES WILL_FAIL TRUE)
+
+add_test(
+    NAME DaisyHostCliRenderAssertionsPass
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        render
+        ${PROJECT_SOURCE_DIR}/training/examples/multidelay_smoke.json
+        --output-dir
+        ${PROJECT_BINARY_DIR}/cli_smoke/render_assertions_pass
+        --expect-non-silent
+        --expect-timeline-target-node
+        node0
+        --json
+)
+
 set_tests_properties(
     DaisyHostStandaloneSmoke
     DaisyHostRenderSmoke
@@ -434,7 +480,10 @@ set_tests_properties(
     DaisyHostCliDescribeApp
     DaisyHostCliDescribeBoard
     DaisyHostCliValidateScenario
+    DaisyHostCliDoctor
     DaisyHostCliRender
+    DaisyHostCliRenderAssertions
+    DaisyHostCliRenderAssertionsPass
     PROPERTIES
         LABELS "smoke"
         RUN_SERIAL TRUE

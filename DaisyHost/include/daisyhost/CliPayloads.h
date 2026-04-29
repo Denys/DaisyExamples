@@ -3,6 +3,7 @@
 #include <string>
 
 #include "daisyhost/EffectiveHostStateSnapshot.h"
+#include "daisyhost/RenderAssertions.h"
 #include "daisyhost/RenderTypes.h"
 
 namespace daisyhost
@@ -18,7 +19,9 @@ bool SerializeBoardDescriptionPayloadJson(const std::string& boardId,
                                           std::string*       outputJson,
                                           std::string*       errorMessage = nullptr);
 std::string SerializeInputsPayloadJson();
-std::string SerializeRenderResultPayloadJson(const RenderResultManifest& manifest);
+std::string SerializeRenderResultPayloadJson(
+    const RenderResultManifest& manifest,
+    const RenderAssertionReport* assertions = nullptr);
 bool BuildDefaultSnapshot(const std::string&        appId,
                           const std::string&        boardId,
                           const std::string&        selectedNodeId,
