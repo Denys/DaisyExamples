@@ -93,6 +93,39 @@ Latest implementation iteration:
 
 - Date: 2026-04-29
 - Thread: Local Codex thread
+- Slice: WS10 external debug surface + TF11 node-targeted event closeout claim
+- Manager-readable plan:
+  - What is being implemented: finish the current node-event readback rulebook
+    and expose that evidence through additive `debugState` payload fields on
+    the existing CLI JSON outputs.
+  - Why it matters: agents and CI should be able to see which rack node each
+    relevant event affected without manually stitching together raw manifest
+    fields.
+  - Target completion: move `TF11` from `60%` to `100%` only after targeted
+    tests and the full gate pass; advance `WS10` from `25%` to `65%`, not
+    `100%`, because routine external-debug adoption remains future evidence.
+  - Out of scope: no new CLI command, routing preset, graph editor, Hub
+    workflow, scenario inventory, DAW/VST3 claim, firmware flashing, hardware
+    validation, or live-plugin remote control.
+- Planned write slices:
+  - TF11: `src/RenderRuntime.cpp` and `tests/test_render_runtime.cpp` for
+    resolved/global/ambiguous node-event behavior.
+  - WS10: `src/CliPayloads.cpp` and `tests/test_cli_payloads.cpp` for additive
+    `debugState.timeline.events`, `eventsByTargetNode`, and node event counts.
+  - Docs after verification: `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`,
+    `CHECKPOINT.md`, `CHANGELOG.md`, and skill/readme docs only as needed.
+- Preflight notes:
+  - `git status --short` shows no tracked DaisyHost source/doc dirt before
+    this claim; unrelated submodule/untracked `noderr`/DaisyTheory entries are
+    outside this sprint and must be preserved.
+  - `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    recommended `WS10`; runner-up was `TF11`; explicit waits remain `WS9`,
+    `WS11`, `WS12`, `WS13`, `TF17`, and `TF18`.
+
+Previous implementation iteration:
+
+- Date: 2026-04-29
+- Thread: Local Codex thread
 - Slice: TF12 closeout + TF16 CLI render assertions
 - Manager-readable result:
   - Done: the automated verification foundation is now closed out, and the
