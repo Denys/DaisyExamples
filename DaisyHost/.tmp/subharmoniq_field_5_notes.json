@@ -1,0 +1,88 @@
+﻿{
+    "boardId":  "daisy_field",
+    "appId":  "subharmoniq",
+    "renderConfig":  {
+                         "sampleRate":  48000,
+                         "blockSize":  64,
+                         "durationSeconds":  1.2,
+                         "outputChannelCount":  2
+                     },
+    "seed":  4242,
+    "audioInput":  {
+                       "mode":  "host",
+                       "level":  0,
+                       "frequencyHz":  220
+                   },
+    "timeline":  [
+                     {
+                         "timeSeconds":  0,
+                         "type":  "midi",
+                         "status":  144,
+                         "data1":  48,
+                         "data2":  110
+                     },
+                     {
+                         "timeSeconds":  0.11,
+                         "type":  "midi",
+                         "status":  128,
+                         "data1":  48,
+                         "data2":  0
+                     },
+                     {
+                         "timeSeconds":  0.2,
+                         "type":  "midi",
+                         "status":  144,
+                         "data1":  52,
+                         "data2":  110
+                     },
+                     {
+                         "timeSeconds":  0.31,
+                         "type":  "midi",
+                         "status":  128,
+                         "data1":  52,
+                         "data2":  0
+                     },
+                     {
+                         "timeSeconds":  0.4,
+                         "type":  "midi",
+                         "status":  144,
+                         "data1":  55,
+                         "data2":  110
+                     },
+                     {
+                         "timeSeconds":  0.51,
+                         "type":  "midi",
+                         "status":  128,
+                         "data1":  55,
+                         "data2":  0
+                     },
+                     {
+                         "timeSeconds":  0.6,
+                         "type":  "midi",
+                         "status":  144,
+                         "data1":  60,
+                         "data2":  110
+                     },
+                     {
+                         "timeSeconds":  0.71,
+                         "type":  "midi",
+                         "status":  128,
+                         "data1":  60,
+                         "data2":  0
+                     },
+                     {
+                         "timeSeconds":  0.8,
+                         "type":  "midi",
+                         "status":  144,
+                         "data1":  64,
+                         "data2":  110
+                     },
+                     {
+                         "timeSeconds":  0.95,
+                         "type":  "midi",
+                         "status":  128,
+                         "data1":  64,
+                         "data2":  0
+                     }
+                 ]
+}

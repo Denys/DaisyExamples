@@ -292,12 +292,14 @@ TEST(CliPayloadsTest, RenderPayloadIncludesDebugStateForRackReadback)
     manifest.routes.push_back({"node0/port/audio_out_2", "node1/port/audio_in_2"});
 
     daisyhost::RenderTimelineEvent resolvedEvent;
-    resolvedEvent.type         = daisyhost::RenderTimelineEventType::kMidi;
-    resolvedEvent.targetNodeId = "node1";
+    resolvedEvent.type             = daisyhost::RenderTimelineEventType::kMidi;
+    resolvedEvent.targetNodeId     = "node1";
+    resolvedEvent.targetResolution = "selected_node";
     manifest.executedTimeline.push_back(resolvedEvent);
 
     daisyhost::RenderTimelineEvent unresolvedEvent;
-    unresolvedEvent.type = daisyhost::RenderTimelineEventType::kAudioInputConfig;
+    unresolvedEvent.type             = daisyhost::RenderTimelineEventType::kAudioInputConfig;
+    unresolvedEvent.targetResolution = "global";
     manifest.executedTimeline.push_back(unresolvedEvent);
 
     auto parsed = ParseJson(daisyhost::cli::SerializeRenderResultPayloadJson(manifest));
@@ -327,6 +329,105 @@ TEST(CliPayloadsTest, RenderPayloadIncludesDebugStateForRackReadback)
     EXPECT_EQ(static_cast<int>(timeline->getProperty("executedEventCount")), 2);
     EXPECT_EQ(static_cast<int>(timeline->getProperty("resolvedTargetEventCount")),
               1);
+
+    auto* timelineEvents = timeline->getProperty("events").getArray();
+    ASSERT_NE(timelineEvents, nullptr);
+    ASSERT_EQ(timelineEvents->size(), 2);
+    auto* nodeEvent = (*timelineEvents)[0].getDynamicObject();
+    auto* globalEvent = (*timelineEvents)[1].getDynamicObject();
+    ASSERT_NE(nodeEvent, nullptr);
+    ASSERT_NE(globalEvent, nullptr);
+    EXPECT_EQ(nodeEvent->getProperty("scope").toString(), "node");
+    EXPECT_EQ(nodeEvent->getProperty("resolution").toString(), "selected_node");
+    EXPECT_EQ(nodeEvent->getProperty("targetNodeId").toString(), "node1");
+    EXPECT_EQ(globalEvent->getProperty("scope").toString(), "global");
+    EXPECT_EQ(globalEvent->getProperty("resolution").toString(), "global");
+
+    auto* eventsByTargetNode
+        = timeline->getProperty("eventsByTargetNode").getDynamicObject();
+    ASSERT_NE(eventsByTargetNode, nullptr);
+    EXPECT_EQ(static_cast<int>(eventsByTargetNode->getProperty("node0")), 0);
+    EXPECT_EQ(static_cast<int>(eventsByTargetNode->getProperty("node1")), 1);
+
+    EXPECT_EQ(static_cast<int>(entryNode->getProperty("eventCount")), 0);
+    EXPECT_EQ(static_cast<int>(outputNode->getProperty("eventCount")), 1);
+}
+
+TEST(CliPayloadsTest, RenderDebugTimelinePreservesEventIdsAndTopLevelFields)
+{
+    daisyhost::RenderResultManifest manifest;
+    manifest.appId          = "multidelay";
+    manifest.boardId        = "daisy_field";
+    manifest.selectedNodeId = "node1";
+    manifest.entryNodeId    = "node0";
+    manifest.outputNodeId   = "node1";
+    manifest.audioChecksum  = "abcdef";
+
+    daisyhost::RenderNodeResultSummary node0;
+    node0.nodeId         = "node0";
+    node0.appId          = "multidelay";
+    node0.appDisplayName = "Multi Delay";
+    manifest.nodes.push_back(node0);
+
+    daisyhost::RenderNodeResultSummary node1;
+    node1.nodeId         = "node1";
+    node1.appId          = "multidelay";
+    node1.appDisplayName = "Multi Delay";
+    manifest.nodes.push_back(node1);
+
+    daisyhost::RenderTimelineEvent parameterEvent;
+    parameterEvent.type             = daisyhost::RenderTimelineEventType::kParameterSet;
+    parameterEvent.targetNodeId     = "node0";
+    parameterEvent.targetResolution = "id_derived";
+    parameterEvent.parameterId      = "node0/param/delay_primary";
+    parameterEvent.normalizedValue  = 0.25f;
+    manifest.executedTimeline.push_back(parameterEvent);
+
+    daisyhost::RenderTimelineEvent surfaceEvent;
+    surfaceEvent.type             = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    surfaceEvent.targetNodeId     = "node1";
+    surfaceEvent.targetResolution = "id_derived";
+    surfaceEvent.controlId        = "node1/control/field_knob_5";
+    surfaceEvent.normalizedValue  = 0.5f;
+    manifest.executedTimeline.push_back(surfaceEvent);
+
+    daisyhost::RenderTimelineEvent audioEvent;
+    audioEvent.type             = daisyhost::RenderTimelineEventType::kAudioInputConfig;
+    audioEvent.targetResolution = "global";
+    audioEvent.hasAudioLevel    = true;
+    audioEvent.audioLevel       = 3.0f;
+    manifest.executedTimeline.push_back(audioEvent);
+
+    auto parsed = ParseJson(daisyhost::cli::SerializeRenderResultPayloadJson(manifest));
+    auto* root = parsed.getDynamicObject();
+    ASSERT_NE(root, nullptr);
+    EXPECT_EQ(root->getProperty("appId").toString(), "multidelay");
+    EXPECT_EQ(root->getProperty("audioChecksum").toString(), "abcdef");
+
+    auto* topLevelTimeline = root->getProperty("executedTimeline").getArray();
+    ASSERT_NE(topLevelTimeline, nullptr);
+    ASSERT_EQ(topLevelTimeline->size(), 3);
+
+    auto* debugState = root->getProperty("debugState").getDynamicObject();
+    ASSERT_NE(debugState, nullptr);
+    auto* timeline = debugState->getProperty("timeline").getDynamicObject();
+    ASSERT_NE(timeline, nullptr);
+    auto* events = timeline->getProperty("events").getArray();
+    ASSERT_NE(events, nullptr);
+    ASSERT_EQ(events->size(), 3);
+
+    auto* parameterDebug = (*events)[0].getDynamicObject();
+    auto* surfaceDebug = (*events)[1].getDynamicObject();
+    auto* audioDebug = (*events)[2].getDynamicObject();
+    ASSERT_NE(parameterDebug, nullptr);
+    ASSERT_NE(surfaceDebug, nullptr);
+    ASSERT_NE(audioDebug, nullptr);
+    EXPECT_EQ(parameterDebug->getProperty("parameterId").toString(),
+              "node0/param/delay_primary");
+    EXPECT_EQ(surfaceDebug->getProperty("controlId").toString(),
+              "node1/control/field_knob_5");
+    EXPECT_EQ(audioDebug->getProperty("scope").toString(), "global");
+    EXPECT_EQ(static_cast<double>(audioDebug->getProperty("level")), 3.0);
 }
 
 TEST(CliPayloadsTest, RenderPayloadCanIncludeAssertionReport)

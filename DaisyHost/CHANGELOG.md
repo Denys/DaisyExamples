@@ -4,6 +4,65 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- complete the current TF11 node-targeted event/readback foundation and advance
+  WS10 external debug payloads:
+  - render timeline readback now reports durable target resolution evidence for
+    supported node-affecting events: explicit target, selected-node default,
+    id-derived target, or global scope
+  - keep global events such as audio input configuration global instead of
+    pretending they belong to a rack node
+  - extend existing `render --json` debug output with additive
+    `debugState.timeline.events[]`, `debugState.timeline.eventsByTargetNode`,
+    and `debugState.nodes[].eventCount`
+  - preserve existing CLI commands, top-level render JSON fields, routing
+    presets, scenario/session schemas, Hub behavior, firmware behavior, and
+    DAW/hardware validation scope
+  - manager-readable result: TF11 is complete for the current two-node rack
+    render-event contract; WS10 moves forward but remains partial until the
+    stronger debug surface is used repeatedly by real external-debug consumers
+  - verify with a red Debug build on missing
+    `RenderTimelineEvent::targetResolution`, Debug `RenderRuntime|CliPayloads`
+    CTest passing `46/46`, broader affected Debug CTest passing `84/84`,
+    direct Release render/snapshot CLI proof including checksum
+    `cd30ef6ba7b7acdb`, normalized `doctor --json`, normalized `gate --json`,
+    and final `cmd /c build_host.cmd` passing Release `ctest` `284/284`
+- fix Daisy Field/Subharmoniq live MIDI, audio stability, and OLED behavior:
+  - fix the actual repeated-note mute root cause: Field CV defaults feed
+    `cutoff_cv` at mid-scale, which pushed the Subharmoniq state-variable
+    filter into an unstable high-cutoff range and produced non-finite audio
+    after live-style MIDI notes
+  - keep the Subharmoniq filter coefficient inside a stable range and reset
+    non-finite filter state defensively before it can poison later notes
+  - tighten the remaining repeated-note edge case by bounding the SVF internal
+    state each sample; a five-note Field/Subharmoniq render that previously
+    serialized `inf` samples now reports finite, non-zero audio with peak
+    `1.065806`
+  - deliver incoming MIDI to the selected rack node once during rack processing,
+    avoiding duplicate selected-core delivery before the rack pass; this was a
+    real live-path bug, but not sufficient by itself to solve the mute
+  - make open Subharmoniq menus override transient/status OLED content, so menu
+    rows no longer visually drift under touch-zoom feedback
+  - render the host OLED with bounded 128x64 row rectangles and smaller text,
+    including proper inverted-row contrast
+  - verify with red/green repeated-MIDI Subharmoniq and RenderRuntime
+    regressions, Debug Subharmoniq/OLED/RenderRuntime and Field board/layout
+    CTest slices, Debug standalone build, and standalone smoke for
+    `board=daisy_field`, `app=subharmoniq`
+- pilot WS13 CLI-guided QA workflow adoption:
+  - exercise the existing CLI evidence path without adding commands: normalized
+    `doctor`, app/board discovery, scenario validation, render assertions,
+    render smoke, and the Release CLI CTest slice
+  - record that the pilot advances WS13 only partially because routine adoption
+    still needs repeated clean full-gate evidence
+  - capture a new adoption blocker: `gate --json` can report
+    `locked-artifact` on Windows when the running `DaisyHostCLI.exe` must
+    rebuild itself
+  - keep direct `cmd /c build_host.cmd` as the fallback build authority; the
+    WS13 reruns reached Release build stages but did not finish a green full
+    gate in the active dirty multi-chat checkout
+  - keep new CLI commands, runtime/debug payload edits, GUI/DAW/VST3
+    validation, firmware flashing, hardware validation, and live-plugin control
+    out of scope
 - complete TF12 verification/build hardening and TF16 CLI render assertions:
   - close TF12 as the current automated verification foundation: `build_host.cmd`,
     `gate --json`, expanded `doctor --json`, CTest smoke entries, and CLI

@@ -59,6 +59,7 @@ struct RenderTimelineEvent
     double                  timeSeconds      = 0.0;
     RenderTimelineEventType type             = RenderTimelineEventType::kParameterSet;
     std::string             targetNodeId;
+    std::string             targetResolution;
     std::string             controlId;
     std::string             parameterId;
     std::string             portId;

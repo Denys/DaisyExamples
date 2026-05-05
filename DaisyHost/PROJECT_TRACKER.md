@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-04-29
+Last updated: 2026-05-01
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -22,7 +22,7 @@ Latest fully green host gate from this checkout:
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `278/278`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `284/284`
 - smoke tests included:
   - `DaisyHostNextWpSuggester`
   - `DaisyHostStandaloneSmoke`
@@ -38,40 +38,35 @@ Latest fully green host gate from this checkout:
 
 Latest automated gate attempt:
 
-- Date: 2026-04-29
-- Request: TF12 verification closeout plus TF16 CLI render assertions
-- Result: full wrapper gate passed `278/278`.
+- Date: 2026-05-01
+- Request: remaining `daisy_field` / `subharmoniq` live-audio mute after the
+  previous duplicate-MIDI, OLED, and DSP-stability fixes.
+- Result: targeted Debug/live-processor proof is green; full host gate was not
+  rerun in this iteration.
 - Evidence:
-  - red step: normalized-env Debug `cmake --build build --config Debug --target unit_tests DaisyHostCLI`
-    failed before implementation on missing `daisyhost/RenderAssertions.h`
-  - normalized-env Debug `cmake --build build --config Debug --target unit_tests DaisyHostCLI`:
-    passed
-  - `ctest --test-dir build -C Debug --output-on-failure -R "RenderAssertion|CliPayloads|DaisyHostCliRender|DoctorDiagnostics"`:
-    passed `22/22`
-  - normalized-env `build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json`:
-    returned `ok: true`, no blockers, and expected CTest registrations
-    including both render-assertion smoke entries
-  - normalized-env `build\Release\DaisyHostCLI.exe gate --source-dir . --build-dir build --config Release --json`:
-    returned `ok: true`, no blockers, and Release CTest `278/278`
-  - direct Release render assertion pass:
-    `build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf16_assert_pass --expect-non-silent --expect-timeline-target-node node0 --json`
-    returned success with checksum `c9c3f665e6a0dd2b`
-  - direct Release render assertion failure:
-    `build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf16_assert_fail --expect-checksum definitely-not-the-checksum --json`
-    returned exit code `2`
-  - direct Release render assertion usage check:
-    `build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf16_assert_usage --expect-node-id --json`
-    returned exit code `1`
-  - final structured gate invoked `cmd /c build_host.cmd` and passed with
-    Release `ctest` `278/278`
+  - Red: the new Debug processor regression
+    `DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible`
+    failed before the fix: Field K8 targeted `node0/control/output` but held
+    `0`, and all four repeated MIDI note-energy checks were `0`.
+  - Green: `cmake --build build --config Debug --target unit_tests` passed.
+  - Green targeted payload:
+    `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*:RenderRuntimeTest.SubharmoniqField*`
+    passed `32/32`.
+  - Green standalone build: normalized-process-env
+    `cmake --build build --config Debug --target DaisyHostPatch_Standalone`
+    passed after a raw run hit the known duplicate `Path` / `PATH` MSBuild
+    environment issue.
+  - Green standalone smoke: normalized-process-env
+    `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60`
+    passed.
 - Interpretation:
-  - TF12 is complete for automated verification/build hardening: wrapper,
-    gate, doctor, CTest smoke, CLI adoption docs, and latest full-gate evidence
-    agree.
-  - TF16 is complete as a bounded extension of existing `render`: agents and
-    CI can fail directly on render evidence without adding a new command.
-  - This pass does not claim routine adoption, manual GUI, DAW/VST3, hardware,
-    firmware, or live-plugin validation.
+  - The remaining mute was in the JUCE live processor restore/control-writeback
+    path, not in firmware and not in the previously fixed duplicate-MIDI path.
+  - Previous fixes were insufficient because their tests covered app-core and
+    render stability but did not exercise restored Subharmoniq page state through
+    the live Field/top-control writer before audio processing.
+  - This pass does not claim manual speaker listening, external MIDI hardware,
+    DAW/VST3 validation, firmware flashing, or Daisy Field hardware validation.
 
 ## Blockers For Other WPs
 
@@ -81,15 +76,166 @@ completion. The implementation percent remains in the workstream tables below.
 | WP | What blocks it | How to unblock | % unblocked |
 |---|---|---|---|
 | `TF8` Daisy Field board support | Manual Field hardware validation, generated-adapter flashing, broader firmware parity decisions, real voltage checks, USB MIDI/computer-side validation, and DAW/VST3 validation remain outside the automated host gate. | Run the Field hardware/manual validation checklist, flash generated adapters when explicitly scoped, record voltage/USB/DAW evidence, and keep host-only proof separate from hardware proof. | `70%` |
-| `TF11` Node-targeted event surface expansion | The first render/debug readback slice exists, but the remaining node-event contract scope is not yet explicitly closed. | Define the remaining event/readback surface, add contract tests for only that scope, and rerun targeted plus full host verification. | `60%` |
+| `TF11` Node-targeted event surface expansion | No current implementation blocker for the two-node render-event readback contract; the foundation is complete. | Keep future node-event semantics in explicit product/foundation scope before adding new event types or live remote-control behavior. | `100%` |
 | `WS9` Richer live routing presets | `TF10` provides the routing rulebook, but the actual product semantics for new presets are not designed. | Write an explicit routing-preset product plan: allowed presets, UI language, scenario/session behavior, tests, and non-goals. | `70%` |
 | `WS11` Hub + scenario workflow upgrade | Scenario inventory/readback and Hub workflow scope are still undecided; `TF17` / `TF18` remain deferred. | Decide the curated scenario inventory, Hub launch flow, and whether scenario-backed snapshots are required before editing Hub behavior. | `45%` |
 | `WS12` DAW-facing polish | Automated verification is ready, but manual VST3/DAW validation scope and proof are missing; richer routing may also affect DAW-facing behavior. | Define the DAW checklist, run VST3/manual host validation, and decide whether `WS9` routing scope must land first. | `35%` |
-| `WS13` CLI-guided QA workflow adoption | CLI evidence tools exist, but routine real adoption evidence has not repeated enough to call the workflow standard. | Use `doctor`, `gate`, render assertions, and smoke in several real agent/CI iterations, then promote the proven sequence into policy. | `60%` |
+| `WS13` CLI-guided QA workflow adoption | CLI evidence tools exist and multiple recent WPs have used them, but routine real adoption evidence has not repeated enough to call the workflow standard. | Keep using `doctor`, `gate`, render assertions, and smoke in real agent/CI iterations; record any Windows self-rebuild locks as blockers and fall back to direct `build_host.cmd` when needed. | `75%` |
 | `TF17` Scenario inventory and validation matrix | Scenario parser/examples exist, but the Hub/scenario workflow may still change and repeated inventory pain is not yet proven. | Collect repeated scenario-discovery pain or lock the `WS11` scenario workflow, then add inventory/validation matrix tests. | `35%` |
 | `TF18` Scenario-backed snapshot/readback | Render manifests already cover much of the evidence; no-audio scenario inspection has not become a repeated need. | Start only when `WS10` or `WS11` needs scenario-backed state without writing audio, then define the smallest snapshot contract. | `45%` |
 
 Latest implementation iteration:
+
+- Date: 2026-05-01
+- Thread: Local Codex thread
+- Slice: TF8/TF9 Field Subharmoniq live processor restored-page mute
+- Manager-readable result:
+  - Done: added a processor-level regression for `daisy_field` + `subharmoniq`
+    restored on a page where Field K8 controls output, then fixed the restore
+    order so canonical app state seeds Field/top controls before live controls
+    are applied.
+  - Why it matters: MIDI could still be received and displayed while audio was
+    hard-silent because the live Field control writer zeroed the app output
+    before any note rendering.
+  - What changed for users/agents/CI: Debug unit coverage now reaches the JUCE
+    processor boundary for repeated MIDI notes instead of relying only on core
+    or offline render tests.
+  - What remains: real external MIDI input, manual listening, DAW/VST3, and
+    hardware Field validation are still unverified.
+  - Out of scope: no firmware change, routing-preset change, DAW behavior
+    change, or unrelated DSP change.
+- Files touched by this sprint:
+  - `CMakeLists.txt`
+  - `src/juce/DaisyHostPluginProcessor.cpp`
+  - `tests/test_daisyhost_plugin_processor.cpp`
+  - `PROJECT_TRACKER.md`
+  - `SKILL_PLAYBOOK.md`
+- Verification:
+  - Red: direct Debug payload for
+    `DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible`
+    failed with K8/output value `0` and repeated note energies `0`.
+  - Green: `cmake --build build --config Debug --target unit_tests` passed.
+  - Green targeted: direct Debug payload for
+    `DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*:RenderRuntimeTest.SubharmoniqField*`
+    passed `32/32`.
+  - Green standalone: normalized-env Debug `DaisyHostPatch_Standalone` build
+    passed.
+  - Green smoke: normalized-env standalone smoke passed for
+    `--board daisy_field --app subharmoniq`.
+- Blockers / non-claims:
+  - Raw standalone build still hits the local duplicate `Path` / `PATH`
+    MSBuild environment issue unless the process environment is normalized.
+  - An initial Debug build timeout left stale `MSBuild`/`cl` processes; those
+    were stopped before the red/green reruns.
+  - Existing unrelated dirty work remains preserved.
+- Next safe starting point:
+  - Recommender output: `WS10` external state/debug surface remains next only
+    for a concrete external-debug consumer; runner-up `TF8` Daisy Field board
+    support; explicitly wait on `WS9`, `WS11`, `WS12`, `WS13`, `TF17`, and
+    `TF18`; first safe slice is additive readback beyond the existing
+    `debugState` payload if a real consumer needs it.
+
+Previous implementation iteration:
+
+- Date: 2026-04-29
+- Thread: Local Codex thread
+- Slice: WS10 external debug surface + TF11 node-targeted event closeout
+- Manager-readable result:
+  - Done: completed the current TF11 node-event readback rulebook and expanded
+    the existing WS10 CLI debug payload without adding a new command.
+  - Why it matters: agents and CI can now see both which rack node an event
+    affected and how that target was resolved, so render-debug evidence no
+    longer depends on manually inferring behavior from raw ids.
+  - What changed for users/agents/CI: `render --json` keeps its existing
+    top-level fields and now adds `debugState.timeline.events[]`,
+    `debugState.timeline.eventsByTargetNode`, and `debugState.nodes[].eventCount`;
+    executed timeline entries also carry `targetResolution` when available.
+  - Target completion: `TF11` moves from `60%` to `100%`; `WS10` moves from
+    `25%` to `65%`, not `100%`, because broader external-debug adoption still
+    needs repeated consumer evidence.
+  - What remains: future WS10 work should wait for a concrete external-debug
+    consumer that needs more than the additive CLI `debugState` payload.
+  - Out of scope: no new CLI command, routing preset, graph editor, Hub
+    workflow, scenario inventory, DAW/VST3 claim, firmware flashing, hardware
+    validation, or live-plugin remote control.
+- Files touched by this sprint:
+  - `include/daisyhost/RenderTypes.h`
+  - `src/RenderRuntime.cpp`
+  - `src/CliPayloads.cpp`
+  - `tests/test_render_runtime.cpp`
+  - `tests/test_cli_payloads.cpp`
+  - tracker/checkpoint/changelog/readme/skill docs for closeout wording
+- Verification:
+  - Red: normalized Debug build failed on missing
+    `RenderTimelineEvent::targetResolution`.
+  - Green targeted: Debug `RenderRuntime|CliPayloads` CTest passed `46/46`.
+  - Broader affected: Debug
+    `RenderRuntime|CliPayloads|HostSessionState|EffectiveHostStateSnapshot|LiveRackTopology|DaisyHostCliRender`
+    CTest passed `84/84`.
+  - Direct CLI: Release render proof for
+    `training\examples\field_node_target_surface_smoke.json` passed with
+    checksum `cd30ef6ba7b7acdb` and debug timeline evidence; Release snapshot
+    proof for `multidelay` / `daisy_field` passed.
+  - Readiness: raw `doctor --json` reported duplicate `Path` / `PATH`;
+    normalized-env `doctor --json` passed.
+  - Gate: normalized-env `gate --json` passed Release `ctest` `284/284`;
+    direct `cmd /c build_host.cmd` passed Release `ctest` `284/284`.
+  - Recommender: `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    now recommends `WS10` only for a concrete external-debug consumer that
+    needs more than the additive CLI `debugState` payload; runner-up is `TF8`;
+    waits remain `WS9`, `WS11`, `WS12`, `WS13`, `TF17`, and `TF18`.
+- Blockers / non-claims:
+  - Existing unrelated dirty work remains and was preserved, including active
+    Subharmoniq/OLED/editor/processor and untracked helper files outside this
+    sprint.
+  - No manual GUI, DAW/VST3, firmware, hardware, USB MIDI, or live-plugin
+    validation was performed.
+
+Previous implementation iteration:
+
+- Date: 2026-04-29
+- Thread: Local Codex thread
+- Slice: WS13 CLI-guided QA workflow adoption pilot
+- Manager-readable result:
+  - Done: ran and documented a first CLI-guided QA adoption pilot using the
+    existing commands instead of adding new CLI surface.
+  - Why it matters: agents and CI now have concrete evidence about which parts
+    of the CLI workflow are ready for routine use and where full-gate handoff
+    still needs caution.
+  - What changed for users/agents/CI: the standard path is now framed as
+    `doctor`, discovery, scenario validation, render assertions, render smoke,
+    CLI CTest, and full-gate fallback evidence when available.
+  - Target completion: advance WS13 from `30%` to `45%`, not `60%` or `100%`,
+    because the pilot produced useful evidence but did not produce a clean
+    full-gate result.
+  - What remains: repeated clean adoption in future WPs or CI runs, plus a
+    decision on whether `gate --json` should avoid rebuilding the running CLI
+    executable on Windows.
+  - Out of scope: no new CLI command, no CLI implementation change, no
+    runtime/debug payload edit, no GUI/DAW/VST3 validation, no firmware
+    flashing, no hardware validation, and no live-plugin remote control.
+- Verification:
+  - Raw `doctor --json` correctly reported `duplicate-path-env`; normalized
+    `doctor --json` returned `ok: true`.
+  - Normalized `list-apps`, `describe-app cloudseed`,
+    `describe-board daisy_field`, and `validate-scenario` passed.
+  - Normalized render assertion proof passed with checksum
+    `c9c3f665e6a0dd2b`; normalized `smoke --mode render` passed.
+  - Release CLI CTest slice passed `9/9`.
+  - `gate --json` failed with `locked-artifact` on `DaisyHostCLI.exe` during
+    self-rebuild; direct `cmd /c build_host.cmd` reruns reached Release build
+    stages but failed with exit code `-1` during build-system regeneration.
+  - `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    still recommended `WS10`; runner-up `TF11`; waits `WS9`, `WS11`, `WS12`,
+    `WS13`, `TF17`, and `TF18`.
+- Preflight notes:
+  - Active dirty code from the neighboring WS10/TF11 lane remains preserved:
+    `CMakeLists.txt`, `include/daisyhost/RenderTypes.h`,
+    `src/CliPayloads.cpp`, `src/RenderRuntime.cpp`,
+    `src/juce/DaisyHostPluginEditor.cpp`, multiple tests, and untracked OLED /
+    processor-test files.
+
+Previous implementation iteration:
 
 - Date: 2026-04-29
 - Thread: Local Codex thread
@@ -978,17 +1124,17 @@ Current decision-useful status:
     destination selection and compact lane rows
 - TF12 verification/build hardening is complete for the current automated
   foundation: `build_host.cmd`, `gate --json`, expanded `doctor --json`, CTest
-  smoke, and CLI adoption docs agree on the latest `278/278` gate. Manual DAW,
+  smoke, and CLI adoption docs agree on the latest `284/284` gate. Manual DAW,
   hardware, firmware, and GUI validation remain outside TF12.
 - TF10 routing-contract foundation is complete: shared `LiveRackRoutePlan`
   construction is source-backed, targeted-test-backed, and full-gate-backed.
   Manager-readable result: DaisyHost now has one tested rulebook for today's
   two-node audio rack, while `WS9` remains the place for new routing presets or
   product semantics.
-- TF11 node-targeted event/readback expansion has an initial full-gate-backed
-  slice: render manifests now report resolved target-node identity for inferred
-  node-scoped timeline events, and CLI render-result JSON exposes render
-  `nodes`, `routes`, and `executedTimeline` debug readback.
+- TF11 node-targeted event/readback expansion is complete for the current
+  two-node rack contract: render manifests now report target-node identity and
+  resolution kind for supported node-affecting events while global audio-input
+  config remains global.
 - TF13 CLI activity logging and scope governance is implemented as a docs-only
   layer: future DaisyHostCLI commands should be promoted from logged agent/CI
   pain, not from speculative convenience.
@@ -1156,7 +1302,7 @@ the next portfolio remain readable in one file.
   this checkout.
 - Latest full host gate:
   `cmd /c build_host.cmd` passed on 2026-04-29 and Release `ctest` passed
-  `278/278`, including `DaisyHostCliDoctor`,
+  `284/284`, including `DaisyHostCliDoctor`,
   `DaisyHostCliRenderAssertions`, and `DaisyHostCliRenderAssertionsPass`.
 - `WS8` rack UX productionization is implemented against the frozen two-node
   rack baseline without changing the four existing audio-only topology
@@ -1169,21 +1315,26 @@ the next portfolio remain readable in one file.
   Field surface render evidence.
 - TF12 verification/build hardening is complete for the current automated
   foundation: `build_host.cmd`, `gate --json`, expanded `doctor --json`, CTest
-  smoke entries, documented CLI adoption, and the latest `278/278` full gate
+  smoke entries, documented CLI adoption, and the latest `284/284` full gate
   all agree. Manager-readable result: agents and CI now have a repeatable
   build/readiness/gate evidence path; manual DAW, hardware, firmware, and GUI
   validation remain separate product-validation work, not TF12 completion
   criteria.
 - TF10 routing-contract foundation is complete: shared `LiveRackRoutePlan`
   construction is source-backed, targeted-test-backed, and covered by the
-  latest `278/278` full host gate. Manager-readable result: DaisyHost now has
+  latest `284/284` full host gate. Manager-readable result: DaisyHost now has
   one tested routing rulebook for today's two-node audio rack; richer routing
   presets still belong to explicit `WS9` product scope.
-- WS10 now has a first external debug-surface slice: existing
+- TF11 node-targeted event surface is complete for the current two-node rack
+  contract: supported render events now report whether they resolved by
+  explicit target, selected node, id-derived target, or global scope, while
+  ambiguous multi-node node events still require `targetNodeId`.
+- WS10 now has a stronger external debug-surface slice: existing
   `DaisyHostCLI snapshot --json` and `render --json` outputs include additive
   `debugState` readback for board, selected node, entry/output node roles,
-  routes, selected-node target cues, and render timeline target counts without
-  adding new CLI commands or route semantics.
+  routes, selected-node target cues, render timeline events, per-node event
+  counts, and event counts grouped by target node without adding new CLI
+  commands or route semantics.
 - TF13 now defines the DaisyHostCLI activity logger and scope governance layer:
   future CLI commands are tracked as evidence-backed automation needs before
   code-bearing work such as TF14/TF15 starts.
@@ -1203,6 +1354,12 @@ the next portfolio remain readable in one file.
   count, node ids, and executed timeline target-node evidence without manually
   inspecting JSON. Manager-readable result: render proof is now an executable
   pass/fail contract, not only a report someone must read.
+- WS13 now has repeated CLI-guided QA evidence: normalized `doctor`,
+  discovery, scenario validation, render assertions, render smoke, CLI CTest,
+  `gate --json`, and direct `build_host.cmd` have all produced useful evidence
+  across recent work packages. Manager-readable result: DaisyHost has a
+  practical agent/CI workflow, but routine adoption is not yet complete until
+  the sequence repeats cleanly enough to become the default handoff standard.
 - TF9 board-generic editor surface is complete: editor-facing board panel
   names, selected-node hint copy, keyboard hint copy, trace mode, indicator
   visibility, and extended-surface visibility now live in `BoardProfile` for
@@ -1222,10 +1379,10 @@ the next portfolio remain readable in one file.
 |---|---|---|---|---|---|---|
 | `WS8` | Rack UX productionization | Makes the visible 2-node rack feel shippable: clearer node context, stronger role labels, better selected-node feedback, and fewer operator mistakes. | **Done:** frozen `WS7` rack baseline was available and preserved. | `TF8`, `TF9`, `TF12`, `WS9` | `100%` | Implemented; automated gate green, manual visual/hardware/DAW validation not claimed |
 | `WS9` | Richer live routing presets | Expands the rack past the current four audio-only presets without jumping to a freeform graph editor. | **Ready for explicit planning:** `TF10` is complete as the routing foundation, but route semantics remain owned by `WS9` scope.<br>`WS7` rack runtime; full-gate-backed `TF10` routing contract | `WS8`, `TF10`, `TF11`, `TF12` | `0%` | Planned; do not start without explicit routing-preset scope |
-| `WS10` | External state / debug surface | Exposes the effective host state outside the processor for tooling, QA, diagnostics, and demos. | **First slice implemented:** additive CLI `debugState` now exists on `snapshot --json` and `render --json`.<br>Existing snapshot model; clearer node-targeted event rules from `TF11` | `TF11`, `TF12`, `WS8` | `25%` | First external debug-surface slice implemented; no new CLI commands |
+| `WS10` | External state / debug surface | Exposes the effective host state outside the processor for tooling, QA, diagnostics, and demos. | **Advanced but not complete:** additive CLI `debugState` now includes node roles, routes, target cues, timeline event readback, per-node event counts, and grouped target-node counts.<br>Existing snapshot model; completed node-targeted event rules from `TF11` | `TF11`, `TF12`, `WS8` | `65%` | Strong CLI debug payload implemented; routine external-debug adoption still pending |
 | `WS11` | Hub + scenario workflow upgrade | Turns Hub into a launch surface for curated rack setups, saved scenarios, and repeatable operator flows. | **Blocked / not ready:** board-generic editor dependency is complete, but scenario inventory/readback and Hub workflow scope remain unimplemented.<br>Stable rack UX from `WS8`; board-aware editor foundation from `TF8` / `TF9`; future scenario work from `TF17` / `TF18` | `WS8`, `TF8`, `TF9`, `TF12` | `0%` | Planned after scenario workflow expectations settle |
 | `WS12` | DAW-facing polish | Improves host-facing ergonomics and validates real VST3 behavior after the rack baseline is frozen. | **Blocked / not ready:** verification foundation is complete, but DAW-facing validation still needs explicit manual VST3/DAW scope and proof.<br>Stable rack UX from `WS8`; completed verification hardening from `TF12` | `WS8`, `TF12` | `0%` | Planned after manual DAW validation scope settles |
-| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Partly ready:** `TF13` governance, `TF14` gate diagnostics, `TF15` doctor readiness, and `TF16` render assertions exist; broader adoption still waits for repeated workflow evidence.<br>`TF13`, implemented `TF14`, implemented `TF15`, implemented `TF16`, future adoption evidence | `TF12`, `TF14`, `TF15`, `TF16` | `30%` | Useful; CLI evidence tools are available, blocked on repeated adoption evidence |
+| `WS13` | CLI-guided QA workflow adoption | Turns DaisyHostCLI into the routine agent/CI evidence entrypoint without making it a GUI, DAW, firmware, or generic shell controller. | **Adoption evidence growing:** `TF13` governance, `TF14` gate diagnostics, `TF15` doctor readiness, and `TF16` render assertions exist and have now supported a clean WS10/TF11 gate; routine adoption still waits for repeated use across future WPs or CI.<br>`TF13`, implemented `TF14`, implemented `TF15`, implemented `TF16`, future adoption evidence | `TF12`, `TF14`, `TF15`, `TF16` | `60%` | Useful; repeated CLI QA evidence exists, but not yet a routine standard |
 
 ### Technical Foundation Workstreams
 
@@ -1234,7 +1391,7 @@ the next portfolio remain readable in one file.
 | `TF8` | Daisy Field board support | Adds `daisy_field` through the board factory seam plus host-side Field native controls, host-side Field outputs/switches/LEDs, and first shared-core-to-Field firmware adapter generation so Field work can ship without reopening Patch-only architecture. | **Good to go:** `WS7` freeze gate is green; remaining work is validation/follow-on scope, not a dependency blocker.<br>Green `WS7` freeze gate | `WS8`, `WS11`, `TF9`, `TF12` | `70%` | Extended host surface + adapter pipeline v0 implemented; manual Field validation remains |
 | `TF9` | Board-generic editor surface | Removes remaining Patch-shaped assumptions from the editor and board rendering path. | **Done:** board-editor surface policy is now profile-backed for the supported Patch and Field boards.<br>Existing board seam; pairs naturally with `TF8` | `TF8`, `WS8`, `WS11` | `100%` | Complete; editor-facing board surface policy is profile-backed for Patch and Field |
 | `TF10` | Routing contract generalization | Stabilizes route validation and internal graph rules so richer routing does not become a rewrite every sprint. | **Done:** the shared two-node audio routing rulebook is source-backed, targeted-test-backed, and covered by the latest full gate.<br>`WS7` rack/session/render baseline | `WS9`, `TF11`, `TF12` | `100%` | Complete foundation contract; `WS9` owns any new routing presets or product semantics |
-| `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | **In progress:** initial render/debug readback slice is source-backed, targeted-test-backed, and covered by the latest full gate.<br>`WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | `60%` | Initial node-target readback slice implemented |
+| `TF11` | Node-targeted event surface expansion | Broadens the node-scoped event model for live/render/debug tooling beyond the current first-pass contract. | **Done for current contract:** supported render events expose explicit, selected-node, id-derived, or global readback and ambiguous multi-node events still require a target.<br>`WS7` node-targeted runtime | `WS9`, `WS10`, `TF10` | `100%` | Complete foundation contract for current two-node render-event readback |
 | `TF12` | Verification / build hardening | Keeps `build_host.cmd`, smoke coverage, and checkout verification boring and repeatable. | **Done:** wrapper, gate, doctor, CTest smoke, CLI adoption docs, and latest full-gate evidence agree.<br>`build_host.cmd`, `gate --json`, `doctor --json`, CLI smoke coverage | All workstreams | `100%` | Complete automated verification foundation; manual DAW/hardware/firmware validation remains outside TF12 |
 | `TF13` | CLI activity logger and scope governance | Adds the lightweight evidence log and usefulness tiers that decide whether new DaisyHostCLI commands are essential, useful, nice-to-have, deferred, or rejected. | **Done:** tracker/docs evidence is sufficient; no runtime dependency.<br>Existing `PROJECT_TRACKER.md` ledger and DaisyHostCLI adoption sequence | `TF12`, `TF14`, `TF15`, docs-only Worker 3 slices | `100%` | Essential; implemented as docs-only governance |
 | `TF14` | CLI gate diagnostics | Adds structured full-gate evidence and known-blocker classification so agents do not manually mine long MSBuild/CTest logs. | **Done:** implemented as a thin wrapper over `build_host.cmd`; source/build preflight readiness is now covered by implemented `TF15`.<br>`TF13`, `build_host.cmd`, current CTest smoke entries | `TF10`, `TF11`, `TF15` | `100%` | Essential; implemented with `gate --json` phase, CTest, target, blocker, and output-tail diagnostics |
@@ -1336,6 +1493,9 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 
 | Date / thread | Workstream | Intended CLI use | Manual fallback used | Pain type | Frequency | Evidence | Candidate CLI change | Tier | Decision |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-04-29 / Local Codex thread | `WS10` / `TF11` | Inspect event scope, target resolution, grouped target-node counts, and per-node event counts from existing `render --json`. | Manual inference from raw timeline ids, selected-node state, node arrays, and route arrays. | `missing-payload` | `repeated` | TF11 completed the current render-event readback rulebook and WS10 now has stronger external debug evidence, but repeated consumer adoption is still needed before WS10 can close. | Keep the additive payload; add no new command. Continue WS10 only for a concrete external-debug consumer that needs more than `debugState`. | `useful` | `implemented` |
+| 2026-04-29 / Local Codex thread | `WS13` | Use existing DaisyHostCLI commands as the standard agent/CI QA evidence chain. | Direct `cmd /c build_host.cmd` was used after `gate --json` failed while the running CLI tried to relink `DaisyHostCLI.exe`. | `slow-check` | `first` | Normalized `doctor`, discovery, scenario validation, render assertion proof, render smoke, and Release CLI CTest `9/9` passed. `gate --json` failed with `locked-artifact` on `DaisyHostCLI.exe`, and direct wrapper reruns did not finish a green full gate in the active dirty checkout. | Keep WS13 as an adoption pilot; investigate whether `gate --json` should avoid rebuilding the running CLI executable or document direct-wrapper fallback for dirty Windows checkouts. | `useful` | `log-only` |
+| 2026-04-29 / Local Codex thread | `WS13` | Use `doctor --json` as the first readiness signal before longer checks. | Normalized process environment before rerunning CLI checks. | `weak-doctor` | `repeated` | Raw `doctor --json` reported `duplicate-path-env`; normalized `doctor --json` returned `ok: true`, no blockers, and expected CTest registrations. | Keep doctor behavior; make WS13 runbooks call out raw-vs-normalized environment interpretation instead of adding a command. | `essential` | `log-only` |
 | 2026-04-29 / Local Codex thread | `TF16` | Make `render` fail directly when expected render evidence is missing. | Manual inspection of render JSON fields such as checksum, channel peaks, routes, nodes, and executed timeline targets. | `ambiguous-evidence` | `repeated` | TF11/WS10 exposed render evidence, but CI/agents still needed a pass/fail contract for expected evidence. Direct Release checks proved passing assertions, checksum mismatch exit code `2`, and missing-value usage exit code `1`. | Add assertion flags to existing `render`: checksum, non-silence, route count, node id, and timeline target-node checks. | `useful` | `implemented` |
 | 2026-04-27 / Local Codex thread | `WS10` | Read selected-node rack/debug context directly from existing `snapshot --json` and `render --json` commands. | Manual correlation of top-level snapshot/render fields, node arrays, routes, and executed timeline. | `missing-payload` | `repeated` | TF11 made raw node/route/timeline data available, but external QA still needed a compact board/selected-node/role/target summary. | Additive `debugState` object on existing CLI JSON payloads, with no new command. | `useful` | `implemented` |
 | 2026-04-27 / Local Codex thread | `TF10` / `TF11` | Summarize full host-gate and targeted verification failures as structured evidence. | Manual reading of `cmd /c build_host.cmd`, MSBuild, and CTest output in tracker rows. | `log-parsing` | `repeated` | TF10 full-gate attempt and TF11 closeout both required interpreting wrapper/CTest output, known dirty-test blockers, stale processes, and Path/PATH behavior. | `TF14` `gate --json` thin wrapper with conservative known-blocker classification. | `essential` | `implement-next` |
@@ -1349,6 +1509,12 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 
 | Date | Thread / agent | Workstream | Files / slice | Tests run | Docs reviewed | Blockers | Handoff |
 |---|---|---|---|---|---|---|---|
+| 2026-05-01 | Local Codex thread | TF8/TF9 Field Subharmoniq live processor restored-page mute | `CMakeLists.txt`, `src/juce/DaisyHostPluginProcessor.cpp`, `tests/test_daisyhost_plugin_processor.cpp`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`; existing dirty Field/OLED/Subharmoniq files from earlier iterations were preserved | Red: direct Debug payload for `DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible` failed before the fix with Field K8 targeting `node0/control/output` but holding `0`, and all repeated MIDI note energy checks at `0`. Green: `cmake --build build --config Debug --target unit_tests` passed; direct Debug payload `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*:RenderRuntimeTest.SubharmoniqField*` passed `32/32`; normalized-env `cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; normalized-env `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. Raw standalone build first hit the known duplicate `Path` / `PATH` MSBuild environment issue, and an initial Debug build timeout left stale `MSBuild`/`cl` processes that were stopped before the red/green reruns. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, `CHANGELOG.md`, `DaisyHostPluginProcessor`, Field control mapping/session state, and prior Subharmoniq core/render evidence | Full host gate was not rerun. I did not perform physical speaker listening, external MIDI device validation, DAW/VST3 validation, firmware validation, or hardware Field validation. | Manager-readable result: the remaining live mute was not firmware and not the duplicate-MIDI path. It was the JUCE live processor restore/control-writeback order: restored canonical Subharmoniq output could be overwritten by stale Field K8/top-control value `0` before audio, so MIDI tracking kept moving while audio was hard-silent. The fix syncs restored core state back into host controls before applying live controls, preserving legacy control-only sessions by doing this only when canonical restored parameters exist. Recommender: next WP `WS10`, runner-up `TF8`, wait `WS9`/`WS11`/`WS12`/`WS13`/`TF17`/`TF18`; first safe slice is only additive debug readback for a real consumer. |
+| 2026-05-01 | Local Codex thread | TF8/TF9 Field Subharmoniq five-note audio verification and bounded-filter fix | `src/DaisySubharmoniqCore.cpp`, `tests/test_subharmoniq_core.cpp`, `tests/test_render_runtime.cpp`, `.tmp/subharmoniq_field_5_notes.json` verification artifact, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Diagnostic repro: existing repeated-note CTest initially passed, but a one-off five-note `daisy_field`/`subharmoniq` CLI render showed the prior fix was still insufficient: CLI non-silent passed while `manifest.channelSummaries` were null, `actual` was `inf`, and direct WAV parsing found `114980` non-finite samples with first bad sample `(220, inf)`. Red after tightening tests: rebuilt Debug `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\\.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks\|RenderRuntimeTest\\.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote)"` failed on huge finite peaks around `5e37`. Green: `cmake --build build --config Debug --target unit_tests` passed; the same focused CTest passed `2/2`; `cmake --build build --config Debug --target DaisyHostCLI` passed; five-note CLI render passed `--expect-non-silent --expect-timeline-target-node node0` with channel peak `1.065805554389954`, rms `0.266474366188049`, and direct WAV parsing `bad 0`, `nonzero 76358`, `peak 1.0658055543899536`; broader `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|RenderRuntimeTest\\.Subharmoniq)"` passed `31/31`; `Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, `DaisySubharmoniqCore`, render scenario/manifest/WAV evidence, and the previous repeated-note tracker row | I did not perform physical speaker listening, external MIDI device validation, DAW/VST3 validation, firmware validation, or hardware Field validation. GUI launch is covered only by the existing standalone smoke helper, not by manual keypress/audio monitoring. | Manager-readable result: the user-requested 4-5 note check found one more real edge case. The previous reset-on-non-finite filter guard still allowed enormous finite SVF state, which could later serialize as `inf` and plausibly mute the live path. The fix now bounds the SVF internal state every sample, so the five-note Field/Subharmoniq render produces finite, non-zero audio instead of `inf` samples. |
+| 2026-04-29 | Local Codex thread | TF8/TF9 Field Subharmoniq repeated-note mute root-cause fix | `src/DaisySubharmoniqCore.cpp`, `tests/test_subharmoniq_core.cpp`, `tests/test_render_runtime.cpp`, `PROJECT_TRACKER.md`, `CHANGELOG.md`; verification also consumed the existing dirty Field/OLED/processor files from the prior iteration | Red: `RenderRuntimeTest.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote` failed with non-finite audio after repeated MIDI notes on `daisy_field`; after isolating the difference, `SubharmoniqCoreTest.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks` failed at note 0 block 1 frame 46 when Field-style CV defaults were applied (`cutoff_cv=0.5`). Green: `cmake --build build --config Debug --target unit_tests` passed; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\\.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks\|RenderRuntimeTest\\.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote)"` passed `2/2`; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|RenderRuntimeTest\\.Subharmoniq)"` passed `31/31`; `Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, `DaisySubharmoniqCore`, Subharmoniq hosted wrapper, render runtime segmentation/default-CV behavior, and the previous incomplete tracker row | MP4 frame extraction/manual audio capture was still unavailable/not run. No firmware, DAW/VST3, physical MIDI device, or hardware validation was performed. | Manager-readable result: the previous duplicate-MIDI delivery fix was incomplete. The actual repeated-note mute was caused by non-finite DSP output from the Subharmoniq state-variable filter when Daisy Field render/live defaults repeatedly applied mid-scale CV inputs, especially `cutoff_cv=0.5`, pushing cutoff/envelope into an unstable range. The fix clamps the filter coefficient to a stable range and defensively resets non-finite filter state, so repeated MIDI notes remain finite and audible in both core and Field render paths. |
+| 2026-04-29 | Local Codex thread | WS10 external debug surface + TF11 node-targeted event closeout | `include/daisyhost/RenderTypes.h`, `src/RenderRuntime.cpp`, `src/CliPayloads.cpp`, `tests/test_render_runtime.cpp`, `tests/test_cli_payloads.cpp`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: normalized Debug build failed on missing `RenderTimelineEvent::targetResolution`; green targeted Debug `RenderRuntime\|CliPayloads` passed `46/46`; broader Debug affected slice passed `84/84`; direct Release render proof passed with checksum `cd30ef6ba7b7acdb`; Release snapshot proof passed; normalized `doctor --json` passed; normalized `gate --json` passed Release `ctest` `284/284`; direct `cmd /c build_host.cmd` passed Release `ctest` `284/284`; recommender now selects `WS10` only for a concrete external-debug consumer, runner-up `TF8`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Raw `doctor --json` still reports duplicate `Path` / `PATH`; generated unit-test payloads needed rebuilding after the run tag changed; transient stale MSBuild/CL processes briefly locked build artifacts. Existing unrelated Subharmoniq/OLED/editor/processor/submodule/untracked work remains preserved. No new CLI command, routing preset, graph editor, Hub workflow, scenario inventory, GUI/DAW/VST3 validation, firmware flashing, hardware validation, USB MIDI validation, or live-plugin remote control was claimed. | Manager-readable result: TF11 is complete for the current two-node render-event readback contract, and WS10 advances to `65%` with stronger additive CLI debug evidence. Agents/CI can now see what an event affected and how that target was resolved; future WS10 work should wait for a real consumer that needs more than the new payload. |
+| 2026-04-29 | Local Codex thread | TF8/TF9 Field Subharmoniq live MIDI mute + OLED drift fix | `src/juce/DaisyHostPluginProcessor.cpp`, `src/apps/SubharmoniqCore.cpp`, `src/juce/DaisyHostPluginEditor.cpp`, `include/daisyhost/OledDisplayLayout.h`, `src/OledDisplayLayout.cpp`, `tests/test_subharmoniq_core.cpp`, `tests/test_field_oled_transient.cpp`, `CMakeLists.txt`, `PROJECT_TRACKER.md`, `CHANGELOG.md` | Red intent: new OLED menu-over-transient test was added first; first Debug build attempt failed before test execution during a transient googletest/CMake regenerate, so the functional red result was blocked by build-tree state rather than behavior. Green: `cmake --build build --config Debug --target unit_tests` passed; direct Debug payload for `FieldOledTransientTest.*:SubharmoniqCoreTest.*:RenderRuntimeTest.Subharmoniq*` passed `35/35`; `ctest --test-dir build -C Debug --output-on-failure -R "(FieldOledTransientTest\|SubharmoniqCoreTest\|RenderRuntimeTest\\.Subharmoniq)"` passed `35/35`; `ctest --test-dir build -C Debug --output-on-failure -R "(BoardProfileTest\|DaisyFieldRSPLayoutTest\|BoardControlMappingTest)"` passed `41/41`; raw Debug standalone first failed on duplicate `Path` / `PATH`, then `Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed with existing C4702 editor warnings; `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `CHANGELOG.md`, current processor/app/editor/test source, subagent findings from MIDI/live-path and OLED/UI investigations | MP4 frame extraction was not available because ffmpeg/cv2/imageio/moviepy were unavailable and the attempted local OpenCV install failed on temp-directory permissions. No firmware, DAW/VST3, hardware audio capture, or real MIDI-device validation was run. | Manager-readable result: the repeated third-note mute is addressed on the host live path by delivering the incoming MIDI batch only once to the selected rack node instead of once through selected-core compatibility state and again during rack processing. OLED drift is addressed by giving open menus priority over transient/status text and by using a bounded 128x64 OLED text layout in the editor. Manual visible/audio validation remains the next step if the user wants confirmation against the exact attached video workflow. |
+| 2026-04-29 | Local Codex thread | WS13 CLI-guided QA workflow adoption pilot | `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `README.md`, `training/README.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Preflight `git status --short -- .` and `git diff --name-status -- .` captured active WS10/TF11 dirty code; raw `doctor --json` failed with `duplicate-path-env`; normalized `doctor --json` passed; normalized `list-apps`, `describe-app cloudseed`, `describe-board daisy_field`, and `validate-scenario` passed; normalized render assertion proof passed with checksum `c9c3f665e6a0dd2b`; normalized `smoke --mode render` passed; Release `ctest --test-dir build -C Release --output-on-failure -R "DaisyHostCli\|DaisyHostNextWpSuggester"` passed `9/9`; `gate --json` failed with `locked-artifact` on `DaisyHostCLI.exe`; direct `cmd /c build_host.cmd` reruns reached Release build stages but failed with exit code `-1` during CMake/MSBuild regeneration; next-WP recommender selected `WS10`, runner-up `TF11`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Active neighboring WS10/TF11 code dirt remains preserved; full green gate was not claimed; `gate --json` can self-lock when it must rebuild the running CLI executable; direct wrapper reruns were non-green in the dirty checkout. No new CLI command, runtime/debug payload edit, GUI/DAW/VST3 validation, firmware flashing, hardware validation, or live-plugin control was claimed. | Manager-readable result: WS13 advances from `30%` to `45%` as a useful adoption pilot, not to `60%` or `100%`. The pilot proves the CLI QA chain is useful for readiness, discovery, scenario, render assertion, smoke, and CLI CTest evidence, but routine adoption still needs repeated clean full-gate evidence and a decision on the `gate --json` self-rebuild lock. |
 | 2026-04-29 | Local Codex thread | TF12 verification closeout + TF16 CLI render assertions | `include/daisyhost/RenderAssertions.h`, `src/RenderAssertions.cpp`, `include/daisyhost/CliPayloads.h`, `src/CliPayloads.cpp`, `tools/cli_app.cpp`, `src/DoctorDiagnostics.cpp`, `tests/test_render_assertions.cpp`, `tests/test_cli_payloads.cpp`, `tests/test_doctor_diagnostics.cpp`, `CMakeLists.txt`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: normalized-env Debug `unit_tests DaisyHostCLI` failed on missing `RenderAssertions.h`; green targeted Debug `RenderAssertion\|CliPayloads\|DaisyHostCliRender\|DoctorDiagnostics` CTest passed `22/22`; direct Release render assertion pass succeeded with checksum `c9c3f665e6a0dd2b`; failing checksum returned exit code `2`; missing assertion value returned exit code `1`; normalized-env `doctor --json` passed; normalized-env `gate --json` passed with CTest `278/278`; final structured gate invoked `cmd /c build_host.cmd` and passed Release `ctest` `278/278`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Existing unrelated `src/DaisySubharmoniqCore.cpp`, submodule dirt, and untracked `noderr` entries remain preserved. Raw unsanitized doctor can still report duplicate `Path` / `PATH`. No new CLI command, routing preset, Hub workflow, GUI/DAW/VST3 validation, firmware flashing, hardware validation, or live-plugin control was claimed. | Manager-readable result: TF12 is complete as the automated verification foundation, and TF16 is complete as a bounded render evidence assertion slice on existing `render`. Next-WP recommender selected `WS10`; runner-up `TF11`; waits `WS9`, `WS11`, `WS12`, `WS13`, `TF17`, `TF18`; first safe slice is only for a concrete external-debug consumer that needs more than additive `debugState`. |
 | 2026-04-28 | Local Codex thread | TF15 non-interactive verification rerun and CMake registration fix | `CMakeLists.txt`, `PROJECT_TRACKER.md`; inspected dirty render-assertions changes without reverting them | Raw Debug build failed on duplicate `Path` / `PATH`; normalized-env Debug `DaisyHostCLI unit_tests` build passed; Debug `DoctorDiagnostics\|DaisyHostCliDoctor` CTest passed `9/9`; normalized-env Release `DaisyHostCLI unit_tests` build passed; direct Release `doctor --json` returned `ok: true`; Release `DaisyHostCliDoctor\|DoctorDiagnostics` CTest passed `9/9`; an intermediate full gate failed while dirty render-assertions files were incomplete; stable smoke/CLI subset excluding `DaisyHostCliRenderAssertions` passed `9/9`; final `cmd /c build_host.cmd` passed Release `ctest` `277/277`; scoped `git diff --check` passed with LF/CRLF warnings only. | `AGENTS.md`, `PROJECT_TRACKER.md`, current dirty diff | Raw unsanitized MSBuild still fails on duplicate `Path` / `PATH`; unrelated dirty render-assertions, Subharmoniq/vault/submodule/untracked work remains. No manual GUI, DAW/VST3, hardware, or firmware validation was run. | Manager-readable historical result: TF15 readiness checks were green, `DaisyHostCliDoctor` was correctly registered in CMake, and that iteration's automated host gate was green at `277/277`. The final gate also covered concurrent render-assertions dirty work, but this rerun did not claim ownership or manual validation of that separate slice. |
 | 2026-04-28 | Local Codex thread | TF15 doctor source/build readiness expansion | `include/daisyhost/DoctorDiagnostics.h`, `src/DoctorDiagnostics.cpp`, `tools/cli_app.cpp`, `tests/test_doctor_diagnostics.cpp`, `CMakeLists.txt`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Red: Debug `unit_tests` failed on missing `daisyhost/DoctorDiagnostics.h`; green: Debug `DoctorDiagnostics\|DaisyHostCliDoctor` CTest passed `9/9`; normalized-env Release `DaisyHostCLI unit_tests` built; normalized-env direct Release `doctor --json` returned `ok: true` with no blockers; Release `DaisyHostCliDoctor\|DoctorDiagnostics` CTest passed `9/9`; final `cmd /c build_host.cmd` passed Release `ctest` `269/269`; next-WP recommender selected `TF12`, runner-up `WS10`. | `AGENTS.md`, `README.md`, `training/README.md`, `PROJECT_TRACKER.md`, `WORKSTREAM_TRACKER.md`, `CHECKPOINT.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, current dirty diff | Existing unrelated dirty Subharmoniq/vault/submodule/untracked work remains and was preserved. A direct unsanitized doctor run can correctly fail with `duplicate-path-env`; normalized-env proof passed. An accidental parallel Debug/Release build collided on an object lock, then Release reran cleanly. | Manager-readable result: TF15 is complete as a readiness/preflight expansion of existing `doctor --json`, not a new command or gate runner. It tells agents/CI whether the checkout/build tree is ready enough to verify; it does not claim GUI, live plugin, DAW/VST3, firmware flashing, hardware validation, routing changes, or generic shell control. Next safe starting point per recommender is a small `TF12` verification/build-hardening slice; runner-up is `WS10` only if a concrete external-debug consumer needs more. |

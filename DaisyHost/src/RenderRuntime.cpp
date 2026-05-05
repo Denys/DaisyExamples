@@ -918,6 +918,11 @@ juce::var MakeTimelineEventVar(const RenderTimelineEvent& event)
     {
         object->setProperty("targetNodeId", juce::String(event.targetNodeId));
     }
+    if(!event.targetResolution.empty())
+    {
+        object->setProperty("targetResolution",
+                            juce::String(event.targetResolution));
+    }
 
     switch(event.type)
     {
@@ -1150,11 +1155,11 @@ bool RequiresTargetNodeId(RenderTimelineEventType type)
 {
     switch(type)
     {
-        case RenderTimelineEventType::kAudioInputConfig:
         case RenderTimelineEventType::kImpulse:
         case RenderTimelineEventType::kMenuRotate:
         case RenderTimelineEventType::kMenuPress: return true;
 
+        case RenderTimelineEventType::kAudioInputConfig:
         case RenderTimelineEventType::kParameterSet:
         case RenderTimelineEventType::kCvSet:
         case RenderTimelineEventType::kGateSet:
@@ -1800,14 +1805,49 @@ std::size_t ResolveSurfaceControlNodeIndex(
     return nodeIndex;
 }
 
-std::string ResolveTimelineEventTargetNodeIdForReadback(
+struct TimelineTargetReadback
+{
+    std::string nodeId;
+    std::string resolution;
+};
+
+bool EventHasQualifiedIdTarget(const RenderTimelineEvent& event)
+{
+    switch(event.type)
+    {
+        case RenderTimelineEventType::kParameterSet:
+            return !ExtractQualifiedNodeId(event.parameterId).empty();
+        case RenderTimelineEventType::kCvSet:
+        case RenderTimelineEventType::kGateSet:
+            return !ExtractQualifiedNodeId(event.portId).empty();
+        case RenderTimelineEventType::kMenuSetItem:
+            return !ExtractQualifiedNodeId(event.menuItemId).empty();
+        case RenderTimelineEventType::kSurfaceControlSet:
+            return !ExtractQualifiedNodeId(event.controlId).empty();
+        case RenderTimelineEventType::kMidi:
+        case RenderTimelineEventType::kAudioInputConfig:
+        case RenderTimelineEventType::kImpulse:
+        case RenderTimelineEventType::kMenuRotate:
+        case RenderTimelineEventType::kMenuPress:
+            return false;
+    }
+
+    return false;
+}
+
+TimelineTargetReadback ResolveTimelineEventTargetReadback(
     const RenderTimelineEvent&            event,
     const RenderScenario&                 scenario,
     const std::vector<ResolvedRenderNode>& nodes)
 {
+    if(event.type == RenderTimelineEventType::kAudioInputConfig)
+    {
+        return {{}, "global"};
+    }
+
     if(!event.targetNodeId.empty())
     {
-        return event.targetNodeId;
+        return {event.targetNodeId, "explicit"};
     }
 
     std::size_t nodeIndex = nodes.size();
@@ -1838,10 +1878,38 @@ std::string ResolveTimelineEventTargetNodeIdForReadback(
 
     if(nodeIndex < nodes.size())
     {
-        return nodes[nodeIndex].config.nodeId;
+        return {nodes[nodeIndex].config.nodeId,
+                EventHasQualifiedIdTarget(event) ? "id_derived" : "selected_node"};
     }
 
-    return {};
+    return {{}, {}};
+}
+
+void DecorateSingleNodeTimelineReadback(RenderTimelineEvent* event,
+                                        const RenderScenario& scenario)
+{
+    if(event == nullptr)
+    {
+        return;
+    }
+
+    if(event->type == RenderTimelineEventType::kAudioInputConfig)
+    {
+        event->targetNodeId.clear();
+        event->targetResolution = "global";
+        return;
+    }
+
+    if(!event->targetNodeId.empty())
+    {
+        event->targetResolution = "explicit";
+        return;
+    }
+
+    event->targetNodeId
+        = scenario.selectedNodeId.empty() ? std::string("node0") : scenario.selectedNodeId;
+    event->targetResolution
+        = EventHasQualifiedIdTarget(*event) ? "id_derived" : "selected_node";
 }
 
 struct TimelineEventWithIndex
@@ -2286,10 +2354,6 @@ bool ValidateMultiNodeScenario(const RenderScenario&             scenario,
 
             case RenderTimelineEventType::kAudioInputConfig:
             {
-                if(ResolveEventNodeIndex(event, scenario, nodes, errorMessage) >= nodes.size())
-                {
-                    return false;
-                }
                 RenderAudioInputConfig updatedConfig = scenario.audioInput;
                 if(event.hasAudioMode)
                 {
@@ -2520,8 +2584,10 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
         {
             const auto& event = sortedEvents[eventIndex].event;
             auto executedEvent = event;
-            executedEvent.targetNodeId
-                = ResolveTimelineEventTargetNodeIdForReadback(event, scenario, nodes);
+            const auto readback
+                = ResolveTimelineEventTargetReadback(event, scenario, nodes);
+            executedEvent.targetNodeId     = readback.nodeId;
+            executedEvent.targetResolution = readback.resolution;
             result->manifest.executedTimeline.push_back(executedEvent);
 
             switch(event.type)
@@ -2609,19 +2675,17 @@ bool RunMultiNodeRenderScenario(const RenderScenario& scenario,
 
                 case RenderTimelineEventType::kAudioInputConfig:
                 {
-                    const auto nodeIndex
-                        = ResolveEventNodeIndex(event, scenario, nodes, nullptr);
-                    if(nodeIndex < nodes.size() && event.hasAudioMode)
+                    if(event.hasAudioMode)
                     {
-                        inputStates[nodeIndex].audioInput.mode = event.audioMode;
+                        inputStates[entryNodeIndex].audioInput.mode = event.audioMode;
                     }
-                    if(nodeIndex < nodes.size() && event.hasAudioLevel)
+                    if(event.hasAudioLevel)
                     {
-                        inputStates[nodeIndex].audioInput.level = event.audioLevel;
+                        inputStates[entryNodeIndex].audioInput.level = event.audioLevel;
                     }
-                    if(nodeIndex < nodes.size() && event.hasAudioFrequency)
+                    if(event.hasAudioFrequency)
                     {
-                        inputStates[nodeIndex].audioInput.frequencyHz
+                        inputStates[entryNodeIndex].audioInput.frequencyHz
                             = event.audioFrequencyHz;
                     }
                     break;
@@ -3379,10 +3443,7 @@ bool RunRenderScenario(const RenderScenario& scenario,
         {
             const auto& event = sortedEvents[eventIndex].event;
             auto executedEvent = event;
-            if(executedEvent.targetNodeId.empty())
-            {
-                executedEvent.targetNodeId = "node0";
-            }
+            DecorateSingleNodeTimelineReadback(&executedEvent, scenario);
             result->manifest.executedTimeline.push_back(executedEvent);
 
             switch(event.type)

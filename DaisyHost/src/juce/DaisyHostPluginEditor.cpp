@@ -10,6 +10,7 @@
 #include "daisyhost/BoardControlMapping.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
 #include "daisyhost/DaisyFieldRSPLayout.h"
+#include "daisyhost/OledDisplayLayout.h"
 #include "daisyhost/StandaloneUiPolicy.h"
 
 namespace
@@ -1941,8 +1942,11 @@ void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
 
     const auto display = processor_.GetDisplayModelSnapshot();
     const auto origin  = area.reduced(10.0f);
+    const auto layout  = daisyhost::BuildOledDisplayLayout(display,
+                                                           display.width,
+                                                           display.height);
 
-    for(const auto& bar : display.bars)
+    for(const auto& bar : layout.bars)
     {
         juce::Rectangle<float> barRect(origin.getX() + static_cast<float>(bar.x),
                                        origin.getY() + static_cast<float>(bar.y),
@@ -1954,15 +1958,22 @@ void DaisyHostPatchAudioProcessorEditor::DrawDisplay(
         g.fillRect(barRect.withWidth(barRect.getWidth() * bar.normalized));
     }
 
-    for(const auto& text : display.texts)
+    for(const auto& text : layout.texts)
     {
+        const auto textRect
+            = juce::Rectangle<float>(origin.getX() + static_cast<float>(text.x),
+                                     origin.getY() + static_cast<float>(text.y),
+                                     static_cast<float>(text.width),
+                                     static_cast<float>(text.height));
+        if(text.inverted)
+        {
+            g.setColour(CreamColour().withAlpha(0.88f));
+            g.fillRect(textRect);
+        }
         g.setColour(text.inverted ? InkColour() : CreamColour());
-        g.setFont(text.y <= 4 ? TitleFont(16.0f) : BodyFont(13.0f));
+        g.setFont(text.inverted ? TitleFont(9.0f) : BodyFont(9.0f));
         g.drawText(text.text,
-                   juce::Rectangle<float>(origin.getX() + static_cast<float>(text.x),
-                                          origin.getY() + static_cast<float>(text.y),
-                                          area.getWidth() - 20.0f,
-                                          18.0f),
+                   textRect,
                    juce::Justification::centredLeft,
                    false);
     }

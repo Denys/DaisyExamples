@@ -344,6 +344,70 @@ TEST(SubharmoniqCoreTest, MultipleMidiNotesAndFieldClockPulsesStayAudible)
     EXPECT_GT(clockEnergy, 0.01f);
 }
 
+TEST(SubharmoniqCoreTest, RepeatedShortMidiNotesRemainFiniteWithSmallBlocks)
+{
+    daisyhost::apps::SubharmoniqCore core("node0");
+    core.Prepare(48000.0, 64);
+    core.ResetToDefaultState(0);
+
+    std::array<float, 64> left{};
+    std::array<float, 64> right{};
+    float                 totalEnergy = 0.0f;
+    float                 peak        = 0.0f;
+
+    for(int noteIndex = 0; noteIndex < 5; ++noteIndex)
+    {
+        core.SetCvInput(1, 0.5f);
+        core.SetCvInput(2, 0.5f);
+        core.SetCvInput(3, 0.5f);
+        core.SetCvInput(4, 0.5f);
+        core.HandleMidiEvent(0x90,
+                             static_cast<std::uint8_t>(48 + noteIndex * 4),
+                             100);
+        for(int block = 0; block < 60; ++block)
+        {
+            left.fill(0.0f);
+            right.fill(0.0f);
+            core.ProcessAudio(left.data(), right.data(), left.size());
+            for(std::size_t frame = 0; frame < left.size(); ++frame)
+            {
+                ASSERT_TRUE(std::isfinite(left[frame]))
+                    << "note " << noteIndex << " block " << block
+                    << " frame " << frame;
+                ASSERT_TRUE(std::isfinite(right[frame]))
+                    << "note " << noteIndex << " block " << block
+                    << " frame " << frame;
+                totalEnergy += std::abs(left[frame]) + std::abs(right[frame]);
+                peak = std::max(peak, std::abs(left[frame]));
+                peak = std::max(peak, std::abs(right[frame]));
+            }
+        }
+        core.HandleMidiEvent(0x80,
+                             static_cast<std::uint8_t>(48 + noteIndex * 4),
+                             0);
+        for(int block = 0; block < 75; ++block)
+        {
+            left.fill(0.0f);
+            right.fill(0.0f);
+            core.ProcessAudio(left.data(), right.data(), left.size());
+            for(std::size_t frame = 0; frame < left.size(); ++frame)
+            {
+                ASSERT_TRUE(std::isfinite(left[frame]))
+                    << "release note " << noteIndex << " block " << block
+                    << " frame " << frame;
+                ASSERT_TRUE(std::isfinite(right[frame]))
+                    << "release note " << noteIndex << " block " << block
+                    << " frame " << frame;
+                peak = std::max(peak, std::abs(left[frame]));
+                peak = std::max(peak, std::abs(right[frame]));
+            }
+        }
+    }
+
+    EXPECT_GT(totalEnergy, 0.1f);
+    EXPECT_LT(peak, 4.0f);
+}
+
 TEST(SubharmoniqCoreTest, OledCompactStatusUsesClearQuantizeLabel)
 {
     daisyhost::apps::SubharmoniqCore core("node0");
@@ -445,6 +509,25 @@ TEST(SubharmoniqCoreTest, OledShowsMenuParameterEditZoom)
     auto display = core.GetDisplayModel();
     EXPECT_TRUE(DisplayContainsText(display, "K1 Cutoff"));
     EXPECT_FALSE(display.bars.empty());
+}
+
+TEST(SubharmoniqCoreTest, OledMenuOpenOverridesTransientAndShowsMenuRows)
+{
+    daisyhost::apps::SubharmoniqCore core("node0");
+    core.Prepare(48000.0, 48);
+    core.ResetToDefaultState(0);
+    ASSERT_TRUE(core.SetActivePage(daisyhost::DaisySubharmoniqPage::kVcf));
+
+    core.SetControl("node0/control/cutoff", 0.50f);
+    ASSERT_TRUE(DisplayContainsText(core.GetDisplayModel(), "K1 Cutoff"));
+
+    core.MenuPress();
+    const auto display = core.GetDisplayModel();
+    EXPECT_EQ(display.mode, daisyhost::DisplayMode::kMenu);
+    EXPECT_TRUE(DisplayContainsText(display, "Pages"));
+    EXPECT_TRUE(DisplayContainsText(display, "Page VCF"));
+    EXPECT_FALSE(DisplayContainsText(display, "K1 Cutoff"));
+    EXPECT_FALSE(DisplayContainsText(display, "Subharmoniq VCF"));
 }
 
 TEST(SubharmoniqCoreTest, OledShowsB7PlayConfirmation)

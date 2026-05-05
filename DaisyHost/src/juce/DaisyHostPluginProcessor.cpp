@@ -4,9 +4,15 @@
 #include <cmath>
 
 #include <juce_audio_utils/juce_audio_utils.h>
+#ifndef DAISYHOST_HEADLESS_PROCESSOR_TEST
+#define DAISYHOST_HEADLESS_PROCESSOR_TEST 0
+#endif
+
+#if !DAISYHOST_HEADLESS_PROCESSOR_TEST
 #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
 
 #include "DaisyHostPluginEditor.h"
+#endif
 #include "daisyhost/AppRegistry.h"
 #include "daisyhost/ComputerKeyboardMidi.h"
 #include "daisyhost/HostModulation.h"
@@ -859,6 +865,11 @@ void DaisyHostPatchAudioProcessor::prepareToPlay(double sampleRate,
         UpdateRackNodeSnapshots(node);
     }
     SyncSelectedNodeStateFromRack();
+    if(!restoredParameterValues_.empty())
+    {
+        SyncHostStateFromCore();
+        FlushSelectedNodeStateToRack();
+    }
     midiNotePreview_.Prepare(sampleRate);
     RefreshMidiInputStatus();
     scratchOutput_.setSize(4, samplesPerBlock, false, false, true);
@@ -961,11 +972,14 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
     }
 
+    const std::vector<daisyhost::MidiMessageEvent> selectedMidiEvents
+        = ToMidiEvents(midiMessages);
+
     ApplyPendingAutomationParametersToCore();
     ApplyControlStateToCore();
     ApplyPendingMenuInteractionsToCore();
     UpdateCvGeneratorOutputs(static_cast<double>(numSamples) / getSampleRate());
-    ApplyVirtualPortStateToCore(ToMidiEvents(midiMessages));
+    ApplyVirtualPortStateToCore(std::vector<daisyhost::MidiMessageEvent>{});
     ApplyRackNodeModulation(GetSelectedRackNode());
     UpdateCoreSnapshots();
     SyncHostStateFromCore();
@@ -1133,7 +1147,6 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         UpdateRackNodeSnapshots(node);
     };
 
-    std::vector<daisyhost::MidiMessageEvent> selectedMidiEvents = ToMidiEvents(midiMessages);
     const std::vector<daisyhost::MidiMessageEvent> emptyMidiEvents;
     for(const auto& nodeId : routePlan.processingOrder)
     {
@@ -1178,12 +1191,20 @@ void DaisyHostPatchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
 
 juce::AudioProcessorEditor* DaisyHostPatchAudioProcessor::createEditor()
 {
+#if DAISYHOST_HEADLESS_PROCESSOR_TEST
+    return nullptr;
+#else
     return new DaisyHostPatchAudioProcessorEditor(*this);
+#endif
 }
 
 bool DaisyHostPatchAudioProcessor::hasEditor() const
 {
+#if DAISYHOST_HEADLESS_PROCESSOR_TEST
+    return false;
+#else
     return true;
+#endif
 }
 
 const juce::String DaisyHostPatchAudioProcessor::getName() const
@@ -3376,6 +3397,11 @@ void DaisyHostPatchAudioProcessor::LoadSession(
     }
 
     SyncSelectedNodeStateFromRack();
+    if(!restoredParameterValues_.empty())
+    {
+        SyncHostStateFromCore();
+        FlushSelectedNodeStateToRack();
+    }
     SyncAutomationParametersFromCore();
 }
 
@@ -3467,6 +3493,7 @@ void DaisyHostPatchAudioProcessor::RefreshMidiInputStatus()
 
     int availableInputs = 0;
     int enabledInputs   = 0;
+#if !DAISYHOST_HEADLESS_PROCESSOR_TEST
     if(auto* holder = juce::StandalonePluginHolder::getInstance())
     {
         const auto devices = juce::MidiInput::getAvailableDevices();
@@ -3479,6 +3506,7 @@ void DaisyHostPatchAudioProcessor::RefreshMidiInputStatus()
             }
         }
     }
+#endif
 
     midiEventTracker_.SetInputDeviceCounts(availableInputs, enabledInputs);
 }

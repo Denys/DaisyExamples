@@ -93,7 +93,7 @@ class SimpleSvfLowpass
 
     void SetFreq(float frequency)
     {
-        const float maxFreq = sampleRate_ * 0.33f;
+        const float maxFreq = sampleRate_ * 0.18f;
         const float clamped = frequency < 20.0f
                                   ? 20.0f
                                   : (frequency > maxFreq ? maxFreq : frequency);
@@ -115,16 +115,25 @@ class SimpleSvfLowpass
 
     void Process(float input)
     {
-        const float driven = std::tanh(input * drive_);
+        const float driven = std::tanh((std::isfinite(input) ? input : 0.0f) * drive_);
         low_ += freq_ * band_;
         const float high = driven - low_ - damping_ * band_;
         band_ += freq_ * high;
+        low_ = ClampState(low_);
+        band_ = ClampState(band_);
         output_ = low_;
     }
 
     float Low() const { return output_; }
 
   private:
+    static float ClampState(float value)
+    {
+        if(!std::isfinite(value))
+            return 0.0f;
+        return std::clamp(value, -2.0f, 2.0f);
+    }
+
     float sampleRate_ = 48000.0f;
     float freq_       = 0.05f;
     float damping_    = 1.0f;

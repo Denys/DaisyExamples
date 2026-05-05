@@ -202,6 +202,31 @@ bool EffectiveParameterValueDiffers(const DaisySubharmoniqCore& core,
     return core.GetEffectiveParameterValue(parameterId, &current)
            && std::abs(current - normalizedValue) > 0.000001f;
 }
+
+const MenuSection* FindMenuSection(const MenuModel& menu,
+                                   const std::string& sectionId)
+{
+    for(const auto& section : menu.sections)
+    {
+        if(section.id == sectionId)
+        {
+            return &section;
+        }
+    }
+    return nullptr;
+}
+
+std::string FormatMenuDisplayLine(const MenuItem& item, bool selected)
+{
+    std::string line = selected ? "> " : "  ";
+    line += item.label;
+    if(!item.valueText.empty())
+    {
+        line += " ";
+        line += item.valueText;
+    }
+    return line;
+}
 } // namespace
 
 SubharmoniqCore::SubharmoniqCore(const std::string& nodeId) : nodeId_(nodeId)
@@ -1227,6 +1252,30 @@ void SubharmoniqCore::BuildDisplay()
     display_.mode = menu_.isOpen ? DisplayMode::kMenu : DisplayMode::kStatus;
     display_.title = "Subharmoniq";
     ++display_.revision;
+
+    if(menu_.isOpen)
+    {
+        const MenuSection* section = FindMenuSection(menu_, menu_.currentSectionId);
+        if(section == nullptr && !menu_.sections.empty())
+        {
+            section = &menu_.sections.front();
+        }
+        if(section != nullptr)
+        {
+            display_.texts.push_back({0, 0, section->title, true});
+            const int selectedIndex = std::max(0, menu_.currentSelection);
+            for(std::size_t i = 0; i < section->items.size() && i < 5; ++i)
+            {
+                display_.texts.push_back(
+                    {0,
+                     12 + static_cast<int>(i) * 10,
+                     FormatMenuDisplayLine(section->items[i],
+                                           static_cast<int>(i) == selectedIndex),
+                     false});
+            }
+        }
+        return;
+    }
 
 #if DAISYHOST_ENABLE_FIELD_OLED_TRANSIENTS
     if(oledTransient_.IsVisible())

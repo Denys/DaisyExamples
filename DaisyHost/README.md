@@ -143,10 +143,12 @@ internals:
   - optional `nodes[]` / `routes[]` contracts now allow internal two-node audio
     render proofs while keeping legacy single-app scenarios valid
   - render manifests and CLI render-result JSON now include node-targeted
-    debug readback for resolved timeline target nodes, render nodes, and routes
+    debug readback for resolved timeline target nodes, target-resolution
+    source, render nodes, and routes
   - CLI `snapshot --json` and `render --json` also include an additive
     `debugState` object for board/selected-node identity, entry/output role
-    labels, routes, selected-node target cues, and render timeline target counts
+    labels, routes, selected-node target cues, render timeline events,
+    per-node event counts, and grouped target-node counts
   - `training/render_dataset.py` expands sweep jobs into multiple run folders
     and writes a `dataset_index.json`
 - Launcher hub:
@@ -391,13 +393,14 @@ Outputs:
 Current local verification caveat:
 
 - the wrapper-driven full host gate last recorded in these docs was the
-  2026-04-29 TF12/TF16 closeout: `cmd /c build_host.cmd`
-  passed and Release `ctest` passed `278/278`, including
+  2026-04-29 WS10/TF11 closeout: `cmd /c build_host.cmd`
+  passed and Release `ctest` passed `284/284`, including
   `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`,
   `DaisyHostCliRenderAssertions`, `DaisyHostCliRenderAssertionsPass`, and the
   other CLI smoke tests. Older
   `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, `216/216`,
-  `232/232`, `233/233`, `243/243`, `244/244`, and `269/269` results are
+  `232/232`, `233/233`, `243/243`, `244/244`, `269/269`, and `278/278`
+  results are
   retained only as dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
@@ -431,8 +434,19 @@ build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-di
 execute the host gate, launch GUI/live-plugin flows, validate a DAW, flash
 firmware, or provide generic shell control.
 
+WS13 treats this sequence as a growing adoption path, not a 100% complete
+standard. Recent 2026-04-29 WPs proved normalized `doctor`, discovery, scenario
+validation, render assertions, render smoke, CLI CTest, `gate --json`, and
+direct `build_host.cmd` evidence. If `gate --json` ever reports a Windows
+`locked-artifact` while rebuilding `DaisyHostCLI.exe`, record the structured
+blocker and rerun the direct wrapper after the CLI exits; do not claim a fresh
+green full gate unless the direct wrapper actually completes.
+
 The `snapshot --json` and `render --json` payloads include `debugState` for
-compact external rack diagnostics without adding a separate command.
+compact external rack diagnostics without adding a separate command. For render
+payloads, `debugState.timeline.events[]` reports event `scope`, `resolution`,
+target node when available, and the relevant parameter/port/control/menu/MIDI
+evidence; `eventsByTargetNode` and `nodes[].eventCount` summarize node impact.
 `render --json` also accepts optional assertion flags
 `--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
 `--expect-node-id`, and `--expect-timeline-target-node`; when supplied, the

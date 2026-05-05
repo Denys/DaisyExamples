@@ -674,6 +674,72 @@ TEST(RenderRuntimeTest, SubharmoniqFieldCutoffSurfaceControlDoesNotMuteAudio)
               0.08f);
 }
 
+TEST(RenderRuntimeTest, SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote)
+{
+    auto scenario = MakeBaseScenario("subharmoniq");
+    scenario.boardId = "daisy_field";
+    scenario.renderConfig.durationSeconds = 1.2;
+    scenario.renderConfig.blockSize = 64;
+    scenario.audioInput.mode
+        = static_cast<int>(daisyhost::TestInputSignalMode::kHostInput);
+
+    for(int index = 0; index < 5; ++index)
+    {
+        const double onTime = static_cast<double>(index) * 0.20;
+        daisyhost::RenderTimelineEvent noteOn;
+        noteOn.timeSeconds = onTime;
+        noteOn.type = daisyhost::RenderTimelineEventType::kMidi;
+        noteOn.midiMessage = {0x90,
+                              static_cast<std::uint8_t>(48 + index * 4),
+                              100};
+        scenario.timeline.push_back(noteOn);
+
+        daisyhost::RenderTimelineEvent noteOff;
+        noteOff.timeSeconds = onTime + 0.08;
+        noteOff.type = daisyhost::RenderTimelineEventType::kMidi;
+        noteOff.midiMessage = {0x80,
+                               static_cast<std::uint8_t>(48 + index * 4),
+                               0};
+        scenario.timeline.push_back(noteOff);
+    }
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+    ASSERT_GE(result.audioChannels.size(), 1u);
+
+    const auto& left = result.audioChannels[0];
+    ASSERT_FALSE(left.empty());
+    float fullRenderPeak = 0.0f;
+    for(const auto& channel : result.audioChannels)
+    {
+        for(const float sample : channel)
+        {
+            ASSERT_TRUE(std::isfinite(sample));
+            fullRenderPeak = std::max(fullRenderPeak, std::abs(sample));
+        }
+    }
+    EXPECT_LT(fullRenderPeak, 4.0f);
+
+    for(int index = 0; index < 5; ++index)
+    {
+        const std::size_t start = static_cast<std::size_t>(
+            (static_cast<double>(index) * 0.20 + 0.02)
+            * scenario.renderConfig.sampleRate);
+        const std::size_t end = std::min<std::size_t>(
+            left.size(),
+            start + static_cast<std::size_t>(0.09 * scenario.renderConfig.sampleRate));
+        float energy = 0.0f;
+        for(std::size_t frame = start; frame < end; ++frame)
+        {
+            ASSERT_TRUE(std::isfinite(left[frame]));
+            energy += std::abs(left[frame]);
+        }
+        EXPECT_GT(energy, 0.1f) << "note index " << index;
+    }
+}
+
 TEST(RenderRuntimeTest, FieldExtendedSurfaceStateMirrorsOutputsSwitchesAndLeds)
 {
     daisyhost::RenderScenario scenario;
@@ -1268,6 +1334,143 @@ TEST(RenderRuntimeTest, ExecutedTimelineReportsResolvedTargetNodes)
     EXPECT_EQ(result.manifest.executedTimeline[1].targetNodeId, "node1");
     EXPECT_EQ(result.manifest.executedTimeline[2].targetNodeId, "node1");
     EXPECT_EQ(result.manifest.executedTimeline[3].targetNodeId, "node1");
+}
+
+TEST(RenderRuntimeTest, ExecutedTimelineReportsTargetResolutionKinds)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.boardId        = "daisy_field";
+    scenario.selectedNodeId = "node1";
+    scenario.entryNodeId    = "node0";
+    scenario.outputNodeId   = "node0";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "multidelay", 456u});
+
+    daisyhost::RenderTimelineEvent parameterEvent;
+    parameterEvent.timeSeconds     = 0.0;
+    parameterEvent.type            = daisyhost::RenderTimelineEventType::kParameterSet;
+    parameterEvent.parameterId     = "node0/param/delay_primary";
+    parameterEvent.normalizedValue = 0.25f;
+    scenario.timeline.push_back(parameterEvent);
+
+    daisyhost::RenderTimelineEvent explicitMidiEvent;
+    explicitMidiEvent.timeSeconds        = 0.01;
+    explicitMidiEvent.type               = daisyhost::RenderTimelineEventType::kMidi;
+    explicitMidiEvent.targetNodeId       = "node0";
+    explicitMidiEvent.midiMessage.status = 0x90;
+    explicitMidiEvent.midiMessage.data1  = 60;
+    explicitMidiEvent.midiMessage.data2  = 100;
+    scenario.timeline.push_back(explicitMidiEvent);
+
+    daisyhost::RenderTimelineEvent selectedMidiEvent;
+    selectedMidiEvent.timeSeconds        = 0.02;
+    selectedMidiEvent.type               = daisyhost::RenderTimelineEventType::kMidi;
+    selectedMidiEvent.midiMessage.status = 0x90;
+    selectedMidiEvent.midiMessage.data1  = 64;
+    selectedMidiEvent.midiMessage.data2  = 100;
+    scenario.timeline.push_back(selectedMidiEvent);
+
+    daisyhost::RenderTimelineEvent surfaceEvent;
+    surfaceEvent.timeSeconds     = 0.03;
+    surfaceEvent.type            = daisyhost::RenderTimelineEventType::kSurfaceControlSet;
+    surfaceEvent.controlId       = "node1/control/field_knob_1";
+    surfaceEvent.normalizedValue = 0.33f;
+    scenario.timeline.push_back(surfaceEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_GE(result.manifest.executedTimeline.size(), 4u);
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetNodeId, "node0");
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetResolution, "id_derived");
+    EXPECT_EQ(result.manifest.executedTimeline[1].targetNodeId, "node0");
+    EXPECT_EQ(result.manifest.executedTimeline[1].targetResolution, "explicit");
+    EXPECT_EQ(result.manifest.executedTimeline[2].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[2].targetResolution, "selected_node");
+    EXPECT_EQ(result.manifest.executedTimeline[3].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[3].targetResolution, "id_derived");
+}
+
+TEST(RenderRuntimeTest, ExecutedTimelineReportsSupportedNodeEventTargets)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.selectedNodeId = "node1";
+    scenario.entryNodeId    = "node0";
+    scenario.outputNodeId   = "node0";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "multidelay", 456u});
+
+    daisyhost::RenderTimelineEvent gateEvent;
+    gateEvent.timeSeconds  = 0.0;
+    gateEvent.type         = daisyhost::RenderTimelineEventType::kGateSet;
+    gateEvent.portId       = "node1/port/gate_in_1";
+    gateEvent.gateValue    = true;
+    scenario.timeline.push_back(gateEvent);
+
+    daisyhost::RenderTimelineEvent impulseEvent;
+    impulseEvent.timeSeconds  = 0.0;
+    impulseEvent.type         = daisyhost::RenderTimelineEventType::kImpulse;
+    impulseEvent.targetNodeId = "node0";
+    scenario.timeline.push_back(impulseEvent);
+
+    daisyhost::RenderTimelineEvent rotateEvent;
+    rotateEvent.timeSeconds  = 0.0;
+    rotateEvent.type         = daisyhost::RenderTimelineEventType::kMenuRotate;
+    rotateEvent.targetNodeId = "node1";
+    rotateEvent.menuDelta    = 1;
+    scenario.timeline.push_back(rotateEvent);
+
+    daisyhost::RenderTimelineEvent pressEvent;
+    pressEvent.timeSeconds  = 0.0;
+    pressEvent.type         = daisyhost::RenderTimelineEventType::kMenuPress;
+    pressEvent.targetNodeId = "node1";
+    scenario.timeline.push_back(pressEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_GE(result.manifest.executedTimeline.size(), 4u);
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetResolution, "id_derived");
+    EXPECT_EQ(result.manifest.executedTimeline[1].targetNodeId, "node0");
+    EXPECT_EQ(result.manifest.executedTimeline[1].targetResolution, "explicit");
+    EXPECT_EQ(result.manifest.executedTimeline[2].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[2].targetResolution, "explicit");
+    EXPECT_EQ(result.manifest.executedTimeline[3].targetNodeId, "node1");
+    EXPECT_EQ(result.manifest.executedTimeline[3].targetResolution, "explicit");
+}
+
+TEST(RenderRuntimeTest, AudioInputConfigReadbackStaysGlobalInMultiNodeRack)
+{
+    auto scenario = MakeBaseScenario("multidelay");
+    scenario.selectedNodeId = "node1";
+    scenario.entryNodeId    = "node0";
+    scenario.outputNodeId   = "node1";
+    scenario.nodes.push_back({"node0", "multidelay", 123u});
+    scenario.nodes.push_back({"node1", "cloudseed", 456u});
+    scenario.routes.push_back({"node0/port/audio_out_1", "node1/port/audio_in_1"});
+    scenario.routes.push_back({"node0/port/audio_out_2", "node1/port/audio_in_2"});
+
+    daisyhost::RenderTimelineEvent audioEvent;
+    audioEvent.timeSeconds   = 0.0;
+    audioEvent.type          = daisyhost::RenderTimelineEventType::kAudioInputConfig;
+    audioEvent.hasAudioLevel = true;
+    audioEvent.audioLevel    = 3.5f;
+    scenario.timeline.push_back(audioEvent);
+
+    daisyhost::RenderResult result;
+    std::string             errorMessage;
+    ASSERT_TRUE(daisyhost::RunRenderScenario(scenario, &result, &errorMessage))
+        << errorMessage;
+
+    ASSERT_EQ(result.manifest.executedTimeline.size(), 1u);
+    EXPECT_TRUE(result.manifest.executedTimeline[0].targetNodeId.empty());
+    EXPECT_EQ(result.manifest.executedTimeline[0].targetResolution, "global");
+    EXPECT_FLOAT_EQ(result.manifest.finalAudioInput.level, 3.5f);
 }
 
 TEST(RenderRuntimeTest, RunsReverseTwoNodeAudioChainScenario)

@@ -120,7 +120,7 @@ Current shell note:
   `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
 - `ctest` launches unit cases through `tests/run_unit_test_payload.py`, which
   receives that payload path and attempts to run a fresh temporary copy
-- the wrapper-driven full host gate reran green on 2026-04-28, so the current
+- the wrapper-driven full host gate reran green on 2026-04-29, so the current
   baseline in this checkout is again a fully green Release host gate rather
   than only partial smoke/debug proof
 - after local Debug rebuilds, direct `ctest -C Debug -R ...` can still point at
@@ -136,12 +136,15 @@ Current shell note:
   `subharmoniq` hosted app, v1 host-side modulation lanes, and WS8 rack UX
   productionization are implemented,
   native `DaisyHostCLI.exe` is build/gate-verified for agent and CI workflows,
-  the latest recorded host gate passed Release `ctest` `278/278`, TF9
+  the latest recorded host gate passed Release `ctest` `284/284`, TF9
   board-generic editor surface policy is complete and profile-backed for Patch
   and Field, TF12 automated verification/build hardening is complete, TF14 CLI
   gate diagnostics exists as a structured `gate --json` wrapper, TF15 doctor
   readiness is implemented as an existing-command preflight, TF16 render
-  assertions are implemented on existing `DaisyHostCLI render`, the
+  assertions are implemented on existing `DaisyHostCLI render`, TF11
+  node-targeted event readback is complete for the current two-node rack
+  contract, WS10 has a stronger additive CLI debug timeline payload, WS13 has
+  repeated CLI-guided QA evidence but not routine adoption completion, the
   first Field firmware adapter (`field/MultiDelay`) is build-verified and
   ST-Link flash-verified, and
   `field/SubharmoniqField` is build/QAE/ST-Link flash-verified with
@@ -174,6 +177,16 @@ Current shell note:
   subset passed `76/76`, and `cmd /c build_host.cmd` passed with Release
   `ctest` `232/232`, superseding the TF10 hardening gate as current checkout
   truth.
+- on 2026-04-29, TF11 closed the current node-targeted event/readback
+  foundation and WS10 advanced the external debug surface: render events now
+  record target resolution as `explicit`, `selected_node`, `id_derived`, or
+  `global`; audio-input config remains global; `render --json` includes
+  `debugState.timeline.events`, `eventsByTargetNode`, and node `eventCount`.
+  Manager-readable result: agents and CI can tell which node an event affected
+  without manually inferring it from raw ids. Targeted Debug CTest passed
+  `46/46`, the broader affected Debug slice passed `84/84`, direct Release
+  render/snapshot CLI proof passed, normalized `gate --json` passed `284/284`,
+  and direct `cmd /c build_host.cmd` passed Release `ctest` `284/284`.
 - on 2026-04-28, TF9 closed the board-generic editor surface foundation:
   editor-facing panel names, selected-node hints, keyboard hints, trace mode,
   indicator visibility, and extended-surface visibility now come from
@@ -190,7 +203,17 @@ Current shell note:
   rerun also passed `244/244`; later TF15 superseded that historical gate with
   Release `ctest` `269/269`; the later non-interactive verification rerun
   superseded that with Release `ctest` `277/277`; the TF12/TF16 closeout
-  superseded that with Release `ctest` `278/278`.
+  superseded that with Release `ctest` `278/278`; the WS10/TF11 closeout
+  superseded that with Release `ctest` `284/284`.
+- on 2026-04-29, WS13 ran the first CLI-guided QA adoption pilot. Normalized
+  `doctor`, discovery, scenario validation, render assertions, render smoke,
+  and the Release CLI CTest slice passed, but `gate --json` exposed a Windows
+  self-rebuild `locked-artifact` on `DaisyHostCLI.exe`, and direct
+  `cmd /c build_host.cmd` reruns did not finish a green full gate in the
+  active dirty WS10/TF11 checkout. Manager-readable result: WS13 is now a
+  useful pilot, not a completed routine standard. The later WS10/TF11 closeout
+  proved a clean normalized `gate --json` and direct wrapper gate from this
+  checkout, but WS13 still needs repeated routine adoption before it can close.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:
@@ -212,7 +235,36 @@ from `patch/Torus/`.
 ## Last Recorded Runtime Verification
 
 - Last fully green DaisyHost host build/test verification rerun from this
-  checkout: 2026-04-28
+  checkout: 2026-04-29
+- Verified commands/results in the current 2026-04-29 WS10/TF11 closeout:
+  - manager-readable result: TF11 is complete for the current two-node
+    render-event readback contract, and WS10 now has a stronger additive CLI
+    debug payload. Agents and CI can inspect event scope, target resolution,
+    per-node event counts, and grouped target-node counts without adding a new
+    command.
+  - passed evidence:
+    - red normalized-env Debug build failed on missing
+      `RenderTimelineEvent::targetResolution`
+    - Debug `RenderRuntime|CliPayloads` CTest passed `46/46`
+    - broader Debug
+      `RenderRuntime|CliPayloads|HostSessionState|EffectiveHostStateSnapshot|LiveRackTopology|DaisyHostCliRender`
+      CTest passed `84/84`
+    - direct Release render proof for
+      `training\examples\field_node_target_surface_smoke.json` passed with
+      checksum `cd30ef6ba7b7acdb` and debug timeline evidence
+    - direct Release snapshot proof for `multidelay` / `daisy_field` passed
+    - normalized-env `doctor --json`: `ok: true`, no blockers
+    - normalized-env `gate --json`: `ok: true`, Release CTest `284/284`
+    - direct `cmd /c build_host.cmd`: Release `ctest` `284/284`
+  - environment evidence:
+    - raw `doctor --json` reported the known duplicate `Path` / `PATH`
+      environment hazard
+  - caveats:
+    - WS10 remains partial because broader external-debug adoption evidence is
+      still future work
+    - no new CLI command, routing preset, graph editor, Hub workflow, scenario
+      inventory, DAW/VST3 validation, GUI validation, firmware flashing,
+      hardware validation, or live-plugin control was added or claimed
 - Verified commands/results in the current 2026-04-29 TF12 closeout and TF16
   CLI render assertion sprint:
   - manager-readable result: DaisyHost now has a completed automated
@@ -1461,12 +1513,12 @@ Version/change tracking target behavior:
 
 ## Current Notes
 
-- The stale 2026-04-27 TF11 `227/227` gate is historical only. The latest
-  recorded full host gate in these docs is the 2026-04-29 TF12/TF16 closeout
-  `278/278` pass.
+- The stale 2026-04-27 TF11 `227/227` and 2026-04-29 TF12/TF16 `278/278`
+  gates are historical only. The latest recorded full host gate in these docs
+  is the 2026-04-29 WS10/TF11 closeout `284/284` pass.
 - Older `159/159`, `168/168`, `196/196`, `197/197`, `202/202`, `211/211`,
   `216/216`, `227/227`, `230/230`, `232/232`, `233/233`, `243/243`,
-  `244/244`, `269/269`, and `277/277`
+  `244/244`, `269/269`, `277/277`, and `278/278`
   counts remain useful as dated historical ledger evidence, but they are not
   the current checkout gate.
 - The standalone smoke harness now tolerates slower Windows process-path

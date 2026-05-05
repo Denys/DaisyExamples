@@ -401,7 +401,8 @@ juce::var DebugNodeVar(const std::string& nodeId,
                        const std::string& appDisplayName,
                        bool               selected,
                        bool               entryNode,
-                       bool               outputNode);
+                       bool               outputNode,
+                       int                eventCount = 0);
 juce::var DebugControlTargetsVar(const std::string& selectedNodeId);
 
 juce::var ChannelSummaryVar(const RenderChannelSummary& summary)
@@ -458,6 +459,89 @@ juce::var RenderRouteVar(const RenderRoute& route)
     return juce::var(object.release());
 }
 
+std::string DebugEventResolution(const RenderTimelineEvent& event)
+{
+    if(!event.targetResolution.empty())
+    {
+        return event.targetResolution;
+    }
+    return event.targetNodeId.empty() ? "global" : "id_derived";
+}
+
+juce::var RenderDebugTimelineEventVar(const RenderTimelineEvent& event)
+{
+    auto object = std::make_unique<juce::DynamicObject>();
+    object->setProperty("timeSeconds", event.timeSeconds);
+    object->setProperty("type",
+                        StringVar(GetRenderTimelineEventTypeName(event.type)));
+    object->setProperty("scope",
+                        StringVar(event.targetNodeId.empty() ? "global" : "node"));
+    object->setProperty("resolution", StringVar(DebugEventResolution(event)));
+    if(!event.targetNodeId.empty())
+    {
+        object->setProperty("targetNodeId", StringVar(event.targetNodeId));
+    }
+
+    switch(event.type)
+    {
+        case RenderTimelineEventType::kParameterSet:
+            object->setProperty("parameterId", StringVar(event.parameterId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+        case RenderTimelineEventType::kCvSet:
+        case RenderTimelineEventType::kGateSet:
+            object->setProperty("portId", StringVar(event.portId));
+            if(event.type == RenderTimelineEventType::kCvSet)
+            {
+                object->setProperty("normalizedValue", event.normalizedValue);
+            }
+            else
+            {
+                object->setProperty("gate", event.gateValue);
+            }
+            break;
+        case RenderTimelineEventType::kMidi:
+            object->setProperty("status",
+                                static_cast<int>(event.midiMessage.status));
+            object->setProperty("data1",
+                                static_cast<int>(event.midiMessage.data1));
+            object->setProperty("data2",
+                                static_cast<int>(event.midiMessage.data2));
+            break;
+        case RenderTimelineEventType::kAudioInputConfig:
+            if(event.hasAudioMode)
+            {
+                object->setProperty(
+                    "mode",
+                    StringVar(GetRenderAudioInputModeName(event.audioMode)));
+            }
+            if(event.hasAudioLevel)
+            {
+                object->setProperty("level", event.audioLevel);
+            }
+            if(event.hasAudioFrequency)
+            {
+                object->setProperty("frequencyHz", event.audioFrequencyHz);
+            }
+            break;
+        case RenderTimelineEventType::kImpulse: break;
+        case RenderTimelineEventType::kMenuRotate:
+            object->setProperty("delta", event.menuDelta);
+            break;
+        case RenderTimelineEventType::kMenuPress: break;
+        case RenderTimelineEventType::kMenuSetItem:
+            object->setProperty("menuItemId", StringVar(event.menuItemId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+        case RenderTimelineEventType::kSurfaceControlSet:
+            object->setProperty("controlId", StringVar(event.controlId));
+            object->setProperty("normalizedValue", event.normalizedValue);
+            break;
+    }
+
+    return juce::var(object.release());
+}
+
 juce::var RenderDebugStateVar(const RenderResultManifest& manifest)
 {
     auto root = std::make_unique<juce::DynamicObject>();
@@ -466,18 +550,35 @@ juce::var RenderDebugStateVar(const RenderResultManifest& manifest)
     root->setProperty("entryNodeId", StringVar(manifest.entryNodeId));
     root->setProperty("outputNodeId", StringVar(manifest.outputNodeId));
 
+    std::map<std::string, int> eventsByTargetNode;
+    for(const auto& node : manifest.nodes)
+    {
+        eventsByTargetNode[node.nodeId] = 0;
+    }
+    for(const auto& event : manifest.executedTimeline)
+    {
+        if(!event.targetNodeId.empty())
+        {
+            ++eventsByTargetNode[event.targetNodeId];
+        }
+    }
+
     juce::Array<juce::var> nodes;
     for(const auto& node : manifest.nodes)
     {
         const bool selected   = node.nodeId == manifest.selectedNodeId;
         const bool entryNode  = node.nodeId == manifest.entryNodeId;
         const bool outputNode = node.nodeId == manifest.outputNodeId;
+        const auto eventCountIt = eventsByTargetNode.find(node.nodeId);
         nodes.add(DebugNodeVar(node.nodeId,
                                node.appId,
                                node.appDisplayName,
                                selected,
                                entryNode,
-                               outputNode));
+                               outputNode,
+                               eventCountIt == eventsByTargetNode.end()
+                                   ? 0
+                                   : eventCountIt->second));
     }
     root->setProperty("nodes", juce::var(nodes));
     root->setProperty("routes",
@@ -499,6 +600,17 @@ juce::var RenderDebugStateVar(const RenderResultManifest& manifest)
         "executedEventCount",
         static_cast<int>(manifest.executedTimeline.size()));
     timeline->setProperty("resolvedTargetEventCount", resolvedTargetEventCount);
+    timeline->setProperty(
+        "events",
+        juce::var(VectorVar(manifest.executedTimeline,
+                            RenderDebugTimelineEventVar)));
+    auto eventCounts = std::make_unique<juce::DynamicObject>();
+    for(const auto& entry : eventsByTargetNode)
+    {
+        eventCounts->setProperty(juce::Identifier(entry.first), entry.second);
+    }
+    timeline->setProperty("eventsByTargetNode",
+                          juce::var(eventCounts.release()));
     root->setProperty("timeline", juce::var(timeline.release()));
     return juce::var(root.release());
 }
@@ -512,6 +624,11 @@ juce::var RenderTimelineEventVar(const RenderTimelineEvent& event)
     if(!event.targetNodeId.empty())
     {
         object->setProperty("targetNodeId", StringVar(event.targetNodeId));
+    }
+    if(!event.targetResolution.empty())
+    {
+        object->setProperty("targetResolution",
+                            StringVar(event.targetResolution));
     }
 
     switch(event.type)
@@ -687,7 +804,8 @@ juce::var DebugNodeVar(const std::string& nodeId,
                        const std::string& appDisplayName,
                        bool               selected,
                        bool               entryNode,
-                       bool               outputNode)
+                       bool               outputNode,
+                       int                eventCount)
 {
     auto object = std::make_unique<juce::DynamicObject>();
     object->setProperty("nodeId", StringVar(nodeId));
@@ -698,6 +816,7 @@ juce::var DebugNodeVar(const std::string& nodeId,
     object->setProperty("outputNode", outputNode);
     object->setProperty("roleLabel",
                         StringVar(DebugRoleLabel(selected, entryNode, outputNode)));
+    object->setProperty("eventCount", eventCount);
     return juce::var(object.release());
 }
 

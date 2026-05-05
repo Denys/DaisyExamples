@@ -52,12 +52,24 @@ DaisyHost/build/Release/DaisyHostCLI.exe smoke --mode render --build-dir DaisyHo
 Use `DaisyHostCLI` as a thin offline facade for reproducible agent/CI
 inspection and render validation. The existing `snapshot --json` and
 `render --json` payloads include additive `debugState` readback for compact
-board, selected-node, route, and role diagnostics. `gate --json` wraps the
-existing host gate with structured phase, CTest, and blocker evidence.
+board, selected-node, route, role, and timeline diagnostics. Render payloads
+also report `debugState.timeline.events[]`, event `scope`, event
+`resolution`, grouped `eventsByTargetNode`, and per-node `eventCount` so
+agents can tell which rack node an event affected without manually inferring
+it from raw ids. `gate --json` wraps the existing host gate with structured
+phase, CTest, and blocker evidence.
 `render --json` can also fail directly on expected render evidence with
 `--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
 `--expect-node-id`, and `--expect-timeline-target-node`; assertion requests add
 an `assertions` report and return validation exit code `2` on mismatch.
+
+The WS13 adoption pilot treats these commands as the standard QA path to repeat
+and refine. Recent WS10/TF11 verification proved the normalized `doctor`,
+`gate`, direct render/snapshot proof, and direct `cmd /c build_host.cmd` path
+green in the active checkout. If a future `gate --json` run reports a
+`locked-artifact` while rebuilding `DaisyHostCLI.exe`, use that JSON as failure
+evidence and rerun the direct wrapper after the CLI process exits before
+claiming a fresh green full gate.
 
 The existing `doctor --json` command is the source/build readiness preflight;
 it is not a new command and does not execute the gate. Its stable top-level

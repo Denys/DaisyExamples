@@ -56,6 +56,7 @@ add_library(daisyhost_core STATIC
     src/MidiEventTracker.cpp
     src/MidiNotePreview.cpp
     src/MidiLearnMap.cpp
+    src/OledDisplayLayout.cpp
     src/SignalGenerator.cpp
     src/StandaloneUiPolicy.cpp
     src/TestInputSignal.cpp
@@ -287,6 +288,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
     tests/test_daisy_field_rsp_layout.cpp
+    tests/test_daisyhost_plugin_processor.cpp
     tests/test_daisy_harmoniqs_core.cpp
     tests/test_daisy_polyosc_core.cpp
     tests/test_daisy_vasynth_core.cpp
@@ -317,8 +319,13 @@ set(DAISYHOST_UNIT_TEST_SOURCES
 
 find_program(DAISYHOST_PYTHON_LAUNCHER NAMES py REQUIRED)
 
+set(DAISYHOST_UNIT_TEST_SUPPORT_SOURCES
+    src/juce/DaisyHostPluginProcessor.cpp
+)
+
 add_executable(unit_tests
     ${DAISYHOST_UNIT_TEST_SOURCES}
+    ${DAISYHOST_UNIT_TEST_SUPPORT_SOURCES}
 )
 
 set_target_properties(unit_tests
@@ -348,7 +355,20 @@ target_link_libraries(unit_tests
         daisyhost_render
         GTest::gtest
         GTest::gtest_main
+        juce::juce_audio_utils
+        juce::juce_dsp
 )
+
+target_compile_definitions(unit_tests
+    PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        DAISYHOST_HEADLESS_PROCESSOR_TEST=1
+)
+
+if(MSVC)
+    target_compile_options(unit_tests PRIVATE /FS)
+endif()
 
 add_test(
     NAME DaisyHostNextWpSuggester
