@@ -21,6 +21,11 @@ int ClampInt(int value, int minValue, int maxValue)
     return std::max(minValue, std::min(maxValue, value));
 }
 
+float ClampFloat(float value, float minValue, float maxValue)
+{
+    return value < minValue ? minValue : (value > maxValue ? maxValue : value);
+}
+
 float MidiNoteToFrequency(int midiNote)
 {
     return 440.0f
@@ -131,7 +136,7 @@ class SimpleSvfLowpass
     {
         if(!std::isfinite(value))
             return 0.0f;
-        return std::clamp(value, -2.0f, 2.0f);
+        return ClampFloat(value, -2.0f, 2.0f);
     }
 
     float sampleRate_ = 48000.0f;

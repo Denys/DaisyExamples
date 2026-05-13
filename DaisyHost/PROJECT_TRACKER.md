@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-05-01
+Last updated: 2026-05-05
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -38,6 +38,93 @@ Latest fully green host gate from this checkout:
 
 Latest automated gate attempt:
 
+- Date: 2026-05-05
+- Request: investigate user report that `daisy_field` / `subharmoniq` produced
+  no audible output while `cloudseed` was audible in the same standalone audio
+  settings.
+- Result: no DSP, processor, render, or launch-path silence was reproduced.
+  Added live-processor regression coverage for fresh Subharmoniq startup,
+  virtual-keyboard MIDI, and the low note range seen in the user's tracker.
+  Rebuilt both Debug and Release standalone artifacts so Hub-launched and
+  directly launched app paths are current.
+- Evidence:
+  - Green build: `cmake --build build --config Debug --target unit_tests`
+    passed after adding the regressions.
+  - Green targeted payload:
+    `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=DaisyHostPluginProcessorTest.FieldSubharmoniqFreshStartupKeepsMidiAudible:DaisyHostPluginProcessorTest.FieldSubharmoniqVirtualKeyboardKeepsMidiAudible:DaisyHostPluginProcessorTest.FieldSubharmoniqLowComputerKeyboardOctaveKeepsMidiAudible:RenderRuntimeTest.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote`
+    passed `4/4`.
+  - Green standalone builds: `cmake --build build --config Debug --target
+    DaisyHostPatch_Standalone` and `cmake --build build --config Release
+    --target DaisyHostPatch_Standalone` passed.
+  - Green standalone smokes:
+    `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir .
+    --config Debug --board daisy_field --app subharmoniq --timeout-seconds 120`
+    and the same command with `--config Release` passed.
+  - Green CLI/tool builds: `cmake --build build --config Debug --target
+    DaisyHostCLI DaisyHostRender` and `cmake --build build --config Release
+    --target DaisyHostCLI DaisyHostRender` passed.
+  - Green render proof: Debug and Release `DaisyHostCLI.exe render` checks for
+    the tracker-observed low notes `34`, `36`, and `41` passed
+    `--expect-non-silent`; the persisted-state-style CV variant remained
+    non-silent with peak `0.350034892559052` and RMS `0.089974492788315`.
+  - Local standalone settings were decoded from
+    `%APPDATA%\DaisyHost Patch\DaisyHost Patch.settings`; saved state was
+    `board daisy_field`, `node0 subharmoniq`, `node0/param/output 0.9`,
+    `node0/host/computer_keyboard_octave 4`, and Realtek speakers at
+    `48000 Hz` / `480 samples`.
+- Interpretation:
+  - The Subharmoniq app core and the live processor MIDI path are producing
+    audio, including the low-note range visible in the user's screenshots.
+  - `CloudSeed` being audible from host/test input does not prove the same
+    path should drive `Subharmoniq`: `CloudSeed` is an audio-input effect,
+    while `Subharmoniq` is a MIDI/gate synth and ignores audio test input by
+    design. Subharmoniq output should be checked through MIDI, Field keys, or
+    Gate In rather than audio-input test source.
+  - This pass does not claim physical speaker listening, external MIDI device
+    validation, DAW/VST3 validation, firmware flashing, or hardware Field
+    validation. Manual retest should be done after closing any old standalone
+    instance and relaunching the freshly rebuilt Debug or Release artifact.
+
+Previous automated gate attempt:
+
+- Date: 2026-05-05
+- Request: proceed with TF8 Daisy Field board support.
+- Result: Field host/render/generator proof is green, all four Field firmware
+  projects pass the fast Daisy project audit, all four Field firmware projects
+  pass QAE with UTF-8 console output, and `field/SubharmoniqField` firmware
+  build was restored after a C++14 compatibility regression in the shared core.
+  Full host gate was not rerun in this iteration.
+- Evidence:
+  - Red: `make` from `../field/SubharmoniqField` failed because
+    `src/DaisySubharmoniqCore.cpp` used `std::clamp`, which is unavailable to
+    the Daisy firmware GNU++14 build.
+  - Green firmware builds: `make` passed in `../field/MultiDelay`,
+    `../field/MultiDelayGenerated`, `../field/SubharmoniqField`, and
+    `../field/DaisyHostController` remained up to date.
+  - Green QAE: UTF-8 QAE validation passed with `0 error(s), 0 warning(s)` in
+    `../field/MultiDelay`, `../field/MultiDelayGenerated`,
+    `../field/SubharmoniqField`, and `../field/DaisyHostController`.
+  - Green host build: `cmake --build build --config Debug --target unit_tests
+    DaisyHostCLI DaisyHostRender` passed.
+  - Green generator: `py -3 -m pytest -q tests/test_field_adapter_generator.py
+    -p no:cacheprovider` passed `3/3`.
+  - Green targeted payload:
+    `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=BoardControlMappingTest.Field*:BoardControlMappingTest.SubharmoniqField*:BoardProfileTest.DaisyField*:BoardProfileTest.BoardFactoryCreatesFieldProfileByBoardId:RenderRuntimeTest.*Field*:DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*`
+    passed `71/71`.
+  - Green render smoke:
+    `py -3 tests\run_smoke.py --mode render --build-dir build --source-dir .
+    --config Debug --board daisy_field --timeout-seconds 120` passed.
+- Interpretation:
+  - TF8 software support is healthier than the tracker baseline: the
+    SubharmoniqField firmware path is buildable again under the real firmware
+    language mode, and host-side Field render evidence still passes after the
+    shared-core fix.
+  - This pass does not claim generated-adapter flashing, manual audio/CV
+    validation, USB MIDI enumeration, DaisyHost MIDI learn, DAW/VST3
+    validation, or full Release host-gate proof.
+
+Earlier automated gate attempt:
+
 - Date: 2026-05-01
 - Request: remaining `daisy_field` / `subharmoniq` live-audio mute after the
   previous duplicate-MIDI, OLED, and DSP-stability fixes.
@@ -68,6 +155,86 @@ Latest automated gate attempt:
   - This pass does not claim manual speaker listening, external MIDI hardware,
     DAW/VST3 validation, firmware flashing, or Daisy Field hardware validation.
 
+Latest documentation iteration:
+
+- Date: 2026-05-05
+- Thread: Local Codex thread
+- Slice: Noderr install/reconcile plus post-installation audit for DaisyHost
+- Manager-readable result:
+  - Done: ran the available Noderr v1.9 Install and Reconcile prompt from the
+    newly extracted `noderr-main` bundle against the current DaisyHost
+    workspace, then ran the available v1.9 Post Installation Audit prompt after
+    restoring the active `noderr` submodule directory. The active
+    `noderr/noderr` operational templates now contain DaisyHost-specific
+    environment, project, architecture, tracker, log, audit, and spec files.
+  - Why it matters: Noderr is now a usable project memory layer for DaisyHost
+    rather than an unactivated template copy; future Noderr sessions can start
+    from the actual host architecture, current workstream blockers, and
+    verified environment caveats.
+  - What changed for users/agents/CI: the active Noderr submodule now contains
+    one unified 43-NodeID subsystem architecture, 43 matching spec files, a
+    Windows development environment profile, install log entry, and
+    post-installation audit entry. The parent DaisyHost source tree and build
+    behavior were not changed.
+  - What remains: the parent repo still sees the `noderr` submodule pointer as
+    modified because the reconciled Noderr commit is local to the submodule;
+    `noderr-main/` remains an untracked extracted source bundle; the full
+    DaisyHost host gate was not rerun because this pass changed only Noderr
+    documentation.
+  - Out of scope: no DaisyHost source behavior, CMake target, hosted app,
+    firmware, DAW/VST3, hardware, routing preset, Hub workflow, or CLI command
+    change was made or claimed.
+- Files touched by this sprint:
+  - `noderr/noderr/environment_context.md`
+  - `noderr/noderr/noderr_project.md`
+  - `noderr/noderr/noderr_architecture.md`
+  - `noderr/noderr/noderr_tracker.md`
+  - `noderr/noderr/noderr_log.md`
+  - `noderr/noderr/specs/*.md`
+  - `PROJECT_TRACKER.md`
+- Verification:
+  - Prompt source resolved to
+    `noderr-main/noderr/prompts/NDv1.9__Install_And_Reconcile.md`; the
+    requested shorter path/name did not exist in this checkout.
+  - Tool discovery passed: `cmake --version` reported `4.2.1`,
+    `git --version` reported `2.53.0.windows.1`, and `py -3 --version`
+    reported `3.14.3`.
+  - Release test discovery passed:
+    `ctest --test-dir build -C Release -N` listed `287` tests.
+  - Recommender passed:
+    `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    recommended `WS10` only for a concrete external-debug consumer, with
+    `TF8` as runner-up.
+  - Noderr consistency passed: architecture NodeID extraction found `43`
+    unique mapped NodeIDs and `noderr/noderr/specs` contained `43` matching
+    `.md` spec files.
+  - Environment context placeholder check passed:
+    `noderr/noderr/environment_context.md` contained `0` square-bracket
+    placeholder markers.
+  - Operational placeholder search passed: no `Agent:`, `Generated Timestamp`,
+    `ExampleNodeID`, `Example Node`, `[Example`, or `placeholder` text remained
+    in the active Noderr operational files and specs.
+  - Post-installation audit prompt source resolved to
+    `noderr-main/noderr/prompts/NDv1.9__Post_Installation_Audit.md`; the
+    requested shorter path/name did not exist in this checkout.
+  - Post-installation audit result: `READY_WITH_BOUNDARIES`, system health
+    score `90/100`, 35 source-backed NodeIDs, 8 planned/manual-validation
+    gaps, and no critical Noderr readiness issues.
+  - The active `noderr` directory had to be restored from
+    `https://github.com/Denys/noderr.git` before audit because the previous
+    submodule working tree was missing and no `.git/modules/noderr` recovery
+    copy existed.
+  - Noderr submodule commit created:
+    `6564c08 feat: audit DaisyHost Noderr installation`.
+- Blockers / non-claims:
+  - The full host gate was not rerun in this docs-only pass.
+  - The known Windows duplicate `Path` / `PATH` environment hazard appeared
+    during environment discovery and is documented in the Noderr environment
+    context.
+  - No parent-repo commit was created because doing so would record a submodule
+    pointer to a local Noderr commit while unrelated parent-repo work remains
+    dirty.
+
 ## Blockers For Other WPs
 
 `% unblocked` estimates dependency/readiness clearance, not implementation
@@ -85,6 +252,76 @@ completion. The implementation percent remains in the workstream tables below.
 | `TF18` Scenario-backed snapshot/readback | Render manifests already cover much of the evidence; no-audio scenario inspection has not become a repeated need. | Start only when `WS10` or `WS11` needs scenario-backed state without writing audio, then define the smallest snapshot contract. | `45%` |
 
 Latest implementation iteration:
+
+- Date: 2026-05-05
+- Thread: Local Codex thread
+- Slice: TF8 Daisy Field board support software/firmware compatibility sweep
+- Manager-readable result:
+  - Done: reran the Field support evidence path, found that
+    `field/SubharmoniqField` no longer built under the Daisy firmware toolchain,
+    and fixed the shared core so it stays C++14-compatible for firmware while
+    preserving host behavior.
+  - Why it matters: DaisyHost Field support depends on the same portable core
+    compiling in both the host and the real Field firmware adapter. A host-only
+    pass would have missed the firmware break.
+  - What changed for users/agents/CI: `DaisySubharmoniqCore` no longer uses
+    C++17 `std::clamp` in the firmware-facing filter-state clamp path, so the
+    checked-in `SubharmoniqField` adapter builds again with the existing
+    GNU++14 Makefile.
+  - What remains: hands-on Field audio/CV validation, USB MIDI enumeration,
+    DaisyHost MIDI learn, generated-adapter flashing, DAW/VST3 validation, and
+    the full Release host gate remain unclaimed.
+  - Out of scope: no flashing, no DAW launch, no new board surface, no routing
+    preset, no automation expansion, and no manual hardware validation.
+- Files touched by this sprint:
+  - `src/DaisySubharmoniqCore.cpp`
+  - `PROJECT_TRACKER.md`
+  - `FIELD_PROJECT_TRACKER.md`
+  - `CHANGELOG.md`
+  - `SKILL_PLAYBOOK.md`
+- Verification:
+  - Fast Daisy project audits passed with `0 error(s), 0 warning(s)` for
+    `../field/MultiDelay`, `../field/MultiDelayGenerated`,
+    `../field/SubharmoniqField`, and `../field/DaisyHostController`.
+  - Red: `make` from `../field/SubharmoniqField` failed on
+    `std::clamp` not being available under GNU++14.
+  - Green firmware builds: `make` passed in `../field/MultiDelay`,
+    `../field/MultiDelayGenerated`, and `../field/SubharmoniqField`;
+    `../field/DaisyHostController` reported `Nothing to be done for 'all'`.
+  - Green QAE: UTF-8 QAE validation passed with `0 error(s), 0 warning(s)` in
+    all four Field firmware project directories above.
+  - Green host build: `cmake --build build --config Debug --target unit_tests
+    DaisyHostCLI DaisyHostRender` passed.
+  - Green generator: `py -3 -m pytest -q tests/test_field_adapter_generator.py
+    -p no:cacheprovider` passed `3/3`.
+  - Green targeted payload:
+    `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=BoardControlMappingTest.Field*:BoardControlMappingTest.SubharmoniqField*:BoardProfileTest.DaisyField*:BoardProfileTest.BoardFactoryCreatesFieldProfileByBoardId:RenderRuntimeTest.*Field*:DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*`
+    passed `71/71`.
+  - Green render smoke:
+    `py -3 tests\run_smoke.py --mode render --build-dir build --source-dir .
+    --config Debug --board daisy_field --timeout-seconds 120` passed.
+- Blockers / non-claims:
+  - No `make program` command was run in this pass because hardware flashing is
+    opt-in.
+  - No physical audio, CV voltage, USB MIDI, MIDI learn, DAW/VST3, or manual
+    GUI validation was performed.
+  - A first QAE run without `PYTHONIOENCODING=utf-8` failed on Windows cp1252
+    console output before lint findings; the UTF-8 reruns passed.
+  - Full Release host gate was not rerun.
+- Next safe starting point:
+  - Recommender output:
+    `py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md`
+    recommends `WS10 - External state / debug surface`; runner-up is
+    `TF8 - Daisy Field board support`; explicitly wait on `WS9`, `WS11`,
+    `WS12`, `WS13`, `TF17`, and `TF18`; first safe WS10 slice remains only for
+    a concrete external-debug consumer that needs more than the additive CLI
+    `debugState` payload.
+  - Continue TF8 with real hardware validation when the Field and DAW are
+    available: USB MIDI enumeration, DaisyHost standalone device enablement,
+    MIDI tracker/learn proof, Field audio/CV/OLED/LED checklist, then DAW/VST3
+    validation. Keep any new code changes defect-driven from those checks.
+
+Previous implementation iteration:
 
 - Date: 2026-05-01
 - Thread: Local Codex thread
@@ -1509,6 +1746,7 @@ Decision values: `log-only`, `plan`, `implement-next`, `implemented`,
 
 | Date | Thread / agent | Workstream | Files / slice | Tests run | Docs reviewed | Blockers | Handoff |
 |---|---|---|---|---|---|---|---|
+| 2026-05-05 | Local Codex thread | TF8 Field Subharmoniq live-audio no-output investigation | `tests/test_daisyhost_plugin_processor.cpp`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`; Debug/Release `DaisyHostPatch_Standalone`, `DaisyHostCLI`, and `DaisyHostRender` artifacts were rebuilt; unrelated dirty source, docs, submodules, and Noderr state were preserved | Green: `cmake --build build --config Debug --target unit_tests` passed; targeted payload for `DaisyHostPluginProcessorTest.FieldSubharmoniqFreshStartupKeepsMidiAudible:DaisyHostPluginProcessorTest.FieldSubharmoniqVirtualKeyboardKeepsMidiAudible:DaisyHostPluginProcessorTest.FieldSubharmoniqLowComputerKeyboardOctaveKeepsMidiAudible:RenderRuntimeTest.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote` passed `4/4`; Debug and Release `DaisyHostPatch_Standalone` builds passed; Debug and Release standalone smoke passed for `--board daisy_field --app subharmoniq`; Debug and Release `DaisyHostCLI DaisyHostRender` builds passed; Debug and Release CLI render checks for notes `34`, `36`, and `41` passed `--expect-non-silent`; persisted-state-style CV render stayed non-silent with peak `0.350034892559052`, RMS `0.089974492788315`. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, `CHANGELOG.md`, `DaisyHostPluginProcessor`, `SubharmoniqCore`, `DaisySubharmoniqCore`, render runtime evidence, standalone settings under `%APPDATA%\DaisyHost Patch\DaisyHost Patch.settings` | No physical speaker listening, external MIDI hardware, DAW/VST3, firmware flashing, or Field hardware validation was run. The automated path cannot prove what the user heard from the Windows Audio test button. | Manager-readable result: the user-visible silence did not reproduce in the source-backed audio paths. The fresh startup, virtual keyboard, low-note processor path, render path, and standalone launch path all produce or launch cleanly. The local saved state was not muting Subharmoniq (`output 0.9`, keyboard octave `4`). The likely immediate action is to retest after closing any stale standalone and using the freshly rebuilt Release/Debug artifact; also treat audio-input test source as effect-only for Subharmoniq because it is a MIDI/gate synth. |
 | 2026-05-01 | Local Codex thread | TF8/TF9 Field Subharmoniq live processor restored-page mute | `CMakeLists.txt`, `src/juce/DaisyHostPluginProcessor.cpp`, `tests/test_daisyhost_plugin_processor.cpp`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`; existing dirty Field/OLED/Subharmoniq files from earlier iterations were preserved | Red: direct Debug payload for `DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible` failed before the fix with Field K8 targeting `node0/control/output` but holding `0`, and all repeated MIDI note energy checks at `0`. Green: `cmake --build build --config Debug --target unit_tests` passed; direct Debug payload `py -3 tests\run_unit_test_payload.py build\unit_test_bin\20260429200925336\Debug\DaisyHostTestPayload.bin --gtest_filter=DaisyHostPluginProcessorTest.FieldSubharmoniqRestoredVcfPageKeepsRepeatedMidiAudible:SubharmoniqCoreTest.*:RenderRuntimeTest.SubharmoniqField*` passed `32/32`; normalized-env `cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; normalized-env `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. Raw standalone build first hit the known duplicate `Path` / `PATH` MSBuild environment issue, and an initial Debug build timeout left stale `MSBuild`/`cl` processes that were stopped before the red/green reruns. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, `CHANGELOG.md`, `DaisyHostPluginProcessor`, Field control mapping/session state, and prior Subharmoniq core/render evidence | Full host gate was not rerun. I did not perform physical speaker listening, external MIDI device validation, DAW/VST3 validation, firmware validation, or hardware Field validation. | Manager-readable result: the remaining live mute was not firmware and not the duplicate-MIDI path. It was the JUCE live processor restore/control-writeback order: restored canonical Subharmoniq output could be overwritten by stale Field K8/top-control value `0` before audio, so MIDI tracking kept moving while audio was hard-silent. The fix syncs restored core state back into host controls before applying live controls, preserving legacy control-only sessions by doing this only when canonical restored parameters exist. Recommender: next WP `WS10`, runner-up `TF8`, wait `WS9`/`WS11`/`WS12`/`WS13`/`TF17`/`TF18`; first safe slice is only additive debug readback for a real consumer. |
 | 2026-05-01 | Local Codex thread | TF8/TF9 Field Subharmoniq five-note audio verification and bounded-filter fix | `src/DaisySubharmoniqCore.cpp`, `tests/test_subharmoniq_core.cpp`, `tests/test_render_runtime.cpp`, `.tmp/subharmoniq_field_5_notes.json` verification artifact, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md` | Diagnostic repro: existing repeated-note CTest initially passed, but a one-off five-note `daisy_field`/`subharmoniq` CLI render showed the prior fix was still insufficient: CLI non-silent passed while `manifest.channelSummaries` were null, `actual` was `inf`, and direct WAV parsing found `114980` non-finite samples with first bad sample `(220, inf)`. Red after tightening tests: rebuilt Debug `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\\.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks\|RenderRuntimeTest\\.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote)"` failed on huge finite peaks around `5e37`. Green: `cmake --build build --config Debug --target unit_tests` passed; the same focused CTest passed `2/2`; `cmake --build build --config Debug --target DaisyHostCLI` passed; five-note CLI render passed `--expect-non-silent --expect-timeline-target-node node0` with channel peak `1.065805554389954`, rms `0.266474366188049`, and direct WAV parsing `bad 0`, `nonzero 76358`, `peak 1.0658055543899536`; broader `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|RenderRuntimeTest\\.Subharmoniq)"` passed `31/31`; `Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, `DaisySubharmoniqCore`, render scenario/manifest/WAV evidence, and the previous repeated-note tracker row | I did not perform physical speaker listening, external MIDI device validation, DAW/VST3 validation, firmware validation, or hardware Field validation. GUI launch is covered only by the existing standalone smoke helper, not by manual keypress/audio monitoring. | Manager-readable result: the user-requested 4-5 note check found one more real edge case. The previous reset-on-non-finite filter guard still allowed enormous finite SVF state, which could later serialize as `inf` and plausibly mute the live path. The fix now bounds the SVF internal state every sample, so the five-note Field/Subharmoniq render produces finite, non-zero audio instead of `inf` samples. |
 | 2026-04-29 | Local Codex thread | TF8/TF9 Field Subharmoniq repeated-note mute root-cause fix | `src/DaisySubharmoniqCore.cpp`, `tests/test_subharmoniq_core.cpp`, `tests/test_render_runtime.cpp`, `PROJECT_TRACKER.md`, `CHANGELOG.md`; verification also consumed the existing dirty Field/OLED/processor files from the prior iteration | Red: `RenderRuntimeTest.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote` failed with non-finite audio after repeated MIDI notes on `daisy_field`; after isolating the difference, `SubharmoniqCoreTest.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks` failed at note 0 block 1 frame 46 when Field-style CV defaults were applied (`cutoff_cv=0.5`). Green: `cmake --build build --config Debug --target unit_tests` passed; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\\.RepeatedShortMidiNotesRemainFiniteWithSmallBlocks\|RenderRuntimeTest\\.SubharmoniqFieldRepeatedMidiNotesStayAudiblePerNote)"` passed `2/2`; `ctest --test-dir build -C Debug --output-on-failure -R "(SubharmoniqCoreTest\|RenderRuntimeTest\\.Subharmoniq)"` passed `31/31`; `Remove-Item Env:PATH -ErrorAction SilentlyContinue; cmake --build build --config Debug --target DaisyHostPatch_Standalone` passed; `py -3 tests\run_smoke.py --mode standalone --build-dir build --source-dir . --config Debug --board daisy_field --app subharmoniq --timeout-seconds 60` passed. | `AGENTS.md`, `README.md`, `CHECKPOINT.md`, `PROJECT_TRACKER.md`, `CHANGELOG.md`, `SKILL_PLAYBOOK.md`, `DaisySubharmoniqCore`, Subharmoniq hosted wrapper, render runtime segmentation/default-CV behavior, and the previous incomplete tracker row | MP4 frame extraction/manual audio capture was still unavailable/not run. No firmware, DAW/VST3, physical MIDI device, or hardware validation was performed. | Manager-readable result: the previous duplicate-MIDI delivery fix was incomplete. The actual repeated-note mute was caused by non-finite DSP output from the Subharmoniq state-variable filter when Daisy Field render/live defaults repeatedly applied mid-scale CV inputs, especially `cutoff_cv=0.5`, pushing cutoff/envelope into an unstable range. The fix clamps the filter coefficient to a stable range and defensively resets non-finite filter state, so repeated MIDI notes remain finite and audible in both core and Field render paths. |

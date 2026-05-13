@@ -4,6 +4,23 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- restore `field/SubharmoniqField` firmware build compatibility during the TF8
+  Daisy Field support sweep:
+  - replace the shared `DaisySubharmoniqCore` filter-state `std::clamp` call
+    with a local C++14-safe clamp helper so the same portable core still builds
+    under the Daisy firmware GNU++14 Makefile
+  - preserve the host-side bounded-filter behavior introduced for Field
+    repeated-note stability
+  - verify with a red `make` failure from `field/SubharmoniqField`, green
+    `make` rerun with FLASH `128784 B` / `98.25%`, UTF-8 QAE passing
+    `0 error(s), 0 warning(s)` for `field/MultiDelay`,
+    `field/MultiDelayGenerated`, `field/SubharmoniqField`, and
+    `field/DaisyHostController`, Debug host build, Field-focused payload tests
+    passing `71/71`, adapter-generator pytest passing `3/3`, and Debug
+    `daisy_field` render smoke passing
+  - keep flashing, manual Field audio/CV validation, USB MIDI enumeration,
+    MIDI learn, DAW/VST3 validation, routing, automation, and full Release host
+    gate out of scope for this sweep
 - complete the current TF11 node-targeted event/readback foundation and advance
   WS10 external debug payloads:
   - render timeline readback now reports durable target resolution evidence for

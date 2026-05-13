@@ -1,6 +1,6 @@
 # DaisyHost Field Project Tracker
 
-Last updated: 2026-04-26
+Last updated: 2026-05-05
 
 Use this file as the Field-specific tracker for DaisyHost. It keeps
 `daisy_field` host implementation work, validation work, and deferred hardware
@@ -61,6 +61,10 @@ until an explicit flash pass is requested and run.
     and changed the Field adapter to pickup-style knob startup
   - firmware `make`, QAE validation, and ST-Link `make program` flash/verify
     passed on 2026-04-26
+  - 2026-05-05 TF8 sweep fixed a firmware compatibility regression where the
+    shared `DaisySubharmoniqCore` used C++17 `std::clamp`; `make` now passes
+    again for `field/SubharmoniqField` under the existing GNU++14 firmware
+    Makefile
   - the manual Field hardware checklist remains pending
 - DaisyHost USB MIDI controller firmware:
   - `field/DaisyHostController` is a controller-only Field firmware target;
@@ -473,9 +477,10 @@ cmd /c build_host.cmd
 
 ### Sprint F6: SubharmoniqField Hardware Validation And Filter Round 2
 
-Status: Round 1 build/QAE/ST-Link flash-verified on 2026-04-26; no-audio root
-causes fixed in the portable core and Field startup adapter; manual hardware
-validation and Round 2 filter modes pending.
+Status: Round 1 build/QAE/ST-Link flash-verified on 2026-04-26; firmware build
+compatibility refreshed on 2026-05-05 after replacing a C++17-only shared-core
+clamp; no-audio root causes fixed in the portable core and Field startup
+adapter; manual hardware validation and Round 2 filter modes pending.
 
 Manager explanation: SubharmoniqField is now a real firmware target and hosted
 app, but it should not be described as hardware-validated until the hands-on
@@ -508,6 +513,22 @@ Result: `make` passed as up to date, QAE passed with `0 error(s),
 STLINK `V3J7M2`, target voltage `3.263618`, programmed
 `build/SubharmoniqField.elf`, reported `** Verified OK **`, and reset the
 target.
+
+2026-05-05 firmware compatibility refresh:
+
+```powershell
+cd ..\field\SubharmoniqField
+make
+$env:PYTHONIOENCODING='utf-8'; py -3 ..\..\DAISY_QAE\validate_daisy_code.py .
+```
+
+Result: initial `make` failed because `DaisySubharmoniqCore.cpp` used
+`std::clamp`, which is not available in the firmware GNU++14 build. After
+replacing that call with the local C++14-safe clamp helper, `make` passed with
+FLASH `128784 B` / `98.25%`, and QAE passed with `0 error(s), 0 warning(s)`.
+
+No `make program` or hands-on hardware validation was run in the 2026-05-05
+refresh.
 
 ## Explicitly Out Of Scope Until Separately Approved
 

@@ -214,6 +214,17 @@ Current shell note:
   useful pilot, not a completed routine standard. The later WS10/TF11 closeout
   proved a clean normalized `gate --json` and direct wrapper gate from this
   checkout, but WS13 still needs repeated routine adoption before it can close.
+- on 2026-05-05, a TF8 Field support sweep restored
+  `field/SubharmoniqField` firmware build compatibility after the shared
+  `DaisySubharmoniqCore` used C++17 `std::clamp` in a firmware-facing path.
+  Manager-readable result: the host Field/Subharmoniq bounded-filter fix now
+  remains portable to the real Daisy firmware GNU++14 build. Fresh evidence:
+  red `make` failure in `field/SubharmoniqField`, green `make` rerun with
+  FLASH `128784 B` / `98.25%`, UTF-8 QAE `0 error(s), 0 warning(s)` for the
+  four active Field firmware projects, Debug host build, Field-focused payload
+  tests `71/71`, adapter-generator pytest `3/3`, and Debug `daisy_field`
+  render smoke. Full Release host gate, flashing, manual Field audio/CV/USB
+  MIDI validation, and DAW/VST3 validation were not run.
 
 Rebuild the Patch firmware reference targets only when DaisyHost shared cores or
 firmware adapters change:

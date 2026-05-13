@@ -1,6 +1,6 @@
 # DaisyHost Workstream Tracker
 
-Last updated: 2026-04-29
+Last updated: 2026-05-05
 
 This file tracks the next forward-looking DaisyHost portfolio after the current
 `WS1` through `WS7` milestone set.
@@ -29,7 +29,10 @@ Current baseline:
   and ST-Link flash-verified, with manual functional hardware validation still
   pending. Adapter-pipeline v0 now generates a build/QAE-verified
   `field/MultiDelayGenerated` adapter from a checked-in spec and audits firmware
-  portability without claiming arbitrary source translation.
+  portability without claiming arbitrary source translation. A 2026-05-05 TF8
+  sweep also restored `field/SubharmoniqField` firmware build compatibility by
+  removing a C++17-only clamp call from the shared core while preserving the
+  existing host-side bounded-filter behavior.
 - This tracker is mirrored in `PROJECT_TRACKER.md` so the active ledger and the
   forward portfolio stay readable in one place.
 - TF12 verification/build hardening is complete for the current automated

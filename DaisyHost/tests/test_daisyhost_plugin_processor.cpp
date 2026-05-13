@@ -30,6 +30,17 @@ daisyhost::HostSessionState MakeFieldSubharmoniqSession(
     return state;
 }
 
+daisyhost::HostSessionState MakeFieldSubharmoniqStartupSession()
+{
+    daisyhost::HostSessionState state;
+    state.boardId        = "daisy_field";
+    state.selectedNodeId = "node0";
+    state.entryNodeId    = "node0";
+    state.outputNodeId   = "node0";
+    state.nodes.push_back({"node0", "subharmoniq", 0u});
+    return state;
+}
+
 void LoadSession(DaisyHostPatchAudioProcessor& processor,
                  const daisyhost::HostSessionState& state)
 {
@@ -81,6 +92,29 @@ float RenderMidiNoteEnergy(DaisyHostPatchAudioProcessor& processor, int midiNote
     processor.processBlock(buffer, midi);
     return energy + ConsumeBlockEnergy(buffer);
 }
+
+float RenderVirtualKeyboardNoteEnergy(DaisyHostPatchAudioProcessor& processor,
+                                      int                           midiNote)
+{
+    juce::AudioBuffer<float> buffer(2, kBlockSize);
+    juce::MidiBuffer         midi;
+    float                    energy = 0.0f;
+
+    processor.SetVirtualKeyboardNote(midiNote, true, 1.0f);
+    for(int block = 0; block < 64; ++block)
+    {
+        buffer.clear();
+        midi.clear();
+        processor.processBlock(buffer, midi);
+        energy += ConsumeBlockEnergy(buffer);
+    }
+
+    processor.SetVirtualKeyboardNote(midiNote, false, 0.0f);
+    buffer.clear();
+    midi.clear();
+    processor.processBlock(buffer, midi);
+    return energy + ConsumeBlockEnergy(buffer);
+}
 } // namespace
 
 TEST(DaisyHostPluginProcessorTest,
@@ -108,4 +142,52 @@ TEST(DaisyHostPluginProcessorTest,
     {
         EXPECT_GT(noteEnergies[index], 0.001f) << "note index " << index;
     }
+}
+
+TEST(DaisyHostPluginProcessorTest,
+     FieldSubharmoniqFreshStartupKeepsMidiAudible)
+{
+    DaisyHostPatchAudioProcessor processor;
+    LoadSession(processor, MakeFieldSubharmoniqStartupSession());
+
+    processor.setPlayConfigDetails(2, 2, kSampleRate, kBlockSize);
+    processor.prepareToPlay(kSampleRate, kBlockSize);
+
+    ASSERT_TRUE(processor.IsDaisyFieldBoard());
+    ASSERT_EQ(processor.GetActiveAppId().toStdString(), "subharmoniq");
+
+    const float noteEnergy = RenderMidiNoteEnergy(processor, 60);
+    EXPECT_GT(noteEnergy, 0.001f);
+}
+
+TEST(DaisyHostPluginProcessorTest,
+     FieldSubharmoniqVirtualKeyboardKeepsMidiAudible)
+{
+    DaisyHostPatchAudioProcessor processor;
+    LoadSession(processor, MakeFieldSubharmoniqStartupSession());
+
+    processor.setPlayConfigDetails(2, 2, kSampleRate, kBlockSize);
+    processor.prepareToPlay(kSampleRate, kBlockSize);
+
+    ASSERT_TRUE(processor.IsDaisyFieldBoard());
+    ASSERT_EQ(processor.GetActiveAppId().toStdString(), "subharmoniq");
+
+    const float noteEnergy = RenderVirtualKeyboardNoteEnergy(processor, 60);
+    EXPECT_GT(noteEnergy, 0.001f);
+}
+
+TEST(DaisyHostPluginProcessorTest,
+     FieldSubharmoniqLowComputerKeyboardOctaveKeepsMidiAudible)
+{
+    DaisyHostPatchAudioProcessor processor;
+    LoadSession(processor, MakeFieldSubharmoniqStartupSession());
+
+    processor.setPlayConfigDetails(2, 2, kSampleRate, kBlockSize);
+    processor.prepareToPlay(kSampleRate, kBlockSize);
+
+    ASSERT_TRUE(processor.IsDaisyFieldBoard());
+    ASSERT_EQ(processor.GetActiveAppId().toStdString(), "subharmoniq");
+
+    const float noteEnergy = RenderMidiNoteEnergy(processor, 34);
+    EXPECT_GT(noteEnergy, 0.001f);
 }
