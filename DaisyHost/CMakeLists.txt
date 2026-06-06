@@ -40,6 +40,7 @@ add_library(daisyhost_core STATIC
     src/ComputerKeyboardMidi.cpp
     src/DaisyBraidsCore.cpp
     src/DaisyCloudSeedCore.cpp
+    src/DaisyDelayFxCore.cpp
     src/DaisyFieldRSPLayout.cpp
     src/DaisyHarmoniqsCore.cpp
     src/DaisyPolyOscCore.cpp
@@ -63,6 +64,7 @@ add_library(daisyhost_core STATIC
     src/VersionInfo.cpp
     src/apps/BraidsCore.cpp
     src/apps/CloudSeedCore.cpp
+    src/apps/DelayFxAdaptationCore.cpp
     src/apps/HarmoniqsCore.cpp
     src/apps/MultiDelayCore.cpp
     src/apps/PolyOscCore.cpp
@@ -287,6 +289,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_gate_diagnostics.cpp
     tests/test_daisy_braids_core.cpp
     tests/test_daisy_cloudseed_core.cpp
+    tests/test_delay_fx_adaptation_core.cpp
     tests/test_daisy_field_rsp_layout.cpp
     tests/test_daisyhost_plugin_processor.cpp
     tests/test_daisy_harmoniqs_core.cpp

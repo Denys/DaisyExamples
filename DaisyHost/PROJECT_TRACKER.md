@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-05-05
+Last updated: 2026-06-03
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -18,11 +18,11 @@ next safe starting point.
 
 Latest fully green host gate from this checkout:
 
-- `cmd /c build_host.cmd`: passed on 2026-04-29
+- `cmd /c build_host.cmd`: passed on 2026-06-03
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `284/284`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `295/295`
 - smoke tests included:
   - `DaisyHostNextWpSuggester`
   - `DaisyHostStandaloneSmoke`
@@ -37,6 +37,62 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliRenderAssertionsPass`
 
 Latest automated gate attempt:
+
+- Date: 2026-06-03
+- Request: adapt four source-verified delay/Fx projects into Daisy Field
+  firmware projects and matching DaisyHost Field apps, then add a selectable
+  delay bundle:
+  `balazsbencs/daisy-multifx-pedal`,
+  `Farmer2K5/daisy-reverb-playground`, `GuitarML/FunBox`, and
+  `Farmer2K5/daisy-sdram-delaylines`.
+- Result: four source-specific `field_delay_*` DaisyHost apps,
+  `field_delay_bundle`, and five `MyProjects/_projects/Field_delay_*`
+  firmware projects are build-verified. The shared core keeps the
+  source-specific behavior families distinct: Tape [multifx] tape/modulated
+  delay, Tank [reverb] FDN-style reverb, Texture [FunBox] reverse/freeze delay,
+  and Long [sdram] stereo delaylines. The bundle uses A1-A4 for direct
+  algorithm selection and keeps per-algorithm parameter snapshots. Field
+  controls use base plus SW1/SW2 shifted layers, movement-gated knob writes,
+  A-row three-state actions, B-row C4-C5 test notes, external MIDI input, and
+  OLED parameter/value text.
+- Evidence:
+  - Green host build: `cmake --build build --config Debug --target unit_tests
+    DaisyHostCLI DaisyHostRender`.
+  - Green focused host CTest: `ctest --test-dir build -C Debug
+    --output-on-failure -R "DaisyDelayFxCoreTest|DelayFxAdaptationCoreTest"`
+    passed `5/5`.
+  - Green scenario validation: Debug `DaisyHostCLI.exe validate-scenario`
+    passed for all five `training/examples/field_delay_*_smoke.json` files.
+  - Green render proof: Debug `DaisyHostCLI.exe render ... --expect-non-silent
+    --expect-timeline-target-node node0 --json` passed for all five
+    `field_delay_*` scenarios.
+  - Green firmware builds: `make` passed in
+    `../MyProjects/_projects/Field_delay_daisy-multifx-pedal`,
+    `../MyProjects/_projects/Field_delay_daisy-reverb-playground`,
+    `../MyProjects/_projects/Field_delay_FunBox`, and
+    `../MyProjects/_projects/Field_delay_daisy-sdram-delaylines`, plus
+    `../MyProjects/_projects/Field_delay_bundle`; each final link reported
+    FLASH `110524 B` / `84.32%`, SRAM `53932 B` / `10.29%`,
+    RAM_D2 `17224 B` / `5.84%`, and SDRAM `6000 KB` / `9.16%`.
+  - Green firmware QAE: `py -3 ../../../DAISY_QAE/validate_daisy_code.py .`
+    with `PYTHONIOENCODING=utf-8` passed `0 error(s), 0 warning(s)` for all
+    five firmware entry points.
+  - Green full host gate: `cmd /c build_host.cmd` passed; the wrapper
+    configured CMake, built Release `unit_tests DaisyHostCLI DaisyHostHub
+    DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`, and
+    Release CTest passed `295/295`.
+- Interpretation:
+  - This is build-verified and automated-render-verified. It is not a
+    line-by-line UI clone of the four source repositories; exact pedal/UI
+    behavior was intentionally secondary to compilable Field and DaisyHost
+    targets with source-distinct DSP character.
+  - `make` was not on the default PowerShell `PATH`, so firmware builds used
+    `C:\Program Files\DaisyToolchain\bin\make.exe` with that toolchain bin
+    prepended to `PATH`.
+  - Physical Field audio/control validation, external MIDI device enumeration,
+    `make program`, and manual DAW/VST3 validation were not run.
+
+Previous automated gate attempt:
 
 - Date: 2026-05-05
 - Request: investigate user report that `daisy_field` / `subharmoniq` produced
@@ -1848,7 +1904,7 @@ The D2 source and compiled SVG visualize, in a stacked screen-friendly layout:
 
 | Function | What it does | How it's done |
 |---|---|---|
-| Hosted app registry | Registers available DaisyHost apps and resolves a default app when an unknown id is requested. | `src/AppRegistry.cpp` registers `multidelay`, `torus`, `cloudseed`, `braids`, `harmoniqs`, `vasynth`, and `polyosc`; `tests/test_app_registry.cpp` covers registration and unknown-id fallback. |
+| Hosted app registry | Registers available DaisyHost apps and resolves a default app when an unknown id is requested. | `src/AppRegistry.cpp` registers `multidelay`, `torus`, `cloudseed`, `braids`, `harmoniqs`, `vasynth`, `polyosc`, `subharmoniq`, the four source-specific `field_delay_*` apps, and `field_delay_bundle`; `tests/test_app_registry.cpp` and `tests/test_delay_fx_adaptation_core.cpp` cover registration and unknown-id fallback. |
 | Patch board profile | Models the virtual Daisy Patch surface, control hierarchy, ports, and panel artwork metadata. | `src/BoardProfile.cpp` builds the profile; `tests/test_board_profile.cpp` checks port counts, Patch-like placement, artwork markers, and the final `CTRL 1..4 + ENC` mapping. |
 | MultiDelay shared core/menu model | Exposes canonical parameters, OLED/menu interaction, Patch bindings, and deterministic DSP state for the regression fixture app. | `src/apps/MultiDelayCore.cpp` plus `tests/test_multidelay_core.cpp` and `tests/test_parameter_parity.cpp` cover menu editing, `last touch wins`, control mapping, state capture/restore, and menu-vs-direct parameter parity. |
 | Torus hosted app | Provides a second hosted app with stable metadata, display/menu naming, and deterministic render behavior. | `src/apps/TorusCore.cpp`; `tests/test_torus_core.cpp` covers metadata/menu, deterministic reset/render, silent boot without excitation, and display compaction rules. |
@@ -1857,6 +1913,7 @@ The D2 source and compiled SVG visualize, in a stacked screen-friendly layout:
 | Harmoniqs hosted app | Hosts a portable additive Harmoniqs wrapper with page-remapped knobs, MIDI-first triggering, gate alias support, and deterministic render state. | `src/DaisyHarmoniqsCore.cpp` owns the portable Harmoniqs wrapper, harmonic-state layer, and trigger/state logic; `src/apps/HarmoniqsCore.cpp` exposes the DaisyHost adapter, page/menu/display model, and utility actions; `tests/test_daisy_harmoniqs_core.cpp`, `tests/test_harmoniqs_core.cpp`, `tests/test_render_runtime.cpp`, and `training/examples/harmoniqs_smoke.json` cover the shared core, hosted app contract, deterministic render path, and smoke scenario. |
 | VA Synth hosted app | Hosts a portable seven-voice subtractive synth wrapper with page-remapped knobs, MIDI-first polyphonic triggering, gate alias support, and deterministic render state. | `src/DaisyVASynthCore.cpp` owns the portable polyphonic voice/state layer and canonical parameter contract; `src/apps/VASynthCore.cpp` exposes the DaisyHost adapter, page/menu/display model, and utility actions; `tests/test_daisy_vasynth_core.cpp`, `tests/test_vasynth_core.cpp`, `tests/test_render_runtime.cpp`, and `training/examples/vasynth_smoke.json` cover the shared core, hosted app contract, deterministic render path, and smoke scenario. |
 | PolyOsc hosted app | Hosts a portable Patch PolyOsc wrapper with three oscillator outputs, mixed output 4, Patch frequency/global/waveform controls, and host-side Field K5 waveform mapping. | `src/DaisyPolyOscCore.cpp` owns the portable oscillator/state layer; `src/apps/PolyOscCore.cpp` exposes the DaisyHost adapter, menu/display model, Patch bindings, and output-port behavior; `tests/test_daisy_polyosc_core.cpp`, `tests/test_polyosc_core.cpp`, `tests/test_render_runtime.cpp`, `training/examples/polyosc_smoke.json`, and `training/examples/field_polyosc_surface_smoke.json` cover the shared core, hosted app contract, deterministic render path, and Field surface smoke path. |
+| Field delay/Fx adaptations | Hosts four source-backed Field delay/Fx variants plus the selectable Field delay bundle with MIDI-first input, Field K1-K8 bindings, Field key actions, and OLED/menu value text. | `src/DaisyDelayFxCore.cpp` owns the portable DSP, parameter, key-action, display text model, and bundle algorithm metadata; `src/apps/DelayFxAdaptationCore.cpp` exposes the DaisyHost adapter; `tests/test_delay_fx_adaptation_core.cpp` and the five `training/examples/field_delay_*_smoke.json` files cover the shared core, hosted app contract, Field surface mapping, bundle selection, and non-silent render path. |
 | MetaController / macro layer | Exposes deterministic semantic controls that map one named macro to multiple canonical parameters without adding a second saved state layer. | `HostedAppCore` now exposes `GetMetaControllers()`, `SetMetaControllerValue(...)`, and `GetMetaControllerValue(...)`; `src/apps/MultiDelayCore.cpp` and `src/apps/CloudSeedCore.cpp` implement the macro profiles; `tests/test_multidelay_core.cpp` and `tests/test_cloudseed_core.cpp` cover exposure, write-through, and menu-driven updates. |
 | Live rack topology helper | Canonicalizes the four visible audio-only rack topology presets and validates which route shapes are legal in the current two-node audio contract. | `src/LiveRackTopology.cpp`; `tests/test_live_rack_topology.cpp` covers preset expansion, reverse inference, unknown-node rejection, non-audio rejection, partial stereo rejection, and current-contract shape validation. |
 | Host session persistence | Persists board choice, selected node, rack entry/output topology, app selection, canonical parameter values, MIDI learn bindings, host-side generator settings, plus node metadata and routes across save/load. | `src/HostSessionState.cpp`; `tests/test_host_session_state.cpp` now covers legacy v1/v2/v3/v4 compatibility plus v5 rack-global round trips and synthesized `node0` / rack defaults for older sessions. |

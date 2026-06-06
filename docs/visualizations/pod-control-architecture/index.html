@@ -1,0 +1,2824 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daisy Pod and Field Architecture Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    window.podArchitectureMermaidConfig = {
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        fontFamily: "Inter, Segoe UI, sans-serif",
+        primaryColor: "#eef7fb",
+        primaryTextColor: "#172026",
+        primaryBorderColor: "#8bb5cc",
+        lineColor: "#63707d",
+        secondaryColor: "#e6f7f4",
+        tertiaryColor: "#fff1dc"
+      }
+    };
+    if (window.mermaid) {
+      window.mermaid.initialize(window.podArchitectureMermaidConfig);
+    }
+  </script>
+  <script src="https://unpkg.com/gojs/release/go.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --panel-2: #eef3f7;
+      --ink: #172026;
+      --muted: #63707d;
+      --line: #d8e0e8;
+      --edge: #087f73;
+      --edge-soft: #e6f7f4;
+      --multi: #b86900;
+      --multi-soft: #fff1dc;
+      --field: #2f6f9f;
+      --field-soft: #e7f0f8;
+      --template: #536b2f;
+      --template-soft: #eef5e6;
+      --blue: #2f6f9f;
+      --risk: #9f3f2f;
+      --ok: #147a4d;
+      --shadow: 0 16px 38px rgba(22, 33, 44, 0.08);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 252px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #14202a;
+      color: #f7fbff;
+      padding: 24px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+
+    .brand strong {
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      color: #b7c7d3;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    nav a {
+      color: #dce9f1;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: #1f3440;
+      border-color: #335463;
+      text-decoration: none;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1640px;
+      width: 100%;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.12;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+      line-height: 1.25;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      line-height: 1.3;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 0;
+      max-width: 96ch;
+      overflow-wrap: anywhere;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .actions .btn {
+      text-decoration: none;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .btn:hover,
+    .btn.is-active {
+      border-color: #8bb5cc;
+      background: #edf7fb;
+    }
+
+    section {
+      margin-bottom: 24px;
+    }
+
+    .dashboard-page {
+      display: none;
+    }
+
+    .dashboard-page.is-current {
+      display: block;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric,
+    .panel,
+    .project,
+    .callout,
+    .source-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      padding: 14px;
+      min-height: 118px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .metric strong {
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .metric small {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .project {
+      padding: 18px;
+    }
+
+    .project.edge {
+      border-top: 4px solid var(--edge);
+    }
+
+    .project.multi {
+      border-top: 4px solid var(--multi);
+    }
+
+    .project.field {
+      border-top: 4px solid var(--field);
+    }
+
+    .project.template {
+      border-top: 4px solid var(--template);
+    }
+
+    .project-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #fafcff;
+      white-space: nowrap;
+    }
+
+    .tag.edge {
+      color: var(--edge);
+      border-color: #a8d8d0;
+      background: var(--edge-soft);
+    }
+
+    .tag.multi {
+      color: var(--multi);
+      border-color: #edcc97;
+      background: var(--multi-soft);
+    }
+
+    .tag.field {
+      color: var(--field);
+      border-color: #b5d0e3;
+      background: var(--field-soft);
+    }
+
+    .tag.template {
+      color: var(--template);
+      border-color: #c8d9a5;
+      background: var(--template-soft);
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfdff;
+    }
+
+    .block.edge {
+      background: var(--edge-soft);
+      border-color: #a9d9d2;
+    }
+
+    .block.multi {
+      background: var(--multi-soft);
+      border-color: #edca91;
+    }
+
+    .block.field {
+      background: var(--field-soft);
+      border-color: #b5d0e3;
+    }
+
+    .block.template {
+      background: var(--template-soft);
+      border-color: #c8d9a5;
+    }
+
+    .block strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .block span {
+      color: var(--muted);
+      display: block;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .arrow {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 2px 0;
+    }
+
+    .differential {
+      padding: 18px;
+      border: 1px solid #cbd9e2;
+      border-radius: 8px;
+      background: #f9fbfd;
+      box-shadow: var(--shadow);
+    }
+
+    .diff-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .diff-row {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
+    }
+
+    .diff-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .diff-row b {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .diff-row span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .panel {
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .page-title {
+      margin-bottom: 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .two-col,
+    .three-col,
+    .four-col {
+      display: grid;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .four-col {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .info-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      min-height: 122px;
+    }
+
+    .info-card.edge {
+      border-top: 4px solid var(--edge);
+    }
+
+    .info-card.multi {
+      border-top: 4px solid var(--multi);
+    }
+
+    .info-card.field {
+      border-top: 4px solid var(--field);
+    }
+
+    .info-card.template {
+      border-top: 4px solid var(--template);
+    }
+
+    .info-card h3 {
+      margin-bottom: 8px;
+    }
+
+    .info-card ul,
+    .info-card ol {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .mini-table {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .mini-row {
+      display: grid;
+      grid-template-columns: 0.9fr 1.2fr 1.2fr;
+      border-bottom: 1px solid var(--line);
+      min-height: 48px;
+    }
+
+    .mini-table.four-way .mini-row {
+      grid-template-columns: 0.9fr repeat(4, minmax(0, 1fr));
+    }
+
+    .mini-table.field-pair .mini-row {
+      grid-template-columns: 0.9fr 1.15fr 1.15fr;
+    }
+
+    .mini-row:last-child {
+      border-bottom: 0;
+    }
+
+    .mini-cell {
+      padding: 11px 12px;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .mini-cell:last-child {
+      border-right: 0;
+    }
+
+    .mini-cell.head {
+      background: #edf3f7;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .status-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .status-pill {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #f8fbfd;
+    }
+
+    .status-pill.pass {
+      color: var(--ok);
+      background: #e8f6ee;
+      border-color: #a9d7bf;
+    }
+
+    .status-pill.warn {
+      color: var(--multi);
+      background: var(--multi-soft);
+      border-color: #edca91;
+    }
+
+    .lane-chart {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .lane-label {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+
+    .lane-track {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      background: #fbfdff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      padding: 5px;
+      gap: 5px;
+      overflow: hidden;
+    }
+
+    .lane-bar {
+      height: 22px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      color: #132027;
+      font-size: 11px;
+      min-width: 72px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      white-space: nowrap;
+    }
+
+    .time-ruler {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 10px;
+      margin: 6px 0 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .time-ruler-scale {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 0 6px;
+    }
+
+    .time-ruler-scale span {
+      text-align: center;
+    }
+
+    .lane-bar.edge {
+      background: var(--edge-soft);
+      border-color: #9bd0c8;
+    }
+
+    .lane-bar.multi {
+      background: var(--multi-soft);
+      border-color: #edca91;
+    }
+
+    .lane-bar.field {
+      background: var(--field-soft);
+      border-color: #b5d0e3;
+    }
+
+    .lane-bar.template {
+      background: var(--template-soft);
+      border-color: #c8d9a5;
+    }
+
+    .lane-bar.neutral {
+      background: var(--panel-2);
+    }
+
+    .memory-bars {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .memory-bar {
+      display: grid;
+      gap: 5px;
+    }
+
+    .memory-bar label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bar-shell {
+      height: 10px;
+      background: #e7edf2;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--edge);
+    }
+
+    .bar-fill.multi {
+      background: var(--multi);
+    }
+
+    .bar-fill.field {
+      background: var(--field);
+    }
+
+    .bar-fill.template {
+      background: var(--template);
+    }
+
+    .mermaid-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .diagram-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      overflow: auto;
+      min-height: 320px;
+    }
+
+    .diagram-box .mermaid {
+      min-width: 520px;
+    }
+
+    .graph-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    #gojsDiagram {
+      width: 100%;
+      height: 640px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .table {
+      display: grid;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1fr;
+      min-height: 52px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+    }
+
+    .cell {
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .cell:last-child {
+      border-right: 0;
+    }
+
+    .cell.head {
+      background: #edf3f7;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .source-card {
+      padding: 14px;
+      min-height: 150px;
+    }
+
+    .source-card ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .approach-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+
+    .concept {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      display: block;
+      background: #fff;
+    }
+
+    .embed-frame {
+      width: 100%;
+      min-height: 640px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .embed-frame.compact {
+      min-height: 460px;
+    }
+
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .resource-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .resource-panel h3 {
+      margin-bottom: 8px;
+    }
+
+    .resource-panel ul,
+    .resource-panel ol {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .resource-panel pre {
+      background: #111c24;
+      color: #f7fbff;
+      border-radius: 8px;
+      padding: 12px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .warn {
+      color: var(--risk);
+      font-weight: 700;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 14px 0 24px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: relative;
+        height: auto;
+      }
+
+      nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .comparison,
+      .approach-grid,
+      .resource-grid,
+      .two-col,
+      .three-col,
+      .four-col {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 16px;
+      }
+
+      nav,
+      .summary-grid,
+      .mermaid-grid,
+      .source-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topline {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-row {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-table.four-way .mini-row,
+      .mini-table.field-pair .mini-row {
+        grid-template-columns: 1fr;
+      }
+
+      .cell {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .cell:last-child {
+        border-bottom: 0;
+      }
+
+      .mini-cell {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .mini-cell:last-child {
+        border-bottom: 0;
+      }
+
+      .mini-row:not(:first-child) .mini-cell:first-child {
+        font-weight: 700;
+        color: var(--ink);
+        background: #fbfdff;
+      }
+
+      .mini-row:not(:first-child) .mini-cell:nth-child(2)::before,
+      .mini-row:not(:first-child) .mini-cell:nth-child(3)::before {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .mini-row:not(:first-child) .mini-cell:nth-child(2)::before {
+        content: "POD_EDGE_mono_DSP";
+      }
+
+      .mini-row:not(:first-child) .mini-cell:nth-child(3)::before {
+        content: "Pod_MultiFX_Chain";
+      }
+
+      .mini-table.no-mobile-labels .mini-row:not(:first-child) .mini-cell:nth-child(2)::before,
+      .mini-table.no-mobile-labels .mini-row:not(:first-child) .mini-cell:nth-child(3)::before {
+        display: none;
+      }
+
+      .lane {
+        grid-template-columns: 1fr;
+      }
+
+      .time-ruler {
+        grid-template-columns: 1fr;
+      }
+
+      .time-ruler-scale {
+        font-size: 10px;
+      }
+
+      .diagram-box .mermaid {
+        min-width: 0;
+      }
+
+      #gojsDiagram {
+        height: 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <strong>Daisy Architecture Comparison</strong>
+        <span>Pod and Field firmware structures. Family-aware diagrams for timing, responsiveness, controls, and readiness.</span>
+      </div>
+      <nav>
+        <a href="#overview" data-page-link="overview" class="active">Overview</a>
+        <a href="#architecture" data-page-link="architecture">Architecture</a>
+        <a href="#timing" data-page-link="timing">Timing Analysis</a>
+        <a href="#responsiveness" data-page-link="responsiveness">Responsiveness</a>
+        <a href="#cpu-memory" data-page-link="cpu-memory">CPU & Memory</a>
+        <a href="#io-peripherals" data-page-link="io-peripherals">I/O & Peripherals</a>
+        <a href="#parameters" data-page-link="parameters">Parameters</a>
+        <a href="#build-config" data-page-link="build-config">Build & Config</a>
+        <a href="#test-results" data-page-link="test-results">Test Results</a>
+        <a href="#logs" data-page-link="logs">Logs & Evidence</a>
+        <a href="#report" data-page-link="report">Report</a>
+        <a href="#figjam" data-page-link="figjam">FigJam</a>
+        <a href="#edge-graphify" data-page-link="edge-graphify">EDGE Graphify</a>
+        <a href="#multifx-graphify" data-page-link="multifx-graphify">MultiFX Graphify</a>
+        <a href="#gojs" data-page-link="gojs">GoJS</a>
+        <a href="#graphify" data-page-link="graphify">Graphify API</a>
+        <a href="#approach" data-page-link="approach">Approach</a>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="topline">
+        <div>
+          <h1>Daisy Pod and Field Firmware Architecture</h1>
+          <p>Source-grounded comparison across `POD_EDGE_mono_DSP`, `Pod_MultiFX_Chain`, `Field_AdditiveSynth`, and `Field_Template_April`. Control-surface details stay in-family; control-independent timing, runtime ownership, build footprint, and readiness are compared across Pod and Field.</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="#report" data-page-link="report">Report</a>
+          <a class="btn" href="#figjam" data-page-link="figjam">FigJam</a>
+          <a class="btn" href="#edge-graphify" data-page-link="edge-graphify">EDGE Graphify</a>
+          <a class="btn" href="#multifx-graphify" data-page-link="multifx-graphify">MultiFX Graphify</a>
+          <a class="btn" href="#architecture" data-page-link="architecture">Field Compare</a>
+        </div>
+      </div>
+
+      <section id="overview" class="dashboard-page is-current">
+        <div class="summary-grid">
+          <div class="metric">
+            <label>Best Pod reference</label>
+            <strong>POD_EDGE_mono_DSP</strong>
+            <small>Most explicit responsiveness repair: timer ISR plus audio-rate analog plus double-buffer handoff.</small>
+          </div>
+          <div class="metric">
+            <label>Best compact Pod reference</label>
+            <strong>Pod_MultiFX_Chain</strong>
+            <small>Small, readable BUG-005 implementation with page/layer stored values and smooth reattach.</small>
+          </div>
+          <div class="metric">
+            <label>Best Field engine reference</label>
+            <strong>Field_AdditiveSynth</strong>
+            <small>8-voice additive synth, MIDI, OLED, pickup/catch, spectral presets, and prior hardware flash evidence.</small>
+          </div>
+          <div class="metric">
+            <label>Best Field starter shell</label>
+            <strong>Field_Template_April</strong>
+            <small>Clean current Field UI rules: banked pickup/catch, tri-state key LEDs, OLED overview/zoom, external MIDI notes.</small>
+          </div>
+        </div>
+
+        <div class="comparison">
+          <article class="project edge">
+            <div class="project-head">
+              <h2>POD_EDGE_mono_DSP</h2>
+              <span class="tag edge">high-value reference</span>
+            </div>
+            <div class="stack">
+              <div class="block edge">
+                <strong>Input surface</strong>
+                <span>Daisy Pod controls plus external I2C OLED, external encoder, BAK, and CON buttons.</span>
+              </div>
+              <div class="arrow">digital path</div>
+              <div class="block edge">
+                <strong>1 kHz timer ISR</strong>
+                <span>Runs Pod digital control processing and external encoder debounce at a stable rate.</span>
+              </div>
+              <div class="arrow">analog path</div>
+              <div class="block edge">
+                <strong>Audio callback analog read</strong>
+                <span>Runs Pod analog processing at callback rate, matching the Daisy control timing expectation.</span>
+              </div>
+              <div class="arrow">handoff</div>
+              <div class="block edge">
+                <strong>Double-buffered FxParams</strong>
+                <span>Main loop writes the inactive parameter copy, uses a barrier, then swaps the active index read by the ISR.</span>
+              </div>
+              <div class="arrow">DSP</div>
+              <div class="block edge">
+                <strong>Mono DSP chain</strong>
+                <span>Input conditioning, drive, SDRAM delay, diffusion, tone shaping, limiter, and dual-mono output.</span>
+              </div>
+            </div>
+          </article>
+
+          <aside class="differential">
+            <h2>Difference That Matters</h2>
+            <p>Both projects split analog and digital control timing. EDGE goes further because the external encoder and button surface need deterministic debounce independent of display and UI work.</p>
+            <div class="diff-list">
+              <div class="diff-row">
+                <b>Latency risk removed</b>
+                <span>EDGE stops relying on a variable main loop for external encoder debounce.</span>
+              </div>
+              <div class="diff-row">
+                <b>Audio safety improved</b>
+                <span>EDGE keeps I2C, GPIO reads, allocation, and print work out of the audio callback.</span>
+              </div>
+              <div class="diff-row">
+                <b>Parameter consistency improved</b>
+                <span>EDGE sends a coherent parameter snapshot into DSP rather than letting the ISR read a structure being edited.</span>
+              </div>
+              <div class="diff-row">
+                <b>Control jumps reduced</b>
+                <span>MultiFX solves page switching jumps with stored values, movement detection, and slew.</span>
+              </div>
+            </div>
+          </aside>
+
+          <article class="project multi">
+            <div class="project-head">
+              <h2>Pod_MultiFX_Chain</h2>
+              <span class="tag multi">compact reference</span>
+            </div>
+            <div class="stack">
+              <div class="block multi">
+                <strong>Input surface</strong>
+                <span>Daisy Pod knobs, encoder, SW1, and SW2. No external OLED or external encoder stack.</span>
+              </div>
+              <div class="arrow">analog path</div>
+              <div class="block multi">
+                <strong>Audio callback analog read</strong>
+                <span>Runs `hw.ProcessAnalogControls()` in the callback following BUG-005 guidance.</span>
+              </div>
+              <div class="arrow">page comfort</div>
+              <div class="block multi">
+                <strong>Stored positions and reattach</strong>
+                <span>Each page and shift layer stores values; knobs reattach after real movement and then slew toward the physical target.</span>
+              </div>
+              <div class="arrow">digital path</div>
+              <div class="block multi">
+                <strong>Main loop digital events</strong>
+                <span>Encoder and buttons update page selection, shift, bypass, and waveform state in a 1 ms loop.</span>
+              </div>
+              <div class="arrow">DSP</div>
+              <div class="block multi">
+                <strong>Serial effect chain</strong>
+                <span>LFO modulation, Tube, Delay, and Reverb run as a compact multi-effect chain.</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="comparison" style="margin-top:18px;">
+          <article class="project field">
+            <div class="project-head">
+              <h2>Field_AdditiveSynth</h2>
+              <span class="tag field">Field engine reference</span>
+            </div>
+            <div class="stack">
+              <div class="block field">
+                <strong>Input and state</strong>
+                <span>External TRS MIDI drives an 8-voice additive synth; SW1/SW2 select Page A/B; A keys load spectral presets; B keys select LFO/performance state.</span>
+              </div>
+              <div class="arrow">main loop</div>
+              <div class="block field">
+                <strong>1 ms control loop</strong>
+                <span>`midi.Listen`, `ProcessAllControls`, switches, pickup/catch knobs, keys, OLED, and LEDs run outside the audio callback.</span>
+              </div>
+              <div class="arrow">audio</div>
+              <div class="block field">
+                <strong>Poly additive DSP</strong>
+                <span>Eight `HarmonicOscillator&lt;16&gt;` voices feed global LFO, Chorus, ReverbSc, and stereo output.</span>
+              </div>
+            </div>
+          </article>
+
+          <aside class="differential">
+            <h2>Cross-Family Rule</h2>
+            <p>Do not compare Pod encoder count directly to Field key count. Compare architecture and timing across families; compare physical control semantics only inside the same board family.</p>
+            <div class="diff-list">
+              <div class="diff-row">
+                <b>Pod-vs-Pod</b>
+                <span>Control responsiveness, encoder/page behavior, and Pod-specific UI surface are directly comparable.</span>
+              </div>
+              <div class="diff-row">
+                <b>Field-vs-Field</b>
+                <span>Keybed semantics, banked knobs, OLED feedback, MIDI note handling, and LED state are directly comparable.</span>
+              </div>
+              <div class="diff-row">
+                <b>Pod-vs-Field</b>
+                <span>Compare callback ownership, main-loop work, build footprint, state handoff, and reference value, not raw control counts.</span>
+              </div>
+            </div>
+          </aside>
+
+          <article class="project template">
+            <div class="project-head">
+              <h2>Field_Template_April</h2>
+              <span class="tag template">Field starter reference</span>
+            </div>
+            <div class="stack">
+              <div class="block template">
+                <strong>Input and state</strong>
+                <span>External MIDI is the only note-entry path; Field keybed is reserved for parameter/state controls and reset utilities.</span>
+              </div>
+              <div class="arrow">main loop</div>
+              <div class="block template">
+                <strong>1 ms UI/control loop</strong>
+                <span>`ProcessAllControls` feeds `ProcessUi`, banked pickup/catch, LED state, MIDI events, OLED overview, and edit zoom.</span>
+              </div>
+              <div class="arrow">audio</div>
+              <div class="block template">
+                <strong>Mono starter synth</strong>
+                <span>Oscillator, sub, LFO, ADSR, SVF, noise, velocity modes, key tracking, glide, and output trim.</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="architecture" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Architecture</h2>
+          <p>The architecture view is split by comparison type: Pod-vs-Pod for Pod control-surface decisions, Field-vs-Field for Field control/state decisions, and cross-family only for timing ownership, DSP/runtime shape, state handoff, and readiness.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card edge">
+            <h3>POD_EDGE_mono_DSP Structure</h3>
+            <ul>
+              <li>Board target: Daisy Pod plus external I2C OLED, external encoder, BAK, and CON controls.</li>
+              <li>Control split: digital controls in a 1 kHz TIM_5 callback; analog controls in `AudioCallback`.</li>
+              <li>DSP: input conditioning, soft drive, SDRAM delay, feedback filtering, diffusion, tone tilt, limiter.</li>
+              <li>UI: six OLED pages rendered only when state changes and capped by elapsed time.</li>
+              <li>Thread safety: main loop writes inactive `FxParams`, then swaps `active_buf_` after `__DSB()`.</li>
+            </ul>
+          </article>
+          <article class="info-card multi">
+            <h3>Pod_MultiFX_Chain Structure</h3>
+            <ul>
+              <li>Board target: plain Daisy Pod control surface with no external OLED board.</li>
+              <li>Control split: analog controls in `AudioCallback`; encoder/buttons in the main loop.</li>
+              <li>DSP: `Input -> LFO -> Tube -> Delay -> Reverb -> Output`.</li>
+              <li>UI: four effect pages selected by encoder and indicated by RGB LEDs.</li>
+              <li>State: page, bypass, waveform, shift layer, and reattach behavior live in `pod_multifx_pages.h`.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="mini-table" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Surface</div>
+            <div class="mini-cell head">POD_EDGE_mono_DSP</div>
+            <div class="mini-cell head">Pod_MultiFX_Chain</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">User interface</div>
+            <div class="mini-cell">OLED page renderer, external encoder navigation, BAK/CON workflow.</div>
+            <div class="mini-cell">Encoder-selected pages, SW1/SW2 actions, RGB LED state feedback.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Control ownership</div>
+            <div class="mini-cell">Timer owns digital debounce; audio callback owns analog sampling; main loop owns event dispatch and display.</div>
+            <div class="mini-cell">Audio callback owns analog sampling and knob reattach; main loop owns digital events.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Parameter model</div>
+            <div class="mini-cell">One `FxParams` object, double-buffered before audio ISR use.</div>
+            <div class="mini-cell">Per-page `ControlState`, with primary and shifted `LayerState` values.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Best reference use</div>
+            <div class="mini-cell">Complex external controls, OLED UI, low-latency digital controls, ISR-safe parameter handoff.</div>
+            <div class="mini-cell">Simple page architecture, smooth reattach, compact host-testable control state.</div>
+          </div>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Architecture Diagram</h3>
+          <pre class="mermaid">
+flowchart LR
+  edgeInputs["EDGE controls"] --> edgeTimer["1 kHz timer ISR"]
+  edgeTimer --> edgeDigital["Pod digital debounce"]
+  edgeTimer --> edgeExternal["External encoder debounce"]
+  edgeInputs --> edgeAudio["Audio callback"]
+  edgeAudio --> edgeAnalog["Analog controls"]
+  edgeDigital --> edgeUi["UIState"]
+  edgeExternal --> edgeUi
+  edgeAnalog --> edgeUi
+  edgeUi --> edgeBuffer["Double-buffer FxParams"]
+  edgeBuffer --> edgeDsp["EDGE DSP"]
+
+  multiInputs["MultiFX controls"] --> multiAudio["Audio callback"]
+  multiAudio --> multiAnalog["Analog controls"]
+  multiAnalog --> multiReattach["Reattach and slew"]
+  multiInputs --> multiMain["Main loop"]
+  multiMain --> multiDigital["Digital events"]
+  multiDigital --> multiPages["Page state"]
+  multiReattach --> multiDsp["MultiFX DSP"]
+  multiPages --> multiDsp
+          </pre>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Structure</h3>
+            <ul>
+              <li>Board target: Daisy Field with TRS MIDI, 8 knobs, 16 key switches, two switches, OLED, and LEDs.</li>
+              <li>Control ownership: MIDI, Field controls, pickup/catch, keys, display, and LEDs run in the 1 ms main loop.</li>
+              <li>DSP: 8 additive voices, each using `HarmonicOscillator&lt;16&gt;` plus ADSR; global LFO, Chorus, and `ReverbSc`.</li>
+              <li>State model: two `PageState` pages, stored knob values, previous physical reads, and locked/captured flags.</li>
+              <li>Readiness signal: previously used as the known-good Field fallback and successfully flashed with STLINK.</li>
+            </ul>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Structure</h3>
+            <ul>
+              <li>Board target: Daisy Field starter synth using shared `foundation_examples` Field defaults and UI helpers.</li>
+              <li>Control ownership: external MIDI, `hw.ProcessAllControls()`, `ProcessUi()`, LEDs, and OLED run in the 1 ms main loop.</li>
+              <li>DSP: one mono voice with oscillator, sub oscillator, LFO, ADSR, SVF, white noise, glide, velocity, key tracking, and output trim.</li>
+              <li>State model: `ParamBankSet`, active main/alt bank, hidden output level, tri-state key LED state, and focus/zoom state.</li>
+              <li>Reference value: cleaner Field starter shell for new display-based, banked-control projects.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="mini-table four-way no-mobile-labels" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Architecture concern</div>
+            <div class="mini-cell head">POD_EDGE_mono_DSP</div>
+            <div class="mini-cell head">Pod_MultiFX_Chain</div>
+            <div class="mini-cell head">Field_AdditiveSynth</div>
+            <div class="mini-cell head">Field_Template_April</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Control-independent reference value</div>
+            <div class="mini-cell">Best example of deterministic control timing and ISR-safe parameter handoff.</div>
+            <div class="mini-cell">Best compact example of audio-rate analog reads plus simple page state.</div>
+            <div class="mini-cell">Best Field engine example: polyphony, MIDI, OLED, effects, and prior hardware flash evidence.</div>
+            <div class="mini-cell">Best Field starter architecture: reusable helpers, documented defaults, and clean banked UI rules.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Audio callback role</div>
+            <div class="mini-cell">Reads analog controls and an active `FxParams` snapshot, then runs mono DSP.</div>
+            <div class="mini-cell">Reads analog controls, updates current page knobs, then runs serial FX chain.</div>
+            <div class="mini-cell">Runs only audio DSP and consumes an `lfo_reset_req` flag; UI/control work stays outside.</div>
+            <div class="mini-cell">Runs voice DSP from current global state; UI/control work stays outside.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Main-loop role</div>
+            <div class="mini-cell">UI dispatch, OLED redraw, non-critical tasks, and inactive parameter buffer writes.</div>
+            <div class="mini-cell">Digital controls, page events, LEDs, bypass, and waveform changes.</div>
+            <div class="mini-cell">MIDI events, `ProcessAllControls`, switch/page logic, pickup/catch knobs, keys, OLED, LEDs.</div>
+            <div class="mini-cell">MIDI events, `ProcessAllControls`, `ProcessUi`, banked pickup/catch, LEDs, OLED.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">State handoff risk</div>
+            <div class="mini-cell">Explicitly mitigated with double-buffered params.</div>
+            <div class="mini-cell">Small direct page state; host-testable helper reduces behavior risk.</div>
+            <div class="mini-cell">Shared globals are edited in main loop and read in audio; heavier SRAM/audio engine raises review value.</div>
+            <div class="mini-cell">Shared globals are simple and starter-oriented; lowest SRAM pressure among the four.</div>
+          </div>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Field Architecture Diagram</h3>
+          <pre class="mermaid">
+flowchart LR
+  midi["TRS MIDI"] --> addLoop["Additive main loop"]
+  fieldControls["Field knobs, switches, keybed"] --> addLoop
+  addLoop --> addPages["PageState pickup/catch"]
+  addLoop --> addKeys["Spectral presets and LFO/performance keys"]
+  addPages --> addDsp["8 voices: HarmonicOscillator<16> + ADSR"]
+  addKeys --> addDsp
+  addDsp --> addFx["Global LFO, Chorus, ReverbSc"]
+  addLoop --> addUi["OLED partial bars and zoom, LEDs"]
+
+  midi --> templateLoop["Template main loop"]
+  fieldControls --> templateLoop
+  templateLoop --> banks["ParamBankSet main/alt and hidden level"]
+  templateLoop --> tri["Tri-state key LEDs and state controls"]
+  banks --> templateDsp["Mono synth: osc, sub, LFO, ADSR, SVF, noise"]
+  tri --> templateDsp
+  templateLoop --> templateUi["OLED overview and edit zoom"]
+          </pre>
+        </div>
+      </section>
+
+      <section id="timing" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Timing Analysis</h2>
+          <p>The important timing fact is that a 48 kHz sample rate with 48-sample blocks gives a 1 ms audio callback cadence. EDGE adds a second 1 kHz timer lane for digital debounce.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card edge">
+            <h3>EDGE Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="time-ruler">
+                <span>Block timestamp</span>
+                <div class="time-ruler-scale"><span>0.00 ms</span><span>0.25 ms</span><span>0.50 ms</span><span>0.75 ms</span><span>1.00 ms</span></div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Audio callback<br>1 ms block</div>
+                <div class="lane-track">
+                  <div class="lane-bar edge" style="width:22%;">analog read</div>
+                  <div class="lane-bar edge" style="width:34%;">mono DSP</div>
+                  <div class="lane-bar edge" style="width:22%;">output</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Timer ISR<br>1 kHz</div>
+                <div class="lane-track">
+                  <div class="lane-bar edge" style="width:32%;">digital debounce</div>
+                  <div class="lane-bar edge" style="width:34%;">ext encoder</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Main loop<br>background</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:34%;">UI dispatch</div>
+                  <div class="lane-bar neutral" style="width:36%;">OLED redraw</div>
+                  <div class="lane-bar neutral" style="width:24%;">buffer swap</div>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="info-card multi">
+            <h3>MultiFX Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="time-ruler">
+                <span>Block timestamp</span>
+                <div class="time-ruler-scale"><span>0.00 ms</span><span>0.25 ms</span><span>0.50 ms</span><span>0.75 ms</span><span>1.00 ms</span></div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Audio callback<br>1 ms block</div>
+                <div class="lane-track">
+                  <div class="lane-bar multi" style="width:24%;">analog read</div>
+                  <div class="lane-bar multi" style="width:32%;">reattach</div>
+                  <div class="lane-bar multi" style="width:34%;">FX chain</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Main loop<br>1 ms delay</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:30%;">digital controls</div>
+                  <div class="lane-bar neutral" style="width:28%;">page events</div>
+                  <div class="lane-bar neutral" style="width:24%;">LED update</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Timer ISR</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:54%;">not used for controls</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="three-col" style="margin-top:14px;">
+          <div class="info-card">
+            <h3>Shared invariant</h3>
+            <p>`StartAdc()` is called before `StartAudio()` in all four inspected projects, so analog control processing has live ADC data before the callback starts.</p>
+          </div>
+          <div class="info-card">
+            <h3>EDGE extra guarantee</h3>
+            <p>The external encoder does not wait for OLED rendering or background UI code; it is debounced in a fixed-rate timer callback.</p>
+          </div>
+          <div class="info-card">
+            <h3>MultiFX comfort layer</h3>
+            <p>Knob values do not jump on page changes because the stored value remains active until physical movement crosses the reattach threshold.</p>
+          </div>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="time-ruler">
+                <span>Block timestamp</span>
+                <div class="time-ruler-scale"><span>0.00 ms</span><span>0.25 ms</span><span>0.50 ms</span><span>0.75 ms</span><span>1.00 ms</span></div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Audio callback<br>1 ms block</div>
+                <div class="lane-track">
+                  <div class="lane-bar field" style="width:30%;">8 voices</div>
+                  <div class="lane-bar field" style="width:22%;">LFO/mod</div>
+                  <div class="lane-bar field" style="width:24%;">chorus</div>
+                  <div class="lane-bar field" style="width:24%;">reverb</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Main loop<br>1 ms delay</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:20%;">MIDI</div>
+                  <div class="lane-bar neutral" style="width:26%;">controls</div>
+                  <div class="lane-bar neutral" style="width:28%;">pickup/catch</div>
+                  <div class="lane-bar neutral" style="width:24%;">OLED + LEDs</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Startup</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:52%;">StartAdc before InitPages</div>
+                  <div class="lane-bar neutral" style="width:32%;">600 ms splash</div>
+                  <div class="lane-bar field" style="width:16%;">StartAudio</div>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="time-ruler">
+                <span>Block timestamp</span>
+                <div class="time-ruler-scale"><span>0.00 ms</span><span>0.25 ms</span><span>0.50 ms</span><span>0.75 ms</span><span>1.00 ms</span></div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Audio callback<br>1 ms block</div>
+                <div class="lane-track">
+                  <div class="lane-bar template" style="width:26%;">glide</div>
+                  <div class="lane-bar template" style="width:24%;">osc/sub/noise</div>
+                  <div class="lane-bar template" style="width:24%;">ADSR + filter</div>
+                  <div class="lane-bar template" style="width:20%;">output</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Main loop<br>1 ms delay</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:20%;">MIDI</div>
+                  <div class="lane-bar neutral" style="width:28%;">ProcessAllControls</div>
+                  <div class="lane-bar neutral" style="width:27%;">ProcessUi</div>
+                  <div class="lane-bar neutral" style="width:20%;">OLED + LEDs</div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Startup</div>
+                <div class="lane-track">
+                  <div class="lane-bar neutral" style="width:62%;">StartAdc immediately before StartAudio</div>
+                  <div class="lane-bar template" style="width:22%;">StartAudio</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="info-card" style="margin-top:14px;">
+          <h3>Cross-Family Timing Interpretation</h3>
+          <p>Pod and Field projects all use 48-sample blocks at 48 kHz, so the audio callback cadence is 1 ms. The key architecture difference is not the board family; it is where controls are owned. EDGE has an extra 1 kHz hardware timer for digital controls. The Field projects keep Field controls, MIDI, OLED, and LEDs in the 1 ms main loop while the audio callback stays focused on DSP.</p>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Timestamped EDGE Sequence</h3>
+          <pre class="mermaid">
+sequenceDiagram
+  participant Controls
+  participant Timer as Timer ISR
+  participant Main as Main UI loop
+  participant Audio as Audio callback
+  participant Dsp as DSP
+  Controls->>Timer: t=0.00 ms digital edge
+  Timer->>Timer: t=0.00-0.10 ms debounce
+  Controls->>Audio: t=0.00 ms analog sample
+  Audio->>Audio: t=0.00-0.15 ms ProcessAnalogControls
+  Main->>Main: background UI dispatch
+  Main->>Audio: before next block swap active FxParams index
+  Audio->>Dsp: t=0.15-1.00 ms read snapshot and process audio
+          </pre>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Field Main-Loop Timing Sequence</h3>
+          <pre class="mermaid">
+sequenceDiagram
+  participant Midi as MIDI
+  participant Main as 1 ms main loop
+  participant Controls as Field controls
+  participant Ui as OLED and LEDs
+  participant Audio as Audio callback
+  participant Dsp as DSP
+  Midi->>Main: t=0.00 ms Listen and PopEvents
+  Controls->>Main: t=0.10 ms ProcessAllControls
+  Main->>Main: t=0.20 ms page or bank pickup/catch
+  Main->>Ui: t=0.50 ms display and LED update
+  Main->>Main: t=1.00 ms System::Delay(1)
+  Audio->>Dsp: every 1 ms block, process current state
+          </pre>
+        </div>
+      </section>
+
+      <section id="responsiveness" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Responsiveness</h2>
+          <p>This page separates implemented behavior from proposed improvements. The implemented project cards describe code already present in the projects. The MultiFX improvement card lists next-step ideas, not current behavior.</p>
+        </div>
+        <div class="three-col">
+          <article class="info-card edge">
+            <h3>Implemented in EDGE</h3>
+            <ol>
+              <li>Move digital debounce into `ControlTimerCallback` at 1 kHz.</li>
+              <li>Keep `pod.ProcessAnalogControls()` in `AudioCallback` at block cadence.</li>
+              <li>Keep I2C, GPIO reads, print, allocation, and display work out of the audio callback.</li>
+              <li>Use double-buffered `FxParams` so audio reads a coherent snapshot.</li>
+              <li>Throttle OLED redraw by dirty state and elapsed time.</li>
+            </ol>
+          </article>
+          <article class="info-card multi">
+            <h3>Implemented in MultiFX</h3>
+            <ol>
+              <li>Follow BUG-005: analog controls are processed in the audio callback.</li>
+              <li>Keep encoder/buttons in the main loop through `ProcessDigitalControls()`.</li>
+              <li>Preserve page/layer stored values after page changes.</li>
+              <li>Reattach only after movement of at least `0.02` normalized units.</li>
+              <li>Slew a full-scale move over `300 ms` to avoid abrupt parameter jumps.</li>
+            </ol>
+          </article>
+          <article class="info-card">
+            <h3>Potential MultiFX Improvements</h3>
+            <ol>
+              <li>Add a 1 kHz timer path for digital controls if an external encoder, OLED, or heavier UI loop is added.</li>
+              <li>Add a double-buffered parameter snapshot if the page state grows or DSP reads become more complex.</li>
+              <li>Add measured loop-jitter logging around `ProcessDigitalControls()` and `System::Delay(1)`.</li>
+              <li>Expand host tests for SW1 hold/release boundaries, bypass while shifted, and rapid page turns.</li>
+              <li>Add event-rate counters for encoder increments to prove no turns are swallowed under stress.</li>
+            </ol>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Implemented in Field_AdditiveSynth</h3>
+            <ol>
+              <li>Page switch locks all knobs on the target page before stored values can change.</li>
+              <li>Pickup/catch releases a knob only after the physical value crosses the stored value or is within `0.02`.</li>
+              <li>Loading a spectral preset locks Page A `K1-K3` and syncs stored values to the preset.</li>
+              <li>Locked knob LEDs dim to `0.05`, making capture state visible.</li>
+              <li>MIDI, controls, OLED, and LEDs run in the 1 ms main loop, not in the audio callback.</li>
+            </ol>
+          </article>
+          <article class="info-card template">
+            <h3>Implemented in Field_Template_April</h3>
+            <ol>
+              <li>`ParamBankSet` preserves main and alt bank values independently.</li>
+              <li>Bank changes require pickup/catch before a physical knob can overwrite the stored value.</li>
+              <li>Knob LEDs show stored logical values and dim when uncaptured.</li>
+              <li>Hidden `SW2 + K8` output level has its own capture state.</li>
+              <li>Keybed state uses tri-state LEDs, keeping state feedback visible without stealing note-entry keys.</li>
+            </ol>
+          </article>
+        </div>
+        <div class="mini-table" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Risk</div>
+            <div class="mini-cell head">EDGE response</div>
+            <div class="mini-cell head">MultiFX response</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Encoder misses or feels late</div>
+            <div class="mini-cell">Fixed-rate timer debounce handles Pod and external encoder events.</div>
+            <div class="mini-cell">Main loop handles encoder events with a 1 ms delay loop.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Knob response lags</div>
+            <div class="mini-cell">Analog values are sampled in the audio callback cadence.</div>
+            <div class="mini-cell">Analog values are sampled in the audio callback cadence.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Parameter tearing</div>
+            <div class="mini-cell">Double-buffer snapshot prevents the ISR from reading a structure being edited.</div>
+            <div class="mini-cell">Small page state is updated directly; less cross-thread surface than EDGE.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Page-switch value jump</div>
+            <div class="mini-cell">Page-aware `UIState` maps controls and edits explicitly.</div>
+            <div class="mini-cell">Movement-triggered reattach and slew are the main solution.</div>
+          </div>
+        </div>
+        <div class="mini-table field-pair no-mobile-labels" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Field responsiveness concern</div>
+            <div class="mini-cell head">Field_AdditiveSynth</div>
+            <div class="mini-cell head">Field_Template_April</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Bank/page switch jump</div>
+            <div class="mini-cell">Switching Page A/B locks all target page knobs before edits resume.</div>
+            <div class="mini-cell">Switching main/alt bank preserves stored values and requires catch before overwrite.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Preset/default recall jump</div>
+            <div class="mini-cell">Spectral presets lock K1-K3 after applying rolloff/even/odd values.</div>
+            <div class="mini-cell">Reset helpers clear capture state, so recalled defaults do not get overwritten immediately.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Feedback to performer</div>
+            <div class="mini-cell">Locked knobs dim; A/B key LEDs expose preset, LFO, bypass, and sustain state.</div>
+            <div class="mini-cell">Knob LEDs show stored logical values; key LEDs represent off/blink/on state.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Audio callback exposure</div>
+            <div class="mini-cell">No display/control processing in callback; one volatile LFO reset flag is consumed there.</div>
+            <div class="mini-cell">No display/control processing in callback; callback reads current synth state.</div>
+          </div>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Implemented Fix Flow</h3>
+          <pre class="mermaid">
+flowchart TB
+  issue["Delayed knob or encoder reaction"] --> split["Implemented timing split"]
+  split --> analog["Analog sampled at audio callback rate"]
+  split --> digital["Digital controls outside DSP work"]
+  analog --> edgeAnalog["EDGE implemented: pod.ProcessAnalogControls"]
+  digital --> edgeTimer["EDGE implemented: 1 kHz timer debounce"]
+  edgeAnalog --> edgeSnapshot["EDGE implemented: coherent FxParams snapshot"]
+  edgeTimer --> edgeSnapshot
+  analog --> multiAnalog["MultiFX implemented: hw.ProcessAnalogControls"]
+  digital --> multiMain["MultiFX implemented: main-loop events"]
+  multiAnalog --> multiComfort["MultiFX implemented: reattach plus slew"]
+  multiMain --> multiComfort
+  multiComfort --> proposed["Potential MultiFX next step: timer debounce if UI grows"]
+          </pre>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Field Pickup/Catch Flow</h3>
+          <pre class="mermaid">
+flowchart TB
+  change["Page, bank, preset, or default recall"] --> lock["Lock affected knobs"]
+  lock --> stored["Keep stored logical value active"]
+  stored --> led["Dim uncaptured knob LED"]
+  led --> move["Read physical knob in main loop"]
+  move --> near{"Crosses stored value or within 0.02?"}
+  near -->|no| stored
+  near -->|yes| capture["Mark captured"]
+  capture --> bright["Bright LED"]
+  bright --> update["Apply physical knob value to parameter"]
+          </pre>
+        </div>
+      </section>
+
+      <section id="cpu-memory" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>CPU & Memory</h2>
+          <p>These are current clean rebuild footprints from 2026-06-05. They are build footprints, not measured runtime CPU usage.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card edge">
+            <h3>POD_EDGE_mono_DSP Footprint</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>104360 B / 128 KB, 79.62%</span></label><div class="bar-shell"><div class="bar-fill" style="width:79.62%;"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>315036 B / 512 KB, 60.09%</span></label><div class="bar-shell"><div class="bar-fill" style="width:60.09%;"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>384012 B / 64 MB, 0.57%</span></label><div class="bar-shell"><div class="bar-fill" style="width:0.57%;"></div></div></div>
+              <div class="memory-bar"><label><span>RAM_D2</span><span>16960 B / 288 KB, 5.75%</span></label><div class="bar-shell"><div class="bar-fill" style="width:5.75%;"></div></div></div>
+            </div>
+          </article>
+          <article class="info-card multi">
+            <h3>Pod_MultiFX_Chain Footprint</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>82992 B / 128 KB, 63.32%</span></label><div class="bar-shell"><div class="bar-fill multi" style="width:63.32%;"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>446640 B / 512 KB, 85.19%</span></label><div class="bar-shell"><div class="bar-fill multi" style="width:85.19%;"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>192012 B / 64 MB, 0.29%</span></label><div class="bar-shell"><div class="bar-fill multi" style="width:0.29%;"></div></div></div>
+              <div class="memory-bar"><label><span>RAM_D2</span><span>16960 B / 288 KB, 5.75%</span></label><div class="bar-shell"><div class="bar-fill multi" style="width:5.75%;"></div></div></div>
+            </div>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Footprint</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>115640 B / 128 KB, 88.23%</span></label><div class="bar-shell"><div class="bar-fill field" style="width:88.23%;"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>469864 B / 512 KB, 89.62%</span></label><div class="bar-shell"><div class="bar-fill field" style="width:89.62%;"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB, 0.00%</span></label><div class="bar-shell"><div class="bar-fill field" style="width:0%;"></div></div></div>
+              <div class="memory-bar"><label><span>RAM_D2</span><span>17224 B / 288 KB, 5.84%</span></label><div class="bar-shell"><div class="bar-fill field" style="width:5.84%;"></div></div></div>
+            </div>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Footprint</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>114128 B / 128 KB, 87.07%</span></label><div class="bar-shell"><div class="bar-fill template" style="width:87.07%;"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>52832 B / 512 KB, 10.08%</span></label><div class="bar-shell"><div class="bar-fill template" style="width:10.08%;"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB, 0.00%</span></label><div class="bar-shell"><div class="bar-fill template" style="width:0%;"></div></div></div>
+              <div class="memory-bar"><label><span>RAM_D2</span><span>17224 B / 288 KB, 5.84%</span></label><div class="bar-shell"><div class="bar-fill template" style="width:5.84%;"></div></div></div>
+            </div>
+          </article>
+        </div>
+        <div class="info-card" style="margin-top:14px;">
+          <h3>Interpretation</h3>
+          <p>EDGE uses SDRAM for its delay buffer; MultiFX and Field_AdditiveSynth are SRAM-heavy. Field_AdditiveSynth has the highest SRAM pressure because eight voices plus Chorus/ReverbSc are linked into a Field app. Field_Template_April is the best starter reference when SRAM headroom matters, despite similar FLASH size.</p>
+        </div>
+      </section>
+
+      <section id="io-peripherals" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>I/O & Peripherals</h2>
+          <p>EDGE is the stronger hardware-integration reference because it documents the external board pins and OLED bus. MultiFX is the stronger minimal Pod reference.</p>
+        </div>
+        <div class="mini-table">
+          <div class="mini-row">
+            <div class="mini-cell head">Peripheral</div>
+            <div class="mini-cell head">POD_EDGE_mono_DSP</div>
+            <div class="mini-cell head">Pod_MultiFX_Chain</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Analog knobs</div>
+            <div class="mini-cell">Knob 1 and Knob 2 map to delay/time/feedback and page-aware controls.</div>
+            <div class="mini-cell">Knob 1 and Knob 2 edit the selected page/layer parameters.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Buttons</div>
+            <div class="mini-cell">SW1 shift/freeze; SW2 tap tempo or shifted mode toggle; BAK and CON on external board.</div>
+            <div class="mini-cell">SW1 page bypass or temporary shift; SW2 global bypass.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Encoders</div>
+            <div class="mini-cell">Pod encoder for wet/freeze/page actions; external EC11 on D7/D8/D9 for menu navigation.</div>
+            <div class="mini-cell">Pod encoder selects Tube, Delay, Reverb, LFO; push cycles LFO waveform.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Display/status</div>
+            <div class="mini-cell">SSD1306 128x64 OLED, I2C_1, SCL=D11, SDA=D12, address 0x3C, 400 kHz.</div>
+            <div class="mini-cell">RGB LED 1 indicates selected effect page; RGB LED 2 indicates LFO waveform/rate.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Special pins</div>
+            <div class="mini-cell">External board: TRA=D7, TRB=D8, PSH=D9, CON=D10, BAK=D22.</div>
+            <div class="mini-cell">No external board pins documented; plain Daisy Pod surface.</div>
+          </div>
+        </div>
+        <div class="mini-table field-pair no-mobile-labels" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Field surface</div>
+            <div class="mini-cell head">Field_AdditiveSynth</div>
+            <div class="mini-cell head">Field_Template_April</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Note input</div>
+            <div class="mini-cell">TRS hardware MIDI, 8-voice last-note stealing, velocity per voice.</div>
+            <div class="mini-cell">External MIDI only; Field keybed is reserved for parameter/state controls.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Knobs</div>
+            <div class="mini-cell">K1-K8 on Page A/B for spectrum, ADSR, reverb, LFO, chorus, and volume.</div>
+            <div class="mini-cell">K1-K8 main bank; `SW1 + K1-K8` alt bank; `SW2 + K8` hidden level trim.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Keybed</div>
+            <div class="mini-cell">A1-A8 load spectral presets; B1-B4 select LFO waveform; B5-B8 sync/bypass/sustain toggles.</div>
+            <div class="mini-cell">A1-A4 waveform, A5-A8 state modes, B1-B4 transpose, B5 panic, B6-B8 resets.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Display/status</div>
+            <div class="mini-cell">OLED normal view shows active notes, page, partial bars, preset, and bypass flags; zoom shows parameter value.</div>
+            <div class="mini-cell">OLED overview plus 1.4 s edit zoom; knob LEDs show stored values and capture state; tri-state key LEDs show mode state.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Switches</div>
+            <div class="mini-cell">SW1 selects Page A; SW2 selects Page B; switch LEDs show active page.</div>
+            <div class="mini-cell">SW1 holds alt bank; SW2 gives panic action or hidden level modifier behavior.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="parameters" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Parameters</h2>
+          <p>The parameter models differ more than the DSP labels suggest: EDGE uses one broad parameter struct for a six-page instrument; MultiFX stores values per effect page and per logical layer.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card edge">
+            <h3>EDGE Pages</h3>
+            <ul>
+              <li>P1 Perform: time, BPM, feedback, wet/dry, drive, freeze, delay mode.</li>
+              <li>P2 Tone: input HP, feedback LP/HP, wet tone/damping, output tilt.</li>
+              <li>P3 Motion: wow depth, wow rate, modulation enable.</li>
+              <li>P4 Freeze: freeze mode, hold behavior, loop size.</li>
+              <li>P5 Presets: load/save/init slots through external navigation.</li>
+              <li>P6 System: OLED brightness, encoder direction, bypass, sample rate, block size, firmware version.</li>
+            </ul>
+          </article>
+          <article class="info-card multi">
+            <h3>MultiFX Pages</h3>
+            <ul>
+              <li>Tube: Drive and Mix; shifted layer Bias and Distortion.</li>
+              <li>Delay: Time from 10 ms to 100 ms and Feedback from 0.0 to 0.5.</li>
+              <li>Reverb: Decay and Mix; tone fixed at 12 kHz low-pass.</li>
+              <li>LFO: Amplitude coarse and Rate coarse; shifted layer Amplitude fine and Rate fine.</li>
+              <li>Encoder push on LFO cycles Sine, Triangle, Square.</li>
+              <li>Each page stores values independently and rearms reattach when selected.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="mini-table" style="margin-top:14px;">
+          <div class="mini-row">
+            <div class="mini-cell head">Concern</div>
+            <div class="mini-cell head">EDGE</div>
+            <div class="mini-cell head">MultiFX</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Primary state object</div>
+            <div class="mini-cell">`FxParams`, copied into `param_buf[2]`.</div>
+            <div class="mini-cell">`ControlState`, containing `PageState` and `LayerState` arrays.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Smoothing</div>
+            <div class="mini-cell">Audio callback applies `fonepole()` to continuous DSP targets.</div>
+            <div class="mini-cell">Control helper slews values toward physical knob target after reattach.</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell">Persistence</div>
+            <div class="mini-cell">Preset save to flash is still documented as future work.</div>
+            <div class="mini-cell">No flash persistence; state is runtime page memory.</div>
+          </div>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Parameter Model</h3>
+            <ul>
+              <li>Two pages: Page A for spectral/ADSR/reverb, Page B for LFO/chorus/master.</li>
+              <li>`PageState` stores applied values, previous physical knob values, and lock state for each knob.</li>
+              <li>Spectral presets update rolloff/even/odd and lock K1-K3 until physical capture.</li>
+              <li>Toggle state covers LFO sync, reverb bypass, chorus bypass, and sustain.</li>
+              <li>OLED zoom is driven by `zoom_param` and `zoom_start` after knob movement.</li>
+            </ul>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Parameter Model</h3>
+            <ul>
+              <li>Main bank: cutoff, resonance, ADSR, drive, and color.</li>
+              <li>Alt bank: envelope amount, LFO rate/depth, glide, velocity amount, key tracking, noise, and sub.</li>
+              <li>Hidden level trim uses `SW2 + K8` and separate output capture state.</li>
+              <li>State controls cover waveform, velocity mode, key tracking, LFO target, glide mode, transpose, panic, and resets.</li>
+              <li>Focus state stores label/value text for the edit zoom page.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>Field Parameter Ownership</h3>
+          <pre class="mermaid">
+flowchart LR
+  addPage["Additive PageState A/B"] --> addStored["stored values"]
+  addPage --> addLocked["locked flags"]
+  addPreset["Spectral preset"] --> addStored
+  addPreset --> addLocked
+  addStored --> addAudio["Additive audio globals and voice manager"]
+
+  templateBank["Template ParamBankSet"] --> mainBank["main bank"]
+  templateBank --> altBank["alt bank"]
+  level["hidden level state"] --> templateAudio["Template audio globals"]
+  mainBank --> templateAudio
+  altBank --> templateAudio
+  triState["keybed mode state"] --> templateAudio
+          </pre>
+        </div>
+        <div class="diagram-box" style="margin-top:14px;">
+          <h3>MultiFX Reattach Flow</h3>
+          <pre class="mermaid">
+flowchart LR
+  stored["Stored value stays active"]
+  arm["Arm reattach"]
+  wait["Wait for knob movement"]
+  detect["Movement reaches threshold"]
+  attach["Mark attached"]
+  slew["Slew toward physical target"]
+  apply["Apply effective value"]
+
+  stored --> arm --> wait --> detect --> attach --> slew --> apply
+  apply --> stored
+          </pre>
+        </div>
+      </section>
+
+      <section id="build-config" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Build & Config</h2>
+          <p>Both projects use the standard Make-based Daisy firmware flow from their project directories.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card edge">
+            <h3>POD_EDGE_mono_DSP Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Command</span><span class="status-pill">make clean; make</span></div>
+              <div class="status-item"><span>Target ELF</span><span class="status-pill">EDGE_mono_DSP.elf</span></div>
+              <div class="status-item"><span>External source</span><span class="status-pill">tonestack.cpp</span></div>
+              <div class="status-item"><span>Library paths</span><span class="status-pill">../../../libDaisy, ../../../DaisySP</span></div>
+              <div class="status-item"><span>Output</span><span class="status-pill pass">hex + bin generated</span></div>
+            </div>
+          </article>
+          <article class="info-card multi">
+            <h3>Pod_MultiFX_Chain Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Command</span><span class="status-pill">make clean; make</span></div>
+              <div class="status-item"><span>Target ELF</span><span class="status-pill">Pod_MultiFX_Chain.elf</span></div>
+              <div class="status-item"><span>External source</span><span class="status-pill">tube.cpp</span></div>
+              <div class="status-item"><span>LGPL modules</span><span class="status-pill pass">USE_DAISYSP_LGPL</span></div>
+              <div class="status-item"><span>Output</span><span class="status-pill pass">hex + bin generated</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Command</span><span class="status-pill">make clean; make</span></div>
+              <div class="status-item"><span>Target ELF</span><span class="status-pill">Field_AdditiveSynth.elf</span></div>
+              <div class="status-item"><span>Source</span><span class="status-pill">Field_AdditiveSynth.cpp</span></div>
+              <div class="status-item"><span>LGPL modules</span><span class="status-pill pass">USE_DAISYSP_LGPL</span></div>
+              <div class="status-item"><span>Output</span><span class="status-pill pass">hex + bin generated</span></div>
+            </div>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Command</span><span class="status-pill">make clean; make</span></div>
+              <div class="status-item"><span>Target ELF</span><span class="status-pill">Field_Template_April.elf</span></div>
+              <div class="status-item"><span>Source</span><span class="status-pill">Field_Template_April.cpp</span></div>
+              <div class="status-item"><span>Shared helpers</span><span class="status-pill">foundation_examples</span></div>
+              <div class="status-item"><span>Output</span><span class="status-pill pass">hex + bin generated</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="test-results" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Test Results</h2>
+          <p>Current verification was run on 2026-06-05 from the four project directories. Hardware flashing was not performed in this dashboard expansion.</p>
+        </div>
+        <div class="three-col">
+          <article class="info-card edge">
+            <h3>EDGE Firmware Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`make clean; make`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>FLASH</span><span class="status-pill">104360 B, 79.62%</span></div>
+              <div class="status-item"><span>SRAM</span><span class="status-pill">315036 B, 60.09%</span></div>
+              <div class="status-item"><span>SDRAM</span><span class="status-pill">384012 B, 0.57%</span></div>
+            </div>
+          </article>
+          <article class="info-card multi">
+            <h3>MultiFX Firmware Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`make clean; make`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>FLASH</span><span class="status-pill">82992 B, 63.32%</span></div>
+              <div class="status-item"><span>SRAM</span><span class="status-pill">446640 B, 85.19%</span></div>
+              <div class="status-item"><span>SDRAM</span><span class="status-pill">192012 B, 0.29%</span></div>
+            </div>
+          </article>
+          <article class="info-card">
+            <h3>Static Dashboard QA</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Mermaid render</span><span class="status-pill pass">9 SVGs</span></div>
+              <div class="status-item"><span>GoJS render</span><span class="status-pill pass">1 canvas</span></div>
+              <div class="status-item"><span>Mobile width</span><span class="status-pill pass">no overflow</span></div>
+              <div class="status-item"><span>Console/page errors</span><span class="status-pill pass">none</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>Field_AdditiveSynth Firmware Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`make clean; make`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>FLASH</span><span class="status-pill">115640 B, 88.23%</span></div>
+              <div class="status-item"><span>SRAM</span><span class="status-pill warn">469864 B, 89.62%</span></div>
+              <div class="status-item"><span>SDRAM</span><span class="status-pill">0 B, 0.00%</span></div>
+            </div>
+          </article>
+          <article class="info-card template">
+            <h3>Field_Template_April Firmware Build</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`make clean; make`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>FLASH</span><span class="status-pill">114128 B, 87.07%</span></div>
+              <div class="status-item"><span>SRAM</span><span class="status-pill">52832 B, 10.08%</span></div>
+              <div class="status-item"><span>SDRAM</span><span class="status-pill">0 B, 0.00%</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card edge">
+            <h3>QAE Lint: EDGE</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`display.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>`main.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>`ui_state.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>Total</span><span class="status-pill pass">0 errors, 0 warnings</span></div>
+            </div>
+          </article>
+          <article class="info-card multi">
+            <h3>QAE / Host Test: MultiFX</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`Pod_MultiFX_Chain.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>`tests/pod_multifx_pages_test.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>Host page-control test</span><span class="status-pill pass">exit 0</span></div>
+              <div class="status-item"><span>Total</span><span class="status-pill pass">0 errors, 0 warnings</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="two-col" style="margin-top:14px;">
+          <article class="info-card field">
+            <h3>QAE Lint: Field_AdditiveSynth</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`Field_AdditiveSynth.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>`archive/Field_AdditiveSynth - Copy.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>`archive/Field_AdditiveSynth_ctrlZ.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>Total</span><span class="status-pill pass">0 errors, 0 warnings</span></div>
+            </div>
+          </article>
+          <article class="info-card template">
+            <h3>QAE Lint: Field_Template_April</h3>
+            <div class="status-list">
+              <div class="status-item"><span>`Field_Template_April.cpp`</span><span class="status-pill pass">PASS</span></div>
+              <div class="status-item"><span>Total</span><span class="status-pill pass">0 errors, 0 warnings</span></div>
+              <div class="status-item"><span>Shared helpers</span><span class="status-pill">read as source evidence</span></div>
+              <div class="status-item"><span>Hardware flash</span><span class="status-pill warn">not run</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="logs" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Logs & Evidence</h2>
+          <p>This page records the exact evidence used by the dashboard so the visuals stay tied to repo truth.</p>
+        </div>
+        <div class="two-col">
+          <article class="info-card">
+            <h3>Current commands run</h3>
+            <ul>
+              <li>`make clean; make` in `POD_EDGE_mono_DSP` passed.</li>
+              <li>`make clean; make` in `Pod_MultiFX_Chain` passed.</li>
+              <li>`make clean; make` in `Field_AdditiveSynth` passed.</li>
+              <li>`make clean; make` in `Field_Template_April` passed.</li>
+              <li>`py -3 ../../../DAISY_QAE/validate_daisy_code.py .` passed for all four inspected projects.</li>
+              <li>Visual Studio `cl` host test for `tests/pod_multifx_pages_test.cpp` compiled and exited 0.</li>
+              <li>Playwright rendered the static dashboard and exercised the GoJS graph switcher.</li>
+            </ul>
+          </article>
+          <article class="info-card">
+            <h3>Known limitations</h3>
+            <ul>
+              <li>Hardware validation was not run for this dashboard expansion.</li>
+              <li>Graphify semantic extraction still needs an LLM API key; the saved graph JSON is AST-level extraction.</li>
+              <li>The attached infographic remains a concept image, not a literal dashboard screenshot.</li>
+              <li>Runtime CPU load is not measured; CPU & Memory page uses build footprint only.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="source-grid" style="margin-top:14px;">
+          <div class="source-card">
+            <h3>POD_EDGE_mono_DSP source anchors</h3>
+            <ul>
+              <li>`main.cpp:53-55` digital control timer callback.</li>
+              <li>`main.cpp:131-141` analog control processing in audio callback.</li>
+              <li>`main.cpp:419-423` double-buffer parameter handoff.</li>
+              <li>`CONTROLS.md:14-23` hardware controls and OLED pin map.</li>
+              <li>`MEMORY.md:104` notes the sluggish-control fix.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Pod_MultiFX_Chain source anchors</h3>
+            <ul>
+              <li>`Pod_MultiFX_Chain.cpp:140-147` audio callback control update.</li>
+              <li>`Pod_MultiFX_Chain.cpp:231-266` ADC/audio startup and digital main-loop events.</li>
+              <li>`pod_multifx_pages.h:26-27` reattach threshold and slew duration.</li>
+              <li>`README.md:40-49` control surface and LED status mapping.</li>
+              <li>`README.md:147-151` BUG-005 split and host-testable page state.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Field_AdditiveSynth source anchors</h3>
+            <ul>
+              <li>`Field_AdditiveSynth.cpp:589-624` pickup/catch knob processing.</li>
+              <li>`Field_AdditiveSynth.cpp:627-637` SW1/SW2 page selection.</li>
+              <li>`Field_AdditiveSynth.cpp:655-707` keybed preset/LFO/bypass/sustain controls.</li>
+              <li>`Field_AdditiveSynth.cpp:731-792` audio callback DSP path.</li>
+              <li>`Field_AdditiveSynth.cpp:841-873` MIDI, ADC, 600 ms splash, audio start, and 1 ms main loop.</li>
+              <li>`CONTROLS.md:1-16` poly additive overview and pickup/catch rule.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Field_Template_April source anchors</h3>
+            <ul>
+              <li>`README.md:1-8` starter synth scope and current Field control rules.</li>
+              <li>`README.md:69-108` OLED overview and edit zoom behavior.</li>
+              <li>`Field_Template_April.cpp:680-708` `ProcessUi` bank/capture/display path.</li>
+              <li>`Field_Template_April.cpp:710-758` audio callback DSP path.</li>
+              <li>`Field_Template_April.cpp:764-794` 48-sample block, MIDI, ADC, audio start, and 1 ms main loop.</li>
+              <li>`foundation_examples/field_defaults.h:57` recommended Field block size is 48.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="report" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>Report</h2>
+          <p>The written report is summarized here so the dashboard does not depend on an external README link. The source Markdown remains available in `README.md` for version control.</p>
+        </div>
+        <div class="resource-grid">
+          <article class="resource-panel">
+            <h3>Executive Summary</h3>
+            <p>The dashboard now compares two Pod projects and two Field projects. Mermaid remains the strongest source-controlled explanation layer; GoJS remains the best interactive reading layer. Family-specific control surfaces stay separated, while timing, state ownership, build footprint, and reference value are compared across families.</p>
+          </article>
+          <article class="resource-panel">
+            <h3>Conclusion</h3>
+            <p>`POD_EDGE_mono_DSP` remains the highest-value Pod responsiveness reference. `Pod_MultiFX_Chain` remains the cleaner compact Pod reference. `Field_AdditiveSynth` is the heavier Field engine/reference target with prior flash evidence, while `Field_Template_April` is the better Field starter shell for new display-based projects.</p>
+          </article>
+          <article class="resource-panel">
+            <h3>Current Verification</h3>
+            <ul>
+              <li>EDGE clean rebuild: PASS.</li>
+              <li>EDGE QAE: 0 errors, 0 warnings.</li>
+              <li>MultiFX clean rebuild: PASS.</li>
+              <li>MultiFX QAE: 0 errors, 0 warnings.</li>
+              <li>MultiFX host page-control test: exit 0.</li>
+              <li>Field_AdditiveSynth clean rebuild and QAE: PASS.</li>
+              <li>Field_Template_April clean rebuild and QAE: PASS.</li>
+            </ul>
+          </article>
+          <article class="resource-panel">
+            <h3>Dashboard Pages</h3>
+            <p>The report is now distributed across dedicated dashboard views: architecture, timing, responsiveness, CPU/memory, I/O, parameters, build/config, tests, logs, embedded FigJam, embedded Graphify trees, and Graphify API setup.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="figjam" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>FigJam</h2>
+          <p>The FigJam comparison is included here as a dashboard-native replica of the generated FigJam diagram. Use the fallback URL only when you want to edit the FigJam board in Figma.</p>
+        </div>
+        <div class="diagram-box">
+          <h3>FigJam Diagram Replica</h3>
+          <pre class="mermaid">
+flowchart LR
+  issue["Control responsiveness and architecture reference selection"] --> split["Separate timing-sensitive control paths"]
+  split --> edgeTimer["EDGE: 1 kHz digital timer ISR"]
+  split --> edgeAudio["EDGE: audio callback analog read"]
+  edgeTimer --> edgeBuffer["EDGE: double-buffered FxParams"]
+  edgeAudio --> edgeBuffer
+  edgeBuffer --> edgeDsp["EDGE: stable DSP snapshot"]
+
+  split --> multiAudio["MultiFX: audio callback analog read"]
+  split --> multiMain["MultiFX: main-loop digital events"]
+  multiAudio --> multiReattach["MultiFX: reattach plus slew"]
+  multiMain --> multiReattach
+  multiReattach --> multiNext["Potential: timer debounce if UI grows"]
+
+  issue --> fieldRule["Field comparison stays in-family for controls"]
+  fieldRule --> addField["Field_AdditiveSynth: page lock plus pickup/catch"]
+  fieldRule --> templateField["Field_Template_April: ParamBankSet plus tri-state LEDs"]
+  addField --> fieldEngine["Heavy Field engine reference"]
+  templateField --> fieldStarter["Clean Field starter reference"]
+          </pre>
+        </div>
+        <div class="resource-panel" style="margin-top:14px;">
+          <h3>Fallback</h3>
+          <p>Original FigJam source: <a href="https://www.figma.com/board/1SoSoA89u2UiCnn636j1QV?utm_source=other&utm_content=edit_in_figjam&oai_id=&request_id=3fa51c00-b1f9-4b1f-8308-a395a9a3e5e9">Pod Control Responsiveness Comparison</a>. The embedded dashboard replica above now includes the Field extension.</p>
+        </div>
+      </section>
+
+      <section id="edge-graphify" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>EDGE Graphify</h2>
+          <p>Graphify AST tree for `POD_EDGE_mono_DSP`, embedded directly in the dashboard.</p>
+        </div>
+        <iframe class="embed-frame" src="POD_EDGE_mono_DSP_graphify_tree.html" title="POD_EDGE_mono_DSP Graphify tree"></iframe>
+      </section>
+
+      <section id="multifx-graphify" class="dashboard-page panel">
+        <div class="page-title">
+          <h2>MultiFX Graphify</h2>
+          <p>Graphify AST tree for `Pod_MultiFX_Chain`, embedded directly in the dashboard.</p>
+        </div>
+        <iframe class="embed-frame" src="Pod_MultiFX_Chain_graphify_tree.html" title="Pod_MultiFX_Chain Graphify tree"></iframe>
+      </section>
+
+      <section id="mermaid" class="dashboard-page panel">
+        <h2>Diagram Index</h2>
+        <p>The Mermaid diagrams are now distributed onto their related pages instead of being kept in one isolated diagram page.</p>
+        <div class="resource-grid" style="margin-top:14px;">
+          <article class="resource-panel">
+            <h3>Architecture diagram</h3>
+            <p>Pod and Field diagrams embedded on the Architecture page.</p>
+            <a class="btn" href="#architecture" data-page-link="architecture">Open Architecture</a>
+          </article>
+          <article class="resource-panel">
+            <h3>Timestamped timing sequence</h3>
+            <p>EDGE and Field timing sequences embedded on the Timing Analysis page.</p>
+            <a class="btn" href="#timing" data-page-link="timing">Open Timing</a>
+          </article>
+          <article class="resource-panel">
+            <h3>Implemented responsiveness flow</h3>
+            <p>Pod fix flow and Field pickup/catch flow embedded on the Responsiveness page.</p>
+            <a class="btn" href="#responsiveness" data-page-link="responsiveness">Open Responsiveness</a>
+          </article>
+          <article class="resource-panel">
+            <h3>Parameter state diagrams</h3>
+            <p>MultiFX reattach and Field parameter ownership are embedded on the Parameters page.</p>
+            <a class="btn" href="#parameters" data-page-link="parameters">Open Parameters</a>
+          </article>
+        </div>
+      </section>
+
+      <section id="gojs" class="dashboard-page panel">
+        <div class="graph-toolbar">
+          <div>
+            <h2>GoJS Interactive Graph</h2>
+            <p id="graphCaption">Curated comparison graph loaded from the inspected source paths.</p>
+          </div>
+          <div class="actions">
+            <button class="btn is-active" data-graph="difference">Difference</button>
+            <button class="btn" data-graph="edge">EDGE</button>
+            <button class="btn" data-graph="multi">MultiFX</button>
+            <button class="btn" data-graph="fieldAdditive">Additive</button>
+            <button class="btn" data-graph="fieldTemplate">Template</button>
+          </div>
+        </div>
+        <div id="gojsDiagram"></div>
+      </section>
+
+      <section id="graphify" class="dashboard-page panel">
+        <h2>Graphify API Setup</h2>
+        <p>Graphify semantic extraction needs an LLM API key in the shell environment. This run used the local non-LLM AST graph update path, so the saved graphs are useful symbol graphs but not semantic LLM-labeled graphs.</p>
+        <div class="table" style="margin-top: 14px;">
+          <div class="row">
+            <div class="cell head">Project</div>
+            <div class="cell head">Graphify result</div>
+            <div class="cell head">Interpretation</div>
+          </div>
+          <div class="row">
+            <div class="cell">POD_EDGE_mono_DSP</div>
+            <div class="cell">1457 nodes, 1456 raw edges, 1432 post-build edges</div>
+            <div class="cell">Best used for symbol discovery, not as the primary explanation.</div>
+          </div>
+          <div class="row">
+            <div class="cell">Pod_MultiFX_Chain</div>
+            <div class="cell">60 nodes, 112 raw edges, 96 post-build edges</div>
+            <div class="cell">Small enough to read as a whole structure graph.</div>
+          </div>
+          <div class="row">
+            <div class="cell">Field_AdditiveSynth</div>
+            <div class="cell">Not extracted in this dashboard pass</div>
+            <div class="cell">Recommended next Graphify target because it is the heavier Field engine.</div>
+          </div>
+          <div class="row">
+            <div class="cell">Field_Template_April</div>
+            <div class="cell">Not extracted in this dashboard pass</div>
+            <div class="cell">Recommended next Graphify target for reusable Field helper and starter-shell structure.</div>
+          </div>
+        </div>
+        <div class="resource-grid" style="margin-top:14px;">
+          <article class="resource-panel">
+            <h3>Temporary PowerShell key</h3>
+            <p>Use this only for the current shell session. Replace the value with the real key. Do not commit keys to the repo.</p>
+            <pre>$env:GEMINI_API_KEY = "your_key_here"
+graphify extract MyProjects\_projects\POD_EDGE_mono_DSP --backend gemini --out docs\visualizations\pod-control-architecture\graphify-edge-semantic</pre>
+          </article>
+          <article class="resource-panel">
+            <h3>Persistent Windows user key</h3>
+            <p>This writes the key to the Windows user environment. Restart shells after setting it.</p>
+            <pre>[Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "your_key_here", "User")
+[Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")</pre>
+          </article>
+          <article class="resource-panel">
+            <h3>Other supported variables</h3>
+            <ul>
+              <li>`GEMINI_API_KEY` or `GOOGLE_API_KEY` for Gemini.</li>
+              <li>`OPENAI_API_KEY` for OpenAI backend.</li>
+              <li>`ANTHROPIC_API_KEY` for Claude backend.</li>
+              <li>`MOONSHOT_API_KEY` for Kimi backend.</li>
+              <li>`DEEPSEEK_API_KEY` for DeepSeek backend.</li>
+            </ul>
+          </article>
+          <article class="resource-panel">
+            <h3>Suggested rerun commands</h3>
+            <pre>graphify extract MyProjects\_projects\POD_EDGE_mono_DSP --backend gemini --out docs\visualizations\pod-control-architecture\graphify-edge-semantic
+graphify extract MyProjects\_projects\Pod_MultiFX_Chain --backend gemini --out docs\visualizations\pod-control-architecture\graphify-multifx-semantic
+graphify extract MyProjects\_projects\Field_AdditiveSynth --backend gemini --out docs\visualizations\pod-control-architecture\graphify-field-additive-semantic
+graphify extract MyProjects\_projects\Field_Template_April --backend gemini --out docs\visualizations\pod-control-architecture\graphify-field-template-semantic</pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="sources" class="dashboard-page">
+        <h2>Source Evidence</h2>
+        <div class="source-grid">
+          <div class="source-card">
+            <h3>POD_EDGE_mono_DSP</h3>
+            <ul>
+              <li>`main.cpp:53-55` runs digital controls and external encoder debounce in `ControlTimerCallback`.</li>
+              <li>`main.cpp:136-141` processes analog controls in the audio callback and reads the active parameter buffer.</li>
+              <li>`main.cpp:419-423` writes the inactive parameter buffer, uses `__DSB()`, and swaps the active index.</li>
+              <li>`MEMORY.md:104` records the fix for sluggish and swallowed knob or encoder movement.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Pod_MultiFX_Chain</h3>
+            <ul>
+              <li>`Pod_MultiFX_Chain.cpp:142-147` processes analog controls in the audio callback and updates page knobs.</li>
+              <li>`Pod_MultiFX_Chain.cpp:231-266` starts ADC before audio and handles digital controls in the main loop.</li>
+              <li>`pod_multifx_pages.h:26-27` defines the reattach threshold and 300 ms full-scale slew.</li>
+              <li>`README.md:147-150` documents the BUG-005 analog and digital control split.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Field_AdditiveSynth</h3>
+            <ul>
+              <li>`Field_AdditiveSynth.cpp:589-624` implements pickup/catch knob processing.</li>
+              <li>`Field_AdditiveSynth.cpp:655-707` handles Field keybed presets, LFO waveform, bypass, and sustain state.</li>
+              <li>`Field_AdditiveSynth.cpp:731-792` runs the audio callback DSP chain.</li>
+              <li>`Field_AdditiveSynth.cpp:841-873` starts MIDI/ADC/audio and runs the 1 ms main loop.</li>
+              <li>`CONTROLS.md:1-16` documents the poly additive engine and pickup/catch behavior.</li>
+            </ul>
+          </div>
+          <div class="source-card">
+            <h3>Field_Template_April</h3>
+            <ul>
+              <li>`README.md:1-8` documents the starter-synth scope and Field control rules.</li>
+              <li>`Field_Template_April.cpp:680-708` handles banked UI, capture state, LEDs, and display update.</li>
+              <li>`Field_Template_April.cpp:710-758` runs the mono synth audio callback.</li>
+              <li>`Field_Template_April.cpp:764-794` starts MIDI/ADC/audio and runs the 1 ms main loop.</li>
+              <li>`foundation_examples/field_defaults.h:57` defines the recommended Field block size.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="approach" class="dashboard-page panel">
+        <h2>Approach Suitability</h2>
+        <div class="approach-grid">
+          <div class="table">
+            <div class="row">
+              <div class="cell head">Approach</div>
+              <div class="cell head">Best use</div>
+              <div class="cell head">Verdict</div>
+            </div>
+            <div class="row">
+              <div class="cell">Mermaid</div>
+              <div class="cell">Precise, source-controlled architecture and timing diagrams.</div>
+              <div class="cell"><span class="ok">Best default.</span></div>
+            </div>
+            <div class="row">
+              <div class="cell">GoJS</div>
+              <div class="cell">Interactive structure reading and approach comparison.</div>
+              <div class="cell"><span class="ok">Best dashboard layer.</span></div>
+            </div>
+            <div class="row">
+              <div class="cell">Graphify</div>
+              <div class="cell">Finding relationships and symbol density quickly.</div>
+              <div class="cell">Useful input, needs curation.</div>
+            </div>
+            <div class="row">
+              <div class="cell">FigJam</div>
+              <div class="cell">Editable shared visual review.</div>
+              <div class="cell">Good for discussion, less exact than repo docs.</div>
+            </div>
+          </div>
+          <div>
+            <img class="concept" src="assets/dashboard_concept.png" alt="Generated dashboard concept for the architecture comparison">
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Generated from local source inspection on 2026-06-04 and expanded with build/QAE verification on 2026-06-05. This page is static; Mermaid and GoJS rendering depend on CDN script availability when opened offline.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const graphs = {
+      difference: {
+        caption: "Curated difference graph: control responsiveness, lifecycle ownership, and reference value across Pod and Field.",
+        nodes: [
+          { key: "issue", text: "Delayed knob or encoder reaction", category: "risk" },
+          { key: "split", text: "Split timing-sensitive control paths", category: "neutral" },
+          { key: "edgeTimer", text: "EDGE 1 kHz timer ISR", category: "edge" },
+          { key: "edgeAudio", text: "EDGE audio-rate analog read", category: "edge" },
+          { key: "edgeBuffer", text: "EDGE double-buffer FxParams", category: "edge" },
+          { key: "edgeDsp", text: "EDGE coherent DSP snapshot", category: "edge" },
+          { key: "multiAudio", text: "MultiFX audio-rate analog read", category: "multi" },
+          { key: "multiMain", text: "MultiFX main-loop digital events", category: "multi" },
+          { key: "multiReattach", text: "MultiFX reattach plus slew", category: "multi" },
+          { key: "fieldRule", text: "Field controls compared in-family", category: "neutral" },
+          { key: "additiveCatch", text: "Additive page lock pickup/catch", category: "field" },
+          { key: "templateBanks", text: "Template ParamBankSet pickup/catch", category: "template" },
+          { key: "crossFamily", text: "Cross-family: timing, state, footprint", category: "neutral" },
+          { key: "result", text: "Responsive controls with fewer jumps", category: "ok" }
+        ],
+        links: [
+          { from: "issue", to: "split", text: "fixed by" },
+          { from: "split", to: "edgeTimer", text: "digital" },
+          { from: "split", to: "edgeAudio", text: "analog" },
+          { from: "edgeTimer", to: "edgeBuffer", text: "events" },
+          { from: "edgeAudio", to: "edgeBuffer", text: "values" },
+          { from: "edgeBuffer", to: "edgeDsp", text: "snapshot" },
+          { from: "split", to: "multiAudio", text: "analog" },
+          { from: "split", to: "multiMain", text: "digital" },
+          { from: "multiAudio", to: "multiReattach", text: "raw knobs" },
+          { from: "multiMain", to: "multiReattach", text: "page state" },
+          { from: "issue", to: "fieldRule", text: "Field" },
+          { from: "fieldRule", to: "additiveCatch", text: "Page A/B" },
+          { from: "fieldRule", to: "templateBanks", text: "main/alt" },
+          { from: "additiveCatch", to: "crossFamily", text: "main-loop UI" },
+          { from: "templateBanks", to: "crossFamily", text: "main-loop UI" },
+          { from: "edgeDsp", to: "result", text: "EDGE" },
+          { from: "multiReattach", to: "result", text: "MultiFX" },
+          { from: "crossFamily", to: "result", text: "Field" }
+        ]
+      },
+      edge: {
+        caption: "POD_EDGE_mono_DSP graph: external control board, timer ISR, UI dispatch, double-buffered params, and mono DSP.",
+        nodes: [
+          { key: "inputs", text: "Pod plus external controls", category: "edge" },
+          { key: "timer", text: "ControlTimerCallback", category: "edge" },
+          { key: "podDigital", text: "pod.ProcessDigitalControls", category: "edge" },
+          { key: "extDebounce", text: "ext_enc.Debounce", category: "edge" },
+          { key: "audio", text: "AudioCallback", category: "edge" },
+          { key: "analog", text: "pod.ProcessAnalogControls", category: "edge" },
+          { key: "ui", text: "UIState Dispatch and PollControls", category: "edge" },
+          { key: "params", text: "params_ main copy", category: "neutral" },
+          { key: "buffer", text: "param_buf double buffer", category: "neutral" },
+          { key: "dsp", text: "Mono DSP chain", category: "ok" },
+          { key: "display", text: "Display DrawPage", category: "neutral" }
+        ],
+        links: [
+          { from: "inputs", to: "timer", text: "buttons and encoders" },
+          { from: "timer", to: "podDigital", text: "1 kHz" },
+          { from: "timer", to: "extDebounce", text: "1 kHz" },
+          { from: "inputs", to: "audio", text: "knobs" },
+          { from: "audio", to: "analog", text: "1 kHz" },
+          { from: "podDigital", to: "ui", text: "events" },
+          { from: "extDebounce", to: "ui", text: "events" },
+          { from: "analog", to: "ui", text: "values" },
+          { from: "ui", to: "params", text: "edits" },
+          { from: "params", to: "buffer", text: "inactive write" },
+          { from: "buffer", to: "dsp", text: "active snapshot" },
+          { from: "ui", to: "display", text: "dirty redraw" }
+        ]
+      },
+      multi: {
+        caption: "Pod_MultiFX_Chain graph: compact page engine with audio-rate analog reads and main-loop digital events.",
+        nodes: [
+          { key: "inputs", text: "Pod controls", category: "multi" },
+          { key: "audio", text: "AudioCallback", category: "multi" },
+          { key: "analog", text: "hw.ProcessAnalogControls", category: "multi" },
+          { key: "update", text: "UpdateCurrentPageKnobs", category: "multi" },
+          { key: "reattach", text: "UpdateKnobWithReattachAndSlew", category: "multi" },
+          { key: "slew", text: "SlewToward", category: "multi" },
+          { key: "main", text: "Main loop", category: "neutral" },
+          { key: "digital", text: "hw.ProcessDigitalControls", category: "neutral" },
+          { key: "pages", text: "ControlState pages and layers", category: "neutral" },
+          { key: "dsp", text: "LFO, Tube, Delay, Reverb", category: "ok" }
+        ],
+        links: [
+          { from: "inputs", to: "audio", text: "knobs" },
+          { from: "audio", to: "analog", text: "BUG-005" },
+          { from: "analog", to: "update", text: "raw values" },
+          { from: "update", to: "reattach", text: "per knob" },
+          { from: "reattach", to: "slew", text: "target" },
+          { from: "slew", to: "pages", text: "effective values" },
+          { from: "inputs", to: "main", text: "encoder/buttons" },
+          { from: "main", to: "digital", text: "1 ms loop" },
+          { from: "digital", to: "pages", text: "events" },
+          { from: "pages", to: "dsp", text: "parameters" }
+        ]
+      },
+      fieldAdditive: {
+        caption: "Field_AdditiveSynth graph: heavy Field engine with page lock pickup/catch, MIDI, spectral presets, OLED, and global effects.",
+        nodes: [
+          { key: "midi", text: "TRS MIDI", category: "field" },
+          { key: "main", text: "1 ms main loop", category: "neutral" },
+          { key: "controls", text: "ProcessAllControls", category: "field" },
+          { key: "pages", text: "PageState A/B", category: "field" },
+          { key: "catch", text: "pickup/catch locks", category: "field" },
+          { key: "keys", text: "A/B keybed state", category: "field" },
+          { key: "voices", text: "8 HarmonicOscillator<16> voices", category: "ok" },
+          { key: "fx", text: "LFO, Chorus, ReverbSc", category: "ok" },
+          { key: "ui", text: "OLED and LEDs", category: "neutral" }
+        ],
+        links: [
+          { from: "midi", to: "main", text: "events" },
+          { from: "controls", to: "main", text: "1 ms" },
+          { from: "main", to: "pages", text: "switches" },
+          { from: "pages", to: "catch", text: "lock" },
+          { from: "main", to: "keys", text: "presets" },
+          { from: "catch", to: "voices", text: "params" },
+          { from: "keys", to: "voices", text: "spectrum" },
+          { from: "voices", to: "fx", text: "audio" },
+          { from: "main", to: "ui", text: "status" }
+        ]
+      },
+      fieldTemplate: {
+        caption: "Field_Template_April graph: clean Field starter shell with ParamBankSet, tri-state key LEDs, MIDI-only notes, and OLED overview/zoom.",
+        nodes: [
+          { key: "midi", text: "External MIDI notes", category: "template" },
+          { key: "main", text: "1 ms main loop", category: "neutral" },
+          { key: "controls", text: "ProcessAllControls", category: "template" },
+          { key: "ui", text: "ProcessUi", category: "template" },
+          { key: "banks", text: "ParamBankSet main/alt", category: "template" },
+          { key: "level", text: "Hidden output level", category: "template" },
+          { key: "keys", text: "Tri-state key LED state", category: "template" },
+          { key: "voice", text: "Mono starter synth", category: "ok" },
+          { key: "display", text: "OLED overview and zoom", category: "neutral" }
+        ],
+        links: [
+          { from: "midi", to: "main", text: "events" },
+          { from: "controls", to: "main", text: "1 ms" },
+          { from: "main", to: "ui", text: "state" },
+          { from: "ui", to: "banks", text: "banked knobs" },
+          { from: "ui", to: "level", text: "SW2 + K8" },
+          { from: "ui", to: "keys", text: "A/B rows" },
+          { from: "banks", to: "voice", text: "params" },
+          { from: "level", to: "voice", text: "output" },
+          { from: "main", to: "display", text: "feedback" }
+        ]
+      }
+    };
+
+    function initMermaid() {
+      if (!window.mermaid) {
+        return false;
+      }
+      window.mermaid.initialize(window.podArchitectureMermaidConfig);
+      return true;
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function captureMermaidSources() {
+      document.querySelectorAll(".mermaid").forEach(diagram => {
+        if (!diagram.dataset.source) {
+          diagram.dataset.source = diagram.textContent.trim();
+        }
+      });
+    }
+
+    var mermaidRenderCounter = 0;
+
+    async function renderMermaidInPage(page) {
+      if (!window.mermaid || !page) {
+        return;
+      }
+      const diagrams = page.querySelectorAll(".mermaid");
+      for (const diagram of diagrams) {
+        const source = diagram.dataset.source || diagram.textContent.trim();
+        if (!source) {
+          continue;
+        }
+        const existingSvg = diagram.querySelector("svg");
+        const existingHeight = existingSvg ? existingSvg.getBoundingClientRect().height : 0;
+        if (diagram.dataset.renderedVisible === "true" && existingHeight > 80) {
+          continue;
+        }
+        try {
+          const renderId = `pod-architecture-mermaid-${Date.now()}-${mermaidRenderCounter++}`;
+          const rendered = await window.mermaid.render(renderId, source);
+          diagram.innerHTML = rendered.svg;
+          diagram.dataset.renderedVisible = "true";
+          if (rendered.bindFunctions) {
+            rendered.bindFunctions(diagram);
+          }
+        } catch (error) {
+          console.error("Mermaid render failed", error);
+          diagram.dataset.renderedVisible = "error";
+          diagram.innerHTML = `<div class="render-warning">Mermaid render failed. Source retained below for inspection.</div><pre>${escapeHtml(source)}</pre>`;
+        }
+      }
+    }
+
+    function initGoJS() {
+      const container = document.getElementById("gojsDiagram");
+      if (!window.go) {
+        container.innerHTML = "<div style='padding:18px;color:#9f3f2f;font-weight:700'>GoJS did not load. Open this page with network access or inspect the Mermaid diagrams and Graphify HTML exports.</div>";
+        return null;
+      }
+
+      const $ = go.GraphObject.make;
+      const diagram = $(go.Diagram, "gojsDiagram", {
+        initialAutoScale: go.Diagram.Uniform,
+        layout: $(go.LayeredDigraphLayout, {
+          direction: 0,
+          layerSpacing: 58,
+          columnSpacing: 34
+        }),
+        "undoManager.isEnabled": false,
+        allowMove: true,
+        allowCopy: false,
+        allowDelete: false
+      });
+
+      const fills = {
+        edge: "#e6f7f4",
+        multi: "#fff1dc",
+        field: "#e7f0f8",
+        template: "#eef5e6",
+        neutral: "#eef3f7",
+        risk: "#fdecea",
+        ok: "#e8f6ee"
+      };
+      const strokes = {
+        edge: "#087f73",
+        multi: "#b86900",
+        field: "#2f6f9f",
+        template: "#536b2f",
+        neutral: "#63707d",
+        risk: "#9f3f2f",
+        ok: "#147a4d"
+      };
+
+      diagram.nodeTemplate =
+        $(go.Node, "Auto",
+          { minSize: new go.Size(150, 56) },
+          $(go.Shape, "RoundedRectangle",
+            {
+              strokeWidth: 1.4,
+              parameter1: 8,
+              fill: "#fff",
+              stroke: "#d8e0e8"
+            },
+            new go.Binding("fill", "category", c => fills[c] || fills.neutral),
+            new go.Binding("stroke", "category", c => strokes[c] || strokes.neutral)),
+          $(go.TextBlock,
+            {
+              margin: new go.Margin(10, 12, 10, 12),
+              wrap: go.TextBlock.WrapFit,
+              textAlign: "center",
+              maxSize: new go.Size(178, NaN),
+              stroke: "#172026",
+              font: "600 12px Inter, Segoe UI, sans-serif"
+            },
+            new go.Binding("text", "text"))
+        );
+
+      diagram.linkTemplate =
+        $(go.Link,
+          {
+            routing: go.Link.AvoidsNodes,
+            corner: 8,
+            curve: go.Link.JumpOver
+          },
+          $(go.Shape, { stroke: "#7b8a97", strokeWidth: 1.3 }),
+          $(go.Shape, { toArrow: "Standard", stroke: "#7b8a97", fill: "#7b8a97" }),
+          $(go.Panel, "Auto",
+            $(go.Shape, "RoundedRectangle", { fill: "rgba(255,255,255,0.92)", stroke: "#d8e0e8", parameter1: 6 }),
+            $(go.TextBlock,
+              {
+                margin: new go.Margin(3, 6, 3, 6),
+                font: "11px Inter, Segoe UI, sans-serif",
+                stroke: "#63707d"
+              },
+              new go.Binding("text", "text"))
+          )
+        );
+
+      return diagram;
+    }
+
+    function setGraph(diagram, name) {
+      const graph = graphs[name] || graphs.difference;
+      document.getElementById("graphCaption").textContent = graph.caption;
+      if (!diagram) {
+        return;
+      }
+      diagram.model = new go.GraphLinksModel(graph.nodes, graph.links);
+    }
+
+    var activeDiagram = null;
+
+    function showPage(pageId) {
+      const fallback = document.getElementById("overview");
+      const target = document.getElementById(pageId) || fallback;
+      document.querySelectorAll(".dashboard-page").forEach(page => {
+        page.classList.toggle("is-current", page === target);
+      });
+      document.querySelectorAll("nav a").forEach(link => {
+        link.classList.toggle("active", link.dataset.pageLink === target.id);
+      });
+      if (target.id === "gojs" && activeDiagram) {
+        activeDiagram.requestUpdate();
+        activeDiagram.zoomToFit();
+      }
+      renderMermaidInPage(target);
+    }
+
+    function initNav() {
+      document.querySelectorAll("[data-page-link]").forEach(link => {
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          const pageId = link.dataset.pageLink;
+          history.pushState(null, "", `#${pageId}`);
+          showPage(pageId);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+      window.addEventListener("popstate", () => {
+        showPage((location.hash || "#overview").slice(1));
+      });
+      showPage((location.hash || "#overview").slice(1));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initMermaid();
+      captureMermaidSources();
+      initNav();
+      activeDiagram = initGoJS();
+      setGraph(activeDiagram, "difference");
+      document.querySelectorAll("[data-graph]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-graph]").forEach(item => item.classList.remove("is-active"));
+          button.classList.add("is-active");
+          setGraph(activeDiagram, button.dataset.graph);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

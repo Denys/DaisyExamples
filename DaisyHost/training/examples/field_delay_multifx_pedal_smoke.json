@@ -1,0 +1,45 @@
+{
+  "appId": "field_delay_multifx_pedal",
+  "boardId": "daisy_field",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.6,
+    "outputChannelCount": 2
+  },
+  "seed": 6101,
+  "audioInput": {
+    "mode": "sine",
+    "level": 0.25,
+    "frequencyHz": 220.0
+  },
+  "initialParameterValues": {
+    "node0/param/mix": 0.55,
+    "node0/param/time": 0.34,
+    "node0/param/feedback": 0.46,
+    "node0/param/texture": 0.62,
+    "node0/param/mod": 0.42
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.1,
+      "type": "midi",
+      "status": 144,
+      "data1": 60,
+      "data2": 96
+    },
+    {
+      "timeSeconds": 0.2,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_2",
+      "normalizedValue": 0.62
+    },
+    {
+      "timeSeconds": 0.45,
+      "type": "midi",
+      "status": 128,
+      "data1": 60,
+      "data2": 0
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "appId": "field_delay_reverb_playground",
+  "boardId": "daisy_field",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.8,
+    "outputChannelCount": 2
+  },
+  "seed": 6102,
+  "audioInput": {
+    "mode": "impulse",
+    "level": 0.4,
+    "frequencyHz": 110.0
+  },
+  "initialParameterValues": {
+    "node0/param/mix": 0.7,
+    "node0/param/feedback": 0.68,
+    "node0/param/diffusion": 0.82,
+    "node0/param/size": 0.74,
+    "node0/param/damping": 0.48
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.05,
+      "type": "surface_control_set",
+      "controlId": "node0/control/field_knob_5",
+      "normalizedValue": 0.66
+    },
+    {
+      "timeSeconds": 0.2,
+      "type": "midi",
+      "status": 144,
+      "data1": 67,
+      "data2": 76
+    },
+    {
+      "timeSeconds": 0.55,
+      "type": "midi",
+      "status": 128,
+      "data1": 67,
+      "data2": 0
+    }
+  ]
+}

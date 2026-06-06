@@ -1,6 +1,6 @@
 # DAFX-to-DaisySP Checkpoint
-**Date**: 2026-01-12
-**Version**: v1.7-all-tests-passing
+**Date**: 2026-06-06
+**Version**: v1.9-dual-stft-field-measured
 
 ---
 
@@ -26,6 +26,7 @@
 | Track B Infrastructure (Sync 1) | ✅ Complete (FFT Handler, princarg, Windows) |
 | Track B Sync 2 (Robotization, Whisperization) | ✅ Complete (src/spectral/) |
 | Track B Sync 3 (Spectral Filter, Phase Vocoder, Crosstalk) | ✅ Complete (src/spectral/, src/spatial/) |
+| Dual STFT Comparison | Host and CMSIS-backed Seed/Field firmware build verified; Field ST-Link flash/verify completed for four backend/profile variants; Daisy runtime CPU measured from USB serial logger |
 
 ---
 
@@ -70,6 +71,12 @@
 - **Spectral Filter** - `src/spectral/spectral_filter.h` (FFT-based FIR convolution, overlap-add)
 - **Phase Vocoder** - `src/spectral/phase_vocoder.h` (phase accumulation pitch shifter, ±1 octave)
 - **Crosstalk Canceller** - `src/spatial/crosstalk_canceller.h` (HRIR-based stereo separation)
+
+### ✅ STFT Comparison Infrastructure
+- **Dual STFT Backends** - `src/spectral/dual_stft.h` (`Fast_RFFT`, `Fast_ISTFT`, `FastStftBackend`, `DafxStftEnvBackend`, `DualStftProcessor`)
+- **Dual STFT Tests** - `tests/test_dual_stft.cpp` (13 focused tests for RFFT/ISTFT, identity, silence, impulse, COLA/envelope, backend switch contract)
+- **Daisy Seed/Field Example** - `examples/daisy_dual_stft/` (compile-time board/backend/profile selection, CPU-load reporting)
+- **Benchmark Artifacts** - `docs/benchmarks/2026-06-05-dual-stft-results.json`, `docs/reports/2026-06-05-dual-stft-implementation-report.md`
 
 ### ✅ Utilities (Track B Sync 3)
 - **Simple HRIR** - `src/utility/simple_hrir.h` (ITD/ILD-based HRIR generator)
@@ -181,6 +188,8 @@ cd docs/
 | 2026-01-12 | v1.5-phase23-track-b-sync3 | **Track B Sync 3 Complete**: Created `src/spectral/spectral_filter.h` (FFT-based FIR convolution), `src/spectral/phase_vocoder.h` (phase accumulation pitch shifter), `src/spatial/crosstalk_canceller.h` (HRIR-based stereo separation), `src/utility/simple_hrir.h` (ITD/ILD generator). All 24 new tests pass. |
 | 2026-01-12 | v1.6-cicd-complete | **CI/CD Pipeline Complete**: Created `.github/workflows/build.yml` (multi-platform CI for Linux/Windows/macOS), `.github/workflows/release.yml` (automated releases). Added CI badge to README. Updated README roadmap to reflect Phase 2/3 completion. **All Planned Features Complete.** |
 | 2026-01-12 | v1.7-all-tests-passing | **S4/S5 Validation Complete**: Fixed 6 pre-existing test failures. TubeTest (adjusted for DC offset), RingMod (fixed to true ring modulation), StereoPan (replaced tangent law with cosine pan law). **151/151 tests pass (100%)**. |
+| 2026-06-05 | v1.8-dual-stft-build-verified | **Dual STFT Comparison Added**: Implemented Fast-style and DAFX `stftenv.m` identity backends with CMSIS RFFT-backed Daisy firmware path and portable host fallback, added 13 host tests for 512/128/64 and 1024/256/64, added Daisy Seed/Field firmware example, prepared the Field ST-Link measurement runner with Windows OpenOCD script-dir detection, and recorded firmware memory for all four Field backend/profile builds after `COM3` became visible. Runtime CPU measurement was deferred to the v1.9 hardware run. |
+| 2026-06-06 | v1.9-dual-stft-field-measured | **Dual STFT Field CPU Measured**: Flashed and OpenOCD-verified all four Daisy Field variants through ST-Link, resolved the programming/debug VCP `COM3` to Daisy USB serial logger `COM5`, captured 67 CPU samples per variant, and updated benchmark JSON/report with measured CPU: Fast 512 `13.008%` max / `6.505%` avg, DAFX 512 `16.060%` / `8.183%`, Fast 1024 `25.719%` / `6.666%`, DAFX 1024 `31.319%` / `8.291%`. |
 
 ---
 

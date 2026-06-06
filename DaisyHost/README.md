@@ -100,6 +100,12 @@ internals:
     standalone rhythm-triggered audio; the 2026-04-26 follow-up also tunes the
     default envelope/output/filter path and Field knob pickup behavior so the
     startup patch is audible in host tests without physical knobs muting it
+  - `DelayFxAdaptationCore` hosts four Field-focused delay/Fx source
+    adaptations on one portable `DaisyDelayFxCore`: MultiFX tape delay, FDN
+    reverb playground, FunBox reverse/freeze delay, and SDRAM long delaylines;
+    it also exposes `field_delay_bundle`, a Field selector that names the
+    algorithms by type first: Tape [multifx], Tank [reverb], Texture [FunBox],
+    and Long [sdram]
 - Multi-app host:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings
@@ -375,6 +381,11 @@ Checked-in render smoke scenarios now include:
 - `training/examples/field_extended_surface_smoke.json`
 - `training/examples/field_node_target_surface_smoke.json`
 - `training/examples/field_polyosc_surface_smoke.json`
+- `training/examples/field_delay_multifx_pedal_smoke.json`
+- `training/examples/field_delay_reverb_playground_smoke.json`
+- `training/examples/field_delay_funbox_smoke.json`
+- `training/examples/field_delay_sdram_delaylines_smoke.json`
+- `training/examples/field_delay_bundle_smoke.json`
 
 Outputs:
 
@@ -390,17 +401,18 @@ Outputs:
   recommended work package, runner-up, overlap risk, explicit waits, and first
   safe implementation slice for WP closeouts
 
-Current local verification caveat:
+Current local verification note:
 
 - the wrapper-driven full host gate last recorded in these docs was the
-  2026-04-29 WS10/TF11 closeout: `cmd /c build_host.cmd`
-  passed and Release `ctest` passed `284/284`, including
+  2026-06-03 Field delay/Fx adaptation pass: `cmd /c build_host.cmd`
+  passed and Release `ctest` passed `293/293`, including the new
+  `DaisyDelayFxCoreTest` / `DelayFxAdaptationCoreTest` coverage,
   `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`,
   `DaisyHostCliRenderAssertions`, `DaisyHostCliRenderAssertionsPass`, and the
   other CLI smoke tests. Older
   `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, `216/216`,
-  `232/232`, `233/233`, `243/243`, `244/244`, `269/269`, and `278/278`
-  results are
+  `232/232`, `233/233`, `243/243`, `244/244`, `269/269`, `278/278`, and
+  `284/284` results are
   retained only as dated historical evidence.
 - `tests/run_smoke.py` now uses a wider process-query timeout for standalone
   smoke so slower Windows process-path discovery does not produce a false
@@ -476,10 +488,14 @@ py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
   portable Harmoniqs wrapper and canonical additive-state mapper
 - `include/daisyhost/DaisyVASynthCore.h` / `src/DaisyVASynthCore.cpp`:
   portable VA synth wrapper and canonical polyphonic-state mapper
+- `include/daisyhost/DaisyDelayFxCore.h` / `src/DaisyDelayFxCore.cpp`:
+  portable Field delay/Fx source-adaptation core and bundle algorithm metadata
 - `src/apps/CloudSeedCore.cpp`: DaisyHost-native CloudSeed supported app core
 - `src/apps/BraidsCore.cpp`: DaisyHost-native Braids supported app core
 - `src/apps/HarmoniqsCore.cpp`: DaisyHost-native Harmoniqs supported app core
 - `src/apps/VASynthCore.cpp`: DaisyHost-native VA Synth supported app core
+- `src/apps/DelayFxAdaptationCore.cpp`: DaisyHost-native Field delay/Fx
+  adapter core
 - `src/AppRegistry.cpp`: app registry and factory layer
 - `src/HubSupport.cpp`: launcher hub registries, profiles, launch planning, and startup requests
 - `src/HostAutomationBridge.cpp`: stable five-slot DAW automation mapping

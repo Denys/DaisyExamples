@@ -1,0 +1,45 @@
+{
+  "appId": "field_delay_funbox",
+  "boardId": "daisy_field",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.7,
+    "outputChannelCount": 2
+  },
+  "seed": 6103,
+  "audioInput": {
+    "mode": "saw",
+    "level": 0.22,
+    "frequencyHz": 164.81
+  },
+  "initialParameterValues": {
+    "node0/param/mix": 0.58,
+    "node0/param/time": 0.44,
+    "node0/param/feedback": 0.52,
+    "node0/param/texture": 0.72,
+    "node0/param/smear": 0.68
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.08,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/field_keys/a3",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.15,
+      "type": "midi",
+      "status": 144,
+      "data1": 72,
+      "data2": 90
+    },
+    {
+      "timeSeconds": 0.5,
+      "type": "midi",
+      "status": 128,
+      "data1": 72,
+      "data2": 0
+    }
+  ]
+}

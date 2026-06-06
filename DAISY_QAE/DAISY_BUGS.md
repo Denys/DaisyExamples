@@ -96,6 +96,18 @@ kLedKeysB     = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 LEDs
 
 **Lesson Learned**: Always verify against a known working implementation before making assumptions from documentation or pinout diagrams.
 
+### Regression Note - Field_delay_bundle
+
+**Date**: 2026-06-04
+**Project**: `MyProjects/_projects/Field_delay_bundle` via shared adapter `Field_delay_shared`
+**Symptom**: Pressing a physical A-row key triggered B-row note behavior; for example, A2 showed `B2 Note D4`.
+**Cause**: The shared adapter trusted older row-index notes instead of the hardware smoke test. In this Field/keybed path, raw scan indices `0..7` are physical B1-B8 and raw scan indices `8..15` are physical A1-A8. The logical core still expects A controls as `0..7` and B notes as `8..15`, so the physical adapter must translate rows before calling the core.
+**Fix**: `KeyboardIndexForPhysicalKey(A, n)` must return `8 + (n - 1)`; `KeyboardIndexForPhysicalKey(B, n)` must return `n - 1`. Keep the logical LED list as `LED_KEY_A1..A8` and `LED_KEY_B1..B8`; do not reuse LED enum order as keyboard input order.
+**Why this repeats**: `DaisyField::LED_KEY_*`, raw `KeyboardRisingEdge()` indices, physical silk-screen row names, and project-local logical key roles are four different layers. New projects often collapse them into one mental model. Do not do that: name physical row mapping and logical key roles separately.
+**Hardware check added**: `Field_delay_bundle` uses A1-A4 LEDs as algorithm-select indicators, while B-row presses open an OLED zoom such as `B2 Note D4 key` and force the same-number B LED while the physical B key is held.
+**2026-06-04 follow-up**: B keys correctly triggered notes but lit A-row key LEDs. Fix: the shared adapter now treats logical A LED values as `LED_KEY_B*` and logical B LED values as `LED_KEY_A*`, preserving key number order. The bundle also now reconciles physical B pressed state each control pass so missed falling edges cannot leave a B note stuck on.
+**Audio follow-up**: The internal pluck engine had a long natural tail after note-off, which could leave a specific pitched high-frequency tone. Fix: pluck mode now damps released voices quickly, and bundle defaults for synth brightness, decay, and level were reduced. Regression coverage: `BundleInternalSynthIsIdleSilentAndReleaseDecays`.
+
 ---
 
 ## BUG-002: Field_ModalBells B-Row Key Crash

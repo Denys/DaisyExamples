@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Field Template June Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gojs/release/go.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --panel-2: #edf3f7;
+      --ink: #172026;
+      --muted: #60717f;
+      --line: #d7e0e8;
+      --june: #146b68;
+      --june-soft: #e3f5f2;
+      --april: #536b2f;
+      --april-soft: #eef5e6;
+      --delay: #2f6f9f;
+      --delay-soft: #e7f0f8;
+      --warn: #9f5a10;
+      --warn-soft: #fff3dc;
+      --ok: #147a4d;
+      --risk: #9f3f2f;
+      --shadow: 0 16px 34px rgba(22, 33, 44, 0.08);
+      color-scheme: light;
+      font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--delay);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(20, 107, 104, 0.35);
+      outline-offset: 2px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #13202a;
+      color: #f8fbff;
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 22px;
+    }
+
+    .brand strong {
+      font-size: 17px;
+      line-height: 1.18;
+    }
+
+    .brand span {
+      color: #b8c7d3;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    nav {
+      display: grid;
+      gap: 7px;
+    }
+
+    nav a {
+      color: #e1edf5;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: #1f3440;
+      border-color: #335463;
+      text-decoration: none;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1640px;
+      width: 100%;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    h1 {
+      font-size: clamp(26px, 3vw, 38px);
+      line-height: 1.08;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 21px;
+      line-height: 1.22;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 15px;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 98ch;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      background: #eef3f7;
+      border-radius: 5px;
+      padding: 1px 4px;
+      font-size: 0.92em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+
+    .btn:hover,
+    button:hover,
+    button.is-active {
+      background: var(--june-soft);
+      border-color: #8fc9c2;
+      text-decoration: none;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.is-current {
+      display: block;
+    }
+
+    section {
+      margin-bottom: 22px;
+    }
+
+    .panel,
+    .metric,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      padding: 14px;
+      min-height: 112px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .metric label {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .metric strong {
+      font-size: 23px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric small {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .card.june {
+      border-top: 4px solid var(--june);
+    }
+
+    .card.april {
+      border-top: 4px solid var(--april);
+    }
+
+    .card.delay {
+      border-top: 4px solid var(--delay);
+    }
+
+    .card.warn {
+      border-top: 4px solid var(--warn);
+    }
+
+    .card ul,
+    .card ol,
+    .panel ul,
+    .panel ol {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      color: var(--muted);
+      background: #fbfdff;
+    }
+
+    .tag.pass {
+      color: var(--ok);
+      border-color: #a9d7bf;
+      background: #e8f6ee;
+    }
+
+    .tag.warn {
+      color: var(--warn);
+      border-color: #e8c58e;
+      background: var(--warn-soft);
+    }
+
+    .tag.june {
+      color: var(--june);
+      border-color: #9fd4ce;
+      background: var(--june-soft);
+    }
+
+    .table {
+      display: grid;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 0.8fr 1.1fr 1.1fr 1.2fr;
+      min-height: 48px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .row.three {
+      grid-template-columns: 0.8fr 1.2fr 1.2fr;
+    }
+
+    .row.two {
+      grid-template-columns: 0.9fr 1.5fr;
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+    }
+
+    .cell {
+      padding: 11px 12px;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      line-height: 1.42;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+
+    .cell:last-child {
+      border-right: 0;
+    }
+
+    .cell.head {
+      background: #edf3f7;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .lane-chart {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .lane-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .lane-track {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      min-height: 36px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 5px;
+      overflow: hidden;
+    }
+
+    .lane-bar {
+      min-width: 74px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 8px;
+      color: #132027;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .lane-bar.june {
+      background: var(--june-soft);
+      border-color: #9fd4ce;
+    }
+
+    .lane-bar.april {
+      background: var(--april-soft);
+      border-color: #c8d9a5;
+    }
+
+    .lane-bar.delay {
+      background: var(--delay-soft);
+      border-color: #b5d0e3;
+    }
+
+    .lane-bar.neutral {
+      background: var(--panel-2);
+    }
+
+    .ruler {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .ruler-scale {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 0 6px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .memory-bars {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .memory-bar {
+      display: grid;
+      gap: 5px;
+    }
+
+    .memory-bar label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-shell {
+      height: 10px;
+      border-radius: 999px;
+      background: #e7edf2;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--june);
+    }
+
+    .bar-fill.april {
+      background: var(--april);
+    }
+
+    .bar-fill.delay {
+      background: var(--delay);
+    }
+
+    .diagram-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      overflow: auto;
+      min-height: 320px;
+    }
+
+    .diagram-box .mermaid {
+      min-width: 0;
+    }
+
+    .diagram-box .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .render-warning {
+      color: var(--risk);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    #gojsDiagram {
+      width: 100%;
+      height: 560px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .fallback-graph {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .fallback-nodes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .fallback-node {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--panel-2);
+    }
+
+    .fallback-node.june {
+      background: var(--june-soft);
+      border-color: #9fd4ce;
+    }
+
+    .fallback-node.april {
+      background: var(--april-soft);
+      border-color: #c8d9a5;
+    }
+
+    .fallback-node.delay {
+      background: var(--delay-soft);
+      border-color: #b5d0e3;
+    }
+
+    .fallback-node.ok {
+      background: #e8f6ee;
+      border-color: #a9d7bf;
+    }
+
+    .fallback-links {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .control-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field-surface {
+      background: #101b23;
+      border-radius: 8px;
+      padding: 16px;
+      color: #eaf4f8;
+      display: grid;
+      gap: 14px;
+      min-height: 360px;
+    }
+
+    .surface-row {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .surface-key,
+    .surface-knob,
+    .surface-switch,
+    .surface-oled {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .surface-knob {
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      position: relative;
+    }
+
+    .surface-knob::before {
+      content: "";
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 6px solid #65c7be;
+      border-top-color: #273b45;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    .surface-key {
+      min-height: 54px;
+      font-size: 12px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+    }
+
+    .surface-key span,
+    .surface-knob span {
+      color: #bdd2dc;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .surface-switch {
+      min-height: 48px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      font-size: 12px;
+    }
+
+    .surface-oled {
+      background: #e8f7f4;
+      color: #10252b;
+      text-align: left;
+      min-height: 108px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .evidence {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 14px 0 24px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: relative;
+        height: auto;
+      }
+
+      nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric-grid,
+      .grid-2,
+      .grid-3,
+      .control-map {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 16px;
+      }
+
+      .topline {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      nav,
+      .surface-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .row,
+      .row.three,
+      .row.two,
+      .lane,
+      .ruler {
+        grid-template-columns: 1fr;
+      }
+
+      .cell {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .cell:last-child {
+        border-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <strong>Field Template June</strong>
+        <span>Controls-optimized Daisy Field template derived from April and Field delay references.</span>
+      </div>
+      <nav aria-label="Dashboard pages">
+        <a href="#overview" data-page-link="overview" class="active">Overview</a>
+        <a href="#architecture" data-page-link="architecture">Architecture</a>
+        <a href="#timing" data-page-link="timing">Timing Analysis</a>
+        <a href="#responsiveness" data-page-link="responsiveness">Responsiveness</a>
+        <a href="#cpu-memory" data-page-link="cpu-memory">CPU &amp; Memory</a>
+        <a href="#io" data-page-link="io">I/O &amp; Peripherals</a>
+        <a href="#parameters" data-page-link="parameters">Parameters</a>
+        <a href="#build" data-page-link="build">Build &amp; Config</a>
+        <a href="#tests" data-page-link="tests">Test Results</a>
+        <a href="#logs" data-page-link="logs">Logs &amp; Evidence</a>
+      </nav>
+    </aside>
+
+    <main id="main">
+      <div class="topline">
+        <div>
+          <h1>Field_Template_June Controls Dashboard</h1>
+          <p>Dedicated report for the new Daisy Field template with until-touched controls, capped visual refresh, build/QAE evidence, and comparison against <code>Field_Template_April</code> and <code>Field_delay_bundle</code>.</p>
+        </div>
+        <div class="actions" aria-label="Project links">
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/README.md">Project README</a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/HARDWARE_TESTPLAN.md">Hardware Test Plan</a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/Field_Template_June.cpp">Source</a>
+        </div>
+      </div>
+
+      <section id="overview" class="page panel is-current">
+        <h2>Overview</h2>
+        <div class="metric-grid">
+          <div class="metric">
+            <label>Build</label>
+            <strong>PASS</strong>
+            <small><code>make</code> completed for <code>Field_Template_June</code>.</small>
+          </div>
+          <div class="metric">
+            <label>QAE</label>
+            <strong>0 / 0</strong>
+            <small>No validator errors or warnings after UTF-8 rerun.</small>
+          </div>
+          <div class="metric">
+            <label>Control Loop</label>
+            <strong>1 ms</strong>
+            <small>Controls stay in the main loop; visual I/O is capped separately.</small>
+          </div>
+          <div class="metric">
+            <label>Flash Path</label>
+            <strong>ST-Link</strong>
+            <small>Hardware plan uses <code>make program</code>, not manual DFU.</small>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card june">
+            <h3>What Changed</h3>
+            <p>June replaces near-value pickup with movement-gated until-touched control. Each active bank or hidden modifier records raw knob positions at entry, protects stored values, and attaches only when the knob moves.</p>
+          </div>
+          <div class="card april">
+            <h3>April Baseline</h3>
+            <p>April is still the clean source baseline: external-MIDI mono synth, main/alt banked knobs, hidden output level, tri-state key LEDs, and OLED overview/zoom.</p>
+          </div>
+          <div class="card delay">
+            <h3>Delay Reference</h3>
+            <p><code>Field_delay_bundle</code> supplied the strongest runtime pattern: movement-gated layers, 50 ms OLED cadence, 16 ms LED cadence, and bounded MIDI event processing.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture" class="page panel">
+        <h2>Architecture</h2>
+        <div class="grid-2">
+          <div class="diagram-box">
+            <h3>Mermaid System Architecture</h3>
+            <div class="mermaid">
+flowchart TD
+  MIDI["External MIDI"] --> Main["1 ms main loop"]
+  ADC["ADC knobs and switches"] --> Main
+  Main --> Touch["Until-touched gate"]
+  Touch --> Banks["Main, Alt, Level stored values"]
+  Main --> Keys["A/B keybed state controls"]
+  Banks --> VoiceDirty["Dirty voice setup"]
+  VoiceDirty --> Synth["Mono synth parameter setters"]
+  Banks --> Audio["Audio callback DSP"]
+  Keys --> Audio
+  Audio --> Out["Stereo audio output"]
+  Main --> Oled["OLED dirty redraw, 50 ms cap"]
+  Main --> Leds["LED transmit, 16 ms cap"]
+            </div>
+          </div>
+          <div class="card">
+            <h3>GoJS Interactive Graph</h3>
+            <p id="gojsCaption">Source-grounded relationship graph for June runtime ownership.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+              <button type="button" class="is-active" data-graph="june">June Runtime</button>
+              <button type="button" data-graph="comparison">April vs June vs Delay</button>
+            </div>
+            <div id="gojsDiagram" aria-label="Interactive GoJS architecture graph"></div>
+          </div>
+        </div>
+
+        <div class="table" style="margin-top:14px">
+          <div class="row">
+            <div class="cell head">Surface</div>
+            <div class="cell head">Field_Template_April</div>
+            <div class="cell head">Field_Template_June</div>
+            <div class="cell head">Field_delay_bundle</div>
+          </div>
+          <div class="row">
+            <div class="cell">Control model</div>
+            <div class="cell">Near-value pickup/catch with stored logical values.</div>
+            <div class="cell">Until-touched movement gate per bank/modifier entry.</div>
+            <div class="cell">Until-touched layer gates for base, SW1, and SW2 layers.</div>
+          </div>
+          <div class="row">
+            <div class="cell">Visual I/O</div>
+            <div class="cell">OLED and LED work every main-loop pass.</div>
+            <div class="cell">OLED capped at 50 ms; LEDs capped at 16 ms.</div>
+            <div class="cell">Same 50 ms / 16 ms visual cadence family.</div>
+          </div>
+          <div class="row">
+            <div class="cell">DSP scope</div>
+            <div class="cell">Small mono synth starter.</div>
+            <div class="cell">Same small mono synth, optimized runtime shell.</div>
+            <div class="cell">Large multi-algorithm delay/Fx bundle with internal voice.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="timing" class="page panel">
+        <h2>Timing Analysis</h2>
+        <p>The important design point is not that every task runs faster. It is that every task runs at a rate matched to its job: controls at 1 ms, LEDs at human-visible refresh, and OLED at a capped dirty redraw rate.</p>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="card june">
+            <h3>June Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="ruler"><span></span><div class="ruler-scale"><span>0 ms</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div></div>
+              <div class="lane"><div class="lane-label">Audio callback<br>48 samples</div><div class="lane-track"><span class="lane-bar june">mono DSP</span><span class="lane-bar june">filter/env</span><span class="lane-bar neutral">out</span></div></div>
+              <div class="lane"><div class="lane-label">Main loop<br>1 ms</div><div class="lane-track"><span class="lane-bar june">MIDI <=16</span><span class="lane-bar june">controls</span><span class="lane-bar june">touch gate</span><span class="lane-bar neutral">dirty flags</span></div></div>
+              <div class="lane"><div class="lane-label">LED lane<br>16 ms cap</div><div class="lane-track"><span class="lane-bar june">knob values</span><span class="lane-bar june">key states</span><span class="lane-bar june">swap/transmit</span></div></div>
+              <div class="lane"><div class="lane-label">OLED lane<br>50 ms cap</div><div class="lane-track"><span class="lane-bar june">dirty check</span><span class="lane-bar june">overview/zoom</span><span class="lane-bar june">display update</span></div></div>
+            </div>
+          </div>
+          <div class="diagram-box">
+            <h3>Mermaid Timing Sequence</h3>
+            <div class="mermaid">
+sequenceDiagram
+  participant HW as Field controls
+  participant Main as 1 ms main loop
+  participant Gate as Until-touched gate
+  participant UI as Visual schedulers
+  participant Audio as Audio callback
+
+  HW->>Main: ProcessAllControls
+  Main->>Gate: compare raw knob with entry anchor
+  Gate-->>Main: write only after movement threshold
+  Main->>UI: set dirty flags
+  UI-->>UI: LED update when 16 ms elapsed
+  UI-->>UI: OLED update when 50 ms elapsed
+  Main->>Audio: simple parameter/state reads
+  Audio->>Audio: mono synth DSP per block
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="responsiveness" class="page panel">
+        <h2>Responsiveness</h2>
+        <div class="grid-2">
+          <div class="diagram-box">
+            <h3>Until-Touched State Machine</h3>
+            <div class="mermaid">
+stateDiagram-v2
+  [*] --> Stored
+  Stored --> Armed: bank, modifier, boot, or reset records raw anchor
+  Armed --> Armed: movement <= 0.012
+  Armed --> Live: movement > 0.012
+  Live --> Live: raw knob writes active parameter
+  Live --> Armed: switch bank or modifier
+  Live --> Armed: reset bank or all defaults
+            </div>
+          </div>
+          <div class="card june">
+            <h3>What This Means On K1</h3>
+            <p>Plain <code>K1</code> writes <code>Cutoff</code> only while the main bank is active and after <code>K1</code> has moved from the main-bank entry anchor. Holding <code>SW1</code> switches the active context, so <code>SW1 + K1</code> writes <code>EnvAmt</code> and cannot overwrite the stored <code>Cutoff</code>.</p>
+            <ul>
+              <li>No need to hunt for the old stored value.</li>
+              <li>No immediate jump when changing bank or modifier.</li>
+              <li>Reset defaults remain stable until knobs move again.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table" style="margin-top:14px">
+          <div class="row three">
+            <div class="cell head">Scenario</div>
+            <div class="cell head">April</div>
+            <div class="cell head">June</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Switch main -> alt</div>
+            <div class="cell">Alt value waits until physical knob is near stored value.</div>
+            <div class="cell">Alt value waits until physical knob moves from switch-entry position.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Return alt -> main</div>
+            <div class="cell">Main value waits for near-match pickup.</div>
+            <div class="cell">Main value attaches on first deliberate movement after release.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Reset defaults</div>
+            <div class="cell">Capture clears; near-match is needed again.</div>
+            <div class="cell">New raw anchors are recorded; defaults are protected until movement.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cpu-memory" class="page panel">
+        <h2>CPU &amp; Memory</h2>
+        <div class="grid-3">
+          <div class="card april">
+            <h3>Field_Template_April</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>114128 B / 128 KB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:87.07%"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>52832 B / 512 KB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:10.08%"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="card june">
+            <h3>Field_Template_June</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>115688 B / 128 KB</span></label><div class="bar-shell"><div class="bar-fill" style="width:88.26%"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>52920 B / 512 KB</span></label><div class="bar-shell"><div class="bar-fill" style="width:10.09%"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB</span></label><div class="bar-shell"><div class="bar-fill" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="card delay">
+            <h3>Field_delay_bundle</h3>
+            <p>The delay bundle is a heavier reference by design. It is useful for runtime scheduling and layer behavior, not as a memory-footprint target for the small template.</p>
+            <ul>
+              <li>Uses shared DaisyHost delay core.</li>
+              <li>Attaches SDRAM delay storage.</li>
+              <li>Includes multiple algorithms plus internal voice.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="io" class="page panel">
+        <h2>I/O &amp; Peripherals</h2>
+        <div class="control-map">
+          <div class="field-surface" aria-label="Daisy Field control surface schematic">
+            <div class="surface-oled">
+JUNE MAIN
+SAW  TR:0
+A5:SCL A6:HALF
+A7:FILT A8:LEG
+            </div>
+            <div class="surface-row">
+              <div class="surface-knob">K1<span>Cutoff / EnvAmt</span></div>
+              <div class="surface-knob">K2<span>Reso / LfoRt</span></div>
+              <div class="surface-knob">K3<span>Attack / LfoDp</span></div>
+              <div class="surface-knob">K4<span>Decay / Glide</span></div>
+              <div class="surface-knob">K5<span>Sustain / VelAmt</span></div>
+              <div class="surface-knob">K6<span>Release / KeyTrk</span></div>
+              <div class="surface-knob">K7<span>Drive / Noise</span></div>
+              <div class="surface-knob">K8<span>Color / Sub / Level</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-key">A1<span>Sine</span></div>
+              <div class="surface-key">A2<span>Tri</span></div>
+              <div class="surface-key">A3<span>Saw</span></div>
+              <div class="surface-key">A4<span>Sqr</span></div>
+              <div class="surface-key">A5<span>Velocity</span></div>
+              <div class="surface-key">A6<span>Keytrack</span></div>
+              <div class="surface-key">A7<span>LFO target</span></div>
+              <div class="surface-key">A8<span>Glide</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-key">B1<span>-12</span></div>
+              <div class="surface-key">B2<span>0</span></div>
+              <div class="surface-key">B3<span>+12</span></div>
+              <div class="surface-key">B4<span>+24</span></div>
+              <div class="surface-key">B5<span>Panic</span></div>
+              <div class="surface-key">B6<span>Reset Main</span></div>
+              <div class="surface-key">B7<span>Reset Alt</span></div>
+              <div class="surface-key">B8<span>Reset All</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-switch">SW1<span>Alt bank</span></div>
+              <div class="surface-switch">SW2<span>Level modifier</span></div>
+            </div>
+          </div>
+          <div class="diagram-box">
+            <h3>Control And Display Flow</h3>
+            <div class="mermaid">
+flowchart TD
+  Knobs["K1-K8 raw ADC values"] --> Context["Active context: Main, Alt, or Level"]
+  Switches["SW1 and SW2"] --> Context
+  Context --> Anchor["Record raw entry anchor"]
+  Anchor --> Gate["Wait for movement > 0.012"]
+  Gate --> Stored["Write stored logical value"]
+  Stored --> Oled["OLED zoom and overview"]
+  Stored --> KnobLeds["Knob LEDs show stored value"]
+  Keys["A/B keybed"] --> Modes["Wave, transpose, mode, reset, panic"]
+  Modes --> KeyLeds["Tri-state key LEDs"]
+  Modes --> Oled
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="parameters" class="page panel">
+        <h2>Parameters</h2>
+        <div class="table">
+          <div class="row">
+            <div class="cell head">Knob</div>
+            <div class="cell head">Main Bank</div>
+            <div class="cell head">Hold SW1</div>
+            <div class="cell head">Hold SW2</div>
+          </div>
+          <div class="row"><div class="cell">K1</div><div class="cell">Cutoff</div><div class="cell">EnvAmt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K2</div><div class="cell">Reso</div><div class="cell">LfoRt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K3</div><div class="cell">Attack</div><div class="cell">LfoDp</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K4</div><div class="cell">Decay</div><div class="cell">Glide</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K5</div><div class="cell">Sustain</div><div class="cell">VelAmt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K6</div><div class="cell">Release</div><div class="cell">KeyTrk</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K7</div><div class="cell">Drive</div><div class="cell">Noise</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K8</div><div class="cell">Color</div><div class="cell">Sub</div><div class="cell">Level</div></div>
+        </div>
+      </section>
+
+      <section id="build" class="page panel">
+        <h2>Build &amp; Config</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Firmware Target</h3>
+            <ul>
+              <li><code>TARGET = Field_Template_June</code></li>
+              <li><code>CPP_SOURCES = Field_Template_June.cpp</code></li>
+              <li><code>LIBDAISY_DIR = ../../../libDaisy</code></li>
+              <li><code>DAISYSP_DIR = ../../../DaisySP</code></li>
+              <li>Audio block size is the Field recommended 48-sample block.</li>
+            </ul>
+          </div>
+          <div class="card june">
+            <h3>Flash And Test Commands</h3>
+            <ul>
+              <li><code>make</code> builds the firmware.</li>
+              <li><code>py -3 ../../../DAISY_QAE/validate_daisy_code.py .</code> runs QAE.</li>
+              <li><code>make program</code> flashes through ST-Link.</li>
+              <li><code>.\run_hardware_testplan.ps1 -Flash</code> runs build, QAE, ST-Link flash, and hardware checklist.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="tests" class="page panel">
+        <h2>Test Results</h2>
+        <div class="table">
+          <div class="row three">
+            <div class="cell head">Check</div>
+            <div class="cell head">Result</div>
+            <div class="cell head">Evidence</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Firmware build</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>make</code>, exit 0. FLASH <code>115688 B</code>, SRAM <code>52920 B</code>.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Daisy QAE</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>0 error(s), 0 warning(s)</code> after UTF-8 rerun.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Hardware test runner smoke</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>run_hardware_testplan.ps1 -SkipBuild -NonInteractive</code>, exit 0.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Hardware flash/run</div>
+            <div class="cell"><span class="tag warn">PENDING</span></div>
+            <div class="cell">Not run in this pass. Use ST-Link command when the Field is connected.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="logs" class="page panel">
+        <h2>Logs &amp; Evidence</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Current Command Evidence</h3>
+            <div class="evidence">
+              <span><code>make</code> in <code>MyProjects/_projects/Field_Template_June</code>: exit 0.</span>
+              <span>Memory: FLASH <code>115688 B / 128 KB</code>, SRAM <code>52920 B / 512 KB</code>, SDRAM <code>0 B / 64 MB</code>.</span>
+              <span>QAE first run failed before findings because Windows used cp1252 output; UTF-8 rerun passed.</span>
+              <span>Hardware runner non-interactive/no-flash path: exit 0.</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Source Evidence</h3>
+            <ul>
+              <li>June touch threshold and visual caps: <code>Field_Template_June.cpp:18-26</code>.</li>
+              <li>June movement gate: <code>Field_Template_June.cpp:229</code>.</li>
+              <li>June bank switching anchors: <code>Field_Template_June.cpp:341-348</code>.</li>
+              <li>June output level gate: <code>Field_Template_June.cpp:513</code>.</li>
+              <li>June bank knob gate: <code>Field_Template_June.cpp:534</code>.</li>
+              <li>June deferred UI outputs: <code>Field_Template_June.cpp:783-797</code>.</li>
+              <li>June startup/control prime: <code>Field_Template_June.cpp:896-924</code>.</li>
+              <li>April pickup/catch baseline: <code>Field_Template_April.cpp:18</code>, <code>433-460</code>.</li>
+              <li>Field delay timing and touch reference: <code>FieldDelayFieldApp.h:33-38</code>, <code>332-345</code>, <code>736-741</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Generated from local source inspection and validation on <time datetime="2026-06-06">2026-06-06</time>. CDN access is required for live Mermaid and GoJS rendering when opened from disk.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const mermaidConfig = {
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        fontFamily: "Segoe UI, sans-serif",
+        primaryColor: "#e3f5f2",
+        primaryTextColor: "#172026",
+        primaryBorderColor: "#8fc9c2",
+        lineColor: "#60717f",
+        secondaryColor: "#eef5e6",
+        tertiaryColor: "#e7f0f8"
+      }
+    };
+
+    if (window.mermaid) {
+      window.mermaid.initialize(mermaidConfig);
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function captureMermaidSources() {
+      document.querySelectorAll(".mermaid").forEach(diagram => {
+        if (!diagram.dataset.source) {
+          diagram.dataset.source = diagram.textContent.trim();
+        }
+      });
+    }
+
+    let mermaidCounter = 0;
+
+    async function renderMermaidInPage(page) {
+      if (!window.mermaid || !page) {
+        return;
+      }
+      const diagrams = page.querySelectorAll(".mermaid");
+      for (const diagram of diagrams) {
+        const source = diagram.dataset.source || diagram.textContent.trim();
+        const existingSvg = diagram.querySelector("svg");
+        if (diagram.dataset.rendered === "true" && existingSvg) {
+          continue;
+        }
+        try {
+          const renderId = `field-template-june-${Date.now()}-${mermaidCounter++}`;
+          const rendered = await window.mermaid.render(renderId, source);
+          diagram.innerHTML = rendered.svg;
+          diagram.dataset.rendered = "true";
+          if (rendered.bindFunctions) {
+            rendered.bindFunctions(diagram);
+          }
+        } catch (error) {
+          console.error("Mermaid render failed", error);
+          diagram.dataset.rendered = "error";
+          diagram.innerHTML = `<div class="render-warning">Mermaid render failed. Source retained below.</div><pre>${escapeHtml(source)}</pre>`;
+        }
+      }
+    }
+
+    const graphData = {
+      june: {
+        caption: "June runtime graph: 1 ms controls, until-touched gate, dirty voice setup, capped visual I/O.",
+        nodes: [
+          { key: "controls", text: "Field controls", group: "june" },
+          { key: "main", text: "1 ms main loop", group: "neutral" },
+          { key: "anchor", text: "Raw entry anchors", group: "june" },
+          { key: "gate", text: "Until-touched gate", group: "june" },
+          { key: "params", text: "Stored params", group: "june" },
+          { key: "voice", text: "Dirty voice setup", group: "ok" },
+          { key: "audio", text: "Audio callback DSP", group: "ok" },
+          { key: "oled", text: "OLED 50 ms cap", group: "june" },
+          { key: "leds", text: "LED 16 ms cap", group: "june" }
+        ],
+        links: [
+          { from: "controls", to: "main", text: "sample" },
+          { from: "main", to: "anchor", text: "on entry" },
+          { from: "anchor", to: "gate", text: "compare" },
+          { from: "gate", to: "params", text: "write after movement" },
+          { from: "params", to: "voice", text: "mark dirty" },
+          { from: "voice", to: "audio", text: "setter state" },
+          { from: "params", to: "audio", text: "values" },
+          { from: "main", to: "oled", text: "dirty/cap" },
+          { from: "main", to: "leds", text: "cap" }
+        ]
+      },
+      comparison: {
+        caption: "Comparison graph: April provided the template, Field_delay_bundle provided the runtime scheduling pattern.",
+        nodes: [
+          { key: "april", text: "Field_Template_April", group: "april" },
+          { key: "pickup", text: "Pickup near stored value", group: "april" },
+          { key: "delay", text: "Field_delay_bundle", group: "delay" },
+          { key: "touch", text: "Movement-gated layers", group: "delay" },
+          { key: "cadence", text: "50 ms OLED / 16 ms LEDs", group: "delay" },
+          { key: "june", text: "Field_Template_June", group: "june" },
+          { key: "result", text: "Stable values and lower UI work", group: "ok" }
+        ],
+        links: [
+          { from: "april", to: "pickup", text: "baseline" },
+          { from: "delay", to: "touch", text: "reference" },
+          { from: "delay", to: "cadence", text: "reference" },
+          { from: "pickup", to: "june", text: "replaced by" },
+          { from: "touch", to: "june", text: "adapted" },
+          { from: "cadence", to: "june", text: "adapted" },
+          { from: "june", to: "result", text: "delivers" }
+        ]
+      }
+    };
+
+    function renderFallbackGraph(container, graph) {
+      if (!container || !graph) {
+        return;
+      }
+      const nodeHtml = graph.nodes.map(node => `<div class="fallback-node ${node.group || "neutral"}">${escapeHtml(node.text)}</div>`).join("");
+      const linkHtml = graph.links.map(link => {
+        const from = graph.nodes.find(node => node.key === link.from);
+        const to = graph.nodes.find(node => node.key === link.to);
+        return `<span>${escapeHtml(from ? from.text : link.from)} -> ${escapeHtml(to ? to.text : link.to)} <code>${escapeHtml(link.text || "")}</code></span>`;
+      }).join("");
+      container.innerHTML = `<div class="fallback-graph"><div class="fallback-nodes">${nodeHtml}</div><div class="fallback-links">${linkHtml}</div></div>`;
+    }
+
+    function initGoJS() {
+      const container = document.getElementById("gojsDiagram");
+      if (!container || !window.go) {
+        return null;
+      }
+      const $ = go.GraphObject.make;
+      const diagram = $(go.Diagram, "gojsDiagram", {
+        initialAutoScale: go.Diagram.Uniform,
+        layout: $(go.LayeredDigraphLayout, { direction: 90, layerSpacing: 58, columnSpacing: 34 }),
+        "undoManager.isEnabled": false,
+        allowCopy: false,
+        allowDelete: false
+      });
+      const fills = { june: "#e3f5f2", april: "#eef5e6", delay: "#e7f0f8", neutral: "#edf3f7", ok: "#e8f6ee" };
+      const strokes = { june: "#146b68", april: "#536b2f", delay: "#2f6f9f", neutral: "#60717f", ok: "#147a4d" };
+      diagram.nodeTemplate =
+        $(go.Node, "Auto",
+          { minSize: new go.Size(150, 56) },
+          $(go.Shape, "RoundedRectangle",
+            { strokeWidth: 1.4, parameter1: 8 },
+            new go.Binding("fill", "group", g => fills[g] || fills.neutral),
+            new go.Binding("stroke", "group", g => strokes[g] || strokes.neutral)),
+          $(go.TextBlock,
+            {
+              margin: new go.Margin(10, 12, 10, 12),
+              wrap: go.TextBlock.WrapFit,
+              textAlign: "center",
+              maxSize: new go.Size(178, NaN),
+              stroke: "#172026",
+              font: "600 12px Segoe UI, sans-serif"
+            },
+            new go.Binding("text", "text"))
+        );
+      diagram.linkTemplate =
+        $(go.Link,
+          { routing: go.Link.AvoidsNodes, corner: 8, curve: go.Link.JumpOver },
+          $(go.Shape, { stroke: "#7b8a97", strokeWidth: 1.3 }),
+          $(go.Shape, { toArrow: "Standard", stroke: "#7b8a97", fill: "#7b8a97" }),
+          $(go.Panel, "Auto",
+            $(go.Shape, "RoundedRectangle", { fill: "rgba(255,255,255,0.92)", stroke: "#d7e0e8", parameter1: 6 }),
+            $(go.TextBlock, { margin: new go.Margin(3, 6, 3, 6), font: "11px Segoe UI, sans-serif", stroke: "#60717f" }, new go.Binding("text", "text"))
+          )
+        );
+      return diagram;
+    }
+
+    let activeDiagram = null;
+
+    function setGraph(name) {
+      const graph = graphData[name] || graphData.june;
+      const caption = document.getElementById("gojsCaption");
+      if (caption) {
+        caption.textContent = graph.caption;
+      }
+      if (activeDiagram) {
+        activeDiagram.model = new go.GraphLinksModel(graph.nodes, graph.links);
+      } else {
+        renderFallbackGraph(document.getElementById("gojsDiagram"), graph);
+      }
+    }
+
+    function showPage(pageId) {
+      const fallback = document.getElementById("overview");
+      const target = document.getElementById(pageId) || fallback;
+      document.querySelectorAll(".page").forEach(page => {
+        page.classList.toggle("is-current", page === target);
+      });
+      document.querySelectorAll("[data-page-link]").forEach(link => {
+        link.classList.toggle("active", link.dataset.pageLink === target.id);
+      });
+      if (target.id === "architecture" && activeDiagram) {
+        activeDiagram.requestUpdate();
+        activeDiagram.zoomToFit();
+      }
+      renderMermaidInPage(target);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      captureMermaidSources();
+      activeDiagram = initGoJS();
+      setGraph("june");
+      document.querySelectorAll("[data-graph]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-graph]").forEach(item => item.classList.remove("is-active"));
+          button.classList.add("is-active");
+          setGraph(button.dataset.graph);
+        });
+      });
+      document.querySelectorAll("[data-page-link]").forEach(link => {
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          const pageId = link.dataset.pageLink;
+          history.pushState(null, "", `#${pageId}`);
+          showPage(pageId);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+      window.addEventListener("popstate", () => {
+        showPage((location.hash || "#overview").slice(1));
+      });
+      showPage((location.hash || "#overview").slice(1));
+    });
+  </script>
+</body>
+</html>

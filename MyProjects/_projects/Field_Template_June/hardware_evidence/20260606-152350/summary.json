@@ -1,0 +1,45 @@
+﻿{
+    "project":  "Field_Template_June",
+    "started":  "2026-06-06T15:23:50.5106259+02:00",
+    "evidence_dir":  "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\MyProjects\\_projects\\Field_Template_June\\.\\hardware_evidence\\20260606-152350",
+    "non_interactive":  false,
+    "build":  {
+                  "status":  "SKIPPED",
+                  "exit_code":  null,
+                  "log":  null,
+                  "reason":  "Skipped by -SkipBuild."
+              },
+    "qae":  {
+                "status":  "SKIPPED",
+                "exit_code":  null,
+                "log":  null,
+                "reason":  "Skipped by -SkipBuild."
+            },
+    "flash":  {
+                  "status":  "SKIPPED",
+                  "exit_code":  null,
+                  "log":  null,
+                  "reason":  "Run with -Flash to call make program."
+              },
+    "serial":  {
+                   "status":  "SKIPPED",
+                   "port":  "",
+                   "baud":  115200,
+                   "log":  null,
+                   "commands_log":  null,
+                   "reason":  "Skipped by -NoSerial."
+               },
+    "checks":  {
+                   "boot_marker":  "BLOCKED",
+                   "selftest_pass":  "BLOCKED",
+                   "status_seen":  "BLOCKED",
+                   "snapshot_seen":  "BLOCKED"
+               },
+    "limitations":  [
+                        "Serial telemetry cannot physically move knobs, press Field keys, or prove OLED visibility.",
+                        "Audio output requires an audio interface or measurement rig for unattended pass/fail validation.",
+                        "MIDI input can be observed if an external MIDI source or scripted MIDI rig is connected during capture."
+                    ],
+    "error":  null,
+    "finished":  "2026-06-06T15:23:50.5463592+02:00"
+}

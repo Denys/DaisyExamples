@@ -1,0 +1,201 @@
+﻿{
+    "generated_at":  "2026-06-05",
+    "project":  "DaisyDAFX dual STFT comparison",
+    "target_board":  "Daisy Field via ST-Link",
+    "sample_rate_hz":  48000,
+    "source_evidence_used":  [
+                                 {
+                                     "label":  "Farmer2K5/daisy-fast-stft",
+                                     "url":  "https://github.com/Farmer2K5/daisy-fast-stft",
+                                     "commit":  "6eda9c43ccb771ae1598260bae13183d9f6b51e2",
+                                     "local_cache_path":  ".tmp/source_evidence/daisy-fast-stft",
+                                     "files":  [
+                                                   "include/DaisyFarm/STFT/fast_stft.h",
+                                                   "include/DaisyFarm/STFT/fast_rfft.h",
+                                                   "include/DaisyFarm/STFT/fast_istft.h",
+                                                   "include/DaisyFarm/STFT/fast_window.h",
+                                                   "include/DaisyFarm/STFT/fast_spectral.h",
+                                                   "ex_stft_mono.cpp",
+                                                   "Performance.md"
+                                               ]
+                                 },
+                                 {
+                                     "label":  "DAFX MATLAB sources",
+                                     "files":  [
+                                                   "DAFX-MATLAB/M_files_chap10/stftenv.m",
+                                                   "DAFX-MATLAB/M_files_chap10/stft.m",
+                                                   "DAFX-MATLAB/M_files_chap07/VX_robot.m",
+                                                   "DAFX-MATLAB/M_files_chap07/VX_pv_nothing.m"
+                                               ]
+                                 },
+                                 {
+                                     "label":  "local research context",
+                                     "files":  [
+                                                   "C:/Users/denko/Codex/_weekly/Embedded_DSP_GitHub_Digest/docs/reports/2026-06-02-dafx-stft-algorithm-analysis-and-dashboard-update.md",
+                                                   "C:/Users/denko/Codex/_weekly/Embedded_DSP_GitHub_Digest/stft_benchmark_dashboard/data/stft_results.json"
+                                               ]
+                                 }
+                             ],
+    "results":  [
+                    {
+                        "backend_name":  "FastStftBackend",
+                        "fft_size":  512,
+                        "hop_size":  128,
+                        "block_size":  64,
+                        "sample_rate_hz":  48000,
+                        "channel_count":  1,
+                        "mode":  "Complex",
+                        "max_cpu_percent":  13.008,
+                        "average_cpu_percent":  6.505,
+                        "cpu_evidence":  "measured Daisy runtime via tools/capture_dual_stft_cpu.ps1 on 2026-06-06T15:32:16.7245744+02:00 from COM5 for 65 seconds",
+                        "cpu_evidence_label":  "measured Daisy runtime",
+                        "cpu_measurement":  {
+                                                "tool":  "tools/capture_dual_stft_cpu.ps1",
+                                                "measured_at":  "2026-06-06T15:32:16.7245744+02:00",
+                                                "port":  "COM5",
+                                                "source":  "COM5",
+                                                "baud_rate":  115200,
+                                                "duration_seconds":  65,
+                                                "sample_count":  67,
+                                                "capture_json":  ".tmp\\dual-stft-cpu-capture-20260606-153216.json",
+                                                "min_cpu_percent":  0.488
+                                            },
+                        "source_reference_max_cpu_percent":  10.24,
+                        "source_reference_note":  "Farmer2K5 Performance.md mono 512/128/64 Complex row; source-reference only, not this port measurement.",
+                        "flash_percent":  85.48,
+                        "sram_percent":  17.49,
+                        "ram_d2_percent":  5.84,
+                        "sdram_percent":  0.0,
+                        "flash_bytes":  112040,
+                        "sram_bytes":  91696,
+                        "ram_d2_bytes":  17224,
+                        "reconstruction_rms_error":  2.006718347E-08,
+                        "host_test":  "DualStftTest.FastBackendReconstructsSineIdentity",
+                        "firmware_build_command":  "make STFT_DEFS=\"-DSTFT_BOARD_FIELD -DSTFT_BACKEND_FAST -DSTFT_PROFILE_512\"",
+                        "firmware_build_status":  "passed",
+                        "known_limitations":  [
+                                                  "Host tests use the portable FFT fallback; Daisy firmware links CMSIS arm_rfft_fast_f32."
+                                              ]
+                    },
+                    {
+                        "backend_name":  "DafxStftEnvBackend",
+                        "fft_size":  512,
+                        "hop_size":  128,
+                        "block_size":  64,
+                        "sample_rate_hz":  48000,
+                        "channel_count":  1,
+                        "mode":  "DAFX identity",
+                        "max_cpu_percent":  16.06,
+                        "average_cpu_percent":  8.183,
+                        "cpu_evidence":  "measured Daisy runtime via tools/capture_dual_stft_cpu.ps1 on 2026-06-06T15:33:43.9714752+02:00 from COM5 for 65 seconds",
+                        "cpu_evidence_label":  "measured Daisy runtime",
+                        "cpu_measurement":  {
+                                                "tool":  "tools/capture_dual_stft_cpu.ps1",
+                                                "measured_at":  "2026-06-06T15:33:43.9714752+02:00",
+                                                "port":  "COM5",
+                                                "source":  "COM5",
+                                                "baud_rate":  115200,
+                                                "duration_seconds":  65,
+                                                "sample_count":  67,
+                                                "capture_json":  ".tmp\\dual-stft-cpu-capture-20260606-153343.json",
+                                                "min_cpu_percent":  0.638
+                                            },
+                        "source_reference_max_cpu_percent":  null,
+                        "source_reference_note":  "No DAFX Daisy runtime CPU reference exists in the inspected sources.",
+                        "flash_percent":  85.72,
+                        "sram_percent":  19.15,
+                        "ram_d2_percent":  5.84,
+                        "sdram_percent":  0.0,
+                        "flash_bytes":  112360,
+                        "sram_bytes":  100384,
+                        "ram_d2_bytes":  17224,
+                        "reconstruction_rms_error":  2.020931156E-08,
+                        "host_test":  "DualStftTest.DafxBackendReconstructsSineIdentity",
+                        "firmware_build_command":  "make STFT_DEFS=\"-DSTFT_BOARD_FIELD -DSTFT_BACKEND_DAFX -DSTFT_PROFILE_512\"",
+                        "firmware_build_status":  "passed",
+                        "known_limitations":  [
+                                                  "DAFX envelope compensation is implemented as stream-local envelope-ring division, not whole-buffer post-normalization."
+                                              ]
+                    },
+                    {
+                        "backend_name":  "FastStftBackend",
+                        "fft_size":  1024,
+                        "hop_size":  256,
+                        "block_size":  64,
+                        "sample_rate_hz":  48000,
+                        "channel_count":  1,
+                        "mode":  "Complex",
+                        "max_cpu_percent":  25.719,
+                        "average_cpu_percent":  6.666,
+                        "cpu_evidence":  "measured Daisy runtime via tools/capture_dual_stft_cpu.ps1 on 2026-06-06T15:35:08.4174761+02:00 from COM5 for 65 seconds",
+                        "cpu_evidence_label":  "measured Daisy runtime",
+                        "cpu_measurement":  {
+                                                "tool":  "tools/capture_dual_stft_cpu.ps1",
+                                                "measured_at":  "2026-06-06T15:35:08.4174761+02:00",
+                                                "port":  "COM5",
+                                                "source":  "COM5",
+                                                "baud_rate":  115200,
+                                                "duration_seconds":  65,
+                                                "sample_count":  67,
+                                                "capture_json":  ".tmp\\dual-stft-cpu-capture-20260606-153508.json",
+                                                "min_cpu_percent":  0.491
+                                            },
+                        "source_reference_max_cpu_percent":  19.72,
+                        "source_reference_note":  "Farmer2K5 Performance.md mono 1024/256/64 Complex row; source-reference only, not this port measurement.",
+                        "flash_percent":  88.59,
+                        "sram_percent":  22.57,
+                        "ram_d2_percent":  5.84,
+                        "sdram_percent":  0.0,
+                        "flash_bytes":  116120,
+                        "sram_bytes":  118320,
+                        "ram_d2_bytes":  17224,
+                        "reconstruction_rms_error":  2.188945913E-08,
+                        "host_test":  "DualStftTest.FastBackend1024ReconstructsSineIdentity",
+                        "firmware_build_command":  "make STFT_DEFS=\"-DSTFT_BOARD_FIELD -DSTFT_BACKEND_FAST -DSTFT_PROFILE_1024\"",
+                        "firmware_build_status":  "passed",
+                        "known_limitations":  [
+                                                  "Host tests use the portable FFT fallback; Daisy firmware links CMSIS arm_rfft_fast_f32."
+                                              ]
+                    },
+                    {
+                        "backend_name":  "DafxStftEnvBackend",
+                        "fft_size":  1024,
+                        "hop_size":  256,
+                        "block_size":  64,
+                        "sample_rate_hz":  48000,
+                        "channel_count":  1,
+                        "mode":  "DAFX identity",
+                        "max_cpu_percent":  31.319,
+                        "average_cpu_percent":  8.291,
+                        "cpu_evidence":  "measured Daisy runtime via tools/capture_dual_stft_cpu.ps1 on 2026-06-06T15:36:30.3435733+02:00 from COM5 for 65 seconds",
+                        "cpu_evidence_label":  "measured Daisy runtime",
+                        "cpu_measurement":  {
+                                                "tool":  "tools/capture_dual_stft_cpu.ps1",
+                                                "measured_at":  "2026-06-06T15:36:30.3435733+02:00",
+                                                "port":  "COM5",
+                                                "source":  "COM5",
+                                                "baud_rate":  115200,
+                                                "duration_seconds":  65,
+                                                "sample_count":  67,
+                                                "capture_json":  ".tmp\\dual-stft-cpu-capture-20260606-153630.json",
+                                                "min_cpu_percent":  0.634
+                                            },
+                        "source_reference_max_cpu_percent":  null,
+                        "source_reference_note":  "No DAFX Daisy runtime CPU reference exists in the inspected sources.",
+                        "flash_percent":  88.87,
+                        "sram_percent":  25.89,
+                        "ram_d2_percent":  5.84,
+                        "sdram_percent":  0.0,
+                        "flash_bytes":  116480,
+                        "sram_bytes":  135712,
+                        "ram_d2_bytes":  17224,
+                        "reconstruction_rms_error":  2.14841176E-08,
+                        "host_test":  "DualStftTest.DafxBackend1024ReconstructsSineIdentity",
+                        "firmware_build_command":  "make STFT_DEFS=\"-DSTFT_BOARD_FIELD -DSTFT_BACKEND_DAFX -DSTFT_PROFILE_1024\"",
+                        "firmware_build_status":  "passed",
+                        "known_limitations":  [
+                                                  "DAFX envelope compensation is implemented as stream-local envelope-ring division, not whole-buffer post-normalization."
+                                              ]
+                    }
+                ]
+}

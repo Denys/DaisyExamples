@@ -4,6 +4,30 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- add source-backed Field delay/Fx adaptations plus a selectable delay bundle
+  with matching DaisyHost apps and `MyProjects/_projects/Field_delay_*`
+  firmware projects:
+  - adapt `balazsbencs/daisy-multifx-pedal`,
+    `Farmer2K5/daisy-reverb-playground`, `GuitarML/FunBox`, and
+    `Farmer2K5/daisy-sdram-delaylines` into one portable
+    `DaisyDelayFxCore`, four source-specific `field_delay_*` hosted apps,
+    `field_delay_bundle`, and five firmware wrappers sharing the Field
+    hardware adapter
+  - name bundle algorithms by type first: Tape [multifx], Tank [reverb],
+    Texture [FunBox], and Long [sdram]; A1-A4 select algorithms and the bundle
+    preserves per-algorithm parameter snapshots while switching sources
+  - support Field K1-K8 base controls plus SW1/SW2 shifted layers, movement
+    gated knob memory, A-row three-state actions, B1-B8 white-key test notes,
+    external MIDI note input, and OLED parameter/value text
+  - verify with Debug `unit_tests DaisyHostCLI DaisyHostRender` build, focused
+    `DaisyDelayFxCoreTest|DelayFxAdaptationCoreTest` CTest passing `5/5`,
+    five `validate-scenario` checks, five non-silent `render` checks, five
+    firmware `make` builds, five QAE linter passes at `0 error(s), 0
+    warning(s)`, and the full wrapper Release host gate `cmd /c
+    build_host.cmd` passing CTest `295/295`
+  - keep flashing, physical Field audio/control validation, external MIDI
+    device enumeration, and manual DAW/VST3 validation out of scope for this
+    pass
 - restore `field/SubharmoniqField` firmware build compatibility during the TF8
   Daisy Field support sweep:
   - replace the shared `DaisySubharmoniqCore` filter-state `std::clamp` call

@@ -1,0 +1,51 @@
+{
+  "appId": "field_delay_bundle",
+  "boardId": "daisy_field",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 0.75,
+    "outputChannelCount": 2
+  },
+  "seed": 6105,
+  "audioInput": {
+    "mode": "saw",
+    "level": 0.22,
+    "frequencyHz": 196.0
+  },
+  "initialParameterValues": {
+    "node0/param/algorithm": 0.0,
+    "node0/param/mix": 0.57,
+    "node0/param/time": 0.38,
+    "node0/param/feedback": 0.50,
+    "node0/param/texture": 0.60
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.08,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/field_keys/a3",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 0.12,
+      "type": "menu_set_item",
+      "itemId": "node0/menu/base/texture",
+      "normalizedValue": 0.74
+    },
+    {
+      "timeSeconds": 0.18,
+      "type": "midi",
+      "status": 144,
+      "data1": 72,
+      "data2": 96
+    },
+    {
+      "timeSeconds": 0.58,
+      "type": "midi",
+      "status": 128,
+      "data1": 72,
+      "data2": 0
+    }
+  ]
+}

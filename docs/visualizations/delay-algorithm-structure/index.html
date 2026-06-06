@@ -1,0 +1,1561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delay Bundle Algorithm Structure Explorer</title>
+  <script src="https://unpkg.com/gojs/release/go.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="data/algorithms.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --text: #12151c;
+      --muted: #5d6573;
+      --border: #d9dee7;
+      --blue: #2d5b9a;
+      --green: #2e7a45;
+      --amber: #b87716;
+      --purple: #7353ba;
+      --red: #a94747;
+      --shadow: 0 12px 30px rgba(18, 21, 28, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.08;
+      letter-spacing: 0;
+      font-weight: 760;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .figma-link {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 650;
+      background: #fdfefe;
+      color: var(--text);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr) 340px;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .sidebar,
+    .details {
+      padding: 14px;
+      overflow: auto;
+      max-height: calc(100vh - 116px);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: minmax(430px, 68vh) auto;
+      min-height: calc(100vh - 116px);
+      overflow: hidden;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .algorithm-list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .algorithm-group-label {
+      margin: 7px 0 1px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 780;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .algorithm-group-label:first-child {
+      margin-top: 0;
+    }
+
+    .algorithm-button,
+    .view-button {
+      appearance: none;
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fbfcfe;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 10px 11px;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+      min-height: 44px;
+    }
+
+    .algorithm-button strong,
+    .view-button strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .algorithm-button span,
+    .view-button span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .algorithm-button.is-active,
+    .view-button.is-active {
+      border-color: var(--blue);
+      background: #edf4ff;
+    }
+
+    .view-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .diagram-stage {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcfe;
+    }
+
+    .diagram-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+
+    .technology-title {
+      min-width: 0;
+    }
+
+    .technology-title strong {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .technology-title span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .technology-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .technology-button {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fbfcfe;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 720;
+      min-height: 32px;
+      padding: 6px 10px;
+    }
+
+    .technology-button.is-active {
+      border-color: var(--blue);
+      background: #edf4ff;
+      color: #12355f;
+    }
+
+    .diagram-window {
+      min-height: 0;
+      position: relative;
+      background: #fbfcfe;
+    }
+
+    .diagram-pane {
+      position: absolute;
+      inset: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+    }
+
+    .diagram-pane.is-active {
+      display: block;
+    }
+
+    #diagram {
+      width: 100%;
+      height: 100%;
+      background: #fbfcfe;
+    }
+
+    .below {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 300px;
+    }
+
+    .algorithm-dashboard {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      overflow: auto;
+    }
+
+    .reference-dashboard {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      overflow: auto;
+      background: #ffffff;
+    }
+
+    .literature-dashboard {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      overflow: auto;
+      background: #fbfcfe;
+    }
+
+    .dashboard-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .dashboard-head .section-title {
+      margin: 0;
+    }
+
+    .dashboard-summary {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+      text-align: right;
+    }
+
+    .algorithm-block-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .algorithm-block {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 10px;
+      min-height: 150px;
+    }
+
+    .algorithm-block strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .algorithm-block .category {
+      display: inline-flex;
+      margin: 7px 0 8px;
+      min-height: 22px;
+      align-items: center;
+      border-radius: 999px;
+      background: #edf4ff;
+      color: var(--blue);
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .algorithm-block p {
+      margin: 0 0 8px;
+      color: #313844;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .block-io {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .block-io span {
+      color: #313844;
+      font-weight: 720;
+    }
+
+    .reference-project {
+      margin-top: 12px;
+    }
+
+    .reference-project:first-of-type {
+      margin-top: 0;
+    }
+
+    .reference-project-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .reference-project-head h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .reference-project-head span {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .reference-summary {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .evidence {
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .literature-review {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .literature-review:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .literature-review h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .review-scope {
+      margin: 0 0 10px;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .review-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .review-meta span,
+    .mini-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--muted);
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .review-section {
+      min-width: 0;
+    }
+
+    .review-section h4 {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .review-section p,
+    .review-section li {
+      color: #313844;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .review-section p {
+      margin: 0;
+    }
+
+    .review-section ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .source-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .source-list li {
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .source-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .theme-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 10px;
+    }
+
+    .theme-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .theme-card p {
+      margin: 0 0 8px;
+      color: #313844;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .equivalence-table {
+      margin-top: 12px;
+    }
+
+    .approach-table {
+      padding: 14px;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .metric {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #edf4ff;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .details h2 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .source {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      margin-bottom: 14px;
+    }
+
+    .details h3 {
+      margin: 18px 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .details p,
+    .details li {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .details ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f2f4f7;
+      border: 1px solid var(--border);
+      color: #313844;
+      font-size: 12px;
+    }
+
+    .control-layer {
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .control-layer summary {
+      cursor: pointer;
+      padding: 10px;
+      background: #fbfcfe;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .control-layer table {
+      font-size: 12px;
+    }
+
+    .mermaid {
+      background: #ffffff;
+      border: 0;
+      border-radius: 0;
+      margin: 0;
+      padding: 18px;
+      min-height: 100%;
+    }
+
+    .graphify-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #ffffff;
+    }
+
+    .external-pane {
+      display: none;
+      height: 100%;
+      padding: 22px;
+      background: #ffffff;
+    }
+
+    .external-pane.is-active {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .external-pane h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .external-pane p {
+      margin: 0 0 12px;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .external-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .external-actions a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: #fbfcfe;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .fallback {
+      padding: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      main {
+        grid-template-columns: 230px minmax(0, 1fr);
+      }
+
+      .details {
+        grid-column: 1 / -1;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .title-row {
+        flex-direction: column;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace,
+      .sidebar,
+      .details {
+        max-height: none;
+        min-height: 0;
+      }
+
+      .diagram-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .technology-tabs {
+        justify-content: flex-start;
+      }
+
+      .below {
+        grid-template-columns: 1fr;
+      }
+
+      .approach-table {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title-row">
+        <div>
+          <h1>Delay Bundle Algorithm Structure Explorer</h1>
+          <p class="subtitle">
+            Source-backed comparison of Tape [multifx], Tank [reverb], Texture [FunBox],
+            Long [sdram], and Phantasmagoria delay algorithms. The page tests which
+            visualization approach is most comprehensible for firmware control flow and
+            DSP algorithm structure.
+          </p>
+        </div>
+        <a class="figma-link" href="https://www.figma.com/board/kX5emp9EAmxTxOjb1ecj4u?utm_source=other&utm_content=edit_in_figjam&oai_id=&request_id=0ab4552c-85b5-4b64-811b-b5d9d7db05e3">Open FigJam</a>
+      </div>
+    </header>
+
+    <main>
+      <aside class="panel sidebar">
+        <h2 class="section-title">Algorithms</h2>
+        <div class="algorithm-list" id="algorithmList"></div>
+
+        <h2 class="section-title">Diagram Content</h2>
+        <div class="view-list">
+          <button class="view-button is-active" data-view="overview">
+            <strong>Bundle overview</strong>
+            <span>Inputs, Field UI, core, algorithms, outputs.</span>
+          </button>
+          <button class="view-button" data-view="algorithm">
+            <strong>Selected algorithm</strong>
+            <span>Internal flow for the selected delay type.</span>
+          </button>
+          <button class="view-button" data-view="controls">
+            <strong>Controls and synth</strong>
+            <span>Knob layers, keybed, OLED, MIDI, internal voices.</span>
+          </button>
+        </div>
+      </aside>
+
+      <section class="panel workspace">
+        <div class="diagram-stage">
+          <div class="diagram-toolbar">
+            <div class="technology-title">
+              <strong>Diagram Technology</strong>
+              <span id="technologyHint">GoJS interactive graph for the current content.</span>
+            </div>
+            <div class="technology-tabs" id="technologyTabs">
+              <button class="technology-button is-active" data-tech="gojs">GoJS</button>
+              <button class="technology-button" data-tech="mermaid">Mermaid</button>
+              <button class="technology-button" data-tech="graphify">Graphify</button>
+              <button class="technology-button" data-tech="figjam">FigJam</button>
+            </div>
+          </div>
+          <div class="diagram-window">
+            <div class="diagram-pane is-active" id="gojsPane">
+              <div id="diagram"></div>
+            </div>
+            <div class="diagram-pane" id="mermaidPane">
+              <pre class="mermaid" id="mermaidBlock"></pre>
+            </div>
+            <div class="diagram-pane" id="graphifyPane">
+              <iframe
+                class="graphify-frame"
+                title="Graphify structure tree"
+                src="graphify-corpus/graphify-out/GRAPH_TREE.html"></iframe>
+            </div>
+            <div class="diagram-pane external-pane" id="figjamPane">
+              <div>
+                <h2>FigJam Editable Diagram</h2>
+                <p>
+                  FigJam is best for review sessions and manual editing. The generated
+                  board contains the editable architecture flowchart for the same bundle
+                  structure shown here. Figma boards are opened externally instead of
+                  embedded so edit access, comments, and account permissions work normally.
+                </p>
+                <div class="external-actions">
+                  <a href="https://www.figma.com/board/kX5emp9EAmxTxOjb1ecj4u?utm_source=other&utm_content=edit_in_figjam&oai_id=&request_id=0ab4552c-85b5-4b64-811b-b5d9d7db05e3">Open FigJam board</a>
+                  <a href="figma-diagram-brief.md">Open FigJam brief</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="fallback" id="graphFallback">
+          GoJS did not load. Use Mermaid, Graphify, or FigJam from the diagram technology selector.
+        </div>
+        <div class="below">
+          <div class="algorithm-dashboard">
+            <div class="dashboard-head">
+              <h2 class="section-title">Extracted Algorithm Blocks</h2>
+              <span class="dashboard-summary" id="extractionSummary"></span>
+            </div>
+            <div class="algorithm-block-grid" id="algorithmBlockGrid"></div>
+          </div>
+          <div class="reference-dashboard">
+            <div class="dashboard-head">
+              <h2 class="section-title">External Source Extractions</h2>
+              <span class="dashboard-summary" id="referenceSummary"></span>
+            </div>
+            <div id="referenceProjectGrid"></div>
+          </div>
+          <div class="literature-dashboard">
+            <div class="dashboard-head">
+              <h2 class="section-title">Literature Review Synthesis</h2>
+              <span class="dashboard-summary" id="literatureSummary"></span>
+            </div>
+            <div id="literatureReviewGrid"></div>
+          </div>
+          <div class="approach-table">
+            <h2 class="section-title">Approach Suitability</h2>
+            <table id="approachTable"></table>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel details" id="details"></aside>
+    </main>
+  </div>
+
+  <script>
+    const model = window.DelayBundleModel;
+    let selectedAlgorithm = model.algorithms[0].id;
+    let selectedView = "overview";
+    let selectedTechnology = "gojs";
+    let diagram = null;
+
+    const technologyHints = {
+      gojs: "GoJS interactive graph for the current content.",
+      mermaid: "Mermaid renders the same content as source-controlled diagram syntax.",
+      graphify: "Graphify shows the generated code-relationship tree for the bundle structure.",
+      figjam: "FigJam opens the editable review diagram generated from Mermaid.",
+    };
+
+    const colors = {
+      input: "#e7f0ff",
+      control: "#fff2d5",
+      process: "#e7f8ec",
+      buffer: "#f1e9ff",
+      output: "#ffeaea",
+      default: "#ffffff",
+    };
+
+    const strokes = {
+      input: "#2d5b9a",
+      control: "#b87716",
+      process: "#2e7a45",
+      buffer: "#7353ba",
+      output: "#a94747",
+      default: "#5d6573",
+    };
+
+    function activeAlgorithm() {
+      return allAlgorithms().find((item) => item.id === selectedAlgorithm) || model.algorithms[0];
+    }
+
+    function slugify(text) {
+      return text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    function isStandaloneDelayAlgorithm(block) {
+      return [
+        "Main Spectral Delay Line",
+        "Reverse Dual-Grain Reader",
+        "Smear Multi-Tap Diffusion",
+        "Echo Chamber Reverb Taps",
+        "Freeze Voice Bank",
+      ].includes(block.name);
+    }
+
+    function phantasmagoriaCandidates() {
+      const project = (model.referenceProjects || []).find((item) => item.id === "phantasmagoria");
+      if (!project) {
+        return [];
+      }
+      const review = (model.literatureReviews || []).find(
+        (item) => item.id === "phantasmagoria-equivalence"
+      );
+      const matrixByName = new Map(
+        ((review && review.equivalenceMatrix) || []).map((row) => [row.extracted, row])
+      );
+      return (project.extractedAlgorithms || [])
+        .filter(isStandaloneDelayAlgorithm)
+        .map((block) => {
+        const row = matrixByName.get(block.name) || {};
+        const id = `phant-${slugify(block.name)}`;
+        const processNode = `${id}-process`;
+        return {
+          id,
+          label: `${block.name} [Phantasmagoria]`,
+          short: block.name,
+          sourceProject: project.sourceProject,
+          coreFunction: project.sourceFile,
+          sourceEnum: `${block.category} reference candidate`,
+          family: `${block.category}: ${row.closest || "delay bundle"} candidate`,
+          basedOn: `${block.role} Source evidence: ${block.evidence}`,
+          behavior: [
+            `Controls: ${block.controls.join(", ")}.`,
+            `Inputs: ${block.inputs.join(", ")}.`,
+            `Outputs: ${block.outputs.join(", ")}.`,
+            row.closest
+              ? `Closest current bundle mode: ${row.closest}.`
+              : "Closest current bundle mode not assigned.",
+            "Reference candidate only: not currently compiled into Field_delay_bundle firmware.",
+          ],
+          strengths: [
+            row.implementationNotes || "Source-backed delay behavior with clear inputs and outputs.",
+            "Useful for comparing future delay bundle expansion against the original four modes.",
+          ],
+          risks: [
+            "Not build-verified or hardware-auditioned in this dashboard pass.",
+            "Phantasmagoria uses Terrarium/Petal-style controls, so Field mapping needs a separate firmware pass.",
+            "Direct source porting needs license review before reuse.",
+          ],
+          keyParameters: block.controls,
+          extractedAlgorithms: [block],
+          graphNodes: [
+            [`${id}-controls`, block.controls.join(", "), "control"],
+            [`${id}-input`, block.inputs.join(", "), "input"],
+            [processNode, block.name, "process"],
+            [`${id}-output`, block.outputs.join(", "), "output"],
+            [`${id}-bundle`, row.closest || "Mapped bundle family", "buffer"],
+          ],
+          graphLinks: [
+            [`${id}-controls`, processNode, "modulates"],
+            [`${id}-input`, processNode, "feeds"],
+            [processNode, `${id}-output`, "outputs"],
+            [processNode, `${id}-bundle`, "maps to"],
+          ],
+        };
+      });
+    }
+
+    function allAlgorithms() {
+      return [...model.algorithms, ...phantasmagoriaCandidates()];
+    }
+
+    function initGoJs() {
+      if (!window.go) {
+        selectedTechnology = "mermaid";
+        document.getElementById("graphFallback").style.display = "block";
+        return;
+      }
+      const $ = go.GraphObject.make;
+      diagram = $(go.Diagram, "diagram", {
+        "undoManager.isEnabled": false,
+        allowMove: true,
+        allowCopy: false,
+        allowDelete: false,
+        initialAutoScale: go.AutoScale.Uniform,
+        contentAlignment: go.Spot.Center,
+        padding: 24,
+        layout: $(go.LayeredDigraphLayout, {
+          direction: 0,
+          layerSpacing: 52,
+          columnSpacing: 28,
+          setsPortSpots: false,
+        }),
+        "toolManager.hoverDelay": 120,
+      });
+
+      diagram.nodeTemplate = $(
+        go.Node,
+        "Auto",
+        {
+          selectionAdorned: true,
+          cursor: "pointer",
+          click: (_event, node) => {
+            const data = node.data || {};
+            if (data.algorithmId) {
+              selectedAlgorithm = data.algorithmId;
+              selectedView = data.viewHint || selectedView;
+              render();
+            }
+          },
+        },
+        $(
+          go.Shape,
+          "RoundedRectangle",
+          {
+            strokeWidth: 1.5,
+            parameter1: 7,
+            fill: "white",
+            stroke: "#d9dee7",
+          },
+          new go.Binding("fill", "category", (category) => colors[category] || colors.default),
+          new go.Binding("stroke", "category", (category) => strokes[category] || strokes.default)
+        ),
+        $(
+          go.TextBlock,
+          {
+            margin: new go.Margin(8, 10, 8, 10),
+            maxSize: new go.Size(190, NaN),
+            wrap: go.TextBlock.WrapFit,
+            font: "600 12px Inter, Segoe UI, sans-serif",
+            stroke: "#12151c",
+          },
+          new go.Binding("text", "label")
+        )
+      );
+
+      diagram.linkTemplate = $(
+        go.Link,
+        {
+          routing: go.Link.Orthogonal,
+          corner: 8,
+          curve: go.Link.JumpOver,
+        },
+        $(go.Shape, { stroke: "#8c95a3", strokeWidth: 1.4 }),
+        $(go.Shape, { toArrow: "Standard", stroke: "#8c95a3", fill: "#8c95a3" }),
+        $(
+          go.Panel,
+          "Auto",
+          $(go.Shape, "RoundedRectangle", {
+            fill: "rgba(255,255,255,0.92)",
+            stroke: "#d9dee7",
+          }),
+          $(
+            go.TextBlock,
+            {
+              margin: new go.Margin(2, 5, 2, 5),
+              font: "11px Inter, Segoe UI, sans-serif",
+              stroke: "#5d6573",
+            },
+            new go.Binding("text", "label")
+          )
+        )
+      );
+    }
+
+    function overviewGraph() {
+      const nodes = [
+        ["audio", "Audio In L/R", "input"],
+        ["midi", "External MIDI", "input"],
+        ["bkeys", "B1-B8 C4-C5 test keys", "input"],
+        ["akeys", "A1-A8 mode keys", "input"],
+        ["knobs", "K1-K8 plus SW1/SW2", "input"],
+        ["keymap", "Physical key map and LED separation", "control"],
+        ["layers", "Until-touched knob layers", "control"],
+        ["snapshots", "Per-algorithm snapshots", "control"],
+        ["oled", "OLED values and zoom", "output"],
+        ["synth", "8-voice pluck/pad synth", "process"],
+        ["params", "24 stable parameter slots", "process"],
+        ["source", "Selected DaisyDelayFxSource", "process"],
+        ["storage", "4 external delay lines", "buffer"],
+        ["mixer", "Dry/wet, bypass, output gain", "process"],
+        ["out", "Audio Out L/R", "output"],
+        ...model.algorithms.map((algo) => [algo.id, algo.label, "buffer", algo.id]),
+      ].map(([key, label, category, algorithmId]) => ({ key, label, category, algorithmId, viewHint: "algorithm" }));
+
+      const links = [
+        ["audio", "source", "samples"],
+        ["midi", "synth", "note events"],
+        ["bkeys", "keymap", "scan"],
+        ["keymap", "synth", "notes"],
+        ["akeys", "snapshots", "select"],
+        ["knobs", "layers", "move"],
+        ["layers", "params", "write"],
+        ["snapshots", "params", "restore"],
+        ["params", "source", "native values"],
+        ["synth", "source", "inject"],
+        ["storage", "tape", "buffers"],
+        ["storage", "tank", "buffers"],
+        ["storage", "texture", "buffers"],
+        ["storage", "long", "buffers"],
+        ["source", "tape", "select"],
+        ["source", "tank", "select"],
+        ["source", "texture", "select"],
+        ["source", "long", "select"],
+        ["tape", "mixer", "wet"],
+        ["tank", "mixer", "wet"],
+        ["texture", "mixer", "wet"],
+        ["long", "mixer", "wet"],
+        ["mixer", "out", "output"],
+        ["params", "oled", "format"],
+      ].map(([from, to, label]) => ({ from, to, label }));
+
+      return { nodes, links };
+    }
+
+    function algorithmGraph(algo) {
+      return {
+        nodes: algo.graphNodes.map(([key, label, category]) => ({ key, label, category })),
+        links: algo.graphLinks.map(([from, to, label]) => ({ from, to, label })),
+      };
+    }
+
+    function controlsGraph() {
+      const nodes = [];
+      const links = [];
+      model.supportSystems.forEach((system) => {
+        system.nodes.forEach(([key, label, category]) => {
+          nodes.push({ key: `${system.id}.${key}`, label, category });
+        });
+        system.links.forEach(([from, to, label]) => {
+          links.push({ from: `${system.id}.${from}`, to: `${system.id}.${to}`, label });
+        });
+      });
+      links.push(
+        { from: "fieldControls.write", to: "internalSynth.mode", label: "synth params" },
+        { from: "internalSynth.sum", to: "fieldControls.zoom", label: "zoom note" }
+      );
+      return { nodes, links };
+    }
+
+    function updateDiagram() {
+      if (!diagram) return;
+      let graph;
+      if (selectedView === "algorithm") {
+        graph = algorithmGraph(activeAlgorithm());
+      } else if (selectedView === "controls") {
+        graph = controlsGraph();
+      } else {
+        graph = overviewGraph();
+      }
+      diagram.model = new go.GraphLinksModel(graph.nodes, graph.links);
+      window.setTimeout(() => {
+        diagram.zoomToFit();
+        diagram.alignDocument(go.Spot.Center, go.Spot.Center);
+      }, 0);
+    }
+
+    function renderAlgorithmList() {
+      const container = document.getElementById("algorithmList");
+      const buttonMarkup = (algo) => `
+          <button class="algorithm-button ${algo.id === selectedAlgorithm ? "is-active" : ""}" data-algorithm="${algo.id}">
+            <strong>${algo.label}</strong>
+            <span>${algo.family}</span>
+          </button>
+        `;
+      container.innerHTML =
+        `<div class="algorithm-group-label">Bundle modes</div>` +
+        model.algorithms.map(buttonMarkup).join("") +
+        `<div class="algorithm-group-label">Phantasmagoria delay algorithms</div>` +
+        phantasmagoriaCandidates().map(buttonMarkup).join("");
+      container.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedAlgorithm = button.dataset.algorithm;
+          selectedView = "algorithm";
+          render();
+        });
+      });
+    }
+
+    function renderViewButtons() {
+      document.querySelectorAll(".view-button").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.view === selectedView);
+        button.onclick = () => {
+          selectedView = button.dataset.view;
+          render();
+        };
+      });
+    }
+
+    function renderTechnologyButtons() {
+      document.querySelectorAll(".technology-button").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.tech === selectedTechnology);
+        button.onclick = () => {
+          selectedTechnology = button.dataset.tech;
+          render();
+        };
+      });
+      document.getElementById("technologyHint").textContent =
+        technologyHints[selectedTechnology] || technologyHints.gojs;
+    }
+
+    function renderTechnologyPanes() {
+      const panes = {
+        gojs: document.getElementById("gojsPane"),
+        mermaid: document.getElementById("mermaidPane"),
+        graphify: document.getElementById("graphifyPane"),
+        figjam: document.getElementById("figjamPane"),
+      };
+      Object.entries(panes).forEach(([key, pane]) => {
+        if (pane) {
+          pane.classList.toggle("is-active", key === selectedTechnology);
+        }
+      });
+      if (selectedTechnology === "gojs" && diagram) {
+        window.setTimeout(() => {
+          diagram.zoomToFit();
+          diagram.alignDocument(go.Spot.Center, go.Spot.Center);
+        }, 0);
+      }
+    }
+
+    function renderDetails() {
+      const algo = activeAlgorithm();
+      const layerTables = model.controls.layers
+        .map((layer) => `
+          <details class="control-layer">
+            <summary>${layer.label}: ${layer.access}</summary>
+            <table>
+              <tbody>
+                ${layer.knobs.map(([knob, target, unit]) => `
+                  <tr><td>${knob}</td><td>${target}</td><td>${unit}</td></tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </details>
+        `)
+        .join("");
+
+      document.getElementById("details").innerHTML = `
+        <h2>${algo.label}</h2>
+        <div class="source">${algo.sourceProject}<br>${algo.coreFunction} / ${algo.sourceEnum}</div>
+        <h3>Basis</h3>
+        <p>${algo.basedOn}</p>
+        <h3>Behavior</h3>
+        <ul>${algo.behavior.map((item) => `<li>${item}</li>`).join("")}</ul>
+        <h3>Strengths</h3>
+        <ul>${algo.strengths.map((item) => `<li>${item}</li>`).join("")}</ul>
+        <h3>Risks</h3>
+        <ul>${algo.risks.map((item) => `<li>${item}</li>`).join("")}</ul>
+        <h3>Key Parameters</h3>
+        <div class="pill-row">${algo.keyParameters.map((item) => `<span class="pill">${item}</span>`).join("")}</div>
+        <h3>Control Layers</h3>
+        ${layerTables}
+      `;
+    }
+
+    function renderApproachTable() {
+      const rows = model.visualizationApproaches
+        .map((item) => `
+          <tr>
+            <td><strong>${item.label}</strong><br>${item.bestFor}</td>
+            <td>${item.notBestFor}</td>
+            <td><span class="metric">${item.suitability}</span></td>
+            <td><span class="metric">${item.maintenance}</span></td>
+            <td>${item.recommendation}</td>
+          </tr>
+        `)
+        .join("");
+      document.getElementById("approachTable").innerHTML = `
+        <thead>
+          <tr>
+            <th>Approach</th>
+            <th>Weakest use</th>
+            <th>Fit</th>
+            <th>Maint.</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      `;
+    }
+
+    function renderAlgorithmDashboard() {
+      const algo = activeAlgorithm();
+      const blocks = algo.extractedAlgorithms || [];
+      document.getElementById("extractionSummary").textContent =
+        `${algo.label} / ${algo.coreFunction}: ${blocks.length} extracted blocks`;
+      document.getElementById("algorithmBlockGrid").innerHTML = blocks
+        .map((block) => `
+          <article class="algorithm-block">
+            <strong>${block.name}</strong>
+            <span class="category">${block.category}</span>
+            <p>${block.role}</p>
+            <div class="block-io"><span>Inputs:</span> ${block.inputs.join(", ")}</div>
+            <div class="block-io"><span>Outputs:</span> ${block.outputs.join(", ")}</div>
+          </article>
+        `)
+        .join("");
+    }
+
+    function renderReferenceProjects() {
+      const projects = model.referenceProjects || [];
+      const totalBlocks = projects.reduce(
+        (sum, project) => sum + (project.extractedAlgorithms || []).length,
+        0
+      );
+      document.getElementById("referenceSummary").textContent =
+        `${projects.length} source project, ${totalBlocks} extracted algorithm names`;
+      document.getElementById("referenceProjectGrid").innerHTML = projects
+        .map((project) => `
+          <section class="reference-project">
+            <div class="reference-project-head">
+              <h3>${project.label}</h3>
+              <span>${project.platform}<br><a href="${project.sourceUrl}">${project.sourceProject}</a></span>
+            </div>
+            <p class="reference-summary">${project.summary}</p>
+            <div class="algorithm-block-grid">
+              ${(project.extractedAlgorithms || []).map((block) => `
+                <article class="algorithm-block">
+                  <strong>${block.name}</strong>
+                  <span class="category">${block.category}</span>
+                  <p>${block.role}</p>
+                  <div class="block-io"><span>Controls:</span> ${block.controls.join(", ")}</div>
+                  <div class="block-io"><span>Inputs:</span> ${block.inputs.join(", ")}</div>
+                  <div class="block-io"><span>Outputs:</span> ${block.outputs.join(", ")}</div>
+                  <div class="evidence"><span>Evidence:</span> ${block.evidence}</div>
+                </article>
+              `).join("")}
+            </div>
+          </section>
+        `)
+        .join("");
+    }
+
+    function sourceMarkup(source) {
+      const url = source.url || "";
+      const label = source.label || url;
+      const linked = url.startsWith("http")
+        ? `<a href="${url}">${label}</a>`
+        : `<code>${url}</code>`;
+      return `<li><strong>${linked}</strong><br>${source.role}</li>`;
+    }
+
+    function renderLiteratureReviews() {
+      const reviews = model.literatureReviews || [];
+      const phantasmagoria = (model.referenceProjects || []).find(
+        (project) => project.id === "phantasmagoria"
+      );
+      const delayCount = phantasmagoria
+        ? (phantasmagoria.extractedAlgorithms || []).length
+        : 0;
+      const standaloneCount = phantasmagoriaCandidates().length;
+      document.getElementById("literatureSummary").textContent =
+        `${reviews.length} review, ${standaloneCount} standalone delay algorithms, ${delayCount - standaloneCount} modifiers`;
+      document.getElementById("literatureReviewGrid").innerHTML = reviews
+        .map((review) => `
+          <section class="literature-review">
+            <h3>${review.title}</h3>
+            <p class="review-scope">${review.scope}</p>
+            <div class="review-meta">
+              <span>${review.reviewType}</span>
+              <span>Searched ${review.searchDate}</span>
+              <span>${standaloneCount} delay algorithms + ${delayCount - standaloneCount} modifiers mapped</span>
+            </div>
+            <div class="review-grid">
+              <div class="review-section">
+                <h4>Research Question</h4>
+                <p>${review.researchQuestion}</p>
+              </div>
+              <div class="review-section">
+                <h4>Inclusion Criteria</h4>
+                <ul>${review.inclusionCriteria.map((item) => `<li>${item}</li>`).join("")}</ul>
+              </div>
+              <div class="review-section">
+                <h4>Sources</h4>
+                <ul class="source-list">${review.evidenceSources.map(sourceMarkup).join("")}</ul>
+              </div>
+              <div class="review-section">
+                <h4>Exclusions</h4>
+                <ul>${(review.exclusions || []).map((item) => `<li>${item}</li>`).join("")}</ul>
+              </div>
+            </div>
+            <div class="theme-grid">
+              ${review.synthesisThemes.map((theme) => `
+                <article class="theme-card">
+                  <strong>${theme.theme}</strong>
+                  <p>${theme.finding}</p>
+                  <div class="chip-row">
+                    ${theme.mappedAlgorithms.map((item) => `<span class="mini-chip">${item}</span>`).join("")}
+                    ${theme.closestBundleModes.map((item) => `<span class="mini-chip">${item}</span>`).join("")}
+                  </div>
+                </article>
+              `).join("")}
+            </div>
+            <table class="equivalence-table">
+              <thead>
+                <tr>
+                  <th>Phantasmagoria block</th>
+                  <th>Closest bundle mode</th>
+                  <th>Priority</th>
+                  <th>Implementation note</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${review.equivalenceMatrix.map((row) => `
+                  <tr>
+                    <td><strong>${row.extracted}</strong></td>
+                    <td>${row.closest}</td>
+                    <td><span class="metric">${row.reusePriority}</span></td>
+                    <td>${row.implementationNotes}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+            <div class="review-grid" style="margin-top: 12px;">
+              <div class="review-section">
+                <h4>Remaining Gaps</h4>
+                <ul>${review.gaps.map((item) => `<li>${item}</li>`).join("")}</ul>
+              </div>
+              <div class="review-section">
+                <h4>Recommendation</h4>
+                <p>${review.recommendation}</p>
+              </div>
+            </div>
+          </section>
+        `)
+        .join("");
+    }
+
+    function mermaidForSelection() {
+      const algo = activeAlgorithm();
+      if (selectedView === "controls") {
+        return `flowchart LR
+    scan["ProcessAllControls"] --> layer["SW1/SW2 layer selection"]
+    scan --> touch["Until-touched knob gate"]
+    layer --> touch
+    touch --> write["SetParameterValue"]
+    write --> zoom["OLED zoom"]
+    midi["External MIDI"] --> voices["8 SynthVoice slots"]
+    brow["B1-B8 C4-C5"] --> voices
+    mode["A5 synth mode"] --> voices
+    hold["A6 hold mode"] --> voices
+    voices --> sum["Mono synth injection"]`;
+      }
+      if (selectedView === "algorithm") {
+        const lines = ["flowchart LR"];
+        algo.graphNodes.forEach(([key, label]) => {
+          lines.push(`    ${key}["${label}"]`);
+        });
+        algo.graphLinks.forEach(([from, to, label]) => {
+          lines.push(`    ${from} -->|"${label}"| ${to}`);
+        });
+        return lines.join("\n");
+      }
+      return `flowchart LR
+    audio["Audio In L/R"] --> source{"Selected source"}
+    midi["External MIDI"] --> synth["8-voice pluck/pad synth"]
+    bkeys["B1-B8 C4-C5"] --> synth
+    knobs["K1-K8 plus SW1/SW2"] --> params["24 stable parameter slots"]
+    akeys["A1-A4"] --> snapshots["Per-algorithm snapshots"]
+    snapshots --> params
+    params --> source
+    synth --> source
+    source --> tape["Tape [multifx]"]
+    source --> tank["Tank [reverb]"]
+    source --> texture["Texture [FunBox]"]
+    source --> long["Long [sdram]"]
+    tape --> mixer["Dry/wet output mixer"]
+    tank --> mixer
+    texture --> mixer
+    long --> mixer
+    mixer --> out["Audio Out L/R"]`;
+    }
+
+    async function renderMermaid() {
+      const block = document.getElementById("mermaidBlock");
+      block.removeAttribute("data-processed");
+      block.innerHTML = "";
+      block.textContent = mermaidForSelection();
+      if (selectedTechnology === "mermaid" && window.mermaid) {
+        try {
+          mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
+          await mermaid.run({ nodes: [block] });
+        } catch (error) {
+          block.textContent = mermaidForSelection() + "\n\nRender error: " + error.message;
+        }
+      }
+    }
+
+    function render() {
+      renderAlgorithmList();
+      renderViewButtons();
+      renderTechnologyButtons();
+      renderDetails();
+      renderAlgorithmDashboard();
+      renderReferenceProjects();
+      renderLiteratureReviews();
+      renderApproachTable();
+      updateDiagram();
+      renderTechnologyPanes();
+      renderMermaid();
+    }
+
+    initGoJs();
+    render();
+  </script>
+</body>
+</html>

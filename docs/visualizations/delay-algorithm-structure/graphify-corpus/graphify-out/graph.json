@@ -1,0 +1,2065 @@
+{
+  "nodes": [
+    {
+      "id": "delay_bundle_structure",
+      "label": "delay_bundle_structure.cpp",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L1"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp",
+      "label": "FieldDelayFieldApp",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L16"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "label": ".RunConfiguredFieldDelayProject()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L18"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "label": ".MainLoop()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L26"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "label": ".ProcessControls()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L33"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "label": ".ProcessLayeredKnobs()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L41"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "label": ".ProcessAKeys()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L49"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "label": ".SelectBundleAlgorithm()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L57"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "label": ".ProcessBKeys()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L66"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_processmidi",
+      "label": ".ProcessMidi()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L73"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_updatedisplay",
+      "label": ".UpdateDisplay()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L78"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_updateleds",
+      "label": ".UpdateLeds()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L84"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_showstartupdisplay",
+      "label": ".ShowStartupDisplay()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L90"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_primecontrols",
+      "label": ".PrimeControls()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L91"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_startaudio",
+      "label": ".StartAudio()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L92"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_currentlayer",
+      "label": ".CurrentLayer()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L93"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_enterlayer",
+      "label": ".EnterLayer()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L94"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_setparametervalue",
+      "label": ".SetParameterValue()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L95"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_recordzoom",
+      "label": ".RecordZoom()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L96"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthmode",
+      "label": ".SetInternalSynthMode()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L97"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthholdmode",
+      "label": ".SetInternalSynthHoldMode()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L98"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_recordalgorithmzoom",
+      "label": ".RecordAlgorithmZoom()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L99"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_savebundlesnapshot",
+      "label": ".SaveBundleSnapshot()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L100"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_restorebundlesnapshot",
+      "label": ".RestoreBundleSnapshot()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L101"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_setsource",
+      "label": ".SetSource()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L102"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_keyboardindexforphysicalkey",
+      "label": ".KeyboardIndexForPhysicalKey()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L103"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_triggerfieldkeyaction",
+      "label": ".TriggerFieldKeyAction()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L104"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_handlemidievent",
+      "label": ".HandleMidiEvent()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L105"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_drawmain",
+      "label": ".DrawMain()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L106"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_drawzoom",
+      "label": ".DrawZoom()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L107"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_bundlefieldkeyledvalues",
+      "label": ".BundleFieldKeyLedValues()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L108"
+    },
+    {
+      "id": "delay_bundle_structure_fielddelayfieldapp_swapbuffersandtransmit",
+      "label": ".SwapBuffersAndTransmit()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L109"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore",
+      "label": "DaisyDelayFxCore",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L112"
+    },
+    {
+      "id": "daisydelayfxsource",
+      "label": "DaisyDelayFxSource",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L114"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_source",
+      "label": "source",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L114"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_prepare",
+      "label": ".Prepare()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L116"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_process",
+      "label": ".Process()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L123"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "label": ".DispatchSelectedAlgorithm()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L130"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "label": ".RebuildParameters()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L150"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "label": ".ProcessInternalSynth()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L158"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "label": ".ProcessMultiFx()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L165"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "label": ".ProcessReverbPlayground()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L175"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "label": ".ProcessFunBox()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L185"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "label": ".ProcessSdramDelaylines()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L194"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_attachdelaystorage",
+      "label": ".AttachDelayStorage()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L203"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_resettodefaultstate",
+      "label": ".ResetToDefaultState()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L204"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_mixdrywetoutput",
+      "label": ".MixDryWetOutput()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L205"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_addbaselayerparameters",
+      "label": ".AddBaseLayerParameters()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L206"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_addshiftoneparameters",
+      "label": ".AddShiftOneParameters()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L207"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_addshifttwoparameters",
+      "label": ".AddShiftTwoParameters()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L208"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_updateparametercache",
+      "label": ".UpdateParameterCache()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L209"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_findvoicefornote",
+      "label": ".FindVoiceForNote()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L210"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_allocatevoice",
+      "label": ".AllocateVoice()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L211"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_processsynthvoice",
+      "label": ".ProcessSynthVoice()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L212"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_smoothdelaytime",
+      "label": ".SmoothDelayTime()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L213"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readstereodelaylines",
+      "label": ".ReadStereoDelayLines()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L214"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applyflutterlfo",
+      "label": ".ApplyFlutterLfo()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L215"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applyfeedbacktone",
+      "label": ".ApplyFeedbackTone()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L216"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applyfasttanhgrit",
+      "label": ".ApplyFastTanhGrit()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L217"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_writefreezeawaredelaylines",
+      "label": ".WriteFreezeAwareDelayLines()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L218"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readfourtankdelays",
+      "label": ".ReadFourTankDelays()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L219"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applydamping",
+      "label": ".ApplyDamping()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L220"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applydiffusion",
+      "label": ".ApplyDiffusion()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L221"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applyhadamardfeedbackmatrix",
+      "label": ".ApplyHadamardFeedbackMatrix()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L222"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_writefourtankdelays",
+      "label": ".WriteFourTankDelays()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L223"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applystereowidth",
+      "label": ".ApplyStereoWidth()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L224"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readnormaltaps",
+      "label": ".ReadNormalTaps()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L225"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readgraintap",
+      "label": ".ReadGrainTap()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L226"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readreverseaccenttap",
+      "label": ".ReadReverseAccentTap()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L227"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_blendtexture",
+      "label": ".BlendTexture()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L228"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_writecrossfeedback",
+      "label": ".WriteCrossFeedback()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L229"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_smoothlongdelaytime",
+      "label": ".SmoothLongDelayTime()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L230"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readprimaryfractionaltaps",
+      "label": ".ReadPrimaryFractionalTaps()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L231"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_readsecondarywarptaps",
+      "label": ".ReadSecondaryWarpTaps()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L232"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applypingpongfeedback",
+      "label": ".ApplyPingPongFeedback()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L233"
+    },
+    {
+      "id": "delay_bundle_structure_daisydelayfxcore_applysmearblend",
+      "label": ".ApplySmearBlend()",
+      "file_type": "code",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L234"
+    },
+    {
+      "id": "00_bundle_overview",
+      "label": "00-bundle-overview.md",
+      "file_type": "document",
+      "source_file": "00-bundle-overview.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "00_bundle_overview_field_delay_bundle_overview",
+      "label": "Field Delay Bundle Overview",
+      "file_type": "document",
+      "source_file": "00-bundle-overview.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "01_tape_multifx",
+      "label": "01-tape-multifx.md",
+      "file_type": "document",
+      "source_file": "01-tape-multifx.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "01_tape_multifx_tape_multifx",
+      "label": "Tape [multifx]",
+      "file_type": "document",
+      "source_file": "01-tape-multifx.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "02_tank_reverb",
+      "label": "02-tank-reverb.md",
+      "file_type": "document",
+      "source_file": "02-tank-reverb.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "02_tank_reverb_tank_reverb",
+      "label": "Tank [reverb]",
+      "file_type": "document",
+      "source_file": "02-tank-reverb.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "03_texture_funbox",
+      "label": "03-texture-funbox.md",
+      "file_type": "document",
+      "source_file": "03-texture-funbox.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "03_texture_funbox_texture_funbox",
+      "label": "Texture [FunBox]",
+      "file_type": "document",
+      "source_file": "03-texture-funbox.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "04_long_sdram",
+      "label": "04-long-sdram.md",
+      "file_type": "document",
+      "source_file": "04-long-sdram.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "04_long_sdram_long_sdram",
+      "label": "Long [sdram]",
+      "file_type": "document",
+      "source_file": "04-long-sdram.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "05_controls_ui_synth",
+      "label": "05-controls-ui-synth.md",
+      "file_type": "document",
+      "source_file": "05-controls-ui-synth.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "05_controls_ui_synth_controls_oled_keybed_and_internal_synth",
+      "label": "Controls, OLED, Keybed, and Internal Synth",
+      "file_type": "document",
+      "source_file": "05-controls-ui-synth.md",
+      "source_location": "L1"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "links": [
+    {
+      "source": "delay_bundle_structure",
+      "target": "delay_bundle_structure_fielddelayfieldapp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processmidi",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_updatedisplay",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_updateleds",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_showstartupdisplay",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_primecontrols",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_startaudio",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_currentlayer",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_enterlayer",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setparametervalue",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordzoom",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthmode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthholdmode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordalgorithmzoom",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_savebundlesnapshot",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_restorebundlesnapshot",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setsource",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_keyboardindexforphysicalkey",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_triggerfieldkeyaction",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_handlemidievent",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_drawmain",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_drawzoom",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_bundlefieldkeyledvalues",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp",
+      "target": "delay_bundle_structure_fielddelayfieldapp_swapbuffersandtransmit",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure",
+      "target": "delay_bundle_structure_daisydelayfxcore",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "daisydelayfxsource",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L114",
+      "weight": 1.0,
+      "context": "field"
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_source",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L114",
+      "weight": 1.0,
+      "context": "field"
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_prepare",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_process",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L130",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L150",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L158",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L194",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_attachdelaystorage",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_resettodefaultstate",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L204",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_mixdrywetoutput",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_addbaselayerparameters",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L206",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_addshiftoneparameters",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L207",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_addshifttwoparameters",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L208",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_updateparametercache",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L209",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_findvoicefornote",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_allocatevoice",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L211",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_processsynthvoice",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L212",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_smoothdelaytime",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L213",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readstereodelaylines",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L214",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyflutterlfo",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L215",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyfeedbacktone",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L216",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyfasttanhgrit",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L217",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_writefreezeawaredelaylines",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L218",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readfourtankdelays",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L219",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applydamping",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L220",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applydiffusion",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L221",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyhadamardfeedbackmatrix",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L222",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_writefourtankdelays",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L223",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applystereowidth",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L224",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readnormaltaps",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readgraintap",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L226",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readreverseaccenttap",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L227",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_blendtexture",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L228",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_writecrossfeedback",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L229",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_smoothlongdelaytime",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L230",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readprimaryfractionaltaps",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L231",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_readsecondarywarptaps",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L232",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applypingpongfeedback",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L233",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore",
+      "target": "delay_bundle_structure_daisydelayfxcore_applysmearblend",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L234",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "target": "delay_bundle_structure_fielddelayfieldapp_showstartupdisplay",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "target": "delay_bundle_structure_fielddelayfieldapp_primecontrols",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "target": "delay_bundle_structure_fielddelayfieldapp_startaudio",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_runconfiguredfielddelayproject",
+      "target": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "target": "delay_bundle_structure_fielddelayfieldapp_updatedisplay",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_mainloop",
+      "target": "delay_bundle_structure_fielddelayfieldapp_updateleds",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processcontrols",
+      "target": "delay_bundle_structure_fielddelayfieldapp_processmidi",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "target": "delay_bundle_structure_fielddelayfieldapp_currentlayer",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "target": "delay_bundle_structure_fielddelayfieldapp_enterlayer",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setparametervalue",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processlayeredknobs",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordzoom",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthmode",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setinternalsynthholdmode",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processakeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordalgorithmzoom",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "target": "delay_bundle_structure_fielddelayfieldapp_savebundlesnapshot",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "target": "delay_bundle_structure_fielddelayfieldapp_setsource",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "target": "delay_bundle_structure_fielddelayfieldapp_restorebundlesnapshot",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "target": "delay_bundle_structure_fielddelayfieldapp_enterlayer",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_selectbundlealgorithm",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordalgorithmzoom",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_keyboardindexforphysicalkey",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_triggerfieldkeyaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processbkeys",
+      "target": "delay_bundle_structure_fielddelayfieldapp_recordzoom",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_processmidi",
+      "target": "delay_bundle_structure_fielddelayfieldapp_handlemidievent",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_updatedisplay",
+      "target": "delay_bundle_structure_fielddelayfieldapp_drawmain",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_updatedisplay",
+      "target": "delay_bundle_structure_fielddelayfieldapp_drawzoom",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_updateleds",
+      "target": "delay_bundle_structure_fielddelayfieldapp_bundlefieldkeyledvalues",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_fielddelayfieldapp_updateleds",
+      "target": "delay_bundle_structure_fielddelayfieldapp_swapbuffersandtransmit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_prepare",
+      "target": "delay_bundle_structure_daisydelayfxcore_attachdelaystorage",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L118",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_prepare",
+      "target": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_prepare",
+      "target": "delay_bundle_structure_daisydelayfxcore_resettodefaultstate",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_process",
+      "target": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L125",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_process",
+      "target": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_process",
+      "target": "delay_bundle_structure_daisydelayfxcore_mixdrywetoutput",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "target": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "target": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L138",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "target": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L142",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_dispatchselectedalgorithm",
+      "target": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "target": "delay_bundle_structure_daisydelayfxcore_addbaselayerparameters",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "target": "delay_bundle_structure_daisydelayfxcore_addshiftoneparameters",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "target": "delay_bundle_structure_daisydelayfxcore_addshifttwoparameters",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L154",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_rebuildparameters",
+      "target": "delay_bundle_structure_daisydelayfxcore_updateparametercache",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L155",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "target": "delay_bundle_structure_daisydelayfxcore_findvoicefornote",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L160",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "target": "delay_bundle_structure_daisydelayfxcore_allocatevoice",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L161",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processinternalsynth",
+      "target": "delay_bundle_structure_daisydelayfxcore_processsynthvoice",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L162",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_smoothdelaytime",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L167",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_readstereodelaylines",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L168",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyflutterlfo",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L169",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyfeedbacktone",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyfasttanhgrit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processmultifx",
+      "target": "delay_bundle_structure_daisydelayfxcore_writefreezeawaredelaylines",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L172",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_readfourtankdelays",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_applydamping",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L178",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_applydiffusion",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_applyhadamardfeedbackmatrix",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L180",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_writefourtankdelays",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processreverbplayground",
+      "target": "delay_bundle_structure_daisydelayfxcore_applystereowidth",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L182",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "target": "delay_bundle_structure_daisydelayfxcore_readnormaltaps",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L187",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "target": "delay_bundle_structure_daisydelayfxcore_readgraintap",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L188",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "target": "delay_bundle_structure_daisydelayfxcore_readreverseaccenttap",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "target": "delay_bundle_structure_daisydelayfxcore_blendtexture",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processfunbox",
+      "target": "delay_bundle_structure_daisydelayfxcore_writecrossfeedback",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L191",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "target": "delay_bundle_structure_daisydelayfxcore_smoothlongdelaytime",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L196",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "target": "delay_bundle_structure_daisydelayfxcore_readprimaryfractionaltaps",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L197",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "target": "delay_bundle_structure_daisydelayfxcore_readsecondarywarptaps",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L198",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "target": "delay_bundle_structure_daisydelayfxcore_applypingpongfeedback",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "delay_bundle_structure_daisydelayfxcore_processsdramdelaylines",
+      "target": "delay_bundle_structure_daisydelayfxcore_applysmearblend",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "delay_bundle_structure.cpp",
+      "source_location": "L200",
+      "weight": 1.0
+    },
+    {
+      "source": "00_bundle_overview",
+      "target": "00_bundle_overview_field_delay_bundle_overview",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "00-bundle-overview.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "01_tape_multifx",
+      "target": "01_tape_multifx_tape_multifx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "01-tape-multifx.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "02_tank_reverb",
+      "target": "02_tank_reverb_tank_reverb",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "02-tank-reverb.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "03_texture_funbox",
+      "target": "03_texture_funbox_texture_funbox",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "03-texture-funbox.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "04_long_sdram",
+      "target": "04_long_sdram_long_sdram",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "04-long-sdram.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "05_controls_ui_synth",
+      "target": "05_controls_ui_synth_controls_oled_keybed_and_internal_synth",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "05-controls-ui-synth.md",
+      "source_location": "L1",
+      "weight": 1.0
+    }
+  ]
+}

@@ -1,0 +1,622 @@
+{
+  "MyProjects/_projects/POD_EDGE_mono_DSP/ExtEncoder.h": {
+    "mtime": 1776011252.5459125,
+    "ast_hash": "1faaebcedc471443b351dd4959c8be13",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/display.cpp": {
+    "mtime": 1776027098.168123,
+    "ast_hash": "34d13f6f87afa6743ae882e128f25d72",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/display.h": {
+    "mtime": 1776026264.08681,
+    "ast_hash": "d5e664cd196163fae70b4bb9834abaef",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/main.cpp": {
+    "mtime": 1776031281.9047244,
+    "ast_hash": "de5d8348a3a9c79489155cc301c0f00c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/parameters.h": {
+    "mtime": 1776020560.984641,
+    "ast_hash": "223280744937ca794ce62abf1ee9459c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/presets.h": {
+    "mtime": 1776016657.8293343,
+    "ast_hash": "9c1a738908f25cc1813c98cebd15dae8",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/ui_state.cpp": {
+    "mtime": 1776028160.5436149,
+    "ast_hash": "0672fbf041c66c50386d4406436b6421",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/ui_state.h": {
+    "mtime": 1776020772.018607,
+    "ast_hash": "8000be469456d4c1e8ea8ed4c2e38ff1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/CONTROLS.md": {
+    "mtime": 1776006411.0552907,
+    "ast_hash": "c6c598aef314822d43acf5b578d8fc8d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/EDGE-oriented_mono_DSP_effects_instrument.md": {
+    "mtime": 1776006507.7516654,
+    "ast_hash": "ae3afe671ef8572af4061153d4f11448",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/MEMORY.md": {
+    "mtime": 1776031333.5999422,
+    "ast_hash": "f455a7f9c713cd99e4f3ce6173677c98",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/PAGES_CONTROLS_EFFECTS.md": {
+    "mtime": 1776007306.595078,
+    "ast_hash": "ff57a751b619c8a455f25971237dddcf",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/PARAMETER_TABLES.md": {
+    "mtime": 1776007756.8236492,
+    "ast_hash": "74cb5aba6d0c3f91adfdd38e153ca10e",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/PHASE_4_TESTS_FULL.md": {
+    "mtime": 1776034252.6362517,
+    "ast_hash": "cd6bb0e6b9f0a9a7517b00eff2bc0078",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/REDESIGN_PLAN.md": {
+    "mtime": 1776018344.0673792,
+    "ast_hash": "d6fca7c79c96998184e2a24e91a53e20",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/Settings/HISTORY.md": {
+    "mtime": 1776030793.0626898,
+    "ast_hash": "059704a8796a21e9f7d438bb1c642d40",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/Settings/SETTINGS.md": {
+    "mtime": 1776031350.6629946,
+    "ast_hash": "f4a29285838d2d076d55bf530ad6ba5c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/USER_MANUAL.md": {
+    "mtime": 1776019435.0136929,
+    "ast_hash": "550ff211632eb09e75b5332346cfbeef",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/docs/plans/2026-04-12-phase2-audio-skeleton-design.md": {
+    "mtime": 1776020400.7356162,
+    "ast_hash": "6dd5af8c45d2b0f31744e0f826debae8",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/docs/plans/2026-04-12-phase2-audio-skeleton.md": {
+    "mtime": 1776020400.7616155,
+    "ast_hash": "8d2fdecc62dda725a5f319c135e84fa9",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/INSTALL.md": {
+    "mtime": 1768108213.7546866,
+    "ast_hash": "6c319503447d527dc56b81383ec0753d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/README.md": {
+    "mtime": 1768108213.7635136,
+    "ast_hash": "0aef1effc01e63babb047bb96b8130e2",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/DOCUMENTATION_PLAN.md": {
+    "mtime": 1768108213.7708714,
+    "ast_hash": "5163b48ecca7e2538a1e1c0e06e931bc",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/NODERR_REPOSITORY_SUMMARY.md": {
+    "mtime": 1768108213.7854571,
+    "ast_hash": "de1828c86233881462368a87d146e4e3",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/noderr_getting_started.md": {
+    "mtime": 1768108213.7931554,
+    "ast_hash": "c771473d2e90d3263b8599cfdcec66b8",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/noderr_guide.md": {
+    "mtime": 1768108213.8000188,
+    "ast_hash": "eff372ec42858b0f8b8eb641edcb0cb2",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/noderr_prompts_guide.md": {
+    "mtime": 1768108213.8057096,
+    "ast_hash": "2bd755d887d4a1d0f34ac67c6e3dc0d7",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/01-quick-start-tts-part1.md": {
+    "mtime": 1768414762.5529795,
+    "ast_hash": "b15a25b378839e9bb6d52c290ae08d5c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/01-quick-start-tts-part2.md": {
+    "mtime": 1768414793.4563246,
+    "ast_hash": "11470c00cb592cd991ba42eec81779af",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/01-quick-start.md": {
+    "mtime": 1768108213.8126805,
+    "ast_hash": "a03dd22bbadb2ac7e1c93932b1085fe0",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/02-core-files-tts-part1.md": {
+    "mtime": 1768414858.881116,
+    "ast_hash": "45c8e08573d2ef22108951aa93af2e78",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/02-core-files-tts-part2.md": {
+    "mtime": 1768414859.0347013,
+    "ast_hash": "1ee171ad32d699702feeaf67275a1402",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/02-core-files.md": {
+    "mtime": 1768108213.8184676,
+    "ast_hash": "b423fe22306ef7dbc1dcdfc4b1374688",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/03-development-loop-tts-part1.md": {
+    "mtime": 1768414877.687204,
+    "ast_hash": "c56567833929170309ab02503d781134",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/03-development-loop-tts-part2.md": {
+    "mtime": 1768414877.8464067,
+    "ast_hash": "73178da6493482e7711598dfb94a1400",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/03-development-loop-tts.md": {
+    "mtime": 1768505114.6196527,
+    "ast_hash": "16251b5e331ecd925d301f732df345f1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/03-development-loop.md": {
+    "mtime": 1768108213.8257816,
+    "ast_hash": "84738ac140508c537640a7fead70aeb4",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/04-writing-specifications-tts-part1.md": {
+    "mtime": 1768414892.1571598,
+    "ast_hash": "40af5125d0b8d7adafba2e0bbff1c1ad",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/04-writing-specifications-tts-part2.md": {
+    "mtime": 1768414892.3011951,
+    "ast_hash": "9534b7e183b932a70b9867cb271656bd",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/04-writing-specifications.md": {
+    "mtime": 1768108213.8343368,
+    "ast_hash": "cfe771eac61c54210a57ecd26237c747",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/05-advanced-prompts-tts-part1.md": {
+    "mtime": 1768414910.0103202,
+    "ast_hash": "33983b1c71512b0ca851e011ebb85447",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/05-advanced-prompts-tts-part2.md": {
+    "mtime": 1768414910.145063,
+    "ast_hash": "1de96423d56c8a1ad58cf2e11363c6a7",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/05-advanced-prompts.md": {
+    "mtime": 1768108213.8427842,
+    "ast_hash": "412b7fd2c80fc86901f71666abeeba88",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/06-retrofitting-projects-tts-part1.md": {
+    "mtime": 1768414924.6564674,
+    "ast_hash": "160e7f0266e9f3145d03bef86d02dec1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/06-retrofitting-projects-tts-part2.md": {
+    "mtime": 1768414924.7947674,
+    "ast_hash": "96da09b58bb8fe94760852ed43a6dc56",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/06-retrofitting-projects.md": {
+    "mtime": 1768108213.8502514,
+    "ast_hash": "8d33ae8c9dc9da3861790a0d45b94a09",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/07-best-practices-tts-part1.md": {
+    "mtime": 1768414945.7364717,
+    "ast_hash": "da052d21ab5d416b069741a7f2cd0f7b",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/07-best-practices-tts-part2.md": {
+    "mtime": 1768414945.87029,
+    "ast_hash": "631890a9e46560aad830429359725e71",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/07-best-practices.md": {
+    "mtime": 1768108213.8584425,
+    "ast_hash": "0ecd72fc49b3df75e996aabf87d2d1cc",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/README.md": {
+    "mtime": 1768108213.8650124,
+    "ast_hash": "1b4a59bd14511ffe96f0d2c43ed28840",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/splitrate.txt": {
+    "mtime": 1768424564.2200496,
+    "ast_hash": "cb8bbfefafb0330575a9c3267f87a9ba",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/understanding-noderr.md": {
+    "mtime": 1768108213.8705263,
+    "ast_hash": "2949b39d7b40d02696aab97503d86f1d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/environment_context.md": {
+    "mtime": 1768108213.879877,
+    "ast_hash": "69cc1191800bc2aad171cf427a2ae68a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/noderr_architecture.md": {
+    "mtime": 1768108213.888901,
+    "ast_hash": "8626a10eea06bf15561469431ed8d6b9",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/noderr_log.md": {
+    "mtime": 1768108213.9049017,
+    "ast_hash": "5c9565e06e7de74dc530bbc1cb0485db",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/noderr_loop.md": {
+    "mtime": 1768108213.9108992,
+    "ast_hash": "222bc880003787d04e803b2019a14d16",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/noderr_project.md": {
+    "mtime": 1768108213.917771,
+    "ast_hash": "9b23df6520164ef7c4bde894f0fddc70",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/noderr_tracker.md": {
+    "mtime": 1768108213.917771,
+    "ast_hash": "303792c144629b9901aa2cc858eb6ce0",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/planning/Readme.md": {
+    "mtime": 1768108213.9331048,
+    "ast_hash": "428cda52f378446b1d6e86c6bb6631e7",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Advanced_Security_Audit.md": {
+    "mtime": 1768108213.9394867,
+    "ast_hash": "2f115ae971041b8448c0c8bce83ab6f5",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Architecture_Generator.md": {
+    "mtime": 1768108213.942426,
+    "ast_hash": "c88e48b7a00f67677373de251946620d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Architecture_Health_Review.md": {
+    "mtime": 1768108213.9513583,
+    "ast_hash": "b9cb28809777c047b7178a04b8b8ccd0",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Execute_Micro_Fix.md": {
+    "mtime": 1768108213.9554498,
+    "ast_hash": "ad4055504320e3a7262ca7217a59b264",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Expand_Completed_Project.md": {
+    "mtime": 1768108213.9554498,
+    "ast_hash": "548b4dd6b8fbba1afa240fbfa36e986a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Feature_Idea_Breakdown.md": {
+    "mtime": 1768108213.969438,
+    "ast_hash": "332f96a2f09d9025a0ac58b8369af102",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Handle_Critical_Issue.md": {
+    "mtime": 1768108213.9847503,
+    "ast_hash": "6191c036cb973d98f4f9df90ec395b0b",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Holistic_Integration_Audit.md": {
+    "mtime": 1768108213.9847503,
+    "ast_hash": "d32caae631ffdc8a9f3603ce9676eeac",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Install_And_Reconcile.md": {
+    "mtime": 1768108213.9847503,
+    "ast_hash": "f7951e677634f35ffb1a3cc3d03ed4c2",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Major_Mid_Project_Feature_Addition.md": {
+    "mtime": 1768108214.0000505,
+    "ast_hash": "f126c597db41431c7b3318bca3ee3edd",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Onboarding_Audit_Verification.md": {
+    "mtime": 1768108214.0000505,
+    "ast_hash": "9b61c52e36abe0512482a6083384b870",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Post_Installation_Audit.md": {
+    "mtime": 1768108214.0183475,
+    "ast_hash": "401f3105121ed698ca9534c368c787d1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Pre_Flight_Feature_Analysis.md": {
+    "mtime": 1768108214.051077,
+    "ast_hash": "7938cc1388df58f97d604dcd9675e30e",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Project_Generator.md": {
+    "mtime": 1768108214.0680716,
+    "ast_hash": "9d2fa7d56a27876fa4f280ade32a5001",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Refactor_Node.md": {
+    "mtime": 1768108214.0680716,
+    "ast_hash": "35871c7f98a8d67fa5d4bdb4f2f50e01",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Resume_Active_Loop.md": {
+    "mtime": 1768108214.084288,
+    "ast_hash": "25a90e4ca5e35239ab8376db01a339a7",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Retrofit_Existing_Project.md": {
+    "mtime": 1768108214.0851793,
+    "ast_hash": "aa370643912489d115a86e584d2f3309",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Spec_Verification_Checkpoint.md": {
+    "mtime": 1768108214.0993028,
+    "ast_hash": "dfc785909abcaeaccccd3aa8d49b1f1b",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Start_Work_Session.md": {
+    "mtime": 1768108214.0999143,
+    "ast_hash": "4ed18cc8bd831f64f929d02256e01f77",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__Strategic_Blueprint_Designer.md": {
+    "mtime": 1768108214.0999143,
+    "ast_hash": "20230b457fa5b35e8ed28a3a9ef2353c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__[LOOP_1A]__Propose_Change_Set.md": {
+    "mtime": 1768108214.1179152,
+    "ast_hash": "2f27cde2cf8f4579fe517b387fc2125d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__[LOOP_1B]__Draft_Specs.md": {
+    "mtime": 1768108214.1179152,
+    "ast_hash": "41e1405dc3b47dc715f1cda5116b1878",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__[LOOP_2A]__Implement_Change_Set.md": {
+    "mtime": 1768108214.1333625,
+    "ast_hash": "518f79ff6e1dbca466efc8c5d5bc6284",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__[LOOP_2B]__Verify_Implementation.md": {
+    "mtime": 1768108214.1333625,
+    "ast_hash": "9bcb5c14467cbbbfdb9c993e0ecb89fa",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/prompts/NDv1.9__[LOOP_3]__Finalize_And_Commit.md": {
+    "mtime": 1768108214.1333625,
+    "ast_hash": "a39a3e8fdf6df6ea5b21ed0ee5ffc460",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/noderr/specs/Readme.md": {
+    "mtime": 1768108214.1507325,
+    "ast_hash": "1bdb47016e2f36e7b6268b87ae92d23c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/03-development-loop-tts.wav": {
+    "mtime": 1768511661.1482882,
+    "ast_hash": "b793722c3e05a6ae3190a7f5315d3096",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS noderr tutorial 1.wav": {
+    "mtime": 1768413078.7715726,
+    "ast_hash": "d2de61c6a7924fc8609b9953eda73761",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS noderr tutorial 2.wav": {
+    "mtime": 1768413648.823739,
+    "ast_hash": "764f6d2d44ca4d730323fc6b52ee802d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS tts frdly noderr tutorial 1.wav": {
+    "mtime": 1768414249.510476,
+    "ast_hash": "ddae4aeb85c0228141cab1d2f70edb96",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS tts frdly noderr tutorial 2.wav": {
+    "mtime": 1768415015.5647247,
+    "ast_hash": "882ae2ca5bebde9d09aaa0fb5d2d33fa",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS tts frdly noderr tutorial 3.wav": {
+    "mtime": 1768415086.6037583,
+    "ast_hash": "5c6f4c338ed09b1bcd4a6ff0379ebe5a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/GAIS tts frdly noderr tutorial 4.wav": {
+    "mtime": 1768415107.113583,
+    "ast_hash": "6e9e8ce5c241afc7dd7e7f72958505be",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 1.wav": {
+    "mtime": 1768412792.071416,
+    "ast_hash": "45817f7b9a065997a3484c2554df3e26",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 1p1.wav": {
+    "mtime": 1768424456.4412766,
+    "ast_hash": "ea7528c78f2e1c68a4471aa23a27d0fc",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 1p2.wav": {
+    "mtime": 1768423909.7642562,
+    "ast_hash": "40798845550ca6c80dd4c9a31c7058b1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 2b.wav": {
+    "mtime": 1768424048.76907,
+    "ast_hash": "e179060430cb6381480266cb1846ee07",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 2p1.wav": {
+    "mtime": 1768423868.4193628,
+    "ast_hash": "5d4ca62e32282c7a9dd3089b24abc1a3",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 2p2.wav": {
+    "mtime": 1768423885.7365286,
+    "ast_hash": "7881c2d4f808f589af939ff956a50f0f",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 3p1.wav": {
+    "mtime": 1768423680.0113258,
+    "ast_hash": "7410c93caf4e9c75468b3b9a1692f938",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 3p2_.wav": {
+    "mtime": 1768423511.7940881,
+    "ast_hash": "e179060430cb6381480266cb1846ee07",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 4p1.wav": {
+    "mtime": 1768423132.9964364,
+    "ast_hash": "b8dd772d183b5f02008ba30acf3edfb9",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 4p1_.wav": {
+    "mtime": 1768423462.4471412,
+    "ast_hash": "ecb73c1ea95982448175c9841b95584a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 4p2.wav": {
+    "mtime": 1768423042.3620143,
+    "ast_hash": "b7177affeae117b98e5321775b633d0d",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 4p2_.wav": {
+    "mtime": 1768423382.8974113,
+    "ast_hash": "3da9c060266e0a773601d4ba5f671b0c",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 5p1.wav": {
+    "mtime": 1768422367.7662632,
+    "ast_hash": "de0b12705c5a387fc6f6306008df76b7",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 5p1_.wav": {
+    "mtime": 1768423249.7714868,
+    "ast_hash": "f3af3bc766afff9ef2bc0c29f4531413",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 5p2.wav": {
+    "mtime": 1768422383.1329033,
+    "ast_hash": "4a03a8d6983204e35fc66bea6db85e9a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 5p2_.wav": {
+    "mtime": 1768423337.3267536,
+    "ast_hash": "0e23c7b5ada1924c4f44a6bd2ff02ac4",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 6p1.wav": {
+    "mtime": 1768422836.4353979,
+    "ast_hash": "e961398ac4af80b222bb47f1bfd3f6c1",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 6p2.wav": {
+    "mtime": 1768422719.6046984,
+    "ast_hash": "11b74323e9657df51d43ce2995bf96a9",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 7p1.wav": {
+    "mtime": 1768415541.203139,
+    "ast_hash": "b296a5215637bf03c1347d6670226595",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Noderr tutorial 7p2.wav": {
+    "mtime": 1768415625.3185117,
+    "ast_hash": "3d5042de160c91c263bf4e4f74cd0872",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/POD_EDGE_mono_DSP/noderr/docs/tutorials/Polyglot_English_Charon_#_Tutorial_3_The_Development_L_2026-01-14_19-17.wav": {
+    "mtime": 1768422661.6177025,
+    "ast_hash": "b0672fcfe5f3ee2319ca461f6b150e06",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/Pod_MultiFX_Chain/Pod_MultiFX_Chain.cpp": {
+    "mtime": 1776210816.9672704,
+    "ast_hash": "1b89b811a96fec0eaadd10ea2b9c439a",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/Pod_MultiFX_Chain/pod_multifx_pages.h": {
+    "mtime": 1776210688.156342,
+    "ast_hash": "80cf6a5b36015811dd8d105bccaf0bce",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/Pod_MultiFX_Chain/tests/pod_multifx_pages_test.cpp": {
+    "mtime": 1776210738.514715,
+    "ast_hash": "92997e0c001005533d2a246f69f7d8be",
+    "semantic_hash": ""
+  },
+  "MyProjects/_projects/Pod_MultiFX_Chain/README.md": {
+    "mtime": 1776210926.529317,
+    "ast_hash": "f8bc4bbe67b7e068b281bace0cb15418",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/delay_bundle_structure.cpp": {
+    "mtime": 1780613382.3011384,
+    "ast_hash": "86157367b6b83348b72bc950b361ecc9",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/00-bundle-overview.md": {
+    "mtime": 1780613284.0914824,
+    "ast_hash": "441c61bfc4220359c8aeb03c4ab0cbde",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/01-tape-multifx.md": {
+    "mtime": 1780613284.0954833,
+    "ast_hash": "b1f18fd7fdbee8324f9d1e345bdc1923",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/02-tank-reverb.md": {
+    "mtime": 1780613284.106485,
+    "ast_hash": "60753056d5fe5b3ae80d077c88b40d64",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/03-texture-funbox.md": {
+    "mtime": 1780613284.117482,
+    "ast_hash": "c96b503b36e2f940f382f7f62320da72",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/04-long-sdram.md": {
+    "mtime": 1780613284.1264834,
+    "ast_hash": "be951181f5d6204ca0c4dad3cc77d5d0",
+    "semantic_hash": ""
+  },
+  "docs/visualizations/delay-algorithm-structure/graphify-corpus/05-controls-ui-synth.md": {
+    "mtime": 1780613284.1364849,
+    "ast_hash": "2e5c8f12cd54e84d1589f970a3e24b7a",
+    "semantic_hash": ""
+  }
+}

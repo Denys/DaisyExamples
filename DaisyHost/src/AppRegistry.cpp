@@ -4,6 +4,7 @@
 
 #include "daisyhost/apps/BraidsCore.h"
 #include "daisyhost/apps/CloudSeedCore.h"
+#include "daisyhost/apps/DelayFxAdaptationCore.h"
 #include "daisyhost/apps/HarmoniqsCore.h"
 #include "daisyhost/apps/MultiDelayCore.h"
 #include "daisyhost/apps/PolyOscCore.h"
@@ -55,6 +56,36 @@ const std::vector<HostedAppRegistration> kRegistrations = {
      "Subharmoniq",
      [](const std::string& nodeId) {
          return std::make_unique<apps::SubharmoniqCore>(nodeId);
+     }},
+    {"field_delay_multifx_pedal",
+     "Field Delay MultiFX Pedal",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::DelayFxAdaptationCore>(
+             DaisyDelayFxSource::kMultiFxPedal, nodeId);
+     }},
+    {"field_delay_reverb_playground",
+     "Field Delay Reverb Playground",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::DelayFxAdaptationCore>(
+             DaisyDelayFxSource::kReverbPlayground, nodeId);
+     }},
+    {"field_delay_funbox",
+     "Field Delay FunBox",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::DelayFxAdaptationCore>(
+             DaisyDelayFxSource::kFunBox, nodeId);
+     }},
+    {"field_delay_sdram_delaylines",
+     "Field Delay SDRAM Delaylines",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::DelayFxAdaptationCore>(
+             DaisyDelayFxSource::kSdramDelaylines, nodeId);
+     }},
+    {"field_delay_bundle",
+     "Field Delay Bundle",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::DelayFxAdaptationCore>(
+             DaisyDelayFxSource::kMultiFxPedal, nodeId, true);
      }},
 };
 } // namespace
