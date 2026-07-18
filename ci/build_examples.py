@@ -20,6 +20,11 @@ filter_dirs = ["libDaisy",
                "libdaisy",
                "MyProjects"]
 
+generated_dirs = [".tmp",
+                  "build",
+                  "__pycache__",
+                  "node_modules"]
+
 dirs_to_search = list(
     filter(lambda x: x not in filter_dirs and os.path.isdir(x), os.listdir('.')))
 
@@ -28,6 +33,8 @@ dirs_to_search = list(
 for dir in dirs_to_search:
     example_dirs = []
     for root, dirs, files in os.walk(dir):
+        dirs[:] = [name for name in dirs
+                   if name not in filter_dirs and name not in generated_dirs]
         if 'Makefile' in files:
             example_dirs.append(root)
     cwd = os.path.abspath(os.getcwd())
