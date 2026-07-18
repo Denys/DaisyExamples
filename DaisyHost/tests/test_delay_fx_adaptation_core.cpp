@@ -61,9 +61,10 @@ TEST(DaisyDelayFxCoreTest, AllProfilesExposeThreeFieldLayersAndRender)
     for(auto source : kSources)
     {
         daisyhost::DaisyDelayFxCore core(source);
-        std::vector<float> storage(daisyhost::DaisyDelayFxCore::kDelayLineCount
-                                       * daisyhost::DaisyDelayFxCore::kMaxDelaySamples,
-                                   0.0f);
+        std::vector<float>          storage(
+            daisyhost::DaisyDelayFxCore::kDelayLineCount
+                * daisyhost::DaisyDelayFxCore::kMaxDelaySamples,
+            0.0f);
         core.AttachDelayStorage(storage.data(),
                                 daisyhost::DaisyDelayFxCore::kDelayLineCount,
                                 daisyhost::DaisyDelayFxCore::kMaxDelaySamples);
@@ -74,8 +75,9 @@ TEST(DaisyDelayFxCoreTest, AllProfilesExposeThreeFieldLayersAndRender)
         {
             for(std::size_t knob = 0; knob < 8; ++knob)
             {
-                EXPECT_NE(std::string(core.GetParameterForLayerKnob(layer, knob)),
-                          "");
+                EXPECT_NE(
+                    std::string(core.GetParameterForLayerKnob(layer, knob)),
+                    "");
             }
         }
 
@@ -98,7 +100,8 @@ TEST(DaisyDelayFxCoreTest, BundleAlgorithmsUseTypeFirstLabels)
     const auto& algorithms = daisyhost::GetDaisyDelayFxAlgorithmDescriptors();
     ASSERT_EQ(algorithms.size(), 6u);
 
-    EXPECT_EQ(algorithms[0].source, daisyhost::DaisyDelayFxSource::kMultiFxPedal);
+    EXPECT_EQ(algorithms[0].source,
+              daisyhost::DaisyDelayFxSource::kMultiFxPedal);
     EXPECT_STREQ(algorithms[0].label, "Tape [multifx]");
     EXPECT_STREQ(algorithms[0].shortLabel, "Tape");
 
@@ -118,7 +121,8 @@ TEST(DaisyDelayFxCoreTest, BundleAlgorithmsUseTypeFirstLabels)
     EXPECT_STREQ(algorithms[4].label, "Spectral [Phantasmagoria]");
     EXPECT_STREQ(algorithms[4].shortLabel, "Spectral");
 
-    EXPECT_EQ(algorithms[5].source, daisyhost::DaisyDelayFxSource::kTimeMachine);
+    EXPECT_EQ(algorithms[5].source,
+              daisyhost::DaisyDelayFxSource::kTimeMachine);
     EXPECT_STREQ(algorithms[5].label, "8 Tap [TimeMachine]");
     EXPECT_STREQ(algorithms[5].shortLabel, "8Tap");
 
@@ -131,7 +135,8 @@ TEST(DaisyDelayFxCoreTest, BundleAlgorithmsUseTypeFirstLabels)
 
 TEST(DaisyDelayFxCoreTest, BundleInternalSynthSupportsPluckPadAndLatch)
 {
-    daisyhost::DaisyDelayFxCore core(daisyhost::DaisyDelayFxSource::kMultiFxPedal);
+    daisyhost::DaisyDelayFxCore core(
+        daisyhost::DaisyDelayFxSource::kMultiFxPedal);
     core.SetBundleMode(true);
     std::vector<float> storage;
     PrepareDelayCore(core, storage);
@@ -176,7 +181,8 @@ TEST(DaisyDelayFxCoreTest, BundleInternalSynthSupportsPluckPadAndLatch)
 
 TEST(DaisyDelayFxCoreTest, BundleInternalSynthIsIdleSilentAndReleaseDecays)
 {
-    daisyhost::DaisyDelayFxCore core(daisyhost::DaisyDelayFxSource::kMultiFxPedal);
+    daisyhost::DaisyDelayFxCore core(
+        daisyhost::DaisyDelayFxSource::kMultiFxPedal);
     core.SetBundleMode(true);
     std::vector<float> storage;
     PrepareDelayCore(core, storage);
@@ -234,8 +240,8 @@ TEST(DelayFxAdaptationCoreTest, HostedAppsExposeFieldSurfaceAndMenu)
 
         std::array<float, 48> outL{};
         std::array<float, 48> outR{};
-        float* outputChannels[] = {outL.data(), outR.data()};
-        daisyhost::PortValue midi;
+        float*                outputChannels[] = {outL.data(), outR.data()};
+        daisyhost::PortValue  midi;
         midi.type = daisyhost::VirtualPortType::kMidi;
         midi.midiEvents.push_back({0x90, 60, 100});
         app.SetPortInput("node0/port/midi_in", midi);
@@ -248,15 +254,14 @@ TEST(DelayFxAdaptationCoreTest, HostedAppsExposeFieldSurfaceAndMenu)
 
 TEST(DelayFxAdaptationCoreTest, RegistryCreatesAllDelayAdaptations)
 {
-    for(const char* appId :
-        {"field_delay_multifx_pedal",
-         "field_delay_reverb_playground",
-         "field_delay_funbox",
-         "field_delay_sdram_delaylines",
-         "field_delay_bundle"})
+    for(const char* appId : {"field_delay_multifx_pedal",
+                             "field_delay_reverb_playground",
+                             "field_delay_funbox",
+                             "field_delay_sdram_delaylines",
+                             "field_delay_bundle"})
     {
         EXPECT_TRUE(RegistryContains(appId));
-        std::string resolved;
+        std::string                               resolved;
         std::unique_ptr<daisyhost::HostedAppCore> app
             = daisyhost::CreateHostedAppCore(appId, "node0", &resolved);
         ASSERT_NE(app, nullptr);
@@ -321,15 +326,15 @@ TEST(DelayFxAdaptationCoreTest, BundleSelectsAndRendersExtendedAlgorithms)
     ASSERT_TRUE(algorithm.hasValue);
     EXPECT_NEAR(algorithm.value, 4.0f / 5.0f, 0.0001f);
 
-    constexpr std::size_t kRenderFrames = 4096;
+    constexpr std::size_t            kRenderFrames = 4096;
     std::array<float, kRenderFrames> inputL{};
     std::array<float, kRenderFrames> inputR{};
     inputL[0] = 0.85f;
     inputR[0] = 0.45f;
     std::array<float, kRenderFrames> outL{};
     std::array<float, kRenderFrames> outR{};
-    const float* inputChannels[] = {inputL.data(), inputR.data()};
-    float* outputChannels[] = {outL.data(), outR.data()};
+    const float* inputChannels[]  = {inputL.data(), inputR.data()};
+    float*       outputChannels[] = {outL.data(), outR.data()};
     app.SetParameterValue("node0/param/mix", 1.0f);
     app.SetParameterValue("node0/param/time", 0.02f);
     app.SetParameterValue("node0/param/feedback", 0.35f);
@@ -340,8 +345,9 @@ TEST(DelayFxAdaptationCoreTest, BundleSelectsAndRendersExtendedAlgorithms)
 
     app.SetMenuItemValue("node0/menu/field_keys/a6", 1.0f);
     app.SetMenuItemValue("node0/menu/field_keys/a6", 0.0f);
-    EXPECT_NE(app.GetDisplayModel().texts.front().text.find("8 Tap [TimeMachine]"),
-              std::string::npos);
+    EXPECT_NE(
+        app.GetDisplayModel().texts.front().text.find("8 Tap [TimeMachine]"),
+        std::string::npos);
     algorithm = app.GetParameterValue("node0/param/algorithm");
     ASSERT_TRUE(algorithm.hasValue);
     EXPECT_NEAR(algorithm.value, 1.0f, 0.0001f);

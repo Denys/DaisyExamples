@@ -11,16 +11,60 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
-    - uses: DoozyX/clang-format-lint-action@v0.20
       with:
-        source: '.'
-        exclude: './DaisySP ./libDaisy ./DaisyTheory ./cube ./utils ./resources ./**/experimental'
+        fetch-depth: 0
+    - name: Collect changed C++ files
+      id: changed-files
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      run: |
+        python3 - <<'PY'
+        import os
+        import subprocess
+
+        excluded_prefixes = (
+            "DaisySP/",
+            "libDaisy/",
+            "DaisyTheory/",
+            "cube/",
+            "utils/",
+            "resources/",
+        )
+        output = subprocess.check_output(
+            [
+                "git",
+                "diff",
+                "--name-only",
+                "--diff-filter=ACMR",
+                os.environ["BASE_SHA"],
+                os.environ["HEAD_SHA"],
+                "--",
+                "*.h",
+                "*.cpp",
+            ],
+            text=True,
+        )
+        files = [
+            path
+            for path in output.splitlines()
+            if not path.startswith(excluded_prefixes)
+            and "/experimental/" not in f"/{path}/"
+        ]
+        escaped = " ".join(
+            path.replace("\\", "\\\\").replace(" ", "\\ ") for path in files
+        )
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+            stream.write(f"files={escaped}\n")
+        print(f"Checking {len(files)} changed C++ file(s)")
+        PY
+    - name: Check changed C++ formatting
+      if: steps.changed-files.outputs.files != ''
+      uses: DoozyX/clang-format-lint-action@v0.20
+      with:
+        source: ${{ steps.changed-files.outputs.files }}
         extensions: 'h,cpp'
         clangFormatVersion: 10
-        inplace: True
-    - uses: EndBug/add-and-commit@v10
-      with:
-        message: 'Automated: committing clang-format changes'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        inplace: False
 

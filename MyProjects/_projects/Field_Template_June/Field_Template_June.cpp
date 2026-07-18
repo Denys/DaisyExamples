@@ -16,23 +16,23 @@ using namespace FieldParameterBanks;
 
 namespace
 {
-constexpr float    kTouchThreshold               = 0.012f;
-constexpr float    kParamChangeDeadband          = 0.0005f;
-constexpr float    kCapturedLedBrightness        = 1.00f;
-constexpr float    kUncapturedLedBrightness      = 0.30f;
-constexpr uint32_t kZoomDurationMs               = 1400;
-constexpr uint32_t kDisplayUpdateMs              = 50;
-constexpr uint32_t kLedUpdateMs                  = 16;
-constexpr uint32_t kMainLoopDelayMs              = 1;
-constexpr uint32_t kTelemetryPeriodMs            = 1000;
-constexpr size_t   kMaxMidiEventsPerTick         = 16;
-constexpr int      kSerialLineBufferSize         = 64;
-constexpr int      kWaveformCount                = 4;
-constexpr int      kTransposeCount               = 4;
-constexpr int      kTemplateKnobCount            = 8;
-constexpr uint8_t  kPerformanceVelocity          = 100;
-constexpr float    kLfoRateMinHz                 = 0.10f;
-constexpr float    kLfoRateMaxHz                 = 12.00f;
+constexpr float    kTouchThreshold          = 0.012f;
+constexpr float    kParamChangeDeadband     = 0.0005f;
+constexpr float    kCapturedLedBrightness   = 1.00f;
+constexpr float    kUncapturedLedBrightness = 0.30f;
+constexpr uint32_t kZoomDurationMs          = 1400;
+constexpr uint32_t kDisplayUpdateMs         = 50;
+constexpr uint32_t kLedUpdateMs             = 16;
+constexpr uint32_t kMainLoopDelayMs         = 1;
+constexpr uint32_t kTelemetryPeriodMs       = 1000;
+constexpr size_t   kMaxMidiEventsPerTick    = 16;
+constexpr int      kSerialLineBufferSize    = 64;
+constexpr int      kWaveformCount           = 4;
+constexpr int      kTransposeCount          = 4;
+constexpr int      kTemplateKnobCount       = 8;
+constexpr uint8_t  kPerformanceVelocity     = 100;
+constexpr float    kLfoRateMinHz            = 0.10f;
+constexpr float    kLfoRateMaxHz            = 12.00f;
 
 enum MainParamIndex
 {
@@ -87,35 +87,61 @@ enum GlideMode
 };
 
 constexpr float kMainDefaults[8] = {
-    0.58f, 0.12f, 0.02f, 0.22f, 0.78f, 0.24f, 0.12f, 0.50f,
+    0.58f,
+    0.12f,
+    0.02f,
+    0.22f,
+    0.78f,
+    0.24f,
+    0.12f,
+    0.50f,
 };
 
 constexpr float kAltDefaults[8] = {
-    0.42f, 0.18f, 0.14f, 0.10f, 0.70f, 0.50f, 0.00f, 0.18f,
+    0.42f,
+    0.18f,
+    0.14f,
+    0.10f,
+    0.70f,
+    0.50f,
+    0.00f,
+    0.18f,
 };
 
 constexpr float kOutputLevelDefault = 0.80f;
 
 const char* kMainLabels[8] = {
-    "Cutoff", "Reso", "Attack", "Decay",
-    "Sustain", "Release", "Drive", "Color",
+    "Cutoff",
+    "Reso",
+    "Attack",
+    "Decay",
+    "Sustain",
+    "Release",
+    "Drive",
+    "Color",
 };
 
 const char* kAltLabels[8] = {
-    "EnvAmt", "LfoRt", "LfoDp", "Glide",
-    "VelAmt", "KeyTrk", "Noise", "Sub",
+    "EnvAmt",
+    "LfoRt",
+    "LfoDp",
+    "Glide",
+    "VelAmt",
+    "KeyTrk",
+    "Noise",
+    "Sub",
 };
 
-const int kTransposeSemitones[kTransposeCount] = {-12, 0, 12, 24};
+const int     kTransposeSemitones[kTransposeCount] = {-12, 0, 12, 24};
 const uint8_t kBPerformanceNotes[8] = {60, 62, 64, 65, 67, 69, 71, 72};
 
-const char* kWaveformNames[kWaveformCount] = {"SINE", "TRI", "SAW", "SQR"};
-const char* kVelocityNames[3]              = {"FIX", "SCL", "PCH"};
-const char* kKeyTrackNames[3]              = {"OFF", "HALF", "FULL"};
-const char* kLfoTargetNames[3]             = {"OFF", "PITCH", "FILT"};
-const char* kGlideNames[3]                 = {"OFF", "LEG", "ON"};
-const char* kTransposeNames[kTransposeCount] = {"-12", "0", "+12", "+24"};
-const uint8_t kOscWaveforms[kWaveformCount] = {
+const char*   kWaveformNames[kWaveformCount]   = {"SINE", "TRI", "SAW", "SQR"};
+const char*   kVelocityNames[3]                = {"FIX", "SCL", "PCH"};
+const char*   kKeyTrackNames[3]                = {"OFF", "HALF", "FULL"};
+const char*   kLfoTargetNames[3]               = {"OFF", "PITCH", "FILT"};
+const char*   kGlideNames[3]                   = {"OFF", "LEG", "ON"};
+const char*   kTransposeNames[kTransposeCount] = {"-12", "0", "+12", "+24"};
+const uint8_t kOscWaveforms[kWaveformCount]    = {
     Oscillator::WAVE_SIN,
     Oscillator::WAVE_TRI,
     Oscillator::WAVE_SAW,
@@ -124,12 +150,12 @@ const uint8_t kOscWaveforms[kWaveformCount] = {
 
 struct MidiState
 {
-    uint8_t note          = 60;
-    uint8_t velocity      = 100;
-    bool    gate          = false;
-    bool    held          = false;
-    bool    sustain       = false;
-    bool    note_active   = false;
+    uint8_t note        = 60;
+    uint8_t velocity    = 100;
+    bool    gate        = false;
+    bool    held        = false;
+    bool    sustain     = false;
+    bool    note_active = false;
 };
 
 struct FocusState
@@ -141,26 +167,26 @@ struct FocusState
 
 struct TelemetryState
 {
-    uint32_t seq                   = 0;
-    uint32_t last_status_ms        = 0;
-    uint32_t note_on_count         = 0;
-    uint32_t note_off_count        = 0;
-    uint32_t midi_cc_count         = 0;
-    uint32_t midi_cap_hits         = 0;
-    uint32_t key_event_count       = 0;
-    uint32_t param_capture_count   = 0;
-    uint32_t param_write_count     = 0;
-    uint32_t output_capture_count  = 0;
-    uint32_t output_write_count    = 0;
-    uint32_t display_update_count  = 0;
-    uint32_t led_update_count      = 0;
-    uint32_t panic_count           = 0;
-    uint32_t reset_count           = 0;
-    uint32_t serial_command_count  = 0;
-    uint32_t serial_unknown_count  = 0;
-    uint32_t selftest_pass_count   = 0;
-    uint32_t selftest_fail_count   = 0;
-    bool     selftest_passed       = false;
+    uint32_t seq                  = 0;
+    uint32_t last_status_ms       = 0;
+    uint32_t note_on_count        = 0;
+    uint32_t note_off_count       = 0;
+    uint32_t midi_cc_count        = 0;
+    uint32_t midi_cap_hits        = 0;
+    uint32_t key_event_count      = 0;
+    uint32_t param_capture_count  = 0;
+    uint32_t param_write_count    = 0;
+    uint32_t output_capture_count = 0;
+    uint32_t output_write_count   = 0;
+    uint32_t display_update_count = 0;
+    uint32_t led_update_count     = 0;
+    uint32_t panic_count          = 0;
+    uint32_t reset_count          = 0;
+    uint32_t serial_command_count = 0;
+    uint32_t serial_unknown_count = 0;
+    uint32_t selftest_pass_count  = 0;
+    uint32_t selftest_fail_count  = 0;
+    bool     selftest_passed      = false;
 };
 
 struct SynthState
@@ -169,36 +195,36 @@ struct SynthState
 
     ParamBank active_bank = ParamBank::Main;
 
-    float output_level     = kOutputLevelDefault;
-    bool  output_captured  = false;
-    float output_touch_anchor = kOutputLevelDefault;
-    bool  sw1_was_pressed  = false;
-    bool  sw2_was_pressed  = false;
-    bool  b_performance_mode = false;
-    bool  b_performance_note_active = false;
-    uint8_t b_performance_note = 60;
+    float   output_level              = kOutputLevelDefault;
+    bool    output_captured           = false;
+    float   output_touch_anchor       = kOutputLevelDefault;
+    bool    sw1_was_pressed           = false;
+    bool    sw2_was_pressed           = false;
+    bool    b_performance_mode        = false;
+    bool    b_performance_note_active = false;
+    uint8_t b_performance_note        = 60;
 
-    float touch_anchor_main[8] = {};
-    float touch_anchor_alt[8]  = {};
+    float touch_anchor_main[8]      = {};
+    float touch_anchor_alt[8]       = {};
     bool  touch_anchors_initialized = false;
 
-    bool     display_dirty         = true;
-    bool     led_dirty             = true;
-    bool     voice_dirty           = true;
-    bool     zoom_was_active       = false;
+    bool     display_dirty          = true;
+    bool     led_dirty              = true;
+    bool     voice_dirty            = true;
+    bool     zoom_was_active        = false;
     uint32_t last_display_update_ms = 0;
     uint32_t last_led_update_ms     = 0;
 
-    int waveform_index     = 2;
-    int transpose_index    = 1;
-    int velocity_mode      = VELOCITY_SCALED;
-    int keytrack_mode      = KEYTRACK_HALF;
-    int lfo_target_mode    = LFO_TARGET_FILTER;
-    int glide_mode         = GLIDE_LEGATO;
+    int waveform_index  = 2;
+    int transpose_index = 1;
+    int velocity_mode   = VELOCITY_SCALED;
+    int keytrack_mode   = KEYTRACK_HALF;
+    int lfo_target_mode = LFO_TARGET_FILTER;
+    int glide_mode      = GLIDE_LEGATO;
 
-    float target_freq_hz   = 261.63f;
-    float current_freq_hz  = 261.63f;
-    bool  legato_playing   = false;
+    float target_freq_hz  = 261.63f;
+    float current_freq_hz = 261.63f;
+    bool  legato_playing  = false;
 };
 
 DaisyField           hw;
@@ -208,8 +234,8 @@ MidiState            midi_state;
 FocusState           focus;
 TelemetryState       telemetry;
 
-volatile bool    serial_line_ready = false;
-volatile uint8_t serial_line_index = 0;
+volatile bool    serial_line_ready                         = false;
+volatile uint8_t serial_line_index                         = 0;
 char             serial_line_buffer[kSerialLineBufferSize] = {};
 
 Oscillator osc;
@@ -271,7 +297,7 @@ bool CommandEquals(const char* command, const char* expected)
     while(*command == ' ' || *command == '\t')
         ++command;
 
-    for(size_t i = 0; ; ++i)
+    for(size_t i = 0;; ++i)
     {
         char lhs = command[i];
         char rhs = expected[i];
@@ -302,7 +328,7 @@ void SerialReceiveCallback(uint8_t* buffer, uint32_t* size)
         if(ch == '\n')
         {
             serial_line_buffer[serial_line_index] = '\0';
-            serial_line_ready = true;
+            serial_line_ready                     = true;
             return;
         }
 
@@ -327,45 +353,52 @@ void LogBoot(const char* stage)
 
 void LogStatus(const char* reason)
 {
-    hw.seed.PrintLine("[FTJUNE] STATUS reason=%s seq=%lu ms=%lu bank=%s gate=%u sus=%u note=%u",
-                      reason,
-                      static_cast<unsigned long>(telemetry.seq),
-                      static_cast<unsigned long>(NowMs()),
-                      BankName(state.active_bank),
-                      midi_state.gate ? 1 : 0,
-                      midi_state.sustain ? 1 : 0,
-                      midi_state.note);
-    hw.seed.PrintLine("[FTJUNE] STATUS capM=%02X capA=%02X outcap=%u on=%lu off=%lu cc=%lu",
-                      CapturedMask(ParamBank::Main),
-                      CapturedMask(ParamBank::Alt),
-                      state.output_captured ? 1 : 0,
-                      static_cast<unsigned long>(telemetry.note_on_count),
-                      static_cast<unsigned long>(telemetry.note_off_count),
-                      static_cast<unsigned long>(telemetry.midi_cc_count));
-    hw.seed.PrintLine("[FTJUNE] STATUS paramCap=%lu paramWrite=%lu key=%lu reset=%lu panic=%lu",
-                      static_cast<unsigned long>(telemetry.param_capture_count),
-                      static_cast<unsigned long>(telemetry.param_write_count),
-                      static_cast<unsigned long>(telemetry.key_event_count),
-                      static_cast<unsigned long>(telemetry.reset_count),
-                      static_cast<unsigned long>(telemetry.panic_count));
+    hw.seed.PrintLine(
+        "[FTJUNE] STATUS reason=%s seq=%lu ms=%lu bank=%s gate=%u sus=%u "
+        "note=%u",
+        reason,
+        static_cast<unsigned long>(telemetry.seq),
+        static_cast<unsigned long>(NowMs()),
+        BankName(state.active_bank),
+        midi_state.gate ? 1 : 0,
+        midi_state.sustain ? 1 : 0,
+        midi_state.note);
+    hw.seed.PrintLine(
+        "[FTJUNE] STATUS capM=%02X capA=%02X outcap=%u on=%lu off=%lu cc=%lu",
+        CapturedMask(ParamBank::Main),
+        CapturedMask(ParamBank::Alt),
+        state.output_captured ? 1 : 0,
+        static_cast<unsigned long>(telemetry.note_on_count),
+        static_cast<unsigned long>(telemetry.note_off_count),
+        static_cast<unsigned long>(telemetry.midi_cc_count));
+    hw.seed.PrintLine(
+        "[FTJUNE] STATUS paramCap=%lu paramWrite=%lu key=%lu reset=%lu "
+        "panic=%lu",
+        static_cast<unsigned long>(telemetry.param_capture_count),
+        static_cast<unsigned long>(telemetry.param_write_count),
+        static_cast<unsigned long>(telemetry.key_event_count),
+        static_cast<unsigned long>(telemetry.reset_count),
+        static_cast<unsigned long>(telemetry.panic_count));
 }
 
 void LogSnapshot(const char* reason)
 {
-    hw.seed.PrintLine("[FTJUNE] SNAP reason=%s ms=%lu bank=%s wave=%s trans=%s vel=%s",
-                      reason,
-                      static_cast<unsigned long>(NowMs()),
-                      BankName(state.active_bank),
-                      kWaveformNames[state.waveform_index],
-                      kTransposeNames[state.transpose_index],
-                      kVelocityNames[state.velocity_mode]);
-    hw.seed.PrintLine("[FTJUNE] SNAP modes sw2=%s key=%s lfo=%s glide=%s out=%d outcap=%u",
-                      Sw2ModeName(),
-                      kKeyTrackNames[state.keytrack_mode],
-                      kLfoTargetNames[state.lfo_target_mode],
-                      kGlideNames[state.glide_mode],
-                      PercentInt(state.output_level),
-                      state.output_captured ? 1 : 0);
+    hw.seed.PrintLine(
+        "[FTJUNE] SNAP reason=%s ms=%lu bank=%s wave=%s trans=%s vel=%s",
+        reason,
+        static_cast<unsigned long>(NowMs()),
+        BankName(state.active_bank),
+        kWaveformNames[state.waveform_index],
+        kTransposeNames[state.transpose_index],
+        kVelocityNames[state.velocity_mode]);
+    hw.seed.PrintLine(
+        "[FTJUNE] SNAP modes sw2=%s key=%s lfo=%s glide=%s out=%d outcap=%u",
+        Sw2ModeName(),
+        kKeyTrackNames[state.keytrack_mode],
+        kLfoTargetNames[state.lfo_target_mode],
+        kGlideNames[state.glide_mode],
+        PercentInt(state.output_level),
+        state.output_captured ? 1 : 0);
     hw.seed.PrintLine("[FTJUNE] SNAP_MAIN p=%d,%d,%d,%d,%d,%d,%d,%d cap=%02X",
                       PercentInt(MainValue(0)),
                       PercentInt(MainValue(1)),
@@ -397,8 +430,8 @@ bool RunSoftwareSelfTest(const char* reason)
     ok                        = ok && kDisplayUpdateMs == 50;
     ok                        = ok && kLedUpdateMs == 16;
     ok                        = ok && kMaxMidiEventsPerTick == 16;
-    ok                        = ok && fabsf(LfoRateHz(0.0f) - kLfoRateMinHz) < 0.0001f;
-    ok                        = ok && fabsf(LfoRateHz(1.0f) - kLfoRateMaxHz) < 0.0001f;
+    ok = ok && fabsf(LfoRateHz(0.0f) - kLfoRateMinHz) < 0.0001f;
+    ok = ok && fabsf(LfoRateHz(1.0f) - kLfoRateMaxHz) < 0.0001f;
 
     if(check_defaults)
     {
@@ -416,12 +449,13 @@ bool RunSoftwareSelfTest(const char* reason)
     else
         ++telemetry.selftest_fail_count;
 
-    hw.seed.PrintLine("[FTJUNE] SELFTEST reason=%s result=%s defaults=%s pass=%lu fail=%lu",
-                      reason,
-                      ok ? "PASS" : "FAIL",
-                      check_defaults ? "checked" : "skipped",
-                      static_cast<unsigned long>(telemetry.selftest_pass_count),
-                      static_cast<unsigned long>(telemetry.selftest_fail_count));
+    hw.seed.PrintLine(
+        "[FTJUNE] SELFTEST reason=%s result=%s defaults=%s pass=%lu fail=%lu",
+        reason,
+        ok ? "PASS" : "FAIL",
+        check_defaults ? "checked" : "skipped",
+        static_cast<unsigned long>(telemetry.selftest_pass_count),
+        static_cast<unsigned long>(telemetry.selftest_fail_count));
     return ok;
 }
 
@@ -462,9 +496,10 @@ void ProcessSerialCommands()
     else
     {
         ++telemetry.serial_unknown_count;
-        hw.seed.PrintLine("[FTJUNE] CMD_UNKNOWN count=%lu value=%s",
-                          static_cast<unsigned long>(telemetry.serial_unknown_count),
-                          command);
+        hw.seed.PrintLine(
+            "[FTJUNE] CMD_UNKNOWN count=%lu value=%s",
+            static_cast<unsigned long>(telemetry.serial_unknown_count),
+            command);
     }
 }
 
@@ -496,7 +531,8 @@ void MarkVoiceDirty()
 
 float* TouchAnchorsFor(ParamBank bank)
 {
-    return bank == ParamBank::Main ? state.touch_anchor_main : state.touch_anchor_alt;
+    return bank == ParamBank::Main ? state.touch_anchor_main
+                                   : state.touch_anchor_alt;
 }
 
 void RecordTouchAnchors(ParamBank bank, const float raw_knobs[8])
@@ -532,7 +568,8 @@ void SetFocus(const char* label, const char* value_text)
 
 void FormatPercentText(char* buffer, size_t size, float value)
 {
-    snprintf(buffer, size, "%d%%", static_cast<int>(Clamp01(value) * 100.0f + 0.5f));
+    snprintf(
+        buffer, size, "%d%%", static_cast<int>(Clamp01(value) * 100.0f + 0.5f));
 }
 
 void FormatIntegerHertz(char* buffer, size_t size, int hz, bool spaced_unit)
@@ -543,7 +580,10 @@ void FormatIntegerHertz(char* buffer, size_t size, int hz, bool spaced_unit)
         snprintf(buffer, size, "%dHz", hz);
 }
 
-void FormatIntegerMilliseconds(char* buffer, size_t size, int ms, bool spaced_unit)
+void FormatIntegerMilliseconds(char*  buffer,
+                               size_t size,
+                               int    ms,
+                               bool   spaced_unit)
 {
     if(spaced_unit)
         snprintf(buffer, size, "%d ms", ms);
@@ -614,7 +654,8 @@ void FormatLfoRate(char* buffer, size_t size, float hertz, bool spaced_unit)
         return;
     }
 
-    FormatIntegerHertz(buffer, size, static_cast<int>(hertz + 0.5f), spaced_unit);
+    FormatIntegerHertz(
+        buffer, size, static_cast<int>(hertz + 0.5f), spaced_unit);
 }
 
 void FormatCompactTime(char* buffer, size_t size, float seconds)
@@ -644,11 +685,9 @@ void FormatMainValue(int idx, float value, char* buffer, size_t size)
                                       ? (0.001f + Clamp01(value) * 1.5f)
                                       : (idx == MAIN_DECAY)
                                             ? (0.001f + Clamp01(value) * 2.0f)
-                                      : (0.001f + Clamp01(value) * 2.5f);
-            FormatIntegerMilliseconds(buffer,
-                                      size,
-                                      static_cast<int>(seconds * 1000.0f + 0.5f),
-                                      true);
+                                            : (0.001f + Clamp01(value) * 2.5f);
+            FormatIntegerMilliseconds(
+                buffer, size, static_cast<int>(seconds * 1000.0f + 0.5f), true);
             break;
         }
         default: FormatPercentText(buffer, size, value); break;
@@ -667,10 +706,8 @@ void FormatAltValue(int idx, float value, char* buffer, size_t size)
         case ALT_GLIDE:
         {
             const float seconds = Clamp01(value) * 0.8f;
-            FormatIntegerMilliseconds(buffer,
-                                      size,
-                                      static_cast<int>(seconds * 1000.0f + 0.5f),
-                                      true);
+            FormatIntegerMilliseconds(
+                buffer, size, static_cast<int>(seconds * 1000.0f + 0.5f), true);
             break;
         }
         default: FormatPercentText(buffer, size, value); break;
@@ -711,7 +748,11 @@ void FormatAltOverviewValue(int idx, float value, char* buffer, size_t size)
     }
 }
 
-void FormatParamValue(ParamBank bank, int idx, float value, char* buffer, size_t size)
+void FormatParamValue(ParamBank bank,
+                      int       idx,
+                      float     value,
+                      char*     buffer,
+                      size_t    size)
 {
     if(bank == ParamBank::Main)
         FormatMainValue(idx, value, buffer, size);
@@ -719,7 +760,11 @@ void FormatParamValue(ParamBank bank, int idx, float value, char* buffer, size_t
         FormatAltValue(idx, value, buffer, size);
 }
 
-void FormatParamOverviewValue(ParamBank bank, int idx, float value, char* buffer, size_t size)
+void FormatParamOverviewValue(ParamBank bank,
+                              int       idx,
+                              float     value,
+                              char*     buffer,
+                              size_t    size)
 {
     if(bank == ParamBank::Main)
         FormatMainOverviewValue(idx, value, buffer, size);
@@ -735,18 +780,34 @@ const char* LabelFor(ParamBank bank, int idx)
 const char* ShortLabelFor(ParamBank bank, int idx)
 {
     static const char* kMainShortLabels[8] = {
-        "Cut", "Res", "Atk", "Dec", "Sus", "Rel", "Drv", "Col",
+        "Cut",
+        "Res",
+        "Atk",
+        "Dec",
+        "Sus",
+        "Rel",
+        "Drv",
+        "Col",
     };
     static const char* kAltShortLabels[8] = {
-        "Env", "Rate", "Dep", "Glid", "Vel", "Key", "Nois", "Sub",
+        "Env",
+        "Rate",
+        "Dep",
+        "Glid",
+        "Vel",
+        "Key",
+        "Nois",
+        "Sub",
     };
 
-    return bank == ParamBank::Main ? kMainShortLabels[idx] : kAltShortLabels[idx];
+    return bank == ParamBank::Main ? kMainShortLabels[idx]
+                                   : kAltShortLabels[idx];
 }
 
 void ResetBank(ParamBank bank)
 {
-    const float* defaults = bank == ParamBank::Main ? kMainDefaults : kAltDefaults;
+    const float* defaults
+        = bank == ParamBank::Main ? kMainDefaults : kAltDefaults;
     for(int i = 0; i < kTemplateKnobCount; ++i)
     {
         state.banks.Write(bank, i, defaults[i]);
@@ -761,16 +822,16 @@ void ResetAllState()
 {
     ResetBank(ParamBank::Main);
     ResetBank(ParamBank::Alt);
-    state.output_level    = kOutputLevelDefault;
-    state.output_captured = false;
-    state.output_touch_anchor = kOutputLevelDefault;
-    state.waveform_index  = 2;
-    state.transpose_index = 1;
-    state.velocity_mode   = VELOCITY_SCALED;
-    state.keytrack_mode   = KEYTRACK_HALF;
-    state.lfo_target_mode = LFO_TARGET_FILTER;
-    state.glide_mode      = GLIDE_LEGATO;
-    midi_state.sustain    = false;
+    state.output_level              = kOutputLevelDefault;
+    state.output_captured           = false;
+    state.output_touch_anchor       = kOutputLevelDefault;
+    state.waveform_index            = 2;
+    state.transpose_index           = 1;
+    state.velocity_mode             = VELOCITY_SCALED;
+    state.keytrack_mode             = KEYTRACK_HALF;
+    state.lfo_target_mode           = LFO_TARGET_FILTER;
+    state.glide_mode                = GLIDE_LEGATO;
+    midi_state.sustain              = false;
     state.touch_anchors_initialized = false;
     MarkDisplayDirty();
     MarkLedsDirty();
@@ -808,7 +869,8 @@ float AltValue(int idx)
 
 float VelocityScale()
 {
-    const float midi_velocity = fclamp(static_cast<float>(midi_state.velocity) / 127.0f, 0.0f, 1.0f);
+    const float midi_velocity
+        = fclamp(static_cast<float>(midi_state.velocity) / 127.0f, 0.0f, 1.0f);
     switch(state.velocity_mode)
     {
         case VELOCITY_FIXED: return 1.0f;
@@ -845,7 +907,8 @@ float ComputeGlideAlpha()
 
 void UpdateTargetFrequency()
 {
-    const int note = static_cast<int>(midi_state.note) + kTransposeSemitones[state.transpose_index];
+    const int note = static_cast<int>(midi_state.note)
+                     + kTransposeSemitones[state.transpose_index];
     state.target_freq_hz = mtof(static_cast<float>(fclamp(note, 0, 127)));
 
     if(!state.legato_playing || state.glide_mode == GLIDE_OFF)
@@ -862,8 +925,9 @@ void NoteOn(uint8_t note, uint8_t velocity)
     midi_state.held        = true;
     midi_state.note_active = true;
 
-    const bool keep_glide = state.glide_mode == GLIDE_ALWAYS
-                            || (state.glide_mode == GLIDE_LEGATO && was_playing);
+    const bool keep_glide
+        = state.glide_mode == GLIDE_ALWAYS
+          || (state.glide_mode == GLIDE_LEGATO && was_playing);
 
     state.legato_playing = keep_glide;
     UpdateTargetFrequency();
@@ -911,7 +975,7 @@ void PlayBPerformanceNote(int idx)
         return;
 
     ReleaseBPerformanceNote();
-    state.b_performance_note = kBPerformanceNotes[idx];
+    state.b_performance_note        = kBPerformanceNotes[idx];
     state.b_performance_note_active = true;
     NoteOn(state.b_performance_note, kPerformanceVelocity);
 
@@ -960,7 +1024,8 @@ void HandleMidiMessage(MidiEvent msg)
 void ApplyVoiceSetup()
 {
     osc.SetWaveform(kOscWaveforms[state.waveform_index]);
-    sub.SetWaveform(kOscWaveforms[state.waveform_index] == Oscillator::WAVE_SQUARE
+    sub.SetWaveform(kOscWaveforms[state.waveform_index]
+                            == Oscillator::WAVE_SQUARE
                         ? Oscillator::WAVE_SQUARE
                         : Oscillator::WAVE_SAW);
 
@@ -1008,7 +1073,9 @@ void ProcessOutputLevel(const float raw_knob)
     }
 }
 
-void ProcessBankKnobs(ParamBank bank, const float raw_knobs[8], bool override_level)
+void ProcessBankKnobs(ParamBank   bank,
+                      const float raw_knobs[8],
+                      bool        override_level)
 {
     float* anchors = TouchAnchorsFor(bank);
     for(int i = 0; i < kTemplateKnobCount; ++i)
@@ -1043,8 +1110,8 @@ void UpdateKnobLeds(bool sw2_pressed)
 {
     for(int i = 0; i < kTemplateKnobCount; ++i)
     {
-        float value      = state.banks.Read(state.active_bank, i);
-        bool  captured   = state.banks.IsCaptured(state.active_bank, i);
+        float value    = state.banks.Read(state.active_bank, i);
+        bool  captured = state.banks.IsCaptured(state.active_bank, i);
 
         if(sw2_pressed && i == 7)
         {
@@ -1052,13 +1119,15 @@ void UpdateKnobLeds(bool sw2_pressed)
             captured = state.output_captured;
         }
 
-        const float brightness = captured ? kCapturedLedBrightness
-                                          : kUncapturedLedBrightness;
+        const float brightness
+            = captured ? kCapturedLedBrightness : kUncapturedLedBrightness;
         hw.led_driver.SetLed(kLedKnobs[i], Clamp01(value) * brightness);
     }
 
-    hw.led_driver.SetLed(kLedSwitches[0], state.active_bank == ParamBank::Alt ? 1.0f : 0.0f);
-    hw.led_driver.SetLed(kLedSwitches[1], state.b_performance_mode ? 1.0f : 0.0f);
+    hw.led_driver.SetLed(kLedSwitches[0],
+                         state.active_bank == ParamBank::Alt ? 1.0f : 0.0f);
+    hw.led_driver.SetLed(kLedSwitches[1],
+                         state.b_performance_mode ? 1.0f : 0.0f);
 }
 
 KeyLedState CyclicModeLed(int value, int default_value)
@@ -1080,7 +1149,8 @@ void UpdateKeyLeds()
     key_leds.Clear();
 
     for(int i = 0; i < 4; ++i)
-        key_leds.SetA(i, i == state.waveform_index ? KeyLedState::On : KeyLedState::Off);
+        key_leds.SetA(
+            i, i == state.waveform_index ? KeyLedState::On : KeyLedState::Off);
 
     key_leds.SetA(4, CyclicModeLed(state.velocity_mode, VELOCITY_SCALED));
     key_leds.SetA(5, CyclicModeLed(state.keytrack_mode, KEYTRACK_HALF));
@@ -1090,12 +1160,16 @@ void UpdateKeyLeds()
     if(state.b_performance_mode)
     {
         for(int i = 0; i < 8; ++i)
-            key_leds.SetB(i, hw.KeyboardState(kKeyBIndices[i]) ? KeyLedState::On : KeyLedState::Off);
+            key_leds.SetB(i,
+                          hw.KeyboardState(kKeyBIndices[i]) ? KeyLedState::On
+                                                            : KeyLedState::Off);
     }
     else
     {
         for(int i = 0; i < 4; ++i)
-            key_leds.SetB(i, i == state.transpose_index ? KeyLedState::On : KeyLedState::Off);
+            key_leds.SetB(i,
+                          i == state.transpose_index ? KeyLedState::On
+                                                     : KeyLedState::Off);
     }
 }
 
@@ -1208,7 +1282,7 @@ void HandleKeybedControls(const float raw_knobs[8])
         ResetAllState();
         RecordTouchAnchors(ParamBank::Main, raw_knobs);
         RecordTouchAnchors(ParamBank::Alt, raw_knobs);
-        state.output_touch_anchor = Clamp01(raw_knobs[7]);
+        state.output_touch_anchor       = Clamp01(raw_knobs[7]);
         state.touch_anchors_initialized = true;
         SetFocus("Reset", "All defaults");
     }
@@ -1240,10 +1314,7 @@ void RenderOverview()
     hw.display.Fill(false);
 
     char line[32];
-    snprintf(line,
-             sizeof(line),
-             "JUNE %s",
-             Sw2ModeName());
+    snprintf(line, sizeof(line), "JUNE %s", Sw2ModeName());
     hw.display.SetCursor(0, 0);
     hw.display.WriteString(line, Font_7x10, true);
 
@@ -1285,11 +1356,19 @@ void RenderOverview()
 
         const int y = 32 + row * 8;
 
-        snprintf(line, sizeof(line), "%s:%s", ShortLabelFor(state.active_bank, left_idx), left_value);
+        snprintf(line,
+                 sizeof(line),
+                 "%s:%s",
+                 ShortLabelFor(state.active_bank, left_idx),
+                 left_value);
         hw.display.SetCursor(0, y);
         hw.display.WriteString(line, Font_6x8, true);
 
-        snprintf(line, sizeof(line), "%s:%s", ShortLabelFor(state.active_bank, right_idx), right_value);
+        snprintf(line,
+                 sizeof(line),
+                 "%s:%s",
+                 ShortLabelFor(state.active_bank, right_idx),
+                 right_value);
         hw.display.SetCursor(64, y);
         hw.display.WriteString(line, Font_6x8, true);
     }
@@ -1341,18 +1420,20 @@ void UpdateUiOutputs(bool sw2_pressed)
         UpdateKeyLeds();
         key_leds.Update(now, 1.0f, 1.0f, 250);
         state.last_led_update_ms = now;
-        state.led_dirty = false;
+        state.led_dirty          = false;
         ++telemetry.led_update_count;
     }
 
     const bool zoom_active = focus.until_ms > now;
-    const bool display_due = (now - state.last_display_update_ms) >= kDisplayUpdateMs;
-    if(display_due && (state.display_dirty || zoom_active || state.zoom_was_active))
+    const bool display_due
+        = (now - state.last_display_update_ms) >= kDisplayUpdateMs;
+    if(display_due
+       && (state.display_dirty || zoom_active || state.zoom_was_active))
     {
         RenderDisplay();
         state.last_display_update_ms = now;
-        state.display_dirty = false;
-        state.zoom_was_active = zoom_active;
+        state.display_dirty          = false;
+        state.zoom_was_active        = zoom_active;
         ++telemetry.display_update_count;
     }
 }
@@ -1386,7 +1467,7 @@ void ProcessUi()
     }
     if(sw2_rising)
     {
-        state.output_captured = false;
+        state.output_captured     = false;
         state.output_touch_anchor = raw_knobs[7];
     }
     state.sw2_was_pressed = sw2_pressed;
@@ -1407,7 +1488,9 @@ void ProcessUi()
     UpdateUiOutputs(sw2_pressed);
 }
 
-void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
 {
     const float glide_alpha = ComputeGlideAlpha();
     const float env_amount  = AltValue(ALT_ENV_AMOUNT);
@@ -1419,9 +1502,10 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 
     for(size_t i = 0; i < size; ++i)
     {
-        state.current_freq_hz += (state.target_freq_hz - state.current_freq_hz) * glide_alpha;
+        state.current_freq_hz
+            += (state.target_freq_hz - state.current_freq_hz) * glide_alpha;
 
-        const float lfo_out = lfo.Process();
+        const float lfo_out  = lfo.Process();
         float       osc_freq = state.current_freq_hz;
         if(state.lfo_target_mode == LFO_TARGET_PITCH)
             osc_freq *= 1.0f + (lfo_out * lfo_depth * 0.03f);
@@ -1432,7 +1516,9 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         const float envelope = env.Process(midi_state.gate);
         const float velocity = VelocityScale();
 
-        const float keytrack_note = fclamp(static_cast<float>(midi_state.note) - 36.0f, 0.0f, 72.0f) / 72.0f;
+        const float keytrack_note
+            = fclamp(static_cast<float>(midi_state.note) - 36.0f, 0.0f, 72.0f)
+              / 72.0f;
         float cutoff = 50.0f + MainValue(MAIN_CUTOFF) * 12000.0f;
         cutoff += envelope * env_amount * 7000.0f;
         cutoff += keytrack_note * KeyTracking() * 2500.0f;
@@ -1449,7 +1535,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         source *= 0.6f + color * 0.4f;
 
         filter.Process(source * envelope * velocity);
-        const float shaped = tanhf(filter.Low() * drive_gain) * state.output_level;
+        const float shaped
+            = tanhf(filter.Low() * drive_gain) * state.output_level;
 
         out[0][i] = shaped + in[0][i] * 0.0f;
         out[1][i] = shaped + in[1][i] * 0.0f;
@@ -1481,10 +1568,10 @@ void PrimeControls()
 
     RecordTouchAnchors(ParamBank::Main, raw_knobs);
     RecordTouchAnchors(ParamBank::Alt, raw_knobs);
-    state.output_touch_anchor = raw_knobs[7];
+    state.output_touch_anchor       = raw_knobs[7];
     state.touch_anchors_initialized = true;
-    state.last_display_update_ms = System::GetNow() - kDisplayUpdateMs;
-    state.last_led_update_ms = System::GetNow() - kLedUpdateMs;
+    state.last_display_update_ms    = System::GetNow() - kDisplayUpdateMs;
+    state.last_led_update_ms        = System::GetNow() - kLedUpdateMs;
     MarkDisplayDirty();
     MarkLedsDirty();
 }
@@ -1495,7 +1582,8 @@ int main(void)
 {
     hw.Init();
     hw.seed.StartLog(false);
-    hw.seed.usb_handle.SetReceiveCallback(SerialReceiveCallback, UsbHandle::FS_INTERNAL);
+    hw.seed.usb_handle.SetReceiveCallback(SerialReceiveCallback,
+                                          UsbHandle::FS_INTERNAL);
     LogBoot("init");
     hw.SetAudioBlockSize(kRecommendedBlockSize);
     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
@@ -1532,7 +1620,8 @@ int main(void)
     {
         hw.midi.Listen();
         size_t midi_events_handled = 0;
-        while(hw.midi.HasEvents() && midi_events_handled < kMaxMidiEventsPerTick)
+        while(hw.midi.HasEvents()
+              && midi_events_handled < kMaxMidiEventsPerTick)
         {
             HandleMidiMessage(hw.midi.PopEvent());
             ++midi_events_handled;
