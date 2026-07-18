@@ -8,3 +8,6 @@
 [submodule "libDaisy"]
 	path = libDaisy
 	url = https://github.com/electro-smith/libDaisy
+[submodule "third_party/CloudSeedCore"]
+	path = third_party/CloudSeedCore
+	url = https://github.com/GhostNoteAudio/CloudSeedCore
