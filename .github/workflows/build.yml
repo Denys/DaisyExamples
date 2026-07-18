@@ -15,6 +15,7 @@ jobs:
       run: |
         git submodule update --init --depth 1 DaisySP libDaisy stmlib third_party/CloudSeedCore
         git -C DaisySP submodule update --init --depth 1 DaisySP-LGPL
+        git -C third_party/CloudSeedCore apply ../CloudSeedCore-daisy.patch
     - name: arm-none-eabi-gcc
       uses: fiam/arm-none-eabi-gcc@v1
       with:
