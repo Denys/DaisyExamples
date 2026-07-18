@@ -12,7 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Initialize build submodules
-      run: git submodule update --init --depth 1 DaisySP libDaisy stmlib
+      run: |
+        git submodule update --init --depth 1 DaisySP libDaisy stmlib
+        git -C DaisySP submodule update --init --depth 1 DaisySP-LGPL
     - name: arm-none-eabi-gcc
       uses: fiam/arm-none-eabi-gcc@v1
       with:
@@ -28,6 +30,7 @@ jobs:
     - name: Create Distributable Binaries
       run: python ./ci/build_dist.py -ru
     - name: Deploy Dist
+      if: github.event_name == 'push'
       uses: EndBug/add-and-commit@v10
       with:
         message: 'Automated: Committing Dist folder' 
