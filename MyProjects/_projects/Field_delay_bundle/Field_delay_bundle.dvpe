@@ -1,0 +1,127 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Field Delay Bundle Extended",
+      "author": "Codex / DVPE",
+      "description": "Daisy Field extended delay bundle with six selectable delay algorithms: Tape, Tank, Texture, Long, Spectral Phantasmagoria-inspired behavior, and 8 Tap TimeMachine-inspired behavior.",
+      "created": "2026-06-08T00:00:00Z",
+      "modified": "2026-06-08T00:00:00Z",
+      "version": "1.1.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "hardwareConfig": {
+      "platform": "field",
+      "peripherals": {
+        "useExternalCodec": true,
+        "useSdram": true,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    },
+    "blocks": [
+      {
+        "id": "audio_in",
+        "definitionId": "audio_input_stereo",
+        "position": { "x": -1040, "y": -120 },
+        "label": "AUDIO IN L/R"
+      },
+      {
+        "id": "midi_in",
+        "definitionId": "midi_note",
+        "position": { "x": -1040, "y": 160 },
+        "parameterValues": { "channel": "omni", "voiceCount": 8 },
+        "label": "MIDI + B-ROW NOTES"
+      },
+      {
+        "id": "field_controls",
+        "definitionId": "field_controls",
+        "position": { "x": -1040, "y": 440 },
+        "parameterValues": {
+          "knobs": 8,
+          "layers": ["base", "sw1", "sw2"],
+          "selectorKeys": ["A1", "A2", "A3", "A4", "A5", "A6"],
+          "octaveKeys": ["A7", "A8"]
+        },
+        "label": "FIELD CONTROLS"
+      },
+      {
+        "id": "internal_synth",
+        "definitionId": "pluck_pad_synth",
+        "position": { "x": -680, "y": 160 },
+        "parameterValues": {
+          "voices": 8,
+          "defaultMode": "pluck",
+          "holdMode": "momentary",
+          "noteRange": "C4-C5 with A7/A8 octave shift"
+        },
+        "label": "8-VOICE TEST SYNTH"
+      },
+      {
+        "id": "algorithm_selector",
+        "definitionId": "switch_6",
+        "position": { "x": -360, "y": 20 },
+        "parameterValues": {
+          "choices": [
+            "Tape [multifx]",
+            "Tank [reverb]",
+            "Texture [FunBox]",
+            "Long [sdram]",
+            "Spectral [Phantasmagoria]",
+            "8 Tap [TimeMachine]"
+          ],
+          "snapshotPerChoice": true
+        },
+        "label": "A1-A6 ALGORITHM SELECT"
+      },
+      {
+        "id": "delay_core",
+        "definitionId": "daisy_delay_fx_core",
+        "position": { "x": 80, "y": 20 },
+        "parameterValues": {
+          "delayLines": 4,
+          "samplesPerLine": 384000,
+          "parameterSlots": 24,
+          "licensePolicy": "clean-room behavior adaptation, no vendored external GPL or CC BY-NC-SA source"
+        },
+        "label": "SHARED DELAY CORE"
+      },
+      {
+        "id": "oled_leds",
+        "definitionId": "field_display_leds",
+        "position": { "x": 500, "y": 300 },
+        "parameterValues": {
+          "oledRefreshMs": 50,
+          "ledRefreshMs": 16,
+          "zoomMs": 1200
+        },
+        "label": "OLED + KEY LED FEEDBACK"
+      },
+      {
+        "id": "audio_out",
+        "definitionId": "audio_output_stereo",
+        "position": { "x": 820, "y": -120 },
+        "label": "AUDIO OUT L/R"
+      }
+    ],
+    "connections": [
+      { "from": "audio_in.out", "to": "delay_core.audioIn" },
+      { "from": "midi_in.note", "to": "internal_synth.note" },
+      { "from": "internal_synth.audio", "to": "delay_core.synthIn" },
+      { "from": "field_controls.algorithm", "to": "algorithm_selector.index" },
+      { "from": "algorithm_selector.source", "to": "delay_core.source" },
+      { "from": "field_controls.parameters", "to": "delay_core.parameters" },
+      { "from": "field_controls.octave", "to": "internal_synth.octave" },
+      { "from": "delay_core.audioOut", "to": "audio_out.in" },
+      { "from": "delay_core.displayState", "to": "oled_leds.state" }
+    ],
+    "notes": [
+      "A1-A6 select delay algorithms directly; A7/A8 shift the internal test-synth octave.",
+      "Spectral mode approximates Phantasmagoria-style reverse grain, smear diffusion, erosion, chamber taps, and freeze memory.",
+      "8 Tap mode approximates Time Machine-style eight read-head tap distribution, blur, skew, and feedback limiting.",
+      "External repositories were inspected for behavior and license only; their source is not vendored into this patch."
+    ]
+  }
+}

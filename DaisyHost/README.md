@@ -100,12 +100,14 @@ internals:
     standalone rhythm-triggered audio; the 2026-04-26 follow-up also tunes the
     default envelope/output/filter path and Field knob pickup behavior so the
     startup patch is audible in host tests without physical knobs muting it
-  - `DelayFxAdaptationCore` hosts four Field-focused delay/Fx source
+  - `DelayFxAdaptationCore` hosts six Field-focused delay/Fx behavior
     adaptations on one portable `DaisyDelayFxCore`: MultiFX tape delay, FDN
-    reverb playground, FunBox reverse/freeze delay, and SDRAM long delaylines;
+    reverb playground, FunBox reverse/freeze delay, SDRAM long delaylines,
+    clean-room Phantasmagoria-inspired spectral delay, and clean-room OAM Time
+    Machine-inspired 8-tap delay;
     it also exposes `field_delay_bundle`, a Field selector that names the
     algorithms by type first: Tape [multifx], Tank [reverb], Texture [FunBox],
-    and Long [sdram]
+    Long [sdram], Spectral [Phantasmagoria], and 8 Tap [TimeMachine]
 - Multi-app host:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings

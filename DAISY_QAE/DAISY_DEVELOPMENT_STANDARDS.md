@@ -11,15 +11,17 @@ This document establishes the required workflow for Daisy projects (Field, Pod, 
 ```mermaid
 flowchart LR
     A["1. CONCEPT"] --> B["2. BLOCK DIAGRAMS"]
-    B --> C["3. CONTROLS.md"]
-    C --> D["4. IMPLEMENTATION"]
-    D --> E["5. VERIFY & ITERATE"]
+    B --> C["3. .dvpe PROJECT"]
+    C --> D["4. CONTROLS.md"]
+    D --> E["5. IMPLEMENTATION"]
+    E --> F["6. VERIFY & ITERATE"]
     
     style A fill:#43A047,stroke:#1B5E20,color:#fff
     style B fill:#1E88E5,stroke:#0D47A1,color:#fff
-    style C fill:#FB8C00,stroke:#E65100,color:#000
-    style D fill:#8E24AA,stroke:#4A148C,color:#fff
-    style E fill:#E53935,stroke:#B71C1C,color:#fff
+    style C fill:#00ACC1,stroke:#006064,color:#fff
+    style D fill:#FB8C00,stroke:#E65100,color:#000
+    style E fill:#8E24AA,stroke:#4A148C,color:#fff
+    style F fill:#E53935,stroke:#B71C1C,color:#fff
 ```
 
 ### Step 1: CONCEPT
@@ -34,19 +36,39 @@ flowchart LR
 | **B. Signal Flow Graph** | Audio DSP processing chain | `flowchart LR` |
 | **C. Control Flow** | Event handling & UI logic | `flowchart TD` |
 
-### Step 3: CONTROLS.md
+### Step 3: .dvpe PROJECT
+- Create or update the project-local `.dvpe` file before writing firmware code.
+- Keep the `.dvpe` beside the project source when possible, for example
+  `MyProjects/_projects/ProjectName/ProjectName.dvpe`.
+- The `.dvpe` must match the approved block diagrams and include target
+  hardware, sample rate, block size, DSP blocks, signal/control connections,
+  parameter ranges, defaults, and hardware-control bindings.
+- If a later source edit changes DSP structure, parameter ranges, defaults, or
+  control ownership, update the `.dvpe` in the same change set.
+
+### Step 4: CONTROLS.md
 - Parameter mapping table (all 8 knobs)
 - Key assignments (A1-A8, B1-B8)
 - Switch functions (SW1, SW2)
 - Preset definitions with visual charts
 
-### Step 4: IMPLEMENTATION
+### Step 5: IMPLEMENTATION
 - Use `field_defaults.h` for LED/display helpers
+- For Daisy Field keybed code, do not infer physical rows from raw
+  `KeyboardRisingEdge()` indices or native `LED_KEY_A/B` enum names.
+  Verified rule: physical/logical A1-A8 use scan indices `8..15` and native
+  `LED_KEY_B1..B8`; physical/logical B1-B8 use scan indices `0..7` and native
+  `LED_KEY_A1..A8`. This is confirmed by native `daisy_field.h/.cpp`,
+  `field/KeyboardTest`, and `field/modalvoice`.
+- Avoid float `printf` formatting in firmware UI and serial text. Daisy Make
+  projects use newlib-nano by default; `%f`, `%e`, and `%g` can render blank
+  unless `_printf_float` is linked, which costs flash. Convert to integer Hz,
+  ms, percent, or manually rounded tenths before calling `snprintf()`.
 - Keep control processing in main loop (NOT audio callback)
 - Initialize all DSP modules with `Init(sample_rate)`
 - **Start with a loaded preset** - initialize all parameters, filters, and smoothed values from preset defaults to avoid edge cases
 
-### Step 5: VERIFY & ITERATE
+### Step 6: VERIFY & ITERATE
 - `make clean && make` → Exit 0
 - Flash via ST-Link → Test all controls
 - Update CONTROLS.md with any changes
@@ -164,7 +186,7 @@ int main(void) {
 | Map every knob to raw algorithm min/max with a default linear curve | Choose control curve and range intentionally. See **Reasonable Controls Policy (All Targets)** below. |
 | Use uninitialized DSP modules | Call `module.Init(sample_rate)` for all modules |
 | Mix control and audio threads unsafely | Use atomic variables or simple flags for thread communication |
-| Skip block diagrams | Create all 3 diagrams before writing code |
+| Skip block diagrams or `.dvpe` | Create all 3 diagrams and the matching `.dvpe` project before writing code |
 | Use `std::function` or heavy STL | Use simple C-style callbacks and arrays |
 
 ---
@@ -333,6 +355,26 @@ multiplexed across multiple parameter groups.
 ## 6. OLED Parameter Visualization (Field)
 
 Standard pattern for responsive knob feedback on the Field's 128x64 OLED display.
+
+### Formatting Rule
+
+Do not use `%f` formats for OLED values in normal Daisy firmware builds:
+
+```cpp
+// Good: integer-only formatting works with newlib-nano default linking.
+int hz = (int)(50.0f + cutoff * 12000.0f + 0.5f);
+snprintf(buf, sizeof(buf), "%d Hz", hz);
+
+int ms = (int)(attack_seconds * 1000.0f + 0.5f);
+snprintf(buf, sizeof(buf), "%d ms", ms);
+
+// Risky: may render blank unless Makefile links -u _printf_float.
+snprintf(buf, sizeof(buf), "%.0f Hz", cutoff_hz);
+```
+
+Only enable `_printf_float` deliberately after checking flash usage. For
+Field templates and size-constrained examples, integer-only formatting is the
+default.
 
 ### Change Detection
 
@@ -503,6 +545,7 @@ For most Daisy projects, simple `volatile` floats per-parameter work fine. Use d
 ```
 MyProjects/_projects/ProjectName/
 ├── ProjectName.cpp          # Main implementation
+├── ProjectName.dvpe         # Visual source project and parameter defaults
 ├── Makefile                  # Build configuration
 ├── README.md                 # Project overview
 ├── CONTROLS.md              # Detailed control documentation
@@ -549,6 +592,7 @@ This document is part of an interconnected quality assurance system:
 |----------|---------|-------------|
 | [DAISY_TUTORIALS_KNOWLEDGE.md](DAISY_TUTORIALS_KNOWLEDGE.md) | Official API reference | Understanding GPIO/Audio/ADC |
 | [DAISY_DEBUG_STRATEGY.md](DAISY_DEBUG_STRATEGY.md) | Serial/hardware debugging | When something isn't working |
+| [DAISY_TOOLCHAIN_LIBRARY_NOTES.md](DAISY_TOOLCHAIN_LIBRARY_NOTES.md) | Toolchain/runtime differences | When formatting, heap, syscalls, or link size behave unexpectedly |
 | [DAISY_TECHNICAL_REPORT.md](DAISY_TECHNICAL_REPORT.md) | Complete process documentation | Deep reference, onboarding |
 | [DAISY_BUGS.md](DAISY_BUGS.md) | Bug tracking, investigation methodology | Documenting issues |
 
@@ -556,13 +600,15 @@ This document is part of an interconnected quality assurance system:
 
 ---
 
-**Document Version**: 1.3
-**Last Updated**: 2026-04-15
+**Document Version**: 1.5
+**Last Updated**: 2026-06-07
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-06-07 | Made a project-local `.dvpe` file mandatory before firmware implementation and tied it to block diagrams, parameter ranges, defaults, and control bindings |
+| 1.4 | 2026-06-07 | Added toolchain/library notes reference for newlib-nano/nosys runtime risk triage |
 | 1.3 | 2026-04-15 | Added global Reasonable Controls Policy for Pod/Seed/Field and linked it from Common Pitfalls; kept banked-control smoothing guidance advisory |
 | 1.2 | 2026-02-08 | Added Platform Adaptation (Sec 5), OLED Visualization (Sec 6), Thread Safety Patterns (Sec 7); renamed from "Field" to "Platform" scope |
 | 1.1 | 2026-02-08 | Added common pitfalls table, file organization, Makefile template |

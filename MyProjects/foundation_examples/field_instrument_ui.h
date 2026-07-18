@@ -227,12 +227,12 @@ inline void FormatPercent(char* buffer, size_t size, float value)
 
 inline void FormatMilliseconds(char* buffer, size_t size, float seconds)
 {
-    snprintf(buffer, size, "%.0f ms", seconds * 1000.0f);
+    snprintf(buffer, size, "%d ms", static_cast<int>(seconds * 1000.0f + 0.5f));
 }
 
 inline void FormatHertz(char* buffer, size_t size, float hertz)
 {
-    snprintf(buffer, size, "%.0f Hz", hertz);
+    snprintf(buffer, size, "%d Hz", static_cast<int>(hertz + 0.5f));
 }
 
 inline void FormatMidiNoteName(char* buffer, size_t size, uint8_t note)

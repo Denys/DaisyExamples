@@ -76,7 +76,10 @@ Field running this firmware:
 2. Daisy QAE validator succeeds.
 3. Optional ST-Link flash succeeds when `-Flash` is supplied.
 4. USB serial emits the `[FTJUNE]` marker.
-5. Boot telemetry is observed.
+5. Boot telemetry is observed when the host opens the USB CDC port early
+   enough. If USB re-enumeration delays the host connection, later `[FTJUNE]`
+   `STATUS`, `SELFTEST`, and `SNAP` lines still prove the flashed firmware
+   identity and liveness for the realistic unattended gate.
 6. Built-in software self-test reports `result=PASS`.
 7. Status telemetry is observed.
 8. Snapshot telemetry is observed.
@@ -128,13 +131,18 @@ For unattended evidence, accept the run as `automation-pass` when:
 - QAE is `PASS`;
 - flash is `PASS` when requested, or `SKIPPED` when not requested;
 - serial is `PASS`;
-- `boot_marker`, `selftest_pass`, `status_seen`, and `snapshot_seen` are all
-  `PASS` in `summary.json`.
+- `target_identity_seen`, `selftest_pass`, `status_seen`, and `snapshot_seen`
+  are all `PASS` in `summary.json`.
+
+`boot_marker` is recorded separately. Treat it as strong evidence when present,
+but do not fail an otherwise healthy unattended run solely because Windows did
+not open the USB CDC port before the boot line was emitted.
 
 For full hardware acceptance, add fixture or manual evidence for:
 
 - external MIDI notes produce audio on both outputs;
-- `SW1` switches main/alt bank editing without stored-value jumps;
+- `SW1` toggles main/alt bank editing without stored-value jumps or requiring
+  the switch to be held;
 - `SW2 + K8` edits hidden output level without changing `Color` or `Sub`;
 - `B6`, `B7`, and `B8` reset behavior remains stable until physical knob
   movement crosses the touch threshold;

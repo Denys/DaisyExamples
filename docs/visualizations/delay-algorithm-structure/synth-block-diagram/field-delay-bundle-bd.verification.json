@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "spec": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-bd.json",
+  "outputs": {
+    "svg": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-bd.svg",
+    "html": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-bd.html",
+    "png": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-bd.png"
+  },
+  "checks": {
+    "blockCount": 22,
+    "linkCount": 16,
+    "modLinks": 0,
+    "audioLinks": 6,
+    "controlLinks": 6,
+    "feedbackLinks": 4
+  },
+  "quality": {
+    "ok": true,
+    "readabilityScore": 80,
+    "metrics": {
+      "frameHeaderOverlaps": 0,
+      "linkBlockCollisions": 0,
+      "unrelatedCableCrossings": 5,
+      "sharedCableOverlaps": 1,
+      "longRuns": 0
+    },
+    "warnings": [
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "5 unrelated cable crossing(s) detected; inspect whether jump-over or rerouting is needed"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "1 long shared cable overlap(s) detected; stagger parallel routes or use buses"
+      }
+    ]
+  }
+}

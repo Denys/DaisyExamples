@@ -15,7 +15,11 @@ enum class DaisyDelayFxSource
     kReverbPlayground,
     kFunBox,
     kSdramDelaylines,
+    kPhantasmagoria,
+    kTimeMachine,
 };
+
+static constexpr std::size_t kDaisyDelayFxAlgorithmCount = 6;
 
 struct DaisyDelayFxProfile
 {
@@ -34,7 +38,7 @@ struct DaisyDelayFxAlgorithmDescriptor
     const char*        statePrefix;
 };
 
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4>&
+const std::array<DaisyDelayFxAlgorithmDescriptor, kDaisyDelayFxAlgorithmCount>&
 GetDaisyDelayFxAlgorithmDescriptors();
 const DaisyDelayFxAlgorithmDescriptor& GetDaisyDelayFxAlgorithmDescriptor(
     DaisyDelayFxSource source);
@@ -205,6 +209,14 @@ class DaisyDelayFxCore
                                 float inputRight,
                                 float* outputLeft,
                                 float* outputRight);
+    void ProcessPhantasmagoria(float inputLeft,
+                               float inputRight,
+                               float* outputLeft,
+                               float* outputRight);
+    void ProcessTimeMachine(float inputLeft,
+                            float inputRight,
+                            float* outputLeft,
+                            float* outputRight);
 
     DaisyDelayFxSource source_;
     double             sampleRate_ = 48000.0;

@@ -1,0 +1,59 @@
+{
+  "title": "Field_delay_bundle A1 Tape [multifx] Algorithm Detail",
+  "canvas": {"width": 1660, "height": 820},
+  "rules": {"maxModHorizontal": 260, "frameHeaderHeight": 30},
+  "metadata": {
+    "summary": "Detail block diagram for the Tape [multifx] mode. The bundle wrapper supplies input, internal synth, dry/wet mix, and output gain; this sheet shows the selected tape delay algorithm inside ProcessMultiFx.",
+    "trace": [
+      {"id": "process-dispatch", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:362-376 dispatches kMultiFxPedal to ProcessMultiFx."},
+      {"id": "tape-input", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1144-1158 averages stereo input, applies drive, reads time/feedback/width/mod/grit/freeze/tap-ratio parameters."},
+      {"id": "tape-lfo", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1160-1169 updates lfoPhase_ and creates opposite flutter offsets for L/R reads."},
+      {"id": "tape-read-tone", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1170-1177 reads two delay lines, averages mono wet, filters tone, and creates the saturated write signal."},
+      {"id": "tape-write-output", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1178-1182 writes freeze-aware feedback to delay lines and returns wet L/R."},
+      {"id": "bundle-controls", "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:59-68 lists K1-K8 base/SW1/SW2 mappings for the bundle."}
+    ]
+  },
+  "frames": [
+    {"label": "Controls that shape Tape [multifx]", "x": 35, "y": 20, "w": 1590, "h": 130, "color": "#18a84b", "fill": "#eefcf3"},
+    {"label": "Tape delay feedback loop", "x": 35, "y": 180, "w": 1590, "h": 455, "color": "#e33b3b", "fill": "#fff5f5"},
+    {"label": "Shared bundle output stage", "x": 1050, "y": 665, "w": 575, "h": 120, "color": "#8aa0ad", "fill": "#f8fbfd"}
+  ],
+  "blocks": [
+    {"id": "time_control", "kind": "control", "x": 75, "y": 65, "w": 220, "h": 70, "label": "Time and rhythm controls", "lines": ["K2 Delay Time", "K5 SW1 Rhythm / tap ratio"]},
+    {"id": "feedback_control", "kind": "control", "x": 325, "y": 65, "w": 220, "h": 70, "label": "Feedback / freeze controls", "lines": ["K3 Feedback", "freeze state outside bundle"]},
+    {"id": "tone_control", "kind": "control", "x": 575, "y": 65, "w": 220, "h": 70, "label": "Tone and grit controls", "lines": ["K4 Tone", "K5 Grit / texture"]},
+    {"id": "mod_control", "kind": "control", "x": 825, "y": 65, "w": 220, "h": 70, "label": "Flutter and width controls", "lines": ["K6 Mod", "K2 SW1 Width"]},
+    {"id": "gain_control", "kind": "control", "x": 1075, "y": 65, "w": 220, "h": 70, "label": "Gain controls", "lines": ["K7 Input drive", "K8 Output after bundle mix"]},
+    {"id": "audio_in", "kind": "pitch", "x": 65, "y": 335, "w": 145, "h": 90, "label": "Algorithm input", "lines": ["audio in + internal synth", "left/right samples"]},
+    {"id": "drive_sum", "kind": "mixer", "x": 255, "y": 315, "w": 170, "h": 120, "label": "Driven mono sum", "lines": ["(L + R) * 0.5", "input drive"]},
+    {"id": "time_smooth", "kind": "processor", "x": 480, "y": 250, "w": 190, "h": 105, "label": "Delay-time smoother", "lines": ["target samples from time", "tap ratio", "slewed L/R positions"]},
+    {"id": "flutter_lfo", "kind": "mod", "x": 720, "y": 250, "w": 190, "h": 120, "label": "Flutter LFO", "lines": ["sin(lfoPhase_)", "opposite L/R offsets"], "wave": "lfo"},
+    {"id": "delay_reads", "kind": "processor", "x": 540, "y": 410, "w": 235, "h": 110, "label": "Stereo delay reads", "lines": ["Read line 0 and 1", "smoothed time + flutter", "mono wet = average"]},
+    {"id": "tone_filter", "kind": "processor", "x": 845, "y": 410, "w": 180, "h": 105, "label": "Feedback tone filter", "lines": ["one-pole tone state", "tone Hz from K4"]},
+    {"id": "grit_blend", "kind": "processor", "x": 1085, "y": 410, "w": 190, "h": 105, "label": "FastTanh grit blend", "lines": ["saturate input + tone", "blend clean and grit"]},
+    {"id": "delay_writes", "kind": "note", "x": 845, "y": 540, "w": 220, "h": 85, "label": "Freeze-aware writes", "lines": ["writeBlend = 1 - freeze", "feedback preserved on hold"]},
+    {"id": "wet_lr", "kind": "mixer", "x": 1325, "y": 335, "w": 170, "h": 105, "label": "Wet L/R result", "lines": ["wet left = readL", "wet right = readR"]},
+    {"id": "bundle_mix", "kind": "output", "x": 1110, "y": 705, "w": 210, "h": 70, "label": "Bundle dry/wet and gain", "lines": ["mix, bypass, wet-only, output dB"]},
+    {"id": "audio_out", "kind": "output", "x": 1390, "y": 705, "w": 170, "h": 70, "label": "Audio Out L/R", "lines": ["returned to Field DAC"]}
+  ],
+  "links": [
+    {"from": "audio_in", "to": "drive_sum", "kind": "audio", "points": [[210, 380], [255, 380]], "trace": ["tape-input"]},
+    {"from": "drive_sum", "to": "delay_reads", "kind": "audio", "points": [[425, 380], [500, 380], [500, 465], [540, 465]], "trace": ["tape-input", "tape-read-tone"]},
+    {"from": "delay_reads", "to": "wet_lr", "kind": "audio", "points": [[775, 410], [775, 390], [1290, 390], [1290, 385], [1325, 385]], "trace": ["tape-write-output"]},
+    {"from": "wet_lr", "to": "bundle_mix", "kind": "audio", "points": [[1410, 440], [1410, 650], [1215, 650], [1215, 705]], "trace": ["tape-write-output"]},
+    {"from": "bundle_mix", "to": "audio_out", "kind": "audio", "points": [[1320, 740], [1390, 740]], "trace": ["tape-write-output"]},
+    {"from": "time_control", "to": "time_smooth", "kind": "control", "points": [[185, 135], [185, 220], [575, 220], [575, 250]], "trace": ["bundle-controls", "tape-input"]},
+    {"from": "feedback_control", "to": "delay_writes", "kind": "control", "points": [[435, 135], [435, 560], [845, 560]], "trace": ["bundle-controls", "tape-input", "tape-write-output"]},
+    {"from": "tone_control", "to": "tone_filter", "kind": "control", "points": [[685, 135], [685, 385], [935, 385], [935, 410]], "trace": ["bundle-controls", "tape-read-tone"]},
+    {"from": "tone_control", "to": "grit_blend", "kind": "control", "points": [[685, 135], [685, 155], [1180, 155], [1180, 410]], "trace": ["bundle-controls", "tape-read-tone"]},
+    {"from": "mod_control", "to": "flutter_lfo", "kind": "control", "points": [[935, 135], [935, 205], [815, 205], [815, 250]], "trace": ["bundle-controls", "tape-lfo"]},
+    {"from": "gain_control", "to": "drive_sum", "kind": "control", "points": [[1185, 135], [1185, 170], [340, 170], [340, 315]], "trace": ["bundle-controls", "tape-input"]},
+    {"from": "time_smooth", "to": "delay_reads", "kind": "control", "points": [[575, 355], [575, 410]], "trace": ["tape-input", "tape-read-tone"]},
+    {"from": "flutter_lfo", "to": "delay_reads", "kind": "mod", "points": [[815, 355], [815, 385], [705, 385], [705, 410]], "trace": ["tape-lfo", "tape-read-tone"]},
+    {"from": "delay_reads", "to": "tone_filter", "kind": "audio", "points": [[775, 465], [845, 465]], "trace": ["tape-read-tone"]},
+    {"from": "tone_filter", "to": "grit_blend", "kind": "audio", "points": [[1025, 465], [1085, 465]], "trace": ["tape-read-tone"]},
+    {"from": "drive_sum", "to": "grit_blend", "kind": "audio", "points": [[340, 435], [340, 635], [1180, 635], [1180, 515]], "trace": ["tape-read-tone"]},
+    {"from": "grit_blend", "to": "delay_writes", "kind": "audio", "points": [[1180, 515], [1180, 580], [1065, 580]], "trace": ["tape-write-output"]},
+    {"from": "delay_writes", "to": "delay_reads", "kind": "feedback", "points": [[845, 585], [520, 585], [520, 500], [540, 500]], "trace": ["tape-write-output"]}
+  ]
+}

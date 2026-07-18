@@ -69,10 +69,6 @@ const char* LayerTitle(int layer)
     }
 }
 
-float FieldButtonLedValue(int state)
-{
-    return state == 0 ? 0.0f : (state == 1 ? 0.32f : 0.85f);
-}
 } // namespace
 
 DelayFxAdaptationCore::DelayFxAdaptationCore(DaisyDelayFxSource source,
@@ -392,12 +388,11 @@ std::array<float, 16> DelayFxAdaptationCore::GetFieldKeyLedValues() const
     if(bundleMode_)
     {
         auto values = sharedCore_.GetFieldKeyLedValues();
-        for(std::size_t i = 0; i < 4; ++i)
+        const auto& descriptors = GetDaisyDelayFxAlgorithmDescriptors();
+        for(std::size_t i = 0; i < descriptors.size(); ++i)
         {
             values[i] = i == CurrentAlgorithmIndex() ? 0.85f : 0.03f;
         }
-        values[4] = FieldButtonLedValue(sharedCore_.GetInternalSynthMode());
-        values[5] = FieldButtonLedValue(sharedCore_.GetInternalSynthHoldMode());
         return values;
     }
     return sharedCore_.GetFieldKeyLedValues();
@@ -462,8 +457,10 @@ void DelayFxAdaptationCore::RestoreStatefulParameterValues(
             const auto suffix = StripParameterId(pair.first);
             if(IsBundleAlgorithmParameter(suffix))
             {
+                const auto& descriptors = GetDaisyDelayFxAlgorithmDescriptors();
                 requestedIndex = static_cast<std::size_t>(
-                    std::round(Clamp01(pair.second) * 3.0f));
+                    std::round(Clamp01(pair.second)
+                               * static_cast<float>(descriptors.size() - 1)));
                 continue;
             }
 
@@ -581,7 +578,9 @@ void DelayFxAdaptationCore::SetMenuItemValue(const std::string& itemId,
             const bool pressed = normalizedValue >= 0.5f;
             if(bundleMode_ && row == 'a')
             {
-                if(pressed && key >= 0 && key < 4)
+                const auto& descriptors = GetDaisyDelayFxAlgorithmDescriptors();
+                if(pressed && key >= 0
+                   && static_cast<std::size_t>(key) < descriptors.size())
                 {
                     SelectAlgorithmIndex(static_cast<std::size_t>(key));
                 }
@@ -907,8 +906,8 @@ void DelayFxAdaptationCore::BuildMenuModel()
         "A2 Tank [reverb]",
         "A3 Texture [FunBox]",
         "A4 Long [sdram]",
-        "A5 Synth Off/Pluck/Pad",
-        "A6 Hold Moment/Latch/Drone",
+        "A5 Spectral [Phantasmagoria]",
+        "A6 8 Tap [TimeMachine]",
         "A7 Oct -",
         "A8 Oct +",
     }};

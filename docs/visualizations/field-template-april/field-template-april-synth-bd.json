@@ -1,0 +1,529 @@
+{
+  "title": "Field_Template_April Synth and Controls Block Diagram",
+  "metadata": {
+    "summary": "Warm-up diagram generated from the April template source. It keeps audio left-to-right, controls above the unit they affect, and local ADSR/LFO modulation stubs.",
+    "trace": [
+      {
+        "id": "april-readme-controls",
+        "source": "MyProjects/_projects/Field_Template_April/README.md Controls, LED States, OLED Pages, Hidden Banks / Pages"
+      },
+      {
+        "id": "april-source-state",
+        "source": "MyProjects/_projects/Field_Template_April/Field_Template_April.cpp lines 90-163: parameter labels, mode names, SynthState, oscillator/sub/LFO/env/filter/noise objects"
+      },
+      {
+        "id": "april-source-voice-setup",
+        "source": "MyProjects/_projects/Field_Template_April/Field_Template_April.cpp lines 405-424: waveform, sub, envelope, and LFO setup"
+      },
+      {
+        "id": "april-source-ui",
+        "source": "MyProjects/_projects/Field_Template_April/Field_Template_April.cpp lines 520-593 and 680-705: keybed controls, SW1 hold-alt, SW2 hidden level, UI update loop"
+      },
+      {
+        "id": "april-source-audio",
+        "source": "MyProjects/_projects/Field_Template_April/Field_Template_April.cpp lines 710-755: AudioCallback signal chain"
+      }
+    ]
+  },
+  "rules": {
+    "maxModHorizontal": 260
+  },
+  "canvas": {
+    "width": 1660,
+    "height": 760
+  },
+  "frames": [
+    {
+      "label": "Sound generators",
+      "x": 250,
+      "y": 175,
+      "w": 300,
+      "h": 315
+    },
+    {
+      "label": "Pre-filter mixer",
+      "x": 610,
+      "y": 245,
+      "w": 170,
+      "h": 210
+    },
+    {
+      "label": "Filter",
+      "x": 1015,
+      "y": 245,
+      "w": 180,
+      "h": 205
+    },
+    {
+      "label": "Drive",
+      "x": 1225,
+      "y": 245,
+      "w": 145,
+      "h": 205
+    }
+  ],
+  "blocks": [
+    {
+      "id": "note_controls",
+      "kind": "control",
+      "label": "Note / gate controls",
+      "x": 40,
+      "y": 35,
+      "w": 225,
+      "h": 108,
+      "lines": [
+        "External MIDI notes, velocity, CC64",
+        "B1-B4 transpose controls",
+        "B5 panic, B6-B8 resets"
+      ]
+    },
+    {
+      "id": "pitch_gate",
+      "kind": "pitch",
+      "tag": "note/gate source",
+      "label": "Pitch + gate",
+      "x": 45,
+      "y": 305,
+      "w": 180,
+      "h": 158,
+      "lines": [
+        "external MIDI only",
+        "target frequency",
+        "transpose + glide smoothing",
+        "A7 Pitch LFO in frequency math"
+      ]
+    },
+    {
+      "id": "sound_controls",
+      "kind": "control",
+      "label": "Sound generator controls",
+      "x": 280,
+      "y": 35,
+      "w": 285,
+      "h": 98,
+      "lines": [
+        "A1-A4 waveform, K8 Main Color",
+        "K8 Alt Sub, K7 Alt Noise"
+      ]
+    },
+    {
+      "id": "osc",
+      "kind": "sound",
+      "label": "Main oscillator",
+      "x": 300,
+      "y": 215,
+      "w": 220,
+      "h": 76,
+      "lines": [
+        "A1-A4 wave",
+        "K8 Color/PW"
+      ]
+    },
+    {
+      "id": "sub",
+      "kind": "sound",
+      "label": "Sub oscillator",
+      "x": 300,
+      "y": 305,
+      "w": 220,
+      "h": 78,
+      "lines": [
+        "freq/2",
+        "K8 Alt Sub affects amp and mix"
+      ]
+    },
+    {
+      "id": "noise",
+      "kind": "sound",
+      "label": "White noise",
+      "x": 300,
+      "y": 395,
+      "w": 220,
+      "h": 76,
+      "lines": [
+        "K7 Alt Noise",
+        "max 0.30 mix"
+      ]
+    },
+    {
+      "id": "mix_controls",
+      "kind": "control",
+      "label": "Pre-filter mix controls",
+      "x": 620,
+      "y": 55,
+      "w": 200,
+      "h": 82,
+      "lines": [
+        "Sub and noise amounts"
+      ]
+    },
+    {
+      "id": "mixer",
+      "kind": "mixer",
+      "label": "SUM",
+      "x": 635,
+      "y": 300,
+      "w": 115,
+      "h": 100,
+      "lines": [
+        "osc + sub + noise"
+      ]
+    },
+    {
+      "id": "amp_controls",
+      "kind": "control",
+      "label": "Amp controls",
+      "x": 840,
+      "y": 55,
+      "w": 150,
+      "h": 82,
+      "lines": [
+        "A5 Velocity",
+        "K5 Alt VelAmt"
+      ]
+    },
+    {
+      "id": "amp",
+      "kind": "processor",
+      "label": "Envelope amp",
+      "x": 835,
+      "y": 305,
+      "w": 130,
+      "h": 106,
+      "lines": [
+        "source * env * velocity",
+        "gate from MIDI/CC64"
+      ]
+    },
+    {
+      "id": "filter_controls",
+      "kind": "control",
+      "label": "Filter controls",
+      "x": 1000,
+      "y": 55,
+      "w": 220,
+      "h": 90,
+      "lines": [
+        "K1 Cutoff, K2 Reso",
+        "K1 Alt EnvAmt, A6 KeyTrk",
+        "A7 Filter LFO target"
+      ]
+    },
+    {
+      "id": "filter",
+      "kind": "processor",
+      "label": "SVF LPF",
+      "x": 1040,
+      "y": 300,
+      "w": 130,
+      "h": 124,
+      "lines": [
+        "base cutoff + env",
+        "+ keytrack + LFO",
+        "resonance 0.15-0.95"
+      ]
+    },
+    {
+      "id": "drive_controls",
+      "kind": "control",
+      "label": "Drive controls",
+      "x": 1230,
+      "y": 55,
+      "w": 155,
+      "h": 82,
+      "lines": [
+        "K7 Main Drive",
+        "1x to 8x gain"
+      ]
+    },
+    {
+      "id": "drive",
+      "kind": "processor",
+      "label": "tanh drive",
+      "x": 1245,
+      "y": 305,
+      "w": 105,
+      "h": 82,
+      "lines": [
+        "soft clip"
+      ]
+    },
+    {
+      "id": "level_controls",
+      "kind": "control",
+      "label": "Level controls",
+      "x": 1400,
+      "y": 55,
+      "w": 155,
+      "h": 82,
+      "lines": [
+        "hold SW2 + K8",
+        "hidden output level"
+      ]
+    },
+    {
+      "id": "level",
+      "kind": "output",
+      "label": "Level",
+      "x": 1390,
+      "y": 300,
+      "w": 105,
+      "h": 92,
+      "lines": [
+        "final gain"
+      ]
+    },
+    {
+      "id": "output",
+      "kind": "output",
+      "label": "Output",
+      "x": 1530,
+      "y": 285,
+      "w": 110,
+      "h": 125,
+      "lines": [
+        "stereo L/R DAC"
+      ]
+    },
+    {
+      "id": "adsr",
+      "kind": "mod",
+      "label": "ADSR envelope",
+      "x": 815,
+      "y": 505,
+      "w": 255,
+      "h": 112,
+      "lines": [
+        "K3 Attack, K4 Decay",
+        "K5 Sustain, K6 Release"
+      ],
+      "wave": "env"
+    },
+    {
+      "id": "lfo",
+      "kind": "mod",
+      "label": "LFO",
+      "x": 1085,
+      "y": 505,
+      "w": 265,
+      "h": 112,
+      "lines": [
+        "K2 Alt Rate, K3 Alt Depth",
+        "A7 target: Pitch or Filter"
+      ],
+      "wave": "lfo"
+    },
+    {
+      "id": "ui_runtime",
+      "kind": "note",
+      "label": "April UI runtime",
+      "x": 585,
+      "y": 650,
+      "w": 380,
+      "h": 78,
+      "lines": [
+        "SW1 is hold-alt; pickup/catch threshold 0.02",
+        "OLED, key LEDs, and knob LEDs update from 1 ms loop"
+      ]
+    },
+    {
+      "id": "feedback",
+      "kind": "control",
+      "label": "OLED + LEDs",
+      "x": 1235,
+      "y": 640,
+      "w": 320,
+      "h": 78,
+      "lines": [
+        "show stored values, captured state, selections",
+        "B5 also mirrors note/sustain state"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "note-control-pitch",
+      "kind": "control",
+      "from": "note_controls",
+      "to": "pitch_gate",
+      "points": [[155, 133], [155, 305]],
+      "trace": ["april-readme-controls", "april-source-ui"]
+    },
+    {
+      "id": "pitch-audio",
+      "kind": "audio",
+      "from": "pitch_gate",
+      "to": "osc",
+      "points": [[225, 370], [250, 370]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "sound-control-osc",
+      "kind": "control",
+      "from": "sound_controls",
+      "to": "osc",
+      "points": [[335, 133], [335, 215]],
+      "trace": ["april-readme-controls", "april-source-voice-setup"]
+    },
+    {
+      "id": "sound-control-sub",
+      "kind": "control",
+      "from": "sound_controls",
+      "to": "sub",
+      "points": [[430, 133], [430, 305]],
+      "trace": ["april-readme-controls", "april-source-voice-setup"]
+    },
+    {
+      "id": "sound-control-noise",
+      "kind": "control",
+      "from": "sound_controls",
+      "to": "noise",
+      "points": [[520, 133], [520, 395]],
+      "trace": ["april-readme-controls", "april-source-audio"]
+    },
+    {
+      "id": "osc-mix",
+      "kind": "audio",
+      "from": "osc",
+      "to": "mixer",
+      "points": [[520, 253], [590, 253], [590, 330], [635, 330]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "sub-mix",
+      "kind": "audio",
+      "from": "sub",
+      "to": "mixer",
+      "points": [[520, 344], [635, 344]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "noise-mix",
+      "kind": "audio",
+      "from": "noise",
+      "to": "mixer",
+      "points": [[520, 433], [590, 433], [590, 365], [635, 365]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "mix-control",
+      "kind": "control",
+      "from": "mix_controls",
+      "to": "mixer",
+      "points": [[700, 137], [700, 300]],
+      "trace": ["april-readme-controls"]
+    },
+    {
+      "id": "mixer-amp",
+      "kind": "audio",
+      "from": "mixer",
+      "to": "amp",
+      "points": [[750, 350], [835, 350]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "amp-control",
+      "kind": "control",
+      "from": "amp_controls",
+      "to": "amp",
+      "points": [[910, 137], [910, 305]],
+      "trace": ["april-readme-controls"]
+    },
+    {
+      "id": "adsr-amp",
+      "kind": "mod",
+      "from": "adsr",
+      "to": "amp",
+      "points": [[900, 505], [900, 397]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "adsr-filter",
+      "kind": "mod",
+      "from": "adsr",
+      "to": "filter",
+      "points": [[995, 505], [995, 455], [1100, 455], [1100, 410]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "lfo-filter",
+      "kind": "mod",
+      "from": "lfo",
+      "to": "filter",
+      "points": [[1160, 505], [1160, 410]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "amp-filter",
+      "kind": "audio",
+      "from": "amp",
+      "to": "filter",
+      "points": [[965, 350], [1040, 350]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "filter-control",
+      "kind": "control",
+      "from": "filter_controls",
+      "to": "filter",
+      "points": [[1100, 145], [1100, 300]],
+      "trace": ["april-readme-controls", "april-source-audio"]
+    },
+    {
+      "id": "filter-drive",
+      "kind": "audio",
+      "from": "filter",
+      "to": "drive",
+      "points": [[1170, 350], [1245, 350]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "drive-control",
+      "kind": "control",
+      "from": "drive_controls",
+      "to": "drive",
+      "points": [[1305, 137], [1305, 305]],
+      "trace": ["april-readme-controls"]
+    },
+    {
+      "id": "drive-level",
+      "kind": "audio",
+      "from": "drive",
+      "to": "level",
+      "points": [[1350, 350], [1390, 350]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "level-control",
+      "kind": "control",
+      "from": "level_controls",
+      "to": "level",
+      "points": [[1460, 137], [1460, 300]],
+      "trace": ["april-readme-controls", "april-source-ui"]
+    },
+    {
+      "id": "level-output",
+      "kind": "audio",
+      "from": "level",
+      "to": "output",
+      "points": [[1495, 350], [1530, 350]],
+      "trace": ["april-source-audio"]
+    },
+    {
+      "id": "level-feedback",
+      "kind": "feedback",
+      "from": "level",
+      "to": "feedback",
+      "points": [[1442, 392], [1442, 640]],
+      "trace": ["april-readme-controls", "april-source-ui"]
+    },
+    {
+      "id": "ui-feedback",
+      "kind": "feedback",
+      "from": "ui_runtime",
+      "to": "feedback",
+      "points": [[965, 690], [1235, 690]],
+      "trace": ["april-source-ui"]
+    }
+  ]
+}

@@ -111,9 +111,11 @@ class DelayFxAdaptationCore : public HostedAppCore
     std::unordered_map<std::string, PortValue> portOutputs_;
     std::vector<float>                         scratchLeft_;
     std::vector<float>                         scratchRight_;
-    std::array<std::unordered_map<std::string, float>, 4>
+    std::array<std::unordered_map<std::string, float>,
+               kDaisyDelayFxAlgorithmCount>
                                                algorithmSnapshots_;
-    std::array<bool, 4>                        algorithmSnapshotValid_{};
+    std::array<bool, kDaisyDelayFxAlgorithmCount>
+                                               algorithmSnapshotValid_{};
     bool                                       bundleMode_ = false;
     bool                                       encoderPressed_ = false;
 };

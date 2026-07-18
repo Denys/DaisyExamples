@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "spec": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-texture-detail.json",
+  "outputs": {
+    "svg": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-texture-detail.svg",
+    "html": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-texture-detail.html",
+    "png": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-texture-detail.png"
+  },
+  "checks": {
+    "blockCount": 16,
+    "linkCount": 20,
+    "modLinks": 3,
+    "audioLinks": 8,
+    "controlLinks": 5,
+    "feedbackLinks": 4
+  },
+  "quality": {
+    "ok": true,
+    "readabilityScore": 67,
+    "metrics": {
+      "frameHeaderOverlaps": 0,
+      "linkBlockCollisions": 0,
+      "unrelatedCableCrossings": 8,
+      "sharedCableOverlaps": 0,
+      "longRuns": 3
+    },
+    "warnings": [
+      {
+        "severity": "low",
+        "path": "/links/13",
+        "message": "control segment is 515px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/13",
+        "message": "control segment is 722px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/16",
+        "message": "control segment is 490px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "8 unrelated cable crossing(s) detected; inspect whether jump-over or rerouting is needed"
+      }
+    ]
+  }
+}

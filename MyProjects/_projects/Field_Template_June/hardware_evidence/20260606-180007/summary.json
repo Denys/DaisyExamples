@@ -1,0 +1,43 @@
+﻿{
+    "project":  "Field_Template_June",
+    "started":  "2026-06-06T18:00:07.6287172+02:00",
+    "evidence_dir":  "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\MyProjects\\_projects\\Field_Template_June\\.\\hardware_evidence\\20260606-180007",
+    "non_interactive":  false,
+    "overall_status":  "FAIL",
+    "build":  {
+                  "status":  "PASS",
+                  "exit_code":  0,
+                  "log":  "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\MyProjects\\_projects\\Field_Template_June\\.\\hardware_evidence\\20260606-180007\\build.log",
+                  "reason":  null
+              },
+    "qae":  {
+                "status":  "PASS",
+                "exit_code":  0,
+                "log":  "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\MyProjects\\_projects\\Field_Template_June\\.\\hardware_evidence\\20260606-180007\\qae.log",
+                "reason":  null
+            },
+    "flash":  {
+                  "status":  "SKIPPED",
+                  "exit_code":  null,
+                  "log":  null,
+                  "reason":  "Run with -Flash to call make program."
+              },
+    "serial":  {
+                   "status":  "SKIPPED",
+                   "port":  "",
+                   "baud":  115200,
+                   "log":  null,
+                   "commands_log":  null,
+                   "reason":  null
+               },
+    "checks":  {
+
+               },
+    "limitations":  [
+                        "Serial telemetry cannot physically move knobs, press Field keys, or prove OLED visibility.",
+                        "Audio output requires an audio interface or measurement rig for unattended pass/fail validation.",
+                        "MIDI input can be observed if an external MIDI source or scripted MIDI rig is connected during capture."
+                    ],
+    "error":  "xPack Open On-Chip Debugger 0.12.0-01004-g9ea7f3d64-dirty (2023-01-30-15:04)",
+    "finished":  "2026-06-06T18:00:11.1343798+02:00"
+}

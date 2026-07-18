@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Field Template June - Premium Dashboard</title>
+
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gojs/release/go.js"></script>
+
+    <link rel="stylesheet" href="index_redesigned.css">
+</head>
+<body>
+  <!-- Floating Theme Switcher -->
+  <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle high-contrast bright theme" title="Toggle theme">
+    <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+  <div class="layout">
+    <!-- Sidebar Navigation -->
+    <aside>
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <strong>Field June</strong>
+        </div>
+        <span>Controls-optimized Daisy Field template derived from April and Field delay references.</span>
+      </div>
+      <nav aria-label="Dashboard pages">
+        <a href="#overview" data-page-link="overview" class="active">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          Overview
+        </a>
+        <a href="#architecture" data-page-link="architecture">
+          <svg viewBox="0 0 24 24"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"/><path d="M12 6V18"/><path d="M6 12H18"/></svg>
+          Architecture
+        </a>
+        <a href="#delay-bundle" data-page-link="delay-bundle">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Delay Bundle
+        </a>
+        <a href="#phantasmagoria" data-page-link="phantasmagoria">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Phantasmagoria Review
+        </a>
+        <a href="#timing" data-page-link="timing">
+          <svg viewBox="0 0 24 24"><path d="M12 8V12L15 15"/><circle cx="12" cy="12" r="9"/></svg>
+          Timing Analysis
+        </a>
+        <a href="#responsiveness" data-page-link="responsiveness">
+          <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Responsiveness
+        </a>
+        <a href="#cpu-memory" data-page-link="cpu-memory">
+          <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          CPU &amp; Memory
+        </a>
+        <a href="#io" data-page-link="io">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          I/O &amp; Peripherals
+        </a>
+        <a href="#parameters" data-page-link="parameters">
+          <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          Parameters
+        </a>
+        <a href="#build" data-page-link="build">
+          <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          Build &amp; Config
+        </a>
+        <a href="#tests" data-page-link="tests">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Test Results
+        </a>
+        <a href="#logs" data-page-link="logs">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Logs &amp; Evidence
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main id="main">
+      <div class="topline">
+        <div>
+          <h1>Field_Template_June Controls Dashboard</h1>
+          <p>Dedicated report for the new Daisy Field template with until-touched controls, capped visual refresh, build/QAE evidence, and comparison against <code>Field_Template_April</code> and <code>Field_delay_bundle</code>.</p>
+        </div>
+        <div class="actions" aria-label="Project links">
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/README.md">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+            Project README
+          </a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/HARDWARE_TESTPLAN.md">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Hardware Test Plan
+          </a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/Field_Template_June.cpp">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Source
+          </a>
+        </div>
+      </div>
+
+      <!-- Section: Overview -->
+      <section id="overview" class="page panel is-current">
+        <h2>Overview</h2>
+        <div class="metric-grid">
+          <div class="metric pass">
+            <label>Build Status</label>
+            <strong>PASS</strong>
+            <small><code>make</code> completed for <code>Field_Template_June</code>.</small>
+          </div>
+          <div class="metric">
+            <label>QAE Violations</label>
+            <strong>0 / 0</strong>
+            <small>No validator errors or warnings after UTF-8 rerun.</small>
+          </div>
+          <div class="metric">
+            <label>Control Loop</label>
+            <strong>1 ms</strong>
+            <small>Controls stay in the main loop; visual I/O is capped separately.</small>
+          </div>
+          <div class="metric">
+            <label>Flash Path</label>
+            <strong>ST-Link</strong>
+            <small>Hardware plan uses <code>make program</code>, not manual DFU.</small>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card june">
+            <h3>What Changed</h3>
+            <p>June replaces near-value pickup with movement-gated until-touched control. Each active bank or hidden modifier records raw knob positions at entry, protects stored values, and attaches only when the knob moves.</p>
+          </div>
+          <div class="card april">
+            <h3>April Baseline</h3>
+            <p>April is still the clean source baseline: external-MIDI mono synth, main/alt banked knobs, hidden output level, tri-state key LEDs, and OLED overview/zoom.</p>
+          </div>
+          <div class="card delay">
+            <h3>Delay Reference</h3>
+            <p><code>Field_delay_bundle</code> supplied the strongest runtime pattern: movement-gated layers, 50 ms OLED cadence, 16 ms LED cadence, and bounded MIDI event processing.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Architecture -->
+      <section id="architecture" class="page panel">
+        <h2>Architecture</h2>
+        <p class="architecture-note">Current June firmware has two separate structures: a software runtime that owns control sampling, state handoff, display, LEDs, MIDI, and serial commands; and a mono synth voice that turns the stored state into audio inside the 48-sample callback.</p>
+
+        <!-- Block Diagram Container -->
+        <div class="card block-diagram-card">
+          <h3>Comprehensible Block Diagram</h3>
+          <p>The synth view is hand-routed rather than auto-laid out: blue cables are audio, green cables are UI controls, orange dashed cables are modulation, and gray dashed cables are UI feedback. Controls are attached directly to the sound-processing unit they affect.</p>
+
+          <div class="block-diagram-toolbar" aria-label="Block diagram controls">
+            <button type="button" class="is-active" data-block-view="synth">Synth + Controls</button>
+            <button type="button" data-block-view="software">Software Runtime</button>
+            <span class="spacer"></span>
+            <button type="button" data-block-action="fit">Fit</button>
+            <button type="button" data-block-action="readable">Readable</button>
+            <button type="button" data-block-action="zoom-out">Zoom -</button>
+            <button type="button" data-block-action="zoom-in">Zoom +</button>
+            <button type="button" data-block-action="expand">Expand</button>
+          </div>
+
+          <div class="block-view is-active" data-block-panel="synth">
+            <div class="synth-map-viewport">
+              <div class="synth-map" data-block-zoom="100" aria-label="Field Template June synth block diagram">
+                <svg class="synth-wires" viewBox="0 0 1660 760" aria-hidden="true">
+                  <defs>
+                    <marker id="audioArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#0ea5e9"></path>
+                    </marker>
+                    <marker id="controlArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#10b981"></path>
+                    </marker>
+                    <marker id="modArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b"></path>
+                    </marker>
+                    <marker id="feedbackArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"></path>
+                    </marker>
+                  </defs>
+
+                  <path class="wire-audio" d="M205 365 H250"></path>
+                  <path class="wire-audio" d="M520 250 H590 V330 H620"></path>
+                  <path class="wire-audio" d="M520 340 H620"></path>
+                  <path class="wire-audio" d="M520 430 H590 V360 H620"></path>
+                  <circle class="junction-dot" cx="590" cy="330" r="5"></circle>
+                  <circle class="junction-dot" cx="590" cy="360" r="5"></circle>
+                  <path class="wire-audio" d="M760 345 H835"></path>
+                  <path class="wire-audio" d="M955 345 H1015"></path>
+                  <path class="wire-audio" d="M1175 345 H1225"></path>
+                  <path class="wire-audio" d="M1345 345 H1390"></path>
+                  <path class="wire-audio" d="M1490 345 H1530"></path>
+
+                  <path class="wire-control" d="M135 130 V305"></path>
+                  <path class="wire-control" d="M320 130 V210"></path>
+                  <path class="wire-control" d="M415 130 V300"></path>
+                  <path class="wire-control" d="M510 130 V390"></path>
+                  <path class="wire-control" d="M675 135 V250"></path>
+                  <path class="wire-control" d="M1050 135 V250"></path>
+                  <path class="wire-control" d="M895 135 V300"></path>
+                  <path class="wire-control" d="M1260 135 V285"></path>
+                  <path class="wire-control" d="M1435 135 V285"></path>
+
+                  <path class="wire-mod" d="M895 505 V390"></path>
+                  <path class="wire-mod" d="M985 505 V455 H1080 V405"></path>
+                  <path class="wire-mod" d="M1115 505 V405"></path>
+
+                  <path class="wire-feedback" d="M1440 390 V620 H1450 V650"></path>
+                </svg>
+
+                <div class="map-block control" style="left:40px;top:35px;width:205px;height:102px">
+                  <header class="module-header">Pitch / note controls</header>
+                  <span>MIDI notes + CC64</span>
+                  <span>SW2 Performance B1-B8: C4-C5</span>
+                  <span>B1-B4 transpose, A8 + K4 glide</span>
+                </div>
+
+                <div class="map-block pitch" style="left:45px;top:305px;width:175px;height:138px">
+                  <header class="module-header">VCO Control</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Slew</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>CV</span>
+                    <span><i class="jack"></i>Gate</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                  <span>transpose + glide smoothing</span>
+                  <span>A7 Pitch LFO modulation</span>
+                </div>
+
+                <div class="map-block control" style="left:270px;top:35px;width:275px;height:102px">
+                  <header class="module-header">Sound generator controls</header>
+                  <span>A1-A4 waveform, K8 Main Color</span>
+                  <span>K8 Alt Sub, K7 Alt Noise</span>
+                </div>
+
+                <div class="map-frame" style="left:250px;top:175px;width:300px;height:315px"><strong>Sound generators</strong></div>
+
+                <div class="map-block sound" style="left:300px;top:200px;width:220px;height:90px">
+                  <header class="module-header">Main oscillator</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>PW</span>
+                    <span class="control-item"><i class="dial"></i>Coarse</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>V/Oct</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+                <div class="map-block sound" style="left:300px;top:295px;width:220px;height:90px">
+                  <header class="module-header">Sub oscillator</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Level</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+                <div class="map-block sound" style="left:300px;top:390px;width:220px;height:90px">
+                  <header class="module-header">White noise</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Level</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block control" style="left:610px;top:55px;width:190px;height:86px">
+                  <header class="module-header">Pre-filter mix controls</header>
+                  <span>Sub and noise amounts</span>
+                </div>
+
+                <div class="map-frame" style="left:610px;top:245px;width:170px;height:210px"><strong>Pre-filter mixer</strong></div>
+
+                <div class="map-block mixer" style="left:635px;top:300px;width:120px;height:120px">
+                  <header class="module-header">Mixer</header>
+                  <div class="sum-symbol">SUM</div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In 1</span>
+                    <span><i class="jack"></i>In 2</span>
+                    <span><i class="jack"></i>In 3</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block control" style="left:840px;top:55px;width:135px;height:86px">
+                  <header class="module-header">Amp controls</header>
+                  <span>A5 Velocity</span>
+                  <span>K5 Alt VelAmt</span>
+                </div>
+                <div class="map-block processor" style="left:835px;top:300px;width:120px;height:120px">
+                  <header class="module-header">VCA</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Gain</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In</span>
+                    <span><i class="jack"></i>CV</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block control" style="left:995px;top:55px;width:205px;height:86px">
+                  <header class="module-header">Filter controls</header>
+                  <span>K1 Cutoff, K2 Reso</span>
+                  <span>K1 Alt EnvAmt, A6 KeyTrack</span>
+                </div>
+
+                <div class="map-frame" style="left:1015px;top:245px;width:170px;height:200px"><strong>Filter</strong></div>
+
+                <div class="map-block processor" style="left:1040px;top:300px;width:120px;height:130px">
+                  <header class="module-header">SVF LPF</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Freq</span>
+                    <span class="control-item"><i class="dial"></i>Res</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In</span>
+                    <span><i class="jack"></i>CV</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block control" style="left:1220px;top:55px;width:150px;height:86px">
+                  <header class="module-header">Drive controls</header>
+                  <span>K7 Main Drive, 1x to 8x gain</span>
+                </div>
+
+                <div class="map-frame" style="left:1225px;top:245px;width:145px;height:200px"><strong>Drive</strong></div>
+
+                <div class="map-block processor" style="left:1245px;top:300px;width:105px;height:120px">
+                  <header class="module-header">tanh drive</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Grit</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block control" style="left:1390px;top:55px;width:145px;height:86px">
+                  <header class="module-header">Level controls</header>
+                  <span>hold SW2 + K8</span>
+                  <span>hidden output level</span>
+                </div>
+                <div class="map-block output" style="left:1390px;top:300px;width:100px;height:120px">
+                  <header class="module-header">Level</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Vol</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>In</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                </div>
+                <div class="map-block output" style="left:1530px;top:285px;width:110px;height:130px">
+                  <header class="module-header">Master Out</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>L</span>
+                    <span class="control-item"><i class="dial"></i>R</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>L Out</span>
+                    <span><i class="jack"></i>R Out</span>
+                  </div>
+                </div>
+
+                <div class="map-block mod" style="left:820px;top:505px;width:240px;height:135px">
+                  <header class="module-header">Envelope (ADSR)</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>A</span>
+                    <span class="control-item"><i class="dial"></i>D</span>
+                    <span class="control-item"><i class="dial"></i>S</span>
+                    <span class="control-item"><i class="dial"></i>R</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>Gate</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                  <svg class="mini-wave" viewBox="0 0 180 34" aria-hidden="true">
+                    <path d="M5 28 L42 5 L82 20 H125 L170 29" fill="none" stroke="var(--amber)" stroke-width="3"></path>
+                  </svg>
+                </div>
+                <div class="map-block mod" style="left:1070px;top:505px;width:260px;height:145px">
+                  <header class="module-header">LFO</header>
+                  <div class="module-controls">
+                    <span class="control-item"><i class="dial"></i>Rate</span>
+                    <span class="control-item"><i class="dial"></i>Depth</span>
+                  </div>
+                  <div class="module-jacks">
+                    <span><i class="jack"></i>FM In</span>
+                    <span><i class="jack"></i>Out</span>
+                  </div>
+                  <svg class="mini-wave" viewBox="0 0 180 34" aria-hidden="true">
+                    <path d="M4 18 C24 2, 42 2, 62 18 S100 34, 120 18 S158 2, 176 18" fill="none" stroke="var(--amber)" stroke-width="3"></path>
+                  </svg>
+                </div>
+                <div class="map-block control" style="left:1335px;top:650px;width:230px;height:65px">
+                  <header class="module-header">OLED + LEDs</header>
+                  <span>show stored values, selections, SW2 Controls/Performance</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="signal-legend">
+              <span><i style="--legend-color:var(--sky)"></i>audio signal</span>
+              <span><i style="--legend-color:var(--emerald)"></i>control mapping</span>
+              <span><i class="dashed" style="--legend-color:var(--amber)"></i>modulation</span>
+              <span><i class="dashed" style="--legend-color:var(--text-muted)"></i>UI feedback</span>
+            </div>
+          </div>
+
+          <div class="block-view" data-block-panel="software">
+            <div class="software-lanes" aria-label="Field Template June software runtime lanes">
+              <div class="software-lane">
+                <label>Input scan</label>
+                <div class="software-steps">
+                  <div class="software-step"><strong>Field controls</strong><span>K1-K8, SW1/SW2, A/B keybed</span></div>
+                  <div class="software-step"><strong>External MIDI</strong><span>Note on/off, velocity, CC64 sustain</span></div>
+                  <div class="software-step"><strong>USB serial</strong><span>HELP, STATUS, SNAP, SELFTEST</span></div>
+                  <div class="software-step guard"><strong>Bounded work</strong><span>max 16 MIDI events per tick</span></div>
+                  <div class="software-step"><strong>1 ms pacing</strong><span>System::Delay(1)</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Main loop</label>
+                <div class="software-steps">
+                  <div class="software-step"><strong>ProcessAllControls</strong><span>raw hardware state</span></div>
+                  <div class="software-step guard"><strong>Until-touched gate</strong><span>anchors + capture masks</span></div>
+                  <div class="software-step state"><strong>ParamBankSet</strong><span>Main, Alt, Level stored values</span></div>
+                  <div class="software-step state"><strong>SynthState</strong><span>wave, modes, transpose, level</span></div>
+                  <div class="software-step visual"><strong>Dirty visual flags</strong><span>display and LEDs scheduled</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Audio lane</label>
+                <div class="software-steps">
+                  <div class="software-step audio"><strong>AudioCallback</strong><span>48-sample block</span></div>
+                  <div class="software-step audio"><strong>Read stored state</strong><span>no control scanning</span></div>
+                  <div class="software-step audio"><strong>Mono synth DSP</strong><span>osc, env, lfo, filter, drive</span></div>
+                  <div class="software-step audio"><strong>Stereo output</strong><span>left/right DAC samples</span></div>
+                  <div class="software-step guard"><strong>Boundary</strong><span>no OLED or serial work in audio</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Visual lane</label>
+                <div class="software-steps">
+                  <div class="software-step visual"><strong>OLED</strong><span>50 ms cap, dirty redraw</span></div>
+                  <div class="software-step visual"><strong>Knob LEDs</strong><span>stored logical values</span></div>
+                  <div class="software-step visual"><strong>Key LEDs</strong><span>selections and tri-state modes</span></div>
+                  <div class="software-step state"><strong>Feedback text</strong><span>SW2 Controls/Performance</span></div>
+                  <div class="software-step guard"><strong>Rate separation</strong><span>human-rate UI, audio-rate DSP</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="architecture-tabs" aria-label="Architecture diagram selector">
+          <button type="button" class="is-active" data-arch-view="software">Software Architecture</button>
+          <button type="button" data-arch-view="synth">Synth Structure</button>
+        </div>
+
+        <!-- Software Architecture Panel -->
+        <div class="arch-view is-active" data-arch-panel="software">
+          <div class="diagram-box full">
+            <h3>Software Architecture Flowchart</h3>
+            <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:12px;">Main-loop ownership is separated from audio ownership. The diagram emphasizes rates, handoff state, and what is intentionally kept out of the audio callback.</p>
+
+            <div class="diagram-toolbar">
+              <button type="button" data-mermaid-action="fit">Fit</button>
+              <button type="button" data-mermaid-action="readable">Readable</button>
+              <button type="button" data-mermaid-action="zoom-out">Zoom -</button>
+              <button type="button" data-mermaid-action="zoom-in">Zoom +</button>
+              <span class="spacer"></span>
+              <button type="button" data-mermaid-action="expand">Expand</button>
+            </div>
+
+            <div class="diagram-viewport">
+              <div class="mermaid" data-zoom="135">
+flowchart TD
+    accTitle: Field Template June Software Architecture
+    accDescr: Shows how Field controls, MIDI, serial, stored state, dirty flags, visual refresh, and the 48-sample audio callback are separated.
+
+    classDef inputStyle fill:#334155,stroke:#64748b,stroke-width:1px,color:#f8fafc;
+    classDef loopStyle fill:#1e3a8a,stroke:#3b82f6,stroke-width:1px,color:#f8fafc;
+    classDef stateStyle fill:#581c87,stroke:#a855f7,stroke-width:1px,color:#f8fafc;
+    classDef visualStyle fill:#115e59,stroke:#14b8a6,stroke-width:1px,color:#f8fafc;
+    classDef audioStyle fill:#064e3b,stroke:#10b981,stroke-width:1px,color:#f8fafc;
+    classDef guardStyle fill:#7f1d1d,stroke:#ef4444,stroke-width:1px,color:#f8fafc;
+
+    subgraph layer_inputs["1. Hardware and Host Inputs"]
+        knobs["K1-K8 ADC knobs"]:::inputStyle
+        switches["SW1 bank toggle&lt;br/&gt;SW2 B-mode toggle / Level hold"]:::inputStyle
+        keybed["A/B keybed"]:::inputStyle
+        midi_in["External MIDI input"]:::inputStyle
+        serial_in["USB serial commands"]:::inputStyle
+    end
+
+    subgraph layer_main["2. Main Loop, 1 ms cadence"]
+        scan["ProcessAllControls()"]:::loopStyle
+        serial["ProcessSerialCommands()"]:::loopStyle
+        midi_tick["Drain MIDI queue&lt;br/&gt;max 16 events/tick"]:::loopStyle
+        ui["ProcessUi()"]:::loopStyle
+        gate["Until-touched gate&lt;br/&gt;entry anchors + capture masks"]:::guardStyle
+        key_logic["Keybed state machine&lt;br/&gt;wave / transpose / performance / reset"]:::loopStyle
+        voice_dirty["ApplyVoiceSetup()&lt;br/&gt;only when voice_dirty"]:::loopStyle
+        visual_sched["UpdateUiOutputs()&lt;br/&gt;dirty scheduling"]:::visualStyle
+        delay["System::Delay(1)"]:::loopStyle
+    end
+
+    subgraph layer_state["3. Stored Runtime State"]
+        banks["ParamBankSet&lt;br/&gt;Main, Alt, hidden Level"]:::stateStyle
+        captures["Raw anchors&lt;br/&gt;captured masks"]:::stateStyle
+        synth_state["SynthState&lt;br/&gt;wave, modes, transpose, output level"]:::stateStyle
+        midi_state["MidiState&lt;br/&gt;note, gate, velocity, sustain"]:::stateStyle
+        dirty["Dirty flags&lt;br/&gt;voice, display, LEDs"]:::stateStyle
+    end
+
+    subgraph layer_visual["4. Human-Rate Visual I/O"]
+        oled["OLED overview/focus&lt;br/&gt;50 ms cap"]:::visualStyle
+        key_leds["Key LEDs&lt;br/&gt;mode and selection state"]:::visualStyle
+        knob_leds["Knob LEDs&lt;br/&gt;stored logical values"]:::visualStyle
+    end
+
+    subgraph layer_audio["5. Audio Callback, 48 samples"]
+        callback["AudioCallback()"]:::audioStyle
+        dsp["Mono synth DSP&lt;br/&gt;osc, sub, noise, env, lfo, filter, drive"]:::audioStyle
+        dac["Stereo audio output"]:::audioStyle
+    end
+
+    knobs -->|"raw sample"| scan
+    switches -->|"edge state"| scan
+    keybed -->|"button states"| scan
+    midi_in -->|"queued messages"| midi_tick
+    serial_in -->|"HELP / STATUS / SNAP / SELFTEST"| serial
+
+    scan --> serial --> midi_tick --> ui
+    ui -->|"record anchors on context entry"| captures
+    captures --> gate
+    ui --> gate
+    gate -->|"write only after movement > 0.012"| banks
+    ui --> key_logic --> synth_state
+    midi_tick --> midi_state
+    banks -->|"mark changed params"| dirty
+    key_logic --> dirty
+    dirty --> voice_dirty --> synth_state
+    dirty --> visual_sched
+    visual_sched --> oled
+    visual_sched --> key_leds
+    visual_sched --> knob_leds
+    visual_sched --> delay
+
+    banks -.->|"stored parameter reads"| callback
+    synth_state -.->|"setter state reads"| callback
+    midi_state -.->|"note/gate reads"| callback
+    callback --> dsp --> dac
+              </div>
+            </div>
+          </div>
+
+          <div class="table" style="margin-top:20px">
+            <div class="row synth">
+              <div class="cell head">Software block</div>
+              <div class="cell head">What runs there</div>
+              <div class="cell head">Cadence</div>
+              <div class="cell head">State handoff</div>
+              <div class="cell head">Current evidence</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Boot and priming</div>
+              <div class="cell"><code>Init</code>, startup OLED, <code>StartAdc</code>, <code>PrimeControls</code>, MIDI init, then <code>StartAudio</code>.</div>
+              <div class="cell">One-time before audio starts.</div>
+              <div class="cell">Raw knob anchors are recorded before active control editing starts.</div>
+              <div class="cell">Prevents boot-time parameter jumps.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Main loop</div>
+              <div class="cell">Controls, serial commands, bounded MIDI handling, telemetry, UI logic, and dirty visual scheduling.</div>
+              <div class="cell">1 ms delay per loop.</div>
+              <div class="cell">Writes stored banks, mode state, note state, and dirty flags.</div>
+              <div class="cell"><code>kMainLoopDelayMs = 1</code>, MIDI cap <code>16</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Until-touched gate</div>
+              <div class="cell">Compares each active knob to its bank or modifier entry anchor before accepting edits.</div>
+              <div class="cell">Every main-loop control pass.</div>
+              <div class="cell">Writes Main, Alt, or hidden Level values only after deliberate movement.</div>
+              <div class="cell">Threshold <code>0.012</code>, write deadband <code>0.0005</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Visual output</div>
+              <div class="cell">Knob LEDs, key LEDs, overview OLED, focus zoom, SW2 Controls/Performance state text.</div>
+              <div class="cell">LED cap 16 ms; OLED cap 50 ms.</div>
+              <div class="cell">Reads stored logical values, not raw ADC positions.</div>
+              <div class="cell">Dirty flags avoid full-rate redraw/transmit.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Audio callback</div>
+              <div class="cell">Per-sample oscillator, sub, noise, ADSR, LFO, filter, drive, and output gain processing.</div>
+              <div class="cell">48 samples per block, about 1 ms at 48 kHz.</div>
+              <div class="cell">Reads stored state; does not scan controls, redraw OLED, or handle serial text.</div>
+              <div class="cell">Keeps UI work outside the audio lane.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Synth Structure Panel -->
+        <div class="arch-view" data-arch-panel="synth">
+          <div class="diagram-box full">
+            <h3>Synth Signal Path Flowchart</h3>
+            <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:12px;">This view follows the audio path from notes and mapped UI parameters through generators, modulators, filter, envelope, drive, and output level.</p>
+
+            <div class="diagram-toolbar">
+              <button type="button" data-mermaid-action="fit">Fit</button>
+              <button type="button" data-mermaid-action="readable">Readable</button>
+              <button type="button" data-mermaid-action="zoom-out">Zoom -</button>
+              <button type="button" data-mermaid-action="zoom-in">Zoom +</button>
+              <span class="spacer"></span>
+              <button type="button" data-mermaid-action="expand">Expand</button>
+            </div>
+
+            <div class="diagram-viewport">
+              <div class="mermaid" data-zoom="135">
+flowchart TD
+    accTitle: Field Template June Synth Structure
+    accDescr: Shows the mono synth signal path and the actual Field controls mapped to each generator, modulator, filter, amp, drive, and output block.
+
+    classDef sourceStyle fill:#334155,stroke:#64748b,stroke-width:1px,color:#f8fafc;
+    classDef controlStyle fill:#1e3a8a,stroke:#3b82f6,stroke-width:1px,color:#f8fafc;
+    classDef generatorStyle fill:#7c2d12,stroke:#ea580c,stroke-width:1px,color:#f8fafc;
+    classDef modStyle fill:#581c87,stroke:#a855f7,stroke-width:1px,color:#f8fafc;
+    classDef filterStyle fill:#115e59,stroke:#14b8a6,stroke-width:1px,color:#f8fafc;
+    classDef ampStyle fill:#064e3b,stroke:#10b981,stroke-width:1px,color:#f8fafc;
+    classDef outputStyle fill:#7f1d1d,stroke:#ef4444,stroke-width:1px,color:#f8fafc;
+
+    subgraph layer_note["1. Note, Gate, and Performance Sources"]
+        midi_notes["External MIDI notes&lt;br/&gt;velocity + CC64 sustain"]:::sourceStyle
+        brow_notes["SW2 Performance mode&lt;br/&gt;B1-B8 test notes C4-C5"]:::sourceStyle
+        transpose["B1-B4 Controls mode&lt;br/&gt;transpose -12 / 0 / +12 / +24"]:::controlStyle
+        glide_ctrl["A8 glide mode&lt;br/&gt;K4 Alt Glide"]:::controlStyle
+    end
+
+    subgraph layer_generators["2. Sound Generators"]
+        pitch["Target frequency&lt;br/&gt;transpose + glide smoothing"]:::sourceStyle
+        osc["Main oscillator&lt;br/&gt;A1-A4 waveform&lt;br/&gt;K8 Main Color"]:::generatorStyle
+        sub["Sub oscillator&lt;br/&gt;K8 Alt Sub&lt;br/&gt;freq/2"]:::generatorStyle
+        noise["WhiteNoise&lt;br/&gt;K7 Alt Noise&lt;br/&gt;max 0.30 mix"]:::generatorStyle
+        premix["Pre-filter source mix"]:::generatorStyle
+    end
+
+    subgraph layer_modulators["3. Modulators"]
+        env["ADSR envelope&lt;br/&gt;K3-K6 Main A/D/S/R"]:::modStyle
+        lfo["Sine LFO&lt;br/&gt;K2 Alt Rate, K3 Alt Depth"]:::modStyle
+        lfo_target["A7 LFO target&lt;br/&gt;Off / Pitch / Filter"]:::controlStyle
+        keytrack["A6 KeyTrack&lt;br/&gt;Off / Half / Full"]:::controlStyle
+        velocity["A5 Velocity mode&lt;br/&gt;K5 Alt VelAmt"]:::controlStyle
+        env_amt["K1 Alt EnvAmt"]:::controlStyle
+    end
+
+    subgraph layer_shaping["4. Filter, Amp, and Drive"]
+        amp["Envelope and velocity amp"]:::ampStyle
+        filter["SVF low-pass filter&lt;br/&gt;K1 Cutoff, K2 Reso"]:::filterStyle
+        drive["tanh drive&lt;br/&gt;K7 Main Drive"]:::ampStyle
+        level["Output level&lt;br/&gt;hold SW2 + K8"]:::outputStyle
+    end
+
+    subgraph layer_output["5. Output"]
+        dac["Stereo audio output"]:::outputStyle
+        oled["OLED + key/knob LEDs&lt;br/&gt;show stored mapped values"]:::controlStyle
+    end
+
+    midi_notes --> pitch
+    brow_notes --> pitch
+    transpose --> pitch
+    glide_ctrl --> pitch
+    pitch --> osc
+    pitch --> sub
+    osc --> premix
+    sub --> premix
+    noise --> premix
+    premix --> amp
+    midi_notes --> env
+    brow_notes --> env
+    env --> amp
+    velocity --> amp
+    amp --> filter
+    env -->|"cutoff contribution"| filter
+    env_amt --> filter
+    keytrack --> filter
+    lfo -->|"pitch target"| osc
+    lfo -->|"pitch target"| sub
+    lfo -->|"filter target"| filter
+    lfo_target --> lfo
+    filter --> drive --> level --> dac
+    osc -.->|"UI feedback"| oled
+    env -.->|"UI feedback"| oled
+    filter -.->|"UI feedback"| oled
+    level -.->|"UI feedback while edited"| oled
+              </div>
+            </div>
+          </div>
+
+          <div class="table" style="margin-top:20px">
+            <div class="row synth">
+              <div class="cell head">Synth block</div>
+              <div class="cell head">Controllable parameters</div>
+              <div class="cell head">Mapped controls/UI</div>
+              <div class="cell head">Audio role</div>
+              <div class="cell head">Display/LED feedback</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Main oscillator</div>
+              <div class="cell">Waveform; pulse width and source color.</div>
+              <div class="cell">A1-A4 select Sine, Tri, Saw, Square. K8 in Main bank controls <code>Color</code>.</div>
+              <div class="cell">Primary pitched source; LFO can modulate pitch when A7 target is Pitch.</div>
+              <div class="cell">OLED <code>Wave</code>/<code>Color</code>; key LEDs show selected wave; K8 LED shows stored Color.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Sub oscillator</div>
+              <div class="cell">Sub level; waveform follows main with square preserved, otherwise saw.</div>
+              <div class="cell">SW1 toggles Alt bank; K8 controls <code>Sub</code>.</div>
+              <div class="cell">One octave below the main oscillator, mixed before filtering.</div>
+              <div class="cell">OLED/K8 LED show Alt <code>Sub</code> when Alt bank is active.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Noise source</div>
+              <div class="cell">White-noise mix amount.</div>
+              <div class="cell">SW1 toggles Alt bank; K7 controls <code>Noise</code>.</div>
+              <div class="cell">Adds up to 30 percent noise into the pre-filter mix.</div>
+              <div class="cell">OLED/K7 LED show Alt <code>Noise</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Envelope</div>
+              <div class="cell">Attack, Decay, Sustain, Release.</div>
+              <div class="cell">K3-K6 in Main bank control <code>Attack</code>, <code>Decay</code>, <code>Sustain</code>, <code>Release</code>.</div>
+              <div class="cell">Shapes amplitude and also contributes to filter cutoff through EnvAmt.</div>
+              <div class="cell">OLED focus/overview and K3-K6 LEDs show stored ADSR values.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">LFO</div>
+              <div class="cell">Rate, depth, target.</div>
+              <div class="cell">SW1 toggles Alt bank; K2 controls <code>LfoRt</code>, K3 controls <code>LfoDp</code>. A7 cycles Off, Pitch, Filter.</div>
+              <div class="cell">Sine LFO modulates pitch or filter only when A7 selects a target.</div>
+              <div class="cell">OLED/K2/K3 LEDs show rate/depth; A7 LED shows target state.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Filter</div>
+              <div class="cell">Base cutoff, resonance, envelope amount, key tracking, optional LFO cutoff modulation.</div>
+              <div class="cell">K1 Main <code>Cutoff</code>, K2 Main <code>Reso</code>, K1 Alt <code>EnvAmt</code>, A6 KeyTrack, A7 Filter target.</div>
+              <div class="cell">SVF low-pass follows note, envelope, key tracking, and LFO contributions.</div>
+              <div class="cell">OLED/K1/K2 LEDs show base cutoff/resonance; A6/A7 LEDs show mode selections.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Glide and pitch</div>
+              <div class="cell">Transpose, glide time, glide mode, note source.</div>
+              <div class="cell">B1-B4 controls mode transpose -12/0/+12/+24. A8 selects Off/Legato/On. K4 Alt controls Glide. SW2 toggles B row between controls and performance test notes C4-C5.</div>
+              <div class="cell">Smooths frequency toward the current MIDI or B-row performance note.</div>
+              <div class="cell">OLED shows Trans/Glide and SW2 Controls/Performance state; key LEDs show selected modes.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell" style="font-weight:600; color:var(--text-primary);">Amp, drive, output</div>
+              <div class="cell">Velocity response, drive gain, hidden master output level.</div>
+              <div class="cell">A5 cycles velocity mode. K5 Alt controls <code>VelAmt</code>. K7 Main controls <code>Drive</code>. Hold SW2 and move K8 for hidden <code>Level</code>.</div>
+              <div class="cell">Applies envelope/velocity amplitude, tanh drive, then output-level scaling.</div>
+              <div class="cell">OLED and LEDs show active mapped values; hidden Level appears while SW2+K8 is edited.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive GoJS Panel -->
+        <div class="card graph-card" style="margin-top:24px;">
+          <h3>GoJS Interactive Architecture Explorer</h3>
+          <p id="gojsCaption" style="color:var(--text-muted); font-size:13.5px; margin-bottom:12px;">Source-grounded relationship graph for June runtime ownership.</p>
+
+          <div class="graph-toolbar">
+            <button type="button" class="is-active" data-graph="software">Software Runtime</button>
+            <button type="button" data-graph="synth">Synth Voice</button>
+            <span class="spacer"></span>
+            <button type="button" data-gojs-action="zoom-out">Zoom -</button>
+            <button type="button" data-gojs-action="zoom-in">Zoom +</button>
+            <button type="button" data-gojs-action="fit">Fit</button>
+            <button type="button" data-gojs-action="expand">Expand</button>
+          </div>
+
+          <div class="gojs-shell">
+            <div id="gojsDiagram" aria-label="Interactive GoJS architecture graph"></div>
+            <aside class="gojs-detail" id="gojsDetails" aria-live="polite">
+              <h4>Selection Details</h4>
+              <p>Select a node or link to inspect ownership, cadence, mapped controls, and handoff role.</p>
+            </aside>
+          </div>
+          <div class="gojs-legend" id="gojsLegend" aria-label="GoJS legend"></div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="table" style="margin-top:24px">
+          <div class="row" style="font-weight:700;">
+            <div class="cell head">Surface</div>
+            <div class="cell head">Field_Template_April</div>
+            <div class="cell head">Field_Template_June</div>
+            <div class="cell head">Field_delay_bundle</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Control model</div>
+            <div class="cell">Near-value pickup/catch with stored logical values.</div>
+            <div class="cell">Until-touched movement gate per bank/modifier entry.</div>
+            <div class="cell">Until-touched layer gates for base, SW1, and SW2 layers.</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Visual I/O</div>
+            <div class="cell">OLED and LED work every main-loop pass.</div>
+            <div class="cell">OLED capped at 50 ms; LEDs capped at 16 ms.</div>
+            <div class="cell">Same 50 ms / 16 ms visual cadence family.</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">DSP scope</div>
+            <div class="cell">Small mono synth starter.</div>
+            <div class="cell">Same small mono synth, optimized runtime shell.</div>
+            <div class="cell">Large multi-algorithm delay/Fx bundle with internal voice.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Delay Bundle -->
+      <section id="delay-bundle" class="page panel">
+        <h2>Delay Bundle Reference</h2>
+        <p><code>Field_delay_bundle</code> is the richest Field-family reference in this dashboard because it combines the Field control surface, movement-gated parameter layers, internal note sources, external MIDI, SDRAM delay memory, and four selectable delay algorithms. These diagrams separate the reusable runtime/control idea from the DSP topology inside each algorithm.</p>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="card delay">
+            <h3>What The Overview Shows</h3>
+            <p>The all-in-one view shows the shared execution shell: input drive and internal synth mix feed <code>DaisyDelayFxCore::Process</code>, one selected algorithm runs per audio block, and the Field surface writes normalized state through movement-gated control layers.</p>
+          </div>
+          <div class="card june">
+            <h3>What The Detail Sheets Add</h3>
+            <p>The algorithm sheets expand A1-A4 into actual delay structures: tape lines and flutter, FDN reverb tank, texture/grain tap handling, and long SDRAM stereo delay with fractional reads and cross feedback.</p>
+          </div>
+        </div>
+
+        <div class="delay-diagram-grid" aria-label="Delay bundle synth block diagrams">
+          <!-- Overview Diagram -->
+          <div class="card delay-diagram-card overview">
+            <h3>Original All-In-One Bundle Diagram</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Shared audio/control structure for <code>Field_delay_bundle</code>: Field controls, MIDI/B-row notes, parameter router, internal pluck/pad voice, selected algorithm execution, SDRAM storage, dry/wet safety output, OLED/LED feedback, and CV mirrors.</p>
+            <div class="delay-diagram-toolbar" aria-label="Overview delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-bd.html" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Standalone
+              </a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-bd.svg" alt="Field_delay_bundle all-in-one block diagram" data-delay-image data-delay-width="1900" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">quality: no high warnings</span>
+              <span>Best for runtime ownership and control handoff.</span>
+            </div>
+          </div>
+
+          <!-- A1 Tape Diagram -->
+          <div class="card delay delay-diagram-card">
+            <h3>A1 Tape [multifx]</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Two shared tape-delay lines with per-channel time targets, fractional interpolation, feedback return, one-pole tone filtering, flutter modulation, freeze-aware write gating, and FastTanh grit before wet/dry output.</p>
+            <div class="delay-diagram-toolbar" aria-label="Tape delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tape-detail.html" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Standalone
+              </a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tape-detail.svg" alt="A1 Tape multifx delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A1 selects tape time/feedback/tone behavior from the shared parameter set.</span>
+            </div>
+          </div>
+
+          <!-- A2 Tank Diagram -->
+          <div class="card delay delay-diagram-card">
+            <h3>A2 Tank [reverb]</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Four delay lines form a small feedback-delay network. Input diffusion feeds the tank, Hadamard-style mixing redistributes energy, damping and diffusion shape decay density, and width mixes the stereo wet return.</p>
+            <div class="delay-diagram-toolbar" aria-label="Tank reverb diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tank-detail.html" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Standalone
+              </a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tank-detail.svg" alt="A2 Tank reverb feedback-delay-network block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A2 makes the delay memory behave as a reverb tank rather than a repeat line.</span>
+            </div>
+          </div>
+
+          <!-- A3 Texture Diagram -->
+          <div class="card delay delay-diagram-card">
+            <h3>A3 Texture [FunBox]</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Texture mode fans the same input into normal taps, grain taps, and reverse/accent taps. Slow drift and density smear the read positions, feedback returns through the texture blend, and freeze can hold the write head.</p>
+            <div class="delay-diagram-toolbar" aria-label="Texture delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-texture-detail.html" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Standalone
+              </a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-texture-detail.svg" alt="A3 Texture FunBox delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A3 is the strongest visual reference for multi-tap texture and freeze behavior.</span>
+            </div>
+          </div>
+
+          <!-- A4 Long Diagram -->
+          <div class="card delay delay-diagram-card">
+            <h3>A4 Long [sdram]</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Long mode uses external SDRAM as the main musical delay store. It derives primary, secondary, and warp read taps from a smoothed time target, cross-feeds stereo feedback, filters the return, and optionally freezes writes.</p>
+            <div class="delay-diagram-toolbar" aria-label="Long SDRAM delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-long-detail.html" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Standalone
+              </a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-long-detail.svg" alt="A4 Long SDRAM delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag warn">densest topology</span>
+              <span>A4 intentionally keeps visible long-memory reads and cross-feedback because those are the defining behavior.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Phantasmagoria Delay Review -->
+      <section id="phantasmagoria" class="page panel">
+        <h2>Phantasmagoria Delay Review</h2>
+        <p class="architecture-note">
+          Source-verified literature review comparing the atmospheric spectral delay and echo chamber algorithms from FuzzyLotus/Phantasmagoria to the Daisy Field delay bundle modes.
+        </p>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <h3>Equivalence Matrix</h3>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">
+            Mapping of Phantasmagoria extracted algorithms to the closest Field delay bundle families and potential reuse priority.
+          </p>
+          <div class="table">
+            <div class="row">
+              <div class="cell head">Extracted Algorithm</div>
+              <div class="cell head">Closest Bundle Family</div>
+              <div class="cell head">Reuse Priority</div>
+              <div class="cell head">Implementation Notes</div>
+            </div>
+            <div id="phantasmagoriaTableBody"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <h3>Candidate Algorithms</h3>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">
+            Individual delay-related DSP blocks extracted from Phantasmagoria source code.
+          </p>
+          <div class="grid-2" id="phantasmagoriaCandidatesGrid"></div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <h3>Synthesis Themes</h3>
+          <div class="grid-2" id="phantasmagoriaThemesGrid"></div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="margin-bottom: 0;">
+            <h3>Gaps & Limitations</h3>
+            <ul id="phantasmagoriaGapsList"></ul>
+          </div>
+          <div class="card" style="margin-bottom: 0;">
+            <h3>QAE Recommendations</h3>
+            <p id="phantasmagoriaRecommendation" style="font-size: 13.5px; line-height: 1.6; color: var(--text-primary); font-weight: 500;"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Timing Analysis -->
+      <section id="timing" class="page panel">
+        <h2>Timing Analysis</h2>
+        <p>The important design point is not that every task runs faster. It is that every task runs at a rate matched to its job: controls at 1 ms, LEDs at human-visible refresh, and OLED at a capped dirty redraw rate.</p>
+
+        <div class="grid-2" style="margin-top:14px">
+          <!-- Logic Analyzer view -->
+          <div class="card june">
+            <h3>June Timing Logic Lanes</h3>
+            <div class="lane-chart">
+              <div class="ruler">
+                <span></span>
+                <div class="ruler-scale"><span>0 ms</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Audio callback<br><span style="font-weight:normal; font-size:11px; color:var(--text-muted);">48 samples (block)</span></div>
+                <div class="lane-track">
+                  <span class="lane-bar june" style="flex:0 0 55%;">mono DSP</span>
+                  <span class="lane-bar june" style="flex:0 0 30%;">filter/env</span>
+                  <span class="lane-bar neutral" style="flex:1;">out</span>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">Main loop<br><span style="font-weight:normal; font-size:11px; color:var(--text-muted);">1 ms paced</span></div>
+                <div class="lane-track">
+                  <span class="lane-bar june" style="flex:0 0 25%;">MIDI &lt;=16</span>
+                  <span class="lane-bar june" style="flex:0 0 30%;">controls</span>
+                  <span class="lane-bar june" style="flex:0 0 25%;">touch gate</span>
+                  <span class="lane-bar neutral" style="flex:1;">dirty flags</span>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">LED lane<br><span style="font-weight:normal; font-size:11px; color:var(--text-muted);">16 ms capped</span></div>
+                <div class="lane-track">
+                  <span class="lane-bar june" style="flex:0 0 35%;">knob values</span>
+                  <span class="lane-bar june" style="flex:0 0 35%;">key states</span>
+                  <span class="lane-bar june" style="flex:1;">transmit</span>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="lane-label">OLED lane<br><span style="font-weight:normal; font-size:11px; color:var(--text-muted);">50 ms capped</span></div>
+                <div class="lane-track">
+                  <span class="lane-bar june" style="flex:0 0 25%;">dirty check</span>
+                  <span class="lane-bar june" style="flex:0 0 45%;">overview/zoom</span>
+                  <span class="lane-bar june" style="flex:1;">refresh</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagram-box">
+            <h3>Mermaid Timing Sequence</h3>
+            <div class="mermaid">
+sequenceDiagram
+  participant HW as Field controls
+  participant Main as 1 ms main loop
+  participant Gate as Until-touched gate
+  participant UI as Visual schedulers
+  participant Audio as Audio callback
+
+  HW->>Main: ProcessAllControls
+  Main->>Gate: compare raw knob with entry anchor
+  Gate-->>Main: write only after movement threshold
+  Main->>UI: set dirty flags
+  UI-->>UI: LED update when 16 ms elapsed
+  UI-->>UI: OLED update when 50 ms elapsed
+  Main->>Audio: simple parameter/state reads
+  Audio->>Audio: mono synth DSP per block
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Responsiveness -->
+      <section id="responsiveness" class="page panel">
+        <h2>Responsiveness</h2>
+
+        <div class="grid-2">
+          <div class="diagram-box">
+            <h3>Until-Touched State Machine</h3>
+            <div class="mermaid">
+stateDiagram-v2
+  [*] --> Stored
+  Stored --> Armed: bank, modifier, boot, or reset records raw anchor
+  Armed --> Armed: movement <= 0.012
+  Armed --> Live: movement > 0.012
+  Live --> Live: raw knob writes active parameter
+  Live --> Armed: switch bank or modifier
+  Live --> Armed: reset bank or all defaults
+            </div>
+          </div>
+          <div class="card june">
+            <h3>What This Means On K1</h3>
+            <p>Plain <code>K1</code> writes <code>Cutoff</code> only while the main bank is active and after <code>K1</code> has moved from the main-bank entry anchor. Tapping <code>SW1</code> toggles the Alt bank; when Alt is active, <code>K1</code> writes <code>EnvAmt</code> and cannot overwrite stored <code>Cutoff</code>.</p>
+            <ul>
+              <li>No need to hunt for the old stored value.</li>
+              <li>No immediate jump when changing bank or modifier.</li>
+              <li>Reset defaults remain stable until knobs move again.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table" style="margin-top:24px">
+          <div class="row three" style="font-weight:700;">
+            <div class="cell head">Scenario</div>
+            <div class="cell head">April</div>
+            <div class="cell head">June</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Switch main -> alt</div>
+            <div class="cell">Alt value waits until physical knob is near stored value.</div>
+            <div class="cell">Alt value waits until physical knob moves from switch-entry position.</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Return alt -> main</div>
+            <div class="cell">Main value waits for near-match pickup.</div>
+            <div class="cell">Main value attaches on first deliberate movement after release.</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Reset defaults</div>
+            <div class="cell">Capture clears; near-match is needed again.</div>
+            <div class="cell">New raw anchors are recorded; defaults are protected until movement.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: CPU & Memory -->
+      <section id="cpu-memory" class="page panel">
+        <h2>CPU &amp; Memory</h2>
+        <div class="grid-3">
+          <!-- April Card -->
+          <div class="card april">
+            <h3>Field_Template_April</h3>
+            <div class="memory-bars">
+              <div class="memory-bar">
+                <label><span>FLASH</span><span>114128 B / 128 KB</span></label>
+                <div class="bar-shell"><div class="bar-fill april" style="width:87.07%"></div></div>
+              </div>
+              <div class="memory-bar">
+                <label><span>SRAM</span><span>52832 B / 512 KB</span></label>
+                <div class="bar-shell"><div class="bar-fill april" style="width:10.08%"></div></div>
+              </div>
+              <div class="memory-bar">
+                <label><span>SDRAM</span><span>0 B / 64 MB</span></label>
+                <div class="bar-shell"><div class="bar-fill april" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- June Card -->
+          <div class="card june">
+            <h3>Field_Template_June</h3>
+            <div class="memory-bars">
+              <div class="memory-bar">
+                <label><span>FLASH</span><span>115688 B / 128 KB</span></label>
+                <div class="bar-shell"><div class="bar-fill" style="width:88.26%"></div></div>
+              </div>
+              <div class="memory-bar">
+                <label><span>SRAM</span><span>52920 B / 512 KB</span></label>
+                <div class="bar-shell"><div class="bar-fill" style="width:10.09%"></div></div>
+              </div>
+              <div class="memory-bar">
+                <label><span>SDRAM</span><span>0 B / 64 MB</span></label>
+                <div class="bar-shell"><div class="bar-fill" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delay Card -->
+          <div class="card delay">
+            <h3>Field_delay_bundle</h3>
+            <p style="font-size:13px; line-height:1.5; margin-bottom:10px;">The delay bundle is a heavier reference by design. It is useful for runtime scheduling and layer behavior, not as a memory-footprint target for the small template.</p>
+            <ul style="font-size:12.5px; padding-left:16px; margin:0;">
+              <li>Uses shared DaisyHost delay core.</li>
+              <li>Attaches SDRAM delay storage.</li>
+              <li>Includes multiple algorithms plus internal voice.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: I/O & Peripherals -->
+      <section id="io" class="page panel">
+        <h2>I/O &amp; Peripherals</h2>
+        <div class="control-map">
+          <!-- Emulated Device Plate -->
+          <div class="field-surface" aria-label="Daisy Field control surface schematic">
+            <!-- Screen -->
+            <div class="surface-oled" aria-live="polite">
+JUNE MAIN<br>
+SAW  TR:0<br>
+A5:SCL A6:HALF<br>
+A7:FILT A8:LEG
+            </div>
+
+            <!-- Knobs Row (K1-K8) -->
+            <div class="surface-row">
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(-100deg);"></div></div>
+                K1<span>Cutoff / EnvAmt</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(-30deg);"></div></div>
+                K2<span>Reso / LfoRt</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(45deg);"></div></div>
+                K3<span>Attack / LfoDp</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(-120deg);"></div></div>
+                K4<span>Decay / Glide</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(80deg);"></div></div>
+                K5<span>Sustain / VelAmt</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(-45deg);"></div></div>
+                K6<span>Release / KeyTrk</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(110deg);"></div></div>
+                K7<span>Drive / Noise</span>
+              </div>
+              <div class="surface-knob">
+                <div class="knob-cap"><div class="knob-marker" style="transform: rotate(0deg);"></div></div>
+                K8<span>Color / Sub / Level</span>
+              </div>
+            </div>
+
+            <!-- Keys Row A (A1-A8) -->
+            <div class="surface-row">
+              <div class="surface-key" style="border-color:var(--teal); box-shadow:0 0 10px var(--teal-glow);">A1<span>Sine</span></div>
+              <div class="surface-key">A2<span>Tri</span></div>
+              <div class="surface-key">A3<span>Saw</span></div>
+              <div class="surface-key">A4<span>Sqr</span></div>
+              <div class="surface-key">A5<span>Velocity</span></div>
+              <div class="surface-key">A6<span>Keytrack</span></div>
+              <div class="surface-key">A7<span>LFO target</span></div>
+              <div class="surface-key">A8<span>Glide</span></div>
+            </div>
+
+            <!-- Keys Row B (B1-B8) -->
+            <div class="surface-row">
+              <div class="surface-key">B1<span>-12</span></div>
+              <div class="surface-key" style="border-color:var(--sky); box-shadow:0 0 10px var(--sky-glow);">B2<span>0</span></div>
+              <div class="surface-key">B3<span>+12</span></div>
+              <div class="surface-key">B4<span>+24</span></div>
+              <div class="surface-key">B5<span>Panic</span></div>
+              <div class="surface-key">B6<span>Reset Main</span></div>
+              <div class="surface-key">B7<span>Reset Alt</span></div>
+              <div class="surface-key">B8<span>Reset All</span></div>
+            </div>
+
+            <!-- Bottom Controls (SW1, SW2) -->
+            <div class="surface-row-bottom">
+              <div class="surface-switch" id="sw1-surface">
+                <div class="switch-toggle"><div class="switch-handle"></div></div>
+                SW1<span>Alt bank toggle</span>
+              </div>
+              <div class="surface-switch" id="sw2-surface">
+                <div class="switch-toggle"><div class="switch-handle"></div></div>
+                SW2<span>B mode / Level hold</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagram-box">
+            <h3>Control And Display Flow</h3>
+            <div class="mermaid">
+flowchart TD
+  Knobs["K1-K8 raw ADC values"] --> Context["Active context: Main, Alt, or Level"]
+  Switches["SW1 toggle bank, SW2 toggle B mode or hold Level"] --> Context
+  Context --> Anchor["Record raw entry anchor"]
+  Anchor --> Gate["Wait for movement > 0.012"]
+  Gate --> Stored["Write stored logical value"]
+  Stored --> Oled["OLED zoom and overview"]
+  Stored --> KnobLeds["Knob LEDs show stored value"]
+  Keys["A/B keybed"] --> Modes["Wave, transpose, mode, reset, panic"]
+  Modes --> KeyLeds["Tri-state key LEDs"]
+  Modes --> Oled
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Parameters -->
+      <section id="parameters" class="page panel">
+        <h2>Parameter Matrix</h2>
+        <div class="table">
+          <div class="row" style="font-weight:700;">
+            <div class="cell head">Knob</div>
+            <div class="cell head">Main Bank</div>
+            <div class="cell head">Alt Bank (SW1 toggle)</div>
+            <div class="cell head">SW2 hold</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K1</div>
+            <div class="cell">Cutoff</div>
+            <div class="cell">EnvAmt</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K2</div>
+            <div class="cell">Reso</div>
+            <div class="cell">LfoRt</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K3</div>
+            <div class="cell">Attack</div>
+            <div class="cell">LfoDp</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K4</div>
+            <div class="cell">Decay</div>
+            <div class="cell">Glide</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K5</div>
+            <div class="cell">Sustain</div>
+            <div class="cell">VelAmt</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K6</div>
+            <div class="cell">Release</div>
+            <div class="cell">KeyTrk</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K7</div>
+            <div class="cell">Drive</div>
+            <div class="cell">Noise</div>
+            <div class="cell" style="color:var(--text-muted); font-style:italic;">No hidden mapping</div>
+          </div>
+          <div class="row">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">K8</div>
+            <div class="cell">Color</div>
+            <div class="cell">Sub</div>
+            <div class="cell" style="color:var(--sky); font-weight:600;">Level</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Build & Config -->
+      <section id="build" class="page panel">
+        <h2>Build &amp; Config</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Firmware Target Details</h3>
+            <ul style="margin:8px 0 0 0; padding-left:16px;">
+              <li><code>TARGET = Field_Template_June</code></li>
+              <li><code>CPP_SOURCES = Field_Template_June.cpp</code></li>
+              <li><code>LIBDAISY_DIR = ../../../libDaisy</code></li>
+              <li><code>DAISYSP_DIR = ../../../DaisySP</code></li>
+              <li>Audio block size is the Field recommended 48-sample block.</li>
+            </ul>
+          </div>
+          <div class="card june">
+            <h3>Flash &amp; Verification Commands</h3>
+            <ul style="margin:8px 0 0 0; padding-left:16px;">
+              <li><code>make</code> builds the firmware locally.</li>
+              <li><code>py -3 ../../../DAISY_QAE/validate_daisy_code.py .</code> runs code validations.</li>
+              <li><code>make program</code> flashes through ST-Link programmer.</li>
+              <li><code>.\run_hardware_testplan.ps1 -Flash</code> runs full build, QAE validation, ST-Link flash, and loads interactive hardware checklist.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Test Results -->
+      <section id="tests" class="page panel">
+        <h2>Test Results</h2>
+        <div class="table">
+          <div class="row three" style="font-weight:700;">
+            <div class="cell head">Verification Check</div>
+            <div class="cell head">Result</div>
+            <div class="cell head">Evidence Summary</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Firmware build</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>make</code>, exit code 0. FLASH footprint: <code>115688 B</code>, SRAM footprint: <code>52920 B</code>.</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Daisy QAE Validation</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>0 error(s), 0 warning(s)</code> after UTF-8 console output encoding fix.</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Hardware test runner smoke</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell">Script <code>run_hardware_testplan.ps1 -SkipBuild -NonInteractive</code> executed, exit code 0.</div>
+          </div>
+          <div class="row three">
+            <div class="cell" style="font-weight:600; color:var(--text-primary);">Hardware flash/run</div>
+            <div class="cell"><span class="tag warn">PENDING</span></div>
+            <div class="cell">Not run in this verification pass. Run ST-Link write command when connected to host.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Logs & Evidence -->
+      <section id="logs" class="page panel">
+        <h2>Logs &amp; Evidence</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Current Command Evidence</h3>
+            <div class="evidence">
+              <span><code>make</code> in <code>MyProjects/_projects/Field_Template_June</code>: exit code 0.</span>
+              <span>Memory footprints: FLASH <code>115688 B / 128 KB</code>, SRAM <code>52920 B / 512 KB</code>, SDRAM <code>0 B / 64 MB</code>.</span>
+              <span>QAE first run failed before findings because Windows used CP1252 output encoding; UTF-8 rerun passed.</span>
+              <span>Hardware runner non-interactive/no-flash path: exit code 0.</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Source File Reference Pointers</h3>
+            <ul style="margin:8px 0 0 0; padding-left:16px; font-size:12.5px;">
+              <li>June touch threshold and visual refresh caps: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L18-L26">Field_Template_June.cpp:18-26</a>.</li>
+              <li>June until-touched movement gates: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L229">Field_Template_June.cpp:229</a>.</li>
+              <li>June context switching anchors: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L341-L348">Field_Template_June.cpp:341-348</a>.</li>
+              <li>June hidden Level protection: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L513">Field_Template_June.cpp:513</a>.</li>
+              <li>June parameters until-touched write filter: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L534">Field_Template_June.cpp:534</a>.</li>
+              <li>June deferred UI refresh logic: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L783-L797">Field_Template_June.cpp:783-797</a>.</li>
+              <li>June startup/controls priming sequence: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_June/Field_Template_June.cpp#L896-L924">Field_Template_June.cpp:896-924</a>.</li>
+              <li>April pickup/catch comparison baseline: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_April/Field_Template_April.cpp#L18">Field_Template_April.cpp:18</a>, <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/MyProjects/_projects/Field_Template_April/Field_Template_April.cpp#L433-L460">433-460</a>.</li>
+              <li>Field delay timing reference model: <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/noderr/daisy_multieffects/FieldDelayFieldApp.h#L33-L38">FieldDelayFieldApp.h:33-38</a>, <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/noderr/daisy_multieffects/FieldDelayFieldApp.h#L332-L345">332-345</a>, <a href="file:///C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/noderr/daisy_multieffects/FieldDelayFieldApp.h#L736-L741">736-741</a>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Generated from local source inspection and validation on <time datetime="2026-06-07">2026-06-07</time>. CDN access is required for live Mermaid and GoJS rendering when opened from disk.
+      </footer>
+    </main>
+  </div>
+
+  <!-- JavaScript Behavior & Visualizer Setup -->
+  <script src="../delay-algorithm-structure/data/algorithms.js"></script>
+  <script src="index_redesigned.js" defer></script>
+</body>
+</html>

@@ -112,10 +112,10 @@ kRecommendedBlockSize = 48
 ### 2. LED Arrays
 ```cpp
 kLedKnobs[8]         // LED_KNOB_1 through LED_KNOB_8
-kLedKeysA[8]         // LED_KEY_A1 through LED_KEY_A8 (top row)
-kLedKeysB[8]         // LED_KEY_B1 through LED_KEY_B8 (bottom row)
+kLedKeysA[8]         // physical/logical A1-A8 via native LED_KEY_B*
+kLedKeysB[8]         // physical/logical B1-B8 via native LED_KEY_A*
 kLedSwitches[2]      // LED_SW_1, LED_SW_2
-kLedKeysPlayable[13] // 13 playable keys (excludes black key gaps)
+kLedKeysChromaticScale[12] // 12 playable chromatic LEDs
 ```
 
 **Example - Set knob LEDs to match knob values:**
@@ -130,21 +130,27 @@ hw.led_driver.SwapBuffersAndTransmit();
 
 ### 3. Keyboard Index Mappings
 
-**Important:** The Field defaults map rows in natural order:
+**Important:** The Field defaults expose physical/logical rows in natural
+order, but libDaisy scan indices and native LED enum names use different
+orders. Keep these three layers separate.
 
 ```
 Physical Layout:
   A1  A2  A3  A4  A5  A6  A7  A8   (Top Row)
   B1  B2  B3  B4  B5  B6  B7  B8   (Bottom Row)
 
-Array Indices:
-   0   1   2   3   4   5   6   7   (kKeyAIndices)
-   8   9  10  11  12  13  14  15   (kKeyBIndices)
+Keyboard scan indices:
+   8   9  10  11  12  13  14  15   (kKeyAIndices)
+   0   1   2   3   4   5   6   7   (kKeyBIndices)
+
+LED helper values:
+   0   1   2   3   4   5   6   7   (kLedKeysA, native LED_KEY_B*)
+  15  14  13  12  11  10   9   8   (kLedKeysB, native LED_KEY_A*)
 ```
 
 **Example - Check if key A4 was pressed:**
 ```cpp
-if(hw.KeyboardRisingEdge(kKeyAIndices[3]))  // A4 = index 3
+if(hw.KeyboardRisingEdge(kKeyAIndices[3]))  // A4 = scan index 11
 {
     // Key A4 was pressed
 }
@@ -303,7 +309,8 @@ const int key_b_indices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 #include "../../foundation_examples/field_defaults.h"
 using namespace FieldDefaults;
 
-// Just use kLedKnobs, kKeyAIndices, kKeyBIndices directly!
+// Just use kLedKnobs, kLedKeysA/B, and kKeyAIndices/kKeyBIndices directly.
+// Do not hand-map native LED_KEY_A/B names to physical rows.
 ```
 
 ### 6. OLED Display Helper (FieldOLEDDisplay)

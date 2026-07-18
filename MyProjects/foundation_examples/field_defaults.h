@@ -14,7 +14,7 @@
  *   hw.led_driver.SetLed(kLedKnobs[0], brightness);
  *   
  *   // Use keyboard mappings
- *   int key_idx = kKeyAIndices[3];  // Physical key A4 -> array index 12
+ *   int key_idx = kKeyAIndices[3];  // Physical key A4 -> KeyboardRisingEdge(11)
  *   
  *   // Toggle keyboard LEDs on/off
  *   FieldKeyboardLEDs leds;
@@ -76,17 +76,36 @@ constexpr size_t kLedKnobs[8] = {
     daisy::DaisyField::LED_KNOB_8, // 23
 };
 
-/** 8 Keyboard LEDs - Top Row (A1-A8, left to right)
- * Based on working field_wavetable_morph_synth: LED index = 15 - position
- * A1→15, A2→14, A3→13, A4→12, A5→11, A6→10, A7→9, A8→8
+/** 8 Keyboard LEDs - Physical/logical A row (A1-A8, left to right).
+ * Do not infer physical row identity from the native LED enum names.
+ * Original field/KeyboardTest and field/modalvoice light the first/bottom
+ * playable row with native LED_KEY_A*, so project-facing physical A/B helpers
+ * intentionally cross the native enum labels.
  */
-constexpr size_t kLedKeysA[8] = {15, 14, 13, 12, 11, 10, 9, 8};
+constexpr size_t kLedKeysA[8] = {
+    daisy::DaisyField::LED_KEY_B1,
+    daisy::DaisyField::LED_KEY_B2,
+    daisy::DaisyField::LED_KEY_B3,
+    daisy::DaisyField::LED_KEY_B4,
+    daisy::DaisyField::LED_KEY_B5,
+    daisy::DaisyField::LED_KEY_B6,
+    daisy::DaisyField::LED_KEY_B7,
+    daisy::DaisyField::LED_KEY_B8,
+};
 
-/** 8 Keyboard LEDs - Bottom Row (B1-B8, left to right)
- * Based on working field_wavetable_morph_synth: LED index = position
- * B1→0, B2→1, B3→2, B4→3, B5→4, B6→5, B7→6, B8→7
+/** 8 Keyboard LEDs - Physical/logical B row (B1-B8, left to right).
+ * Physical/logical B uses native LED_KEY_A* in key-number order.
  */
-constexpr size_t kLedKeysB[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+constexpr size_t kLedKeysB[8] = {
+    daisy::DaisyField::LED_KEY_A1,
+    daisy::DaisyField::LED_KEY_A2,
+    daisy::DaisyField::LED_KEY_A3,
+    daisy::DaisyField::LED_KEY_A4,
+    daisy::DaisyField::LED_KEY_A5,
+    daisy::DaisyField::LED_KEY_A6,
+    daisy::DaisyField::LED_KEY_A7,
+    daisy::DaisyField::LED_KEY_A8,
+};
 
 /** 2 Switch LEDs */
 constexpr size_t kLedSwitches[2] = {
@@ -110,32 +129,24 @@ constexpr size_t kLedSwitches[2] = {
  * B row: white keys, A row: black keys at A2, A3, A6, A7
  */
 constexpr size_t kLedKeysChromaticScale[12] = {
-    daisy::DaisyField::LED_KEY_B1, // C
-    daisy::DaisyField::LED_KEY_B2, // D
-    daisy::DaisyField::LED_KEY_B3, // E
-    daisy::DaisyField::LED_KEY_B4, // F
-    daisy::DaisyField::LED_KEY_B5, // G
-    daisy::DaisyField::LED_KEY_B6, // A
-    daisy::DaisyField::LED_KEY_B7, // B
-    daisy::DaisyField::LED_KEY_B8, // C (octave)
-    daisy::DaisyField::LED_KEY_A2, // C#
-    daisy::DaisyField::LED_KEY_A3, // D#
-    daisy::DaisyField::LED_KEY_A6, // G#
-    daisy::DaisyField::LED_KEY_A7, // A#
+    daisy::DaisyField::LED_KEY_A1, // physical B1, C
+    daisy::DaisyField::LED_KEY_A2, // physical B2, D
+    daisy::DaisyField::LED_KEY_A3, // physical B3, E
+    daisy::DaisyField::LED_KEY_A4, // physical B4, F
+    daisy::DaisyField::LED_KEY_A5, // physical B5, G
+    daisy::DaisyField::LED_KEY_A6, // physical B6, A
+    daisy::DaisyField::LED_KEY_A7, // physical B7, B
+    daisy::DaisyField::LED_KEY_A8, // physical B8, C (octave)
+    daisy::DaisyField::LED_KEY_B2, // physical A2, C#
+    daisy::DaisyField::LED_KEY_B3, // physical A3, D#
+    daisy::DaisyField::LED_KEY_B6, // physical A6, G#
+    daisy::DaisyField::LED_KEY_B7, // physical A7, A#
 };
 
 /** All 16 keyboard LEDs (for non-chromatic applications like presets, modes)
  * Order: A1-A8, then B1-B8
  */
 constexpr size_t kLedKeysAll[16] = {
-    daisy::DaisyField::LED_KEY_A1,
-    daisy::DaisyField::LED_KEY_A2,
-    daisy::DaisyField::LED_KEY_A3,
-    daisy::DaisyField::LED_KEY_A4,
-    daisy::DaisyField::LED_KEY_A5,
-    daisy::DaisyField::LED_KEY_A6,
-    daisy::DaisyField::LED_KEY_A7,
-    daisy::DaisyField::LED_KEY_A8,
     daisy::DaisyField::LED_KEY_B1,
     daisy::DaisyField::LED_KEY_B2,
     daisy::DaisyField::LED_KEY_B3,
@@ -144,6 +155,14 @@ constexpr size_t kLedKeysAll[16] = {
     daisy::DaisyField::LED_KEY_B6,
     daisy::DaisyField::LED_KEY_B7,
     daisy::DaisyField::LED_KEY_B8,
+    daisy::DaisyField::LED_KEY_A1,
+    daisy::DaisyField::LED_KEY_A2,
+    daisy::DaisyField::LED_KEY_A3,
+    daisy::DaisyField::LED_KEY_A4,
+    daisy::DaisyField::LED_KEY_A5,
+    daisy::DaisyField::LED_KEY_A6,
+    daisy::DaisyField::LED_KEY_A7,
+    daisy::DaisyField::LED_KEY_A8,
 };
 
 //==============================================================================
@@ -153,20 +172,21 @@ constexpr size_t kLedKeysAll[16] = {
 /**
  * Physical keyboard to array index mapping.
  * 
- * Based on working field_wavetable_morph_synth implementation:
- *   - Row A (A1-A8): KeyboardRisingEdge indices 0-7
- *   - Row B (B1-B8): KeyboardRisingEdge indices 8-15
+ * Verified against libDaisy daisy_field.cpp scan remapping plus original
+ * field/KeyboardTest and field/modalvoice examples:
+ *   - Physical/logical A row (A1-A8): KeyboardRisingEdge indices 8-15
+ *   - Physical/logical B row (B1-B8): KeyboardRisingEdge indices 0-7
  * 
  * Physical Layout:
- *   A1  A2  A3  A4  A5  A6  A7  A8   (Top Row) → indices 0-7
- *   B1  B2  B3  B4  B5  B6  B7  B8   (Bottom Row) → indices 8-15
+ *   A1  A2  A3  A4  A5  A6  A7  A8   (Top Row) -> indices 8-15
+ *   B1  B2  B3  B4  B5  B6  B7  B8   (Bottom Row) -> indices 0-7
  */
 
-// A1=0, A2=1, ..., A8=7
-constexpr int kKeyAIndices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+// A1=8, A2=9, ..., A8=15
+constexpr int kKeyAIndices[8] = {8, 9, 10, 11, 12, 13, 14, 15};
 
-// B1=8, B2=9, ..., B8=15
-constexpr int kKeyBIndices[8] = {8, 9, 10, 11, 12, 13, 14, 15};
+// B1=0, B2=1, ..., B8=7
+constexpr int kKeyBIndices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
 //==============================================================================
 // MUSICAL SCALES (Optional)
@@ -467,7 +487,7 @@ class FieldOLEDDisplay
 
             // Value (large)
             hw_->display.SetCursor(0, 24);
-            snprintf(buf, sizeof(buf), "%.2f", values_[active_param_]);
+            FormatNormalizedPercent(buf, sizeof(buf), values_[active_param_]);
             hw_->display.WriteString(buf, Font_11x18, true);
         }
 
@@ -486,7 +506,9 @@ class FieldOLEDDisplay
             strncpy(short_label, label, 5);
             short_label[5] = '\0';
 
-            snprintf(buf, sizeof(buf), "%s:%.2f", short_label, values_[i]);
+            char value_text[8];
+            FormatNormalizedPercent(value_text, sizeof(value_text), values_[i]);
+            snprintf(buf, sizeof(buf), "%s:%s", short_label, value_text);
 
             hw_->display.SetCursor(0, y);
             hw_->display.WriteString(buf, Font_6x8, i == active_param_);
@@ -526,7 +548,9 @@ class FieldOLEDDisplay
             strncpy(short_label, label, 4);
             short_label[4] = '\0';
 
-            snprintf(buf, sizeof(buf), "%s:%.2f", short_label, values_[i]);
+            char value_text[8];
+            FormatNormalizedPercent(value_text, sizeof(value_text), values_[i]);
+            snprintf(buf, sizeof(buf), "%s:%s", short_label, value_text);
 
             // Left column (0-3), Right column (4-7)
             int x   = (i < 4) ? 0 : 64;
@@ -543,6 +567,18 @@ class FieldOLEDDisplay
     static constexpr int kMaxParams   = 8;
     static constexpr int kMaxLabelLen = 12;
     static constexpr int kMaxTitleLen = 20;
+
+    static void FormatNormalizedPercent(char* buffer, size_t size, float value)
+    {
+        if(size == 0)
+            return;
+        if(value < 0.0f)
+            value = 0.0f;
+        if(value > 1.0f)
+            value = 1.0f;
+        const int percent = static_cast<int>(value * 100.0f + 0.5f);
+        snprintf(buffer, size, "%d%%", percent);
+    }
 
     daisy::DaisyField* hw_;
     char               title_[kMaxTitleLen];

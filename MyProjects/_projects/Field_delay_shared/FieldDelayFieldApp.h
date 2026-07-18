@@ -36,7 +36,8 @@ constexpr uint32_t    kDisplayUpdateMs = 50;
 constexpr uint32_t    kLedUpdateMs = 16;
 constexpr uint32_t    kMainLoopDelayMs = 1;
 constexpr std::size_t kMaxMidiEventsPerTick = 16;
-constexpr std::size_t kBundleAlgorithmCount = 4;
+constexpr std::size_t kBundleAlgorithmCount =
+    daisyhost::kDaisyDelayFxAlgorithmCount;
 constexpr std::size_t kMaxSnapshotParams = 32;
 
 enum class FieldKeyRow
@@ -127,11 +128,6 @@ const char* CurrentAlgorithmLabel()
         .label;
 }
 
-float ThreeStateLed(int state)
-{
-    return state == 0 ? 0.0f : (state == 1 ? 0.32f : 0.85f);
-}
-
 size_t KeyboardIndexForPhysicalKey(FieldKeyRow row, size_t oneBasedKey)
 {
     if(oneBasedKey == 0 || oneBasedKey > 8)
@@ -167,26 +163,6 @@ const char* LayerLabel(int layer)
         case 1: return "SW1";
         case 2: return "SW2";
         default: return "BASE";
-    }
-}
-
-const char* SynthModeLabel(int mode)
-{
-    switch(mode)
-    {
-        case 1: return "Pluck";
-        case 2: return "Pad";
-        default: return "Off";
-    }
-}
-
-const char* SynthHoldLabel(int mode)
-{
-    switch(mode)
-    {
-        case 1: return "Latch";
-        case 2: return "Drone";
-        default: return "Moment";
     }
 }
 
@@ -371,58 +347,26 @@ void ProcessAKeys()
     {
         if(PhysicalKeyRisingEdge(FieldKeyRow::kA, i + 1))
         {
-            if(bundleMode && i < 4)
+            if(bundleMode && i < kBundleAlgorithmCount)
             {
                 SelectBundleAlgorithm(i);
-            }
-            else if(bundleMode && i == 4)
-            {
-                activeCore->SetInternalSynthMode(
-                    (activeCore->GetInternalSynthMode() + 1) % 3);
-            }
-            else if(bundleMode && i == 5)
-            {
-                activeCore->SetInternalSynthHoldMode(
-                    (activeCore->GetInternalSynthHoldMode() + 1) % 3);
             }
             else
             {
                 activeCore->TriggerFieldKeyAction(i, true);
             }
 
-            if(!bundleMode || i >= 4)
+            if(!bundleMode || i >= kBundleAlgorithmCount)
             {
                 std::snprintf(zoomName,
                               sizeof(zoomName),
-                              bundleMode && i == 4
-                                  ? "A5 Synth"
-                                  : (bundleMode && i == 5 ? "A6 Hold" : "A%u"),
+                              "A%u",
                               static_cast<unsigned>(i + 1));
-                if(bundleMode && i == 4)
-                {
-                    std::snprintf(zoomValue,
-                                  sizeof(zoomValue),
-                                  "%s",
-                                  SynthModeLabel(activeCore->GetInternalSynthMode()));
-                    std::snprintf(zoomUnits, sizeof(zoomUnits), "mode");
-                }
-                else if(bundleMode && i == 5)
-                {
-                    std::snprintf(zoomValue,
-                                  sizeof(zoomValue),
-                                  "%s",
-                                  SynthHoldLabel(
-                                      activeCore->GetInternalSynthHoldMode()));
-                    std::snprintf(zoomUnits, sizeof(zoomUnits), "mode");
-                }
-                else
-                {
-                    std::snprintf(zoomValue,
-                                  sizeof(zoomValue),
-                                  "%d",
-                                  activeCore->GetButtonState(i));
-                    std::snprintf(zoomUnits, sizeof(zoomUnits), "state");
-                }
+                std::snprintf(zoomValue,
+                              sizeof(zoomValue),
+                              "%d",
+                              activeCore->GetButtonState(i));
+                std::snprintf(zoomUnits, sizeof(zoomUnits), "state");
                 zoomLayer = activeLayer;
                 zoomKnob = -1;
                 zoomStartMs = System::GetNow();
@@ -430,7 +374,7 @@ void ProcessAKeys()
         }
         if(PhysicalKeyFallingEdge(FieldKeyRow::kA, i + 1))
         {
-            if(!bundleMode || i >= 6)
+            if(!bundleMode || i >= kBundleAlgorithmCount)
             {
                 activeCore->TriggerFieldKeyAction(i, false);
             }
@@ -657,12 +601,10 @@ std::array<float, DaisyDelayFxCore::kFieldKeyCount> BundleFieldKeyLedValues()
 {
     auto values = activeCore->GetFieldKeyLedValues();
     const std::size_t selected = CurrentAlgorithmIndex();
-    for(std::size_t i = 0; i < 4; ++i)
+    for(std::size_t i = 0; i < kBundleAlgorithmCount; ++i)
     {
         values[i] = i == selected ? 0.85f : 0.03f;
     }
-    values[4] = ThreeStateLed(activeCore->GetInternalSynthMode());
-    values[5] = ThreeStateLed(activeCore->GetInternalSynthHoldMode());
     for(std::size_t i = 0; i < bKeyDown.size(); ++i)
     {
         if(bKeyDown[i])

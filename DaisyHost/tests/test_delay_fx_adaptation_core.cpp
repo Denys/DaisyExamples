@@ -12,11 +12,13 @@
 
 namespace
 {
-constexpr std::array<daisyhost::DaisyDelayFxSource, 4> kSources = {{
+constexpr std::array<daisyhost::DaisyDelayFxSource, 6> kSources = {{
     daisyhost::DaisyDelayFxSource::kMultiFxPedal,
     daisyhost::DaisyDelayFxSource::kReverbPlayground,
     daisyhost::DaisyDelayFxSource::kFunBox,
     daisyhost::DaisyDelayFxSource::kSdramDelaylines,
+    daisyhost::DaisyDelayFxSource::kPhantasmagoria,
+    daisyhost::DaisyDelayFxSource::kTimeMachine,
 }};
 
 float Energy(const std::vector<float>& buffer)
@@ -94,7 +96,7 @@ TEST(DaisyDelayFxCoreTest, AllProfilesExposeThreeFieldLayersAndRender)
 TEST(DaisyDelayFxCoreTest, BundleAlgorithmsUseTypeFirstLabels)
 {
     const auto& algorithms = daisyhost::GetDaisyDelayFxAlgorithmDescriptors();
-    ASSERT_EQ(algorithms.size(), 4u);
+    ASSERT_EQ(algorithms.size(), 6u);
 
     EXPECT_EQ(algorithms[0].source, daisyhost::DaisyDelayFxSource::kMultiFxPedal);
     EXPECT_STREQ(algorithms[0].label, "Tape [multifx]");
@@ -111,11 +113,20 @@ TEST(DaisyDelayFxCoreTest, BundleAlgorithmsUseTypeFirstLabels)
               daisyhost::DaisyDelayFxSource::kSdramDelaylines);
     EXPECT_STREQ(algorithms[3].label, "Long [sdram]");
 
+    EXPECT_EQ(algorithms[4].source,
+              daisyhost::DaisyDelayFxSource::kPhantasmagoria);
+    EXPECT_STREQ(algorithms[4].label, "Spectral [Phantasmagoria]");
+    EXPECT_STREQ(algorithms[4].shortLabel, "Spectral");
+
+    EXPECT_EQ(algorithms[5].source, daisyhost::DaisyDelayFxSource::kTimeMachine);
+    EXPECT_STREQ(algorithms[5].label, "8 Tap [TimeMachine]");
+    EXPECT_STREQ(algorithms[5].shortLabel, "8Tap");
+
     EXPECT_EQ(daisyhost::DaisyDelayFxAlgorithmIndex(
                   daisyhost::DaisyDelayFxSource::kFunBox),
               2u);
-    EXPECT_EQ(daisyhost::DaisyDelayFxSourceForAlgorithmIndex(3),
-              daisyhost::DaisyDelayFxSource::kSdramDelaylines);
+    EXPECT_EQ(daisyhost::DaisyDelayFxSourceForAlgorithmIndex(5),
+              daisyhost::DaisyDelayFxSource::kTimeMachine);
 }
 
 TEST(DaisyDelayFxCoreTest, BundleInternalSynthSupportsPluckPadAndLatch)
@@ -278,7 +289,7 @@ TEST(DelayFxAdaptationCoreTest, BundleSelectsAlgorithmsWithAKeysAndSnapshots)
               std::string::npos);
     auto tankAlgorithm = app.GetParameterValue("node0/param/algorithm");
     ASSERT_TRUE(tankAlgorithm.hasValue);
-    EXPECT_NEAR(tankAlgorithm.value, 1.0f / 3.0f, 0.0001f);
+    EXPECT_NEAR(tankAlgorithm.value, 1.0f / 5.0f, 0.0001f);
 
     app.SetParameterValue("node0/param/time", 0.22f);
     app.SetMenuItemValue("node0/menu/field_keys/a1", 1.0f);
@@ -293,4 +304,61 @@ TEST(DelayFxAdaptationCoreTest, BundleSelectsAlgorithmsWithAKeysAndSnapshots)
     EXPECT_GT(leds[0], leds[1]);
     EXPECT_GT(leds[0], leds[2]);
     EXPECT_GT(leds[0], leds[3]);
+}
+
+TEST(DelayFxAdaptationCoreTest, BundleSelectsAndRendersExtendedAlgorithms)
+{
+    daisyhost::apps::DelayFxAdaptationCore app(
+        daisyhost::DaisyDelayFxSource::kMultiFxPedal, "node0", true);
+    app.Prepare(48000.0, 48);
+
+    app.SetMenuItemValue("node0/menu/field_keys/a5", 1.0f);
+    app.SetMenuItemValue("node0/menu/field_keys/a5", 0.0f);
+    EXPECT_NE(app.GetDisplayModel().texts.front().text.find(
+                  "Spectral [Phantasmagoria]"),
+              std::string::npos);
+    auto algorithm = app.GetParameterValue("node0/param/algorithm");
+    ASSERT_TRUE(algorithm.hasValue);
+    EXPECT_NEAR(algorithm.value, 4.0f / 5.0f, 0.0001f);
+
+    constexpr std::size_t kRenderFrames = 4096;
+    std::array<float, kRenderFrames> inputL{};
+    std::array<float, kRenderFrames> inputR{};
+    inputL[0] = 0.85f;
+    inputR[0] = 0.45f;
+    std::array<float, kRenderFrames> outL{};
+    std::array<float, kRenderFrames> outR{};
+    const float* inputChannels[] = {inputL.data(), inputR.data()};
+    float* outputChannels[] = {outL.data(), outR.data()};
+    app.SetParameterValue("node0/param/mix", 1.0f);
+    app.SetParameterValue("node0/param/time", 0.02f);
+    app.SetParameterValue("node0/param/feedback", 0.35f);
+    app.Process({inputChannels, 2}, {outputChannels, 2}, outL.size());
+    EXPECT_GT(Energy(std::vector<float>(outL.begin(), outL.end()))
+                  + Energy(std::vector<float>(outR.begin(), outR.end())),
+              0.001f);
+
+    app.SetMenuItemValue("node0/menu/field_keys/a6", 1.0f);
+    app.SetMenuItemValue("node0/menu/field_keys/a6", 0.0f);
+    EXPECT_NE(app.GetDisplayModel().texts.front().text.find("8 Tap [TimeMachine]"),
+              std::string::npos);
+    algorithm = app.GetParameterValue("node0/param/algorithm");
+    ASSERT_TRUE(algorithm.hasValue);
+    EXPECT_NEAR(algorithm.value, 1.0f, 0.0001f);
+
+    app.SetParameterValue("node0/param/mix", 1.0f);
+    app.SetParameterValue("node0/param/time", 0.0f);
+    app.SetParameterValue("node0/param/feedback", 0.35f);
+    std::fill(outL.begin(), outL.end(), 0.0f);
+    std::fill(outR.begin(), outR.end(), 0.0f);
+    inputL[48] = 0.7f;
+    inputR[48] = 0.2f;
+    app.Process({inputChannels, 2}, {outputChannels, 2}, outL.size());
+    EXPECT_GT(Energy(std::vector<float>(outL.begin(), outL.end()))
+                  + Energy(std::vector<float>(outR.begin(), outR.end())),
+              0.001f);
+
+    const auto leds = app.GetFieldKeyLedValues();
+    EXPECT_GT(leds[5], leds[0]);
+    EXPECT_GT(leds[5], leds[4]);
 }

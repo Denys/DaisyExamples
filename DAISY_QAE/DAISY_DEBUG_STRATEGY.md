@@ -131,27 +131,39 @@ if(debug_trigger)
 
 ## Floating Point Printing
 
-### Option A: Enable %f Support (adds ~3KB to binary)
-```makefile
-# In your Makefile:
-LDFLAGS += -u _printf_float
-```
-Then use:
+Default Daisy Make builds use newlib-nano. Do not assume `%f`, `%e`, or `%g`
+formats work in OLED or serial text. Without an explicit `_printf_float` link
+flag, float-formatted values may render as blank, `?`, or otherwise missing
+even when the control value is valid.
+
+### Option A: Integer Scaling (default for firmware UI)
 ```cpp
-hw.PrintLine("Knob value: %f", knob_val);
+// Convert 0.0-1.0 to 0-100
+int percent = (int)(knob_val * 100.0f + 0.5f);
+hw.PrintLine("Knob: %d%%", percent);
+
+// Prefer integer units for display values.
+int cutoff_hz = (int)(cutoff + 0.5f);
+hw.PrintLine("Cutoff: %d Hz", cutoff_hz);
 ```
 
-### Option B: Use FLT_FMT Macros (no size cost)
+### Option B: Use FLT_FMT Macros (debug text without float printf)
 ```cpp
 hw.PrintLine("Value: " FLT_FMT3, FLT_VAR3(my_float));  // 3 decimals
 hw.PrintLine("Value: " FLT_FMT(6), FLT_VAR(6, my_float));  // 6 decimals
 ```
 
-### Option C: Integer Scaling (simplest)
+### Option C: Enable %f Support (debug-only size tradeoff)
+Use this only when a project deliberately budgets the flash cost and needs true
+printf float formatting.
+
+```makefile
+# In your Makefile:
+LDFLAGS += -u _printf_float
+```
+
 ```cpp
-// Convert 0.0-1.0 to 0-100
-int percent = (int)(knob_val * 100);
-hw.PrintLine("Knob: %d%%", percent);
+hw.PrintLine("Knob value: %f", knob_val);
 ```
 
 ---
@@ -163,7 +175,8 @@ hw.PrintLine("Knob: %d%%", percent);
 # Add debug flag for conditional compilation
 ifeq ($(DEBUG), 1)
 CPPFLAGS += -DDEBUG_SERIAL
-LDFLAGS += -u _printf_float
+# Optional only when flash budget allows real %f printing:
+# LDFLAGS += -u _printf_float
 endif
 ```
 
@@ -190,7 +203,7 @@ Build with: `make DEBUG=1`
 | No output | Check USB cable, ensure `hw.StartLog()` called |
 | Garbled text | Set serial monitor to 115200 baud |
 | Missing early prints | Use `hw.StartLog(true)` to wait for connection |
-| Float prints as "?" | Add `LDFLAGS += -u _printf_float` or use FLT_FMT |
+| Float values blank or "?" | Prefer integer scaling or `FLT_FMT`; add `_printf_float` only as an explicit flash-size tradeoff |
 | System crashes with prints | Don't print in AudioCallback! |
 
 ---
@@ -295,7 +308,7 @@ When paused at breakpoint:
 | No output | Check USB cable, ensure `hw.StartLog()` called |
 | Garbled text | Set serial monitor to 115200 baud |
 | Missing early prints | Use `hw.StartLog(true)` to wait for connection |
-| Float prints as "?" | Add `LDFLAGS += -u _printf_float` or use FLT_FMT |
+| Float values blank or "?" | Prefer integer scaling or `FLT_FMT`; add `_printf_float` only as an explicit flash-size tradeoff |
 | System crashes with prints | Don't print in AudioCallback! |
 | `mkdir build` error (Windows) | Change terminal to Git Bash |
 | F5 debug not working | Check ST-Link connection, install Cortex Debug |
@@ -318,12 +331,13 @@ This document is part of an interconnected quality assurance system:
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 2026-02-08
+**Document Version**: 1.2
+**Last Updated**: 2026-06-06
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2 | 2026-06-06 | Reframed float printing guidance after Field_Template_June OLED value blanks; integer/FLT_FMT is default, `_printf_float` is debug-only |
 | 1.1 | 2026-02-08 | Added VS Code hardware debugging section (ST-Link), debug build configuration |
 | 1.0 | 2026-02-08 | Initial version: 4 debug patterns, float printing, troubleshooting table |

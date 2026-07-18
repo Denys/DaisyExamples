@@ -93,35 +93,41 @@ int main(void)
 ### Keyboard Input Indices (`hw.KeyboardRisingEdge()`)
 | Physical Key | Index |
 |--------------|-------|
-| A1-A8 (Top Row) | 0-7 |
-| B1-B8 (Bottom Row) | 8-15 |
+| A1-A8 (Top Row) | 8-15 |
+| B1-B8 (Bottom Row) | 0-7 |
 
 ### LED Indices (`hw.led_driver.SetLed()`)
 | Physical LED | Index | Formula |
 |--------------|-------|---------|
-| A1 | 15 | `15 - position` |
-| A2 | 14 | |
-| A3 | 13 | |
-| A4 | 12 | |
-| A5 | 11 | |
-| A6 | 10 | |
-| A7 | 9 | |
-| A8 | 8 | |
-| B1 | 0 | `position` |
-| B2 | 1 | |
-| B3 | 2 | |
-| B4 | 3 | |
-| B5 | 4 | |
-| B6 | 5 | |
-| B7 | 6 | |
-| B8 | 7 | |
+| A1 | 0 | native `LED_KEY_B1` |
+| A2 | 1 | native `LED_KEY_B2` |
+| A3 | 2 | native `LED_KEY_B3` |
+| A4 | 3 | native `LED_KEY_B4` |
+| A5 | 4 | native `LED_KEY_B5` |
+| A6 | 5 | native `LED_KEY_B6` |
+| A7 | 6 | native `LED_KEY_B7` |
+| A8 | 7 | native `LED_KEY_B8` |
+| B1 | 15 | native `LED_KEY_A1` |
+| B2 | 14 | native `LED_KEY_A2` |
+| B3 | 13 | native `LED_KEY_A3` |
+| B4 | 12 | native `LED_KEY_A4` |
+| B5 | 11 | native `LED_KEY_A5` |
+| B6 | 10 | native `LED_KEY_A6` |
+| B7 | 9 | native `LED_KEY_A7` |
+| B8 | 8 | native `LED_KEY_A8` |
 | Knob 1-8 | 16-23 | `16 + position` |
 | SW1, SW2 | 24, 25 | |
 
 ### Quick Reference Arrays
 ```cpp
-kKeyAIndices  = {0, 1, 2, 3, 4, 5, 6, 7};       // A1-A8 input
-kKeyBIndices  = {8, 9, 10, 11, 12, 13, 14, 15}; // B1-B8 input
-kLedKeysA     = {15, 14, 13, 12, 11, 10, 9, 8}; // A1-A8 LEDs
-kLedKeysB     = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 LEDs
+kKeyAIndices  = {8, 9, 10, 11, 12, 13, 14, 15}; // A1-A8 input
+kKeyBIndices  = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 input
+kLedKeysA     = {0, 1, 2, 3, 4, 5, 6, 7};       // A1-A8 LEDs via native LED_KEY_B*
+kLedKeysB     = {15, 14, 13, 12, 11, 10, 9, 8}; // B1-B8 LEDs via native LED_KEY_A*
 ```
+
+Native `DaisyField::LED_KEY_A/B` enum names are not the same layer as the
+project-facing physical A/B row names. The original `field/KeyboardTest` and
+`field/modalvoice` examples light the bottom playable row with native
+`LED_KEY_A*` values, while public keyboard scan indices `0..7` are that
+bottom row.

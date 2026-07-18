@@ -11,7 +11,7 @@
 
 This report documents the comprehensive strategy for delivering high-quality embedded audio C++ code for the Daisy platform. The strategy encompasses:
 
-1. **Pre-Development Planning** - Block diagrams, control mapping, and architecture design
+1. **Pre-Development Planning** - Block diagrams, `.dvpe` project, control mapping, and architecture design
 2. **Code Quality Standards** - Templates, patterns, and anti-patterns
 3. **Hardware Abstraction** - Reusable helper libraries for consistent behavior
 4. **Debugging Methodology** - Serial logging and hardware debugging workflows
@@ -25,13 +25,14 @@ This report documents the comprehensive strategy for delivering high-quality emb
 ### 1.1 Mandatory Process Flow
 
 ```
-CONCEPT → BLOCK DIAGRAMS → CONTROLS.md → IMPLEMENTATION → VERIFY & ITERATE
+CONCEPT → BLOCK DIAGRAMS → .dvpe PROJECT → CONTROLS.md → IMPLEMENTATION → VERIFY & ITERATE
 ```
 
 | Phase | Deliverables | Purpose |
 |-------|-------------|---------|
 | **Concept** | 1-2 sentence description, DSP module list, complexity rating | Define scope |
 | **Block Diagrams** | System Architecture, Signal Flow, Control Flow (Mermaid) | Visual design verification |
+| **.dvpe Project** | Project-local visual patch with hardware, block, connection, parameter, default, and control-binding data | Visual source of truth before code |
 | **CONTROLS.md** | Parameter tables, key assignments, switch functions | Hardware mapping documentation |
 | **Implementation** | `.cpp`, `Makefile`, `README.md` | Actual code |
 | **Verify** | `make` → exit 0, hardware test | Quality gate |
@@ -41,6 +42,7 @@ CONCEPT → BLOCK DIAGRAMS → CONTROLS.md → IMPLEMENTATION → VERIFY & ITERA
 ```
 MyProjects/_projects/ProjectName/
 ├── ProjectName.cpp          # Main implementation
+├── ProjectName.dvpe         # Visual project structure and parameter defaults
 ├── Makefile                  # Build configuration
 ├── README.md                 # Project overview
 ├── CONTROLS.md              # Detailed control documentation
@@ -164,19 +166,22 @@ Single-header library providing:
 
 **Keyboard Input:**
 ```
-A-row (top): hw.KeyboardRisingEdge(0) to hw.KeyboardRisingEdge(7)
-B-row (bottom): hw.KeyboardRisingEdge(8) to hw.KeyboardRisingEdge(15)
+A-row (top): hw.KeyboardRisingEdge(8) to hw.KeyboardRisingEdge(15)
+B-row (bottom): hw.KeyboardRisingEdge(0) to hw.KeyboardRisingEdge(7)
 ```
 
 **LED Output:**
 ```
-A-row LEDs: indices 15 (A1) down to 8 (A8) - REVERSED
-B-row LEDs: indices 0 (B1) to 7 (B8) - SEQUENTIAL
+A-row LEDs: native LED_KEY_B1..LED_KEY_B8, indices 0 to 7
+B-row LEDs: native LED_KEY_A1..LED_KEY_A8, indices 15 down to 8
 Knob LEDs: indices 16-23
 Switch LEDs: indices 24-25
 ```
 
-> ⚠️ **Critical**: Input and output indices use DIFFERENT patterns. This asymmetry is a common source of bugs (see BUG-001).
+> **Critical**: Physical row labels, keyboard scan indices, and native LED enum
+> names are different layers. Do not derive one directly from the other; use
+> `field_defaults.h` or recheck native `daisy_field.h/.cpp` plus original
+> `field/KeyboardTest` / `field/modalvoice`.
 
 ---
 
@@ -320,6 +325,19 @@ SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
 ```
 
+`-u _printf_float` is not a default Field UI fix. Daisy Make firmware links
+newlib-nano by default, so `%f` formatting can render blank without that flag,
+but enabling float printf costs flash. For OLED/serial display values, prefer
+integer-only `snprintf()` formats (`%d Hz`, `%d ms`, `%d%%`) unless the project
+explicitly budgets for float printf support.
+
+For the full local runtime-library checklist, see
+[DAISY_TOOLCHAIN_LIBRARY_NOTES.md](DAISY_TOOLCHAIN_LIBRARY_NOTES.md). That note
+tracks the practical differences introduced by `--specs=nano.specs` and
+`--specs=nosys.specs`: optional float printf/scanf support, `libstdc++_nano`,
+`libnosys` syscall stubs, heap allocation risk, iostream pull-ins, and map-file
+triage commands.
+
 ### 7.2 Build Commands
 
 | Command | Purpose |
@@ -336,6 +354,7 @@ include $(SYSTEM_FILES_DIR)/Makefile
 ### 8.1 Pre-Implementation
 
 - [ ] Block diagrams created (System, Signal, Control)
+- [ ] `.dvpe` project created beside source and aligned with diagrams
 - [ ] CONTROLS.md completed
 - [ ] DSP module requirements identified
 - [ ] Complexity rating assigned
@@ -448,16 +467,17 @@ void AudioCallback(...) {
 **Impact**: Projects created with `helper.py create` will have control processing in the audio callback, causing potential race conditions.
 
 **Recommendation**: After using `helper.py create -b field`, immediately:
-1. Move `hw.ProcessAllControls()` from AudioCallback to main loop
-2. Add `hw.StartAdc()` before `hw.StartAudio()`
-3. Add main loop with `System::Delay(16)`
+1. Create and complete the project-local `.dvpe` visual source project
+2. Move `hw.ProcessAllControls()` from AudioCallback to main loop
+3. Add `hw.StartAdc()` before `hw.StartAudio()`
+4. Add main loop with `System::Delay(16)`
 
 ### 11.3 Recommended Workflow Enhancement
 
 #### Current Workflow (Basic)
 
 ```
-./helper.py create → Manual code editing → make → test → debug
+./helper.py create → Manual visual/code editing → make → test → debug
 ```
 
 #### Enhanced Workflow (One-Shot Precision)
@@ -465,15 +485,16 @@ void AudioCallback(...) {
 ```mermaid
 flowchart LR
     A[helper.py create -b field] --> B[Apply field_defaults.h]
-    B --> C[Fix Template Anti-patterns]
-    C --> D[Add Serial Debug Macros]
-    D --> E[Create CONTROLS.md]
-    E --> F[Implement Logic]
-    F --> G[Build + Flash]
-    G --> H{Works?}
-    H -->|No| I[Serial Debug]
-    I --> F
-    H -->|Yes| J[Document in DAISY_BUGS if issue found]
+    B --> C[Create and complete .dvpe]
+    C --> D[Fix Template Anti-patterns]
+    D --> E[Add Serial Debug Macros]
+    E --> F[Create CONTROLS.md]
+    F --> G[Implement Logic]
+    G --> H[Build + Flash]
+    H --> I{Works?}
+    I -->|No| J[Serial Debug]
+    J --> G
+    I -->|Yes| K[Document in DAISY_BUGS if issue found]
 ```
 
 ### 11.4 Enhanced Project Creation Script
@@ -484,10 +505,12 @@ For one-shot precision, create projects with this enhanced command sequence:
 # 1. Create base project
 ./helper.py create MyProjects/_projects/NewProject -b field
 
-# 2. Navigate to project
+# 2. Create/complete NewProject.dvpe before writing DSP logic
+
+# 3. Navigate to project
 cd MyProjects/_projects/NewProject
 
-# 3. Copy field_defaults.h include pattern
+# 4. Copy field_defaults.h include pattern
 # (Manual step - add to .cpp file)
 ```
 
@@ -500,6 +523,24 @@ BASE_DIR="MyProjects/_projects"
 
 # Create project
 ./helper.py create "$BASE_DIR/$PROJECT_NAME" -b field
+
+# Create .dvpe planning artifact before implementation logic
+cat > "$BASE_DIR/$PROJECT_NAME/$PROJECT_NAME.dvpe" << 'EOF'
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "PROJECT_NAME",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48,
+      "description": "Complete DSP blocks, parameter ranges/defaults, and Field control bindings before code."
+    },
+    "blocks": [],
+    "connections": []
+  }
+}
+EOF
 
 # Add field_defaults.h include to generated .cpp
 cat > "$BASE_DIR/$PROJECT_NAME/$PROJECT_NAME.cpp" << 'EOF'
@@ -584,7 +625,7 @@ echo "Created $PROJECT_NAME with field_defaults.h integration"
 | **Use `helper.py update`** | Refreshes VS Code debug configs when corrupted |
 | **Include `--include_vgdb`** | Adds VisualGDB support for Visual Studio debugging |
 | **Serial debug macros in template** | Debug prints always available, stripped in release |
-| **CONTROLS.md first** | Forces design thinking before coding |
+| **.dvpe + CONTROLS.md first** | Forces visual structure and control mapping before coding |
 | **Build after each major change** | Catches errors early, narrows debug scope |
 
 ### 11.6 One-Shot Precision Checklist
@@ -594,6 +635,7 @@ For maximum first-attempt success rate:
 - [ ] Use `helper.py create -b field` for correct Makefile paths
 - [ ] Immediately fix AudioCallback anti-pattern (move ProcessAllControls to main loop)
 - [ ] Add `#include "field_defaults.h"` and helper classes
+- [ ] Create and complete `ProjectName.dvpe` before writing DSP/control logic
 - [ ] Create `CONTROLS.md` before writing logic
 - [ ] Add `hw.StartLog()` at init for serial debugging
 - [ ] Use `DBG_PRINT()` macro for conditional debug output
@@ -637,19 +679,22 @@ All QA documents are interconnected for maximum development efficiency:
 | [DAISY_TUTORIALS_KNOWLEDGE.md](DAISY_TUTORIALS_KNOWLEDGE.md) | Official API reference | Understanding GPIO/Audio/ADC/SPI/I2C |
 | [DAISY_DEVELOPMENT_STANDARDS.md](DAISY_DEVELOPMENT_STANDARDS.md) | Workflow patterns | Starting a new project |
 | [DAISY_DEBUG_STRATEGY.md](DAISY_DEBUG_STRATEGY.md) | Serial/hardware debugging | When something isn't working |
+| [DAISY_TOOLCHAIN_LIBRARY_NOTES.md](DAISY_TOOLCHAIN_LIBRARY_NOTES.md) | Toolchain/runtime library risks | When link behavior, formatting, heap, or syscall behavior is suspicious |
 | [DAISY_BUGS.md](DAISY_BUGS.md) | Bug tracking methodology | Documenting and searching past issues |
 
 **This document's role**: Provides comprehensive technical reference. Use when you need deep understanding of the entire development strategy.
 
 ---
 
-**Document Version**: 1.2
-**Last Updated**: 2026-02-08
+**Document Version**: 1.4
+**Last Updated**: 2026-06-07
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-06-07 | Added `.dvpe` as a required visual source-of-truth artifact before firmware implementation |
+| 1.3 | 2026-06-07 | Linked new Daisy toolchain/library notes for newlib-nano, nosys, heap, formatting, and map-file triage |
 | 1.2 | 2026-02-08 | Added Section 11 (Process Improvement), Section 12 (QA Ecosystem) |
 | 1.1 | 2026-02-08 | Added QA checklist, reference projects, debug strategy section |
 | 1.0 | 2026-02-08 | Initial version: architecture, DSP library, hardware abstraction, build config |

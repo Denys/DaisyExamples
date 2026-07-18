@@ -1,0 +1,61 @@
+{
+  "title": "Field_delay_bundle A3 Texture [FunBox] Algorithm Detail",
+  "canvas": {"width": 1660, "height": 820},
+  "rules": {"maxModHorizontal": 260, "frameHeaderHeight": 30},
+  "metadata": {
+    "summary": "Detail block diagram for the Texture [FunBox] mode. This sheet shows the normal delay taps, grain tap, reverse accent tap, slow drift modulation, texture blend, and cross-feedback write path.",
+    "trace": [
+      {"id": "process-dispatch", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:367-369 dispatches kFunBox to ProcessFunBox."},
+      {"id": "texture-input", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1242-1263 computes driven stereo input, time, feedback, texture, density, smear, mod, width, reverse, freeze, and ratio."},
+      {"id": "texture-drift", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1265-1274 updates slowLfoPhase_ and smooths normal delay positions with drift."},
+      {"id": "texture-reads", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1275-1284 reads normal L/R, grain, and reverse accent taps."},
+      {"id": "texture-blend-write", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1285-1294 blends normal/grain/reverse material and writes cross-feedback delay lines."},
+      {"id": "bundle-controls", "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:59-68 lists K1-K8 base/SW1/SW2 mappings for the bundle."}
+    ]
+  },
+  "frames": [
+    {"label": "Texture controls", "x": 35, "y": 20, "w": 1590, "h": 130, "color": "#18a84b", "fill": "#eefcf3"},
+    {"label": "FunBox-inspired texture delay", "x": 35, "y": 180, "w": 1590, "h": 455, "color": "#e33b3b", "fill": "#fff5f5"},
+    {"label": "Output integration", "x": 1050, "y": 665, "w": 575, "h": 120, "color": "#8aa0ad", "fill": "#f8fbfd"}
+  ],
+  "blocks": [
+    {"id": "time_control", "kind": "control", "x": 70, "y": 65, "w": 220, "h": 70, "label": "Time and tap controls", "lines": ["K2 Delay Time", "K5 SW1 Rhythm / tap mode"]},
+    {"id": "texture_control", "kind": "control", "x": 320, "y": 65, "w": 220, "h": 70, "label": "Texture controls", "lines": ["K5 Texture", "reverse amount from state"]},
+    {"id": "grain_control", "kind": "control", "x": 570, "y": 65, "w": 220, "h": 70, "label": "Grain and smear controls", "lines": ["K2 SW2 Density", "K5 SW2 Smear"]},
+    {"id": "mod_control", "kind": "control", "x": 820, "y": 65, "w": 220, "h": 70, "label": "Drift and width controls", "lines": ["K6 Mod / drift", "K2 SW1 Width"]},
+    {"id": "feedback_control", "kind": "control", "x": 1070, "y": 65, "w": 220, "h": 70, "label": "Feedback and freeze controls", "lines": ["K3 Feedback", "freeze/hold write gate"]},
+    {"id": "audio_in", "kind": "pitch", "x": 65, "y": 350, "w": 145, "h": 90, "label": "Algorithm input", "lines": ["audio in + internal synth", "left/right samples"]},
+    {"id": "drive_stereo", "kind": "mixer", "x": 255, "y": 335, "w": 170, "h": 110, "label": "Driven stereo input", "lines": ["L * drive", "R * drive"]},
+    {"id": "normal_taps", "kind": "processor", "x": 500, "y": 300, "w": 205, "h": 105, "label": "Normal L/R taps", "lines": ["smoothed base delay", "ratio and width"]},
+    {"id": "grain_tap", "kind": "processor", "x": 500, "y": 455, "w": 205, "h": 105, "label": "Grain tap", "lines": ["density sets tap range", "smear offsets position"]},
+    {"id": "reverse_tap", "kind": "processor", "x": 770, "y": 455, "w": 205, "h": 105, "label": "Reverse accent tap", "lines": ["opposite moving tap", "reverse amount blend"]},
+    {"id": "drift_lfo", "kind": "mod", "x": 770, "y": 280, "w": 205, "h": 130, "label": "Slow drift LFO", "lines": ["slowLfoPhase_", "moves normal/grain/reverse reads"], "wave": "lfo"},
+    {"id": "texture_blend", "kind": "mixer", "x": 1050, "y": 380, "w": 205, "h": 115, "label": "Texture blend", "lines": ["wetL = normal vs grain", "wetR = normal vs reverse", "texture + reverse amount"]},
+    {"id": "cross_writer", "kind": "note", "x": 770, "y": 565, "w": 230, "h": 75, "label": "Cross-feedback writes", "lines": ["L writes from wetR", "R writes from wetL"]},
+    {"id": "wet_lr", "kind": "mixer", "x": 1325, "y": 390, "w": 170, "h": 95, "label": "Wet L/R result", "lines": ["texture delay output"]},
+    {"id": "bundle_mix", "kind": "output", "x": 1110, "y": 705, "w": 210, "h": 70, "label": "Bundle dry/wet and gain", "lines": ["mix, bypass, wet-only, output dB"]},
+    {"id": "audio_out", "kind": "output", "x": 1390, "y": 705, "w": 170, "h": 70, "label": "Audio Out L/R", "lines": ["returned to Field DAC"]}
+  ],
+  "links": [
+    {"from": "audio_in", "to": "drive_stereo", "kind": "audio", "points": [[210, 395], [255, 395]], "trace": ["texture-input"]},
+    {"from": "drive_stereo", "to": "cross_writer", "kind": "audio", "points": [[340, 445], [340, 605], [770, 605]], "trace": ["texture-input", "texture-blend-write"]},
+    {"from": "cross_writer", "to": "normal_taps", "kind": "feedback", "points": [[770, 595], [470, 595], [470, 352], [500, 352]], "trace": ["texture-blend-write", "texture-reads"]},
+    {"from": "cross_writer", "to": "grain_tap", "kind": "feedback", "points": [[770, 590], [735, 590], [735, 430], [602, 430], [602, 455]], "trace": ["texture-blend-write", "texture-reads"]},
+    {"from": "cross_writer", "to": "reverse_tap", "kind": "feedback", "points": [[885, 565], [885, 560]], "trace": ["texture-blend-write", "texture-reads"]},
+    {"from": "normal_taps", "to": "texture_blend", "kind": "audio", "points": [[705, 330], [735, 245], [1020, 245], [1020, 420], [1050, 420]], "trace": ["texture-reads", "texture-blend-write"]},
+    {"from": "grain_tap", "to": "texture_blend", "kind": "audio", "points": [[705, 508], [735, 508], [735, 430], [1020, 430], [1020, 445], [1050, 445]], "trace": ["texture-reads", "texture-blend-write"]},
+    {"from": "reverse_tap", "to": "texture_blend", "kind": "audio", "points": [[975, 508], [1035, 508], [1035, 470], [1050, 470]], "trace": ["texture-reads", "texture-blend-write"]},
+    {"from": "texture_blend", "to": "cross_writer", "kind": "feedback", "points": [[1150, 495], [1150, 605], [1000, 605]], "trace": ["texture-blend-write"]},
+    {"from": "texture_blend", "to": "wet_lr", "kind": "audio", "points": [[1255, 438], [1325, 438]], "trace": ["texture-blend-write"]},
+    {"from": "wet_lr", "to": "bundle_mix", "kind": "audio", "points": [[1410, 485], [1410, 650], [1215, 650], [1215, 705]], "trace": ["texture-blend-write"]},
+    {"from": "bundle_mix", "to": "audio_out", "kind": "audio", "points": [[1320, 740], [1390, 740]], "trace": ["texture-blend-write"]},
+    {"from": "time_control", "to": "normal_taps", "kind": "control", "points": [[180, 135], [180, 260], [602, 260], [602, 300]], "trace": ["bundle-controls", "texture-input", "texture-drift"]},
+    {"from": "texture_control", "to": "texture_blend", "kind": "control", "points": [[430, 135], [430, 650], [1152, 650], [1152, 495]], "trace": ["bundle-controls", "texture-blend-write"]},
+    {"from": "grain_control", "to": "grain_tap", "kind": "control", "points": [[680, 135], [480, 135], [480, 508], [500, 508]], "trace": ["bundle-controls", "texture-reads"]},
+    {"from": "mod_control", "to": "drift_lfo", "kind": "control", "points": [[930, 135], [930, 280]], "trace": ["bundle-controls", "texture-drift"]},
+    {"from": "feedback_control", "to": "cross_writer", "kind": "control", "points": [[1180, 135], [1280, 135], [1280, 625], [1000, 625]], "trace": ["bundle-controls", "texture-blend-write"]},
+    {"from": "drift_lfo", "to": "normal_taps", "kind": "mod", "points": [[770, 335], [705, 335]], "trace": ["texture-drift", "texture-reads"]},
+    {"from": "drift_lfo", "to": "grain_tap", "kind": "mod", "points": [[872, 390], [872, 430], [690, 430], [690, 455]], "trace": ["texture-drift", "texture-reads"]},
+    {"from": "drift_lfo", "to": "reverse_tap", "kind": "mod", "points": [[875, 390], [875, 455]], "trace": ["texture-drift", "texture-reads"]}
+  ]
+}

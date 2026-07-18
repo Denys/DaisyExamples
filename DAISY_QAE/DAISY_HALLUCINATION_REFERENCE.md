@@ -36,6 +36,9 @@ These are **fabricated methods that do not exist** in DaisySP. Using them causes
 ❌ NEVER call malloc, new, printf, or PrintLine inside AudioCallback
 ✅ Use flag variables — set flag in callback, act on it in main loop
 
+❌ NEVER assume %.0f / %.1f OLED values render in default Make firmware
+✅ Use integer-only snprintf formatting unless Makefile explicitly links _printf_float
+
 ❌ NEVER skip Init() for DSP modules
 ✅ ALWAYS call module.Init(sample_rate) before StartAudio()
 
@@ -413,15 +416,37 @@ include $(SYSTEM_FILES_DIR)/Makefile
 
 ```cpp
 // Keyboard input indices
-// A-row: hw.KeyboardRisingEdge(0)  to  hw.KeyboardRisingEdge(7)
-// B-row: hw.KeyboardRisingEdge(8)  to  hw.KeyboardRisingEdge(15)
+// Physical/logical A-row: hw.KeyboardRisingEdge(8)  to  hw.KeyboardRisingEdge(15)
+// Physical/logical B-row: hw.KeyboardRisingEdge(0)  to  hw.KeyboardRisingEdge(7)
 
-// LED output indices (ASYMMETRIC — common bug source!)
-// A-row LEDs: index 15 (=A1) down to 8 (=A8)  ← REVERSED
-// B-row LEDs: index 0  (=B1) up to  7 (=B8)   ← sequential
+// LED output indices (native enum labels are not physical row truth)
+// Physical/logical A-row LEDs: native LED_KEY_B1..LED_KEY_B8, indices 0..7
+// Physical/logical B-row LEDs: native LED_KEY_A1..LED_KEY_A8, indices 15..8
 // Knob LEDs:  indices 16-23
 // Switch LEDs: indices 24-25
 ```
+
+---
+
+## Daisy Firmware Text Formatting
+
+Default Make-based Daisy firmware links newlib-nano through
+`libDaisy/core/Makefile`. Float `printf` support is not enabled unless the
+project explicitly links `_printf_float`.
+
+```cpp
+// Good for OLED/serial values
+snprintf(buf, sizeof(buf), "%d Hz", hz_int);
+snprintf(buf, sizeof(buf), "%d ms", ms_int);
+snprintf(buf, sizeof(buf), "%d%%", percent_int);
+
+// Avoid in normal firmware builds
+snprintf(buf, sizeof(buf), "%.0f Hz", hz_float);
+snprintf(buf, sizeof(buf), "%.1fk", khz_float);
+```
+
+Symptom signature: percent values render but Hz/ms values are blank. Check for
+`%f` formatting before changing OLED layout or control routing.
 
 ---
 

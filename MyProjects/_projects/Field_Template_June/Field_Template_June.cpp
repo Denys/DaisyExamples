@@ -30,6 +30,9 @@ constexpr int      kSerialLineBufferSize         = 64;
 constexpr int      kWaveformCount                = 4;
 constexpr int      kTransposeCount               = 4;
 constexpr int      kTemplateKnobCount            = 8;
+constexpr uint8_t  kPerformanceVelocity          = 100;
+constexpr float    kLfoRateMinHz                 = 0.10f;
+constexpr float    kLfoRateMaxHz                 = 12.00f;
 
 enum MainParamIndex
 {
@@ -104,6 +107,7 @@ const char* kAltLabels[8] = {
 };
 
 const int kTransposeSemitones[kTransposeCount] = {-12, 0, 12, 24};
+const uint8_t kBPerformanceNotes[8] = {60, 62, 64, 65, 67, 69, 71, 72};
 
 const char* kWaveformNames[kWaveformCount] = {"SINE", "TRI", "SAW", "SQR"};
 const char* kVelocityNames[3]              = {"FIX", "SCL", "PCH"};
@@ -168,7 +172,11 @@ struct SynthState
     float output_level     = kOutputLevelDefault;
     bool  output_captured  = false;
     float output_touch_anchor = kOutputLevelDefault;
+    bool  sw1_was_pressed  = false;
     bool  sw2_was_pressed  = false;
+    bool  b_performance_mode = false;
+    bool  b_performance_note_active = false;
+    uint8_t b_performance_note = 60;
 
     float touch_anchor_main[8] = {};
     float touch_anchor_alt[8]  = {};
@@ -222,6 +230,11 @@ float Clamp01(float value)
     return fclamp(value, 0.0f, 1.0f);
 }
 
+float LfoRateHz(float value)
+{
+    return kLfoRateMinHz + Clamp01(value) * (kLfoRateMaxHz - kLfoRateMinHz);
+}
+
 uint32_t NowMs()
 {
     return System::GetNow();
@@ -235,6 +248,11 @@ int PercentInt(float value)
 const char* BankName(ParamBank bank)
 {
     return bank == ParamBank::Main ? "main" : "alt";
+}
+
+const char* Sw2ModeName()
+{
+    return state.b_performance_mode ? "PERFORMANCE" : "CONTROLS";
 }
 
 uint8_t CapturedMask(ParamBank bank)
@@ -341,7 +359,8 @@ void LogSnapshot(const char* reason)
                       kWaveformNames[state.waveform_index],
                       kTransposeNames[state.transpose_index],
                       kVelocityNames[state.velocity_mode]);
-    hw.seed.PrintLine("[FTJUNE] SNAP modes key=%s lfo=%s glide=%s out=%d outcap=%u",
+    hw.seed.PrintLine("[FTJUNE] SNAP modes sw2=%s key=%s lfo=%s glide=%s out=%d outcap=%u",
+                      Sw2ModeName(),
                       kKeyTrackNames[state.keytrack_mode],
                       kLfoTargetNames[state.lfo_target_mode],
                       kGlideNames[state.glide_mode],
@@ -378,6 +397,8 @@ bool RunSoftwareSelfTest(const char* reason)
     ok                        = ok && kDisplayUpdateMs == 50;
     ok                        = ok && kLedUpdateMs == 16;
     ok                        = ok && kMaxMidiEventsPerTick == 16;
+    ok                        = ok && fabsf(LfoRateHz(0.0f) - kLfoRateMinHz) < 0.0001f;
+    ok                        = ok && fabsf(LfoRateHz(1.0f) - kLfoRateMaxHz) < 0.0001f;
 
     if(check_defaults)
     {
@@ -514,14 +535,105 @@ void FormatPercentText(char* buffer, size_t size, float value)
     snprintf(buffer, size, "%d%%", static_cast<int>(Clamp01(value) * 100.0f + 0.5f));
 }
 
+void FormatIntegerHertz(char* buffer, size_t size, int hz, bool spaced_unit)
+{
+    if(spaced_unit)
+        snprintf(buffer, size, "%d Hz", hz);
+    else
+        snprintf(buffer, size, "%dHz", hz);
+}
+
+void FormatIntegerMilliseconds(char* buffer, size_t size, int ms, bool spaced_unit)
+{
+    if(spaced_unit)
+        snprintf(buffer, size, "%d ms", ms);
+    else
+        snprintf(buffer, size, "%dms", ms);
+}
+
+void CopyText(char* buffer, size_t size, const char* text)
+{
+    if(size == 0)
+        return;
+
+    size_t i = 0;
+    for(; i + 1 < size && text[i] != '\0'; ++i)
+        buffer[i] = text[i];
+    buffer[i] = '\0';
+}
+
+void FormatSmallTenths(char* buffer, size_t size, int tenths, char unit)
+{
+    if(tenths < 0)
+        tenths = 0;
+    if(tenths > 999)
+        tenths = 999;
+
+    const int whole = tenths / 10;
+    const int frac  = tenths % 10;
+    char      text[8];
+    int       pos = 0;
+
+    if(whole >= 10)
+        text[pos++] = static_cast<char>('0' + (whole / 10));
+    text[pos++] = static_cast<char>('0' + (whole % 10));
+    text[pos++] = '.';
+    text[pos++] = static_cast<char>('0' + frac);
+    text[pos++] = unit;
+    text[pos]   = '\0';
+    CopyText(buffer, size, text);
+}
+
+void FormatTenthsSeconds(char* buffer, size_t size, int ms)
+{
+    FormatSmallTenths(buffer, size, (ms + 50) / 100, 's');
+}
+
+void FormatCompactHertz(char* buffer, size_t size, float hertz)
+{
+    const int hz = static_cast<int>(hertz + 0.5f);
+    if(hertz >= 10000.0f)
+        snprintf(buffer, size, "%dk", (hz + 500) / 1000);
+    else if(hertz >= 1000.0f)
+    {
+        FormatSmallTenths(buffer, size, (hz + 50) / 100, 'k');
+    }
+    else
+        FormatIntegerHertz(buffer, size, hz, false);
+}
+
+void FormatLfoRate(char* buffer, size_t size, float hertz, bool spaced_unit)
+{
+    if(hertz < 1.0f)
+    {
+        const int millihz = static_cast<int>(hertz * 1000.0f + 0.5f);
+        if(spaced_unit)
+            snprintf(buffer, size, "%d mHz", millihz);
+        else
+            snprintf(buffer, size, "%dmHz", millihz);
+        return;
+    }
+
+    FormatIntegerHertz(buffer, size, static_cast<int>(hertz + 0.5f), spaced_unit);
+}
+
+void FormatCompactTime(char* buffer, size_t size, float seconds)
+{
+    const int ms = static_cast<int>(seconds * 1000.0f + 0.5f);
+    if(seconds >= 1.0f)
+        FormatTenthsSeconds(buffer, size, ms);
+    else
+        FormatIntegerMilliseconds(buffer, size, ms, false);
+}
+
 void FormatMainValue(int idx, float value, char* buffer, size_t size)
 {
     switch(idx)
     {
         case MAIN_CUTOFF:
         {
-            const float hz = 40.0f + Clamp01(value) * 14000.0f;
-            FormatHertz(buffer, size, hz);
+            const float hz = 50.0f + Clamp01(value) * 12000.0f;
+            FormatIntegerHertz(buffer, size, static_cast<int>(hz + 0.5f), true);
             break;
         }
         case MAIN_ATTACK:
@@ -530,8 +642,13 @@ void FormatMainValue(int idx, float value, char* buffer, size_t size)
         {
             const float seconds = (idx == MAIN_ATTACK)
                                       ? (0.001f + Clamp01(value) * 1.5f)
+                                      : (idx == MAIN_DECAY)
+                                            ? (0.001f + Clamp01(value) * 2.0f)
                                       : (0.001f + Clamp01(value) * 2.5f);
-            FormatMilliseconds(buffer, size, seconds);
+            FormatIntegerMilliseconds(buffer,
+                                      size,
+                                      static_cast<int>(seconds * 1000.0f + 0.5f),
+                                      true);
             break;
         }
         default: FormatPercentText(buffer, size, value); break;
@@ -544,16 +661,52 @@ void FormatAltValue(int idx, float value, char* buffer, size_t size)
     {
         case ALT_LFO_RATE:
         {
-            const float hz = 0.05f + Clamp01(value) * 12.0f;
-            FormatHertz(buffer, size, hz);
+            FormatLfoRate(buffer, size, LfoRateHz(value), true);
             break;
         }
         case ALT_GLIDE:
         {
             const float seconds = Clamp01(value) * 0.8f;
-            FormatMilliseconds(buffer, size, seconds);
+            FormatIntegerMilliseconds(buffer,
+                                      size,
+                                      static_cast<int>(seconds * 1000.0f + 0.5f),
+                                      true);
             break;
         }
+        default: FormatPercentText(buffer, size, value); break;
+    }
+}
+
+void FormatMainOverviewValue(int idx, float value, char* buffer, size_t size)
+{
+    switch(idx)
+    {
+        case MAIN_CUTOFF:
+            FormatCompactHertz(buffer, size, 50.0f + Clamp01(value) * 12000.0f);
+            break;
+        case MAIN_ATTACK:
+            FormatCompactTime(buffer, size, 0.001f + Clamp01(value) * 1.5f);
+            break;
+        case MAIN_DECAY:
+            FormatCompactTime(buffer, size, 0.001f + Clamp01(value) * 2.0f);
+            break;
+        case MAIN_RELEASE:
+            FormatCompactTime(buffer, size, 0.001f + Clamp01(value) * 2.5f);
+            break;
+        default: FormatPercentText(buffer, size, value); break;
+    }
+}
+
+void FormatAltOverviewValue(int idx, float value, char* buffer, size_t size)
+{
+    switch(idx)
+    {
+        case ALT_LFO_RATE:
+            FormatLfoRate(buffer, size, LfoRateHz(value), false);
+            break;
+        case ALT_GLIDE:
+            FormatCompactTime(buffer, size, Clamp01(value) * 0.8f);
+            break;
         default: FormatPercentText(buffer, size, value); break;
     }
 }
@@ -566,9 +719,29 @@ void FormatParamValue(ParamBank bank, int idx, float value, char* buffer, size_t
         FormatAltValue(idx, value, buffer, size);
 }
 
+void FormatParamOverviewValue(ParamBank bank, int idx, float value, char* buffer, size_t size)
+{
+    if(bank == ParamBank::Main)
+        FormatMainOverviewValue(idx, value, buffer, size);
+    else
+        FormatAltOverviewValue(idx, value, buffer, size);
+}
+
 const char* LabelFor(ParamBank bank, int idx)
 {
     return bank == ParamBank::Main ? kMainLabels[idx] : kAltLabels[idx];
+}
+
+const char* ShortLabelFor(ParamBank bank, int idx)
+{
+    static const char* kMainShortLabels[8] = {
+        "Cut", "Res", "Atk", "Dec", "Sus", "Rel", "Drv", "Col",
+    };
+    static const char* kAltShortLabels[8] = {
+        "Env", "Rate", "Dep", "Glid", "Vel", "Key", "Nois", "Sub",
+    };
+
+    return bank == ParamBank::Main ? kMainShortLabels[idx] : kAltShortLabels[idx];
 }
 
 void ResetBank(ParamBank bank)
@@ -722,6 +895,32 @@ void Panic()
     MarkLedsDirty();
 }
 
+void ReleaseBPerformanceNote()
+{
+    if(!state.b_performance_note_active)
+        return;
+
+    NoteOff(state.b_performance_note);
+    state.b_performance_note_active = false;
+    MarkLedsDirty();
+}
+
+void PlayBPerformanceNote(int idx)
+{
+    if(idx < 0 || idx >= 8)
+        return;
+
+    ReleaseBPerformanceNote();
+    state.b_performance_note = kBPerformanceNotes[idx];
+    state.b_performance_note_active = true;
+    NoteOn(state.b_performance_note, kPerformanceVelocity);
+
+    char note_name[8];
+    FormatMidiNoteName(note_name, sizeof(note_name), state.b_performance_note);
+    SetFocus("Play", note_name);
+    MarkLedsDirty();
+}
+
 void HandleMidiMessage(MidiEvent msg)
 {
     switch(msg.type)
@@ -776,7 +975,7 @@ void ApplyVoiceSetup()
     env.SetSustainLevel(Clamp01(MainValue(MAIN_SUSTAIN)));
     env.SetReleaseTime(0.001f + MainValue(MAIN_RELEASE) * 2.5f);
 
-    lfo.SetFreq(0.05f + AltValue(ALT_LFO_RATE) * 12.0f);
+    lfo.SetFreq(LfoRateHz(AltValue(ALT_LFO_RATE)));
 }
 
 void UpdateFocusForParam(ParamBank bank, int idx, float value)
@@ -858,8 +1057,22 @@ void UpdateKnobLeds(bool sw2_pressed)
         hw.led_driver.SetLed(kLedKnobs[i], Clamp01(value) * brightness);
     }
 
-    hw.led_driver.SetLed(kLedSwitches[0], state.active_bank == ParamBank::Alt ? 1.0f : 0.12f);
-    hw.led_driver.SetLed(kLedSwitches[1], sw2_pressed ? 1.0f : 0.12f);
+    hw.led_driver.SetLed(kLedSwitches[0], state.active_bank == ParamBank::Alt ? 1.0f : 0.0f);
+    hw.led_driver.SetLed(kLedSwitches[1], state.b_performance_mode ? 1.0f : 0.0f);
+}
+
+KeyLedState CyclicModeLed(int value, int default_value)
+{
+    int offset = (value - default_value) % 3;
+    if(offset < 0)
+        offset += 3;
+
+    switch(offset)
+    {
+        case 0: return KeyLedState::Off;
+        case 1: return KeyLedState::Blink;
+        default: return KeyLedState::On;
+    }
 }
 
 void UpdateKeyLeds()
@@ -869,19 +1082,21 @@ void UpdateKeyLeds()
     for(int i = 0; i < 4; ++i)
         key_leds.SetA(i, i == state.waveform_index ? KeyLedState::On : KeyLedState::Off);
 
-    key_leds.SetA(4, static_cast<KeyLedState>(state.velocity_mode));
-    key_leds.SetA(5, static_cast<KeyLedState>(state.keytrack_mode));
-    key_leds.SetA(6, static_cast<KeyLedState>(state.lfo_target_mode));
-    key_leds.SetA(7, static_cast<KeyLedState>(state.glide_mode));
+    key_leds.SetA(4, CyclicModeLed(state.velocity_mode, VELOCITY_SCALED));
+    key_leds.SetA(5, CyclicModeLed(state.keytrack_mode, KEYTRACK_HALF));
+    key_leds.SetA(6, CyclicModeLed(state.lfo_target_mode, LFO_TARGET_FILTER));
+    key_leds.SetA(7, CyclicModeLed(state.glide_mode, GLIDE_LEGATO));
 
-    for(int i = 0; i < 4; ++i)
-        key_leds.SetB(i, i == state.transpose_index ? KeyLedState::On : KeyLedState::Off);
-
-    key_leds.SetB(4, midi_state.sustain ? KeyLedState::Blink
-                                        : (midi_state.gate ? KeyLedState::On : KeyLedState::Off));
-    key_leds.SetB(5, KeyLedState::Blink);
-    key_leds.SetB(6, KeyLedState::Blink);
-    key_leds.SetB(7, KeyLedState::On);
+    if(state.b_performance_mode)
+    {
+        for(int i = 0; i < 8; ++i)
+            key_leds.SetB(i, hw.KeyboardState(kKeyBIndices[i]) ? KeyLedState::On : KeyLedState::Off);
+    }
+    else
+    {
+        for(int i = 0; i < 4; ++i)
+            key_leds.SetB(i, i == state.transpose_index ? KeyLedState::On : KeyLedState::Off);
+    }
 }
 
 void HandleKeybedControls(const float raw_knobs[8])
@@ -897,7 +1112,7 @@ void HandleKeybedControls(const float raw_knobs[8])
             MarkLedsDirty();
         }
 
-        if(hw.KeyboardRisingEdge(kKeyBIndices[i]))
+        if(!state.b_performance_mode && hw.KeyboardRisingEdge(kKeyBIndices[i]))
         {
             ++telemetry.key_event_count;
             state.transpose_index = i;
@@ -940,6 +1155,26 @@ void HandleKeybedControls(const float raw_knobs[8])
         MarkLedsDirty();
     }
 
+    if(state.b_performance_mode)
+    {
+        for(int i = 0; i < 8; ++i)
+        {
+            if(hw.KeyboardRisingEdge(kKeyBIndices[i]))
+            {
+                ++telemetry.key_event_count;
+                PlayBPerformanceNote(i);
+            }
+            if(hw.KeyboardFallingEdge(kKeyBIndices[i])
+               && state.b_performance_note_active
+               && state.b_performance_note == kBPerformanceNotes[i])
+            {
+                ++telemetry.key_event_count;
+                ReleaseBPerformanceNote();
+            }
+        }
+        return;
+    }
+
     if(hw.KeyboardRisingEdge(kKeyBIndices[4]))
     {
         ++telemetry.key_event_count;
@@ -979,13 +1214,25 @@ void HandleKeybedControls(const float raw_knobs[8])
     }
 }
 
-void HandleSwitchActions(bool sw2_pressed)
+void HandleSwitchActions(bool sw2_rising)
 {
-    if(hw.sw[1].RisingEdge() && !sw2_pressed)
+    if(sw2_rising)
     {
-        Panic();
-        SetFocus("Panic", "SW2");
+        state.b_performance_mode = !state.b_performance_mode;
+        ReleaseBPerformanceNote();
+        SetFocus("SW2", state.b_performance_mode ? "Performance" : "Controls");
+        MarkDisplayDirty();
+        MarkLedsDirty();
     }
+}
+
+void ToggleShiftBank(const float raw_knobs[8])
+{
+    const ParamBank next_bank = state.active_bank == ParamBank::Main
+                                    ? ParamBank::Alt
+                                    : ParamBank::Main;
+    SetActiveBank(next_bank, raw_knobs);
+    SetFocus("SW1", next_bank == ParamBank::Alt ? "Alt bank" : "Main bank");
 }
 
 void RenderOverview()
@@ -996,13 +1243,14 @@ void RenderOverview()
     snprintf(line,
              sizeof(line),
              "JUNE %s",
-             state.active_bank == ParamBank::Main ? "MAIN" : "ALT");
+             Sw2ModeName());
     hw.display.SetCursor(0, 0);
     hw.display.WriteString(line, Font_7x10, true);
 
     snprintf(line,
              sizeof(line),
-             "%s  TR:%s",
+             "%s %s  TR:%s",
+             state.active_bank == ParamBank::Main ? "MAIN" : "ALT",
              kWaveformNames[state.waveform_index],
              kTransposeNames[state.transpose_index]);
     hw.display.SetCursor(0, 12);
@@ -1010,31 +1258,39 @@ void RenderOverview()
 
     snprintf(line,
              sizeof(line),
-             "A5:%s A6:%s",
+             "A:%s %s %s %s",
              kVelocityNames[state.velocity_mode],
-             kKeyTrackNames[state.keytrack_mode]);
+             kKeyTrackNames[state.keytrack_mode],
+             kLfoTargetNames[state.lfo_target_mode],
+             kGlideNames[state.glide_mode]);
     hw.display.SetCursor(0, 22);
     hw.display.WriteString(line, Font_6x8, true);
 
-    snprintf(line,
-             sizeof(line),
-             "A7:%s A8:%s",
-             kLfoTargetNames[state.lfo_target_mode],
-             kGlideNames[state.glide_mode]);
-    hw.display.SetCursor(0, 30);
-    hw.display.WriteString(line, Font_6x8, true);
-
-    for(int i = 0; i < 8; ++i)
+    for(int row = 0; row < 4; ++row)
     {
-        char value_text[20];
-        const float value = state.banks.Read(state.active_bank, i);
-        FormatParamValue(state.active_bank, i, value, value_text, sizeof(value_text));
+        const int left_idx  = row;
+        const int right_idx = row + 4;
+        char      left_value[12];
+        char      right_value[12];
+        FormatParamOverviewValue(state.active_bank,
+                                 left_idx,
+                                 state.banks.Read(state.active_bank, left_idx),
+                                 left_value,
+                                 sizeof(left_value));
+        FormatParamOverviewValue(state.active_bank,
+                                 right_idx,
+                                 state.banks.Read(state.active_bank, right_idx),
+                                 right_value,
+                                 sizeof(right_value));
 
-        const int x = (i < 4) ? 0 : 64;
-        const int y = 40 + ((i % 4) * 6);
-        snprintf(line, sizeof(line), "%s:%s", LabelFor(state.active_bank, i), value_text);
+        const int y = 32 + row * 8;
 
-        hw.display.SetCursor(x, y);
+        snprintf(line, sizeof(line), "%s:%s", ShortLabelFor(state.active_bank, left_idx), left_value);
+        hw.display.SetCursor(0, y);
+        hw.display.WriteString(line, Font_6x8, true);
+
+        snprintf(line, sizeof(line), "%s:%s", ShortLabelFor(state.active_bank, right_idx), right_value);
+        hw.display.SetCursor(64, y);
         hw.display.WriteString(line, Font_6x8, true);
     }
 
@@ -1059,8 +1315,10 @@ void RenderZoom()
     hw.display.SetCursor(0, 30);
     hw.display.WriteString(focus.value, Font_11x18, true);
 
+    char footer[24];
+    snprintf(footer, sizeof(footer), "SW2:%s", Sw2ModeName());
     hw.display.SetCursor(0, 54);
-    hw.display.WriteString("SW1=Alt  SW2+K8=Level", Font_6x8, true);
+    hw.display.WriteString(footer, Font_6x8, true);
     hw.display.Update();
 }
 
@@ -1108,15 +1366,25 @@ void ProcessUi()
 
     const bool sw1_pressed = hw.sw[0].Pressed();
     const bool sw2_pressed = hw.sw[1].Pressed();
+    const bool sw1_rising  = sw1_pressed && !state.sw1_was_pressed;
+    const bool sw2_rising  = sw2_pressed && !state.sw2_was_pressed;
 
-    SetActiveBank(sw1_pressed ? ParamBank::Alt : ParamBank::Main, raw_knobs);
+    if(sw1_rising)
+        ToggleShiftBank(raw_knobs);
+
+    if(sw1_pressed != state.sw1_was_pressed)
+    {
+        MarkDisplayDirty();
+        MarkLedsDirty();
+    }
+    state.sw1_was_pressed = sw1_pressed;
 
     if(sw2_pressed != state.sw2_was_pressed)
     {
         MarkDisplayDirty();
         MarkLedsDirty();
     }
-    if(sw2_pressed && !state.sw2_was_pressed)
+    if(sw2_rising)
     {
         state.output_captured = false;
         state.output_touch_anchor = raw_knobs[7];
@@ -1129,7 +1397,7 @@ void ProcessUi()
         ProcessOutputLevel(raw_knobs[7]);
 
     HandleKeybedControls(raw_knobs);
-    HandleSwitchActions(sw2_pressed);
+    HandleSwitchActions(sw2_rising);
     if(state.voice_dirty)
     {
         ApplyVoiceSetup();

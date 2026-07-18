@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-06-03
+Last updated: 2026-06-08
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -37,6 +37,50 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliRenderAssertionsPass`
 
 Latest automated gate attempt:
+
+- Date: 2026-06-08
+- Request: extend `field_delay_bundle` beyond the original four source-backed
+  delay modes by adding Phantasmagoria-inspired algorithms plus
+  `oamodular/time-machine`.
+- Result: `field_delay_bundle` now exposes six bundle algorithms:
+  Tape [multifx], Tank [reverb], Texture [FunBox], Long [sdram],
+  Spectral [Phantasmagoria], and 8 Tap [TimeMachine]. The two new modes are
+  clean-room behavior adaptations, not vendored source: Phantasmagoria was
+  verified as GPL-3.0, and OAM Time Machine was verified as CC BY-NC-SA 4.0.
+  The Field A-row mapping is now A1-A6 direct algorithm select, with A7/A8
+  preserved for octave shifting. A project-local
+  `MyProjects/_projects/Field_delay_bundle/Field_delay_bundle.dvpe` diagram
+  records the extended signal/control model.
+- Evidence:
+  - Red host build: `cmake --build build --config Debug --target unit_tests`
+    failed after the test edit because `kPhantasmagoria` and `kTimeMachine`
+    did not exist yet.
+  - Green host build: `cmake --build build --config Debug --target
+    unit_tests` passed after implementation.
+  - Green focused host CTest: `ctest --test-dir build -C Debug
+    --output-on-failure -R "DaisyDelayFxCoreTest|DelayFxAdaptationCoreTest"`
+    passed `8/8`.
+  - Green firmware build:
+    `C:\Program Files\DaisyToolchain\bin\make.exe` passed in
+    `../MyProjects/_projects/Field_delay_bundle`; final link reported FLASH
+    `118080 B` / `90.09%`, SRAM `54476 B` / `10.39%`, RAM_D2 `17224 B` /
+    `5.84%`, and SDRAM `6000 KB` / `9.16%`.
+  - Green firmware QAE:
+    `py -3 ../../../DAISY_QAE/validate_daisy_code.py .` passed `0 error(s),
+    0 warning(s)` for `Field_delay_bundle.cpp`.
+  - Green diff hygiene: `git diff --check -- <touched files>` passed with no
+    whitespace errors; Git reported line-ending normalization warnings only.
+- Interpretation:
+  - This is host-focused-test, firmware-build, and QAE verified. It is not a
+    direct code port of either external project and should be treated as a
+    source-inspired extended bundle.
+  - The firmware still has flash headroom, but 90.09% FLASH is tight enough
+    that future algorithm expansion should be deliberate.
+  - Full Release host gate, scenario-render sweeps, `make program`, physical
+    Field audio/control validation, external MIDI device enumeration, and
+    manual DAW/VST3 validation were not run.
+
+Previous automated gate attempt:
 
 - Date: 2026-06-03
 - Request: adapt four source-verified delay/Fx projects into Daisy Field

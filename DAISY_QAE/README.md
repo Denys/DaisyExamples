@@ -32,6 +32,7 @@ DAISY_QAE/
 ├── DAISY_DEVELOPMENT_STANDARDS.md   ← Workflow and code patterns (Field/Pod/Seed)
 ├── DAISY_DEBUG_STRATEGY.md           ← Serial and hardware debugging techniques
 ├── DAISY_TECHNICAL_REPORT.md         ← Comprehensive process documentation
+├── DAISY_TOOLCHAIN_LIBRARY_NOTES.md  ← newlib-nano/nosys runtime differences and risks
 ├── DAISY_BUGS.md                     ← Bug tracker with priority queue
 ├── DVPE_MODULE_CATALOG.md            ← Complete list of available DSP blocks
 │
@@ -42,7 +43,7 @@ DAISY_QAE/
 │
 ├── ── Tooling ────────────────────────────────────────────────────────────────
 ├── create_field_project.sh           ← Project scaffolding (fixes helper.py anti-pattern)
-├── validate_daisy_code.py            ← Automated linter (9 rules incl. hallucination detect)
+├── validate_daisy_code.py            ← Automated linter (runtime, Field, Makefile, API rules)
 └── generate_module_catalog.py        ← Script to regenerate module catalog from source
 ```
 
@@ -56,6 +57,7 @@ DAISY_QAE/
 | Scaffolding a new Field project | `./create_field_project.sh MyProject` |
 | Looking up API (GPIO, Audio, ADC) | [DAISY_TUTORIALS_KNOWLEDGE.md](DAISY_TUTORIALS_KNOWLEDGE.md) |
 | Something isn't working | [DAISY_DEBUG_STRATEGY.md](DAISY_DEBUG_STRATEGY.md) |
+| Toolchain/library behavior seems suspicious | [DAISY_TOOLCHAIN_LIBRARY_NOTES.md](DAISY_TOOLCHAIN_LIBRARY_NOTES.md) |
 | Need deep reference | [DAISY_TECHNICAL_REPORT.md](DAISY_TECHNICAL_REPORT.md) |
 | Found a bug, documenting fix | [DAISY_BUGS.md](DAISY_BUGS.md) |
 | Checking code against standards | `python validate_daisy_code.py MyProject.cpp` |
@@ -141,7 +143,8 @@ flowchart LR
     subgraph Phase1["📝 PLANNING"]
         A1["Concept Definition"]
         A2["Block Diagrams"]
-        A3["CONTROLS.md"]
+        A3[".dvpe Project"]
+        A4["CONTROLS.md"]
     end
     
     subgraph Phase2["💻 IMPLEMENTATION"]
@@ -161,7 +164,7 @@ flowchart LR
         D2["Update Standards"]
     end
     
-    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> C1
+    A1 --> A2 --> A3 --> A4 --> B1 --> B2 --> B3 --> C1
     C1 -->|"Pass"| C2
     C1 -->|"Fail"| C3
     C2 -->|"Pass"| D1
@@ -377,7 +380,7 @@ quadrantChart
 
 1. Read `DAISY_DEVELOPMENT_STANDARDS.md` first
 2. Use `DAISY_TUTORIALS_KNOWLEDGE.md` as API reference
-3. Follow the workflow: Concept → Block Diagrams → CONTROLS.md → Implementation
+3. Follow the workflow: Concept → Block Diagrams → .dvpe Project → CONTROLS.md → Implementation
 
 ### When Debugging
 
@@ -391,13 +394,15 @@ quadrantChart
 
 ---
 
-**Version**: 2.1
-**Last Updated**: 2026-02-08
+**Version**: 2.3
+**Last Updated**: 2026-06-07
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.3 | 2026-06-07 | Updated project workflow to require a project-local `.dvpe` artifact before firmware implementation |
+| 2.2 | 2026-06-07 | Added toolchain/library notes and updated validator description for newlib-nano/nosys risks |
 | 2.1 | 2026-02-08 | Added tooling entries (create_field_project.sh, validate_daisy_code.py) |
 | 2.0 | 2026-02-08 | Added 10 mermaid diagrams, visual diagram index, usage-by-phase chart |
 | 1.0 | 2026-02-08 | Initial version: document overview, quick reference table |

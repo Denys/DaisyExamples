@@ -1,0 +1,127 @@
+
+[FTJUNE] STATUS reason=periodic seq=9 ms=9134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=10 ms=10134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] COMMANDS HELP STATUS SNAP SELFTEST
+[FTJUNE] STATUS reason=periodic seq=11 ms=11134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=12 ms=12134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] SELFTEST reason=command result=PASS defaults=skipped pass=2 fail=0
+[FTJUNE] STATUS reason=periodic seq=13 ms=13134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=14 ms=14134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=command seq=15 ms=14736 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=16 ms=15134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=17 ms=16134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=18 ms=17134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] SNAP reason=command ms=17162 bank=main wave=SAW trans=0 vel=SCL
+[FTJUNE] SNAP modes key=HALF lfo=FILT glide=LEG out=80 outcap=0
+[FTJUNE] SNAP_MAIN p=58,12,2,22,78,24,12,50 cap=00
+[FTJUNE] SNAP_ALT p=42,18,14,10,70,50,0,18 cap=00
+[FTJUNE] STATUS reason=periodic seq=19 ms=18134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=20 ms=19134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=21 ms=20134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=22 ms=21134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=23 ms=22134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=24 ms=23134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=25 ms=24134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=26 ms=25134 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=27 ms=26135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=28 ms=27135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=29 ms=28135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=30 ms=29135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=31 ms=30135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=32 ms=31135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=33 ms=32135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=34 ms=33135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=35 ms=34135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=36 ms=35135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=37 ms=36135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=38 ms=37135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=39 ms=38135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=40 ms=39135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=41 ms=40135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=42 ms=41135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=43 ms=42135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=44 ms=43135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=45 ms=44135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=46 ms=45135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=47 ms=46135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0
+[FTJUNE] STATUS reason=periodic seq=48 ms=47135 bank=main gate=0 sus=0 note=60
+[FTJUNE] STATUS capM=00 capA=00 outcap=0 on=0 off=128 cc=0
+[FTJUNE] STATUS paramCap=0 paramWrite=0 key=0 reset=0 panic=0

@@ -26,6 +26,29 @@ float Mix(float a, float b, float amount)
     return a + (b - a) * Clamp01(amount);
 }
 
+float Wrap01(float value)
+{
+    value -= std::floor(value);
+    return value < 0.0f ? value + 1.0f : value;
+}
+
+float TriangleWindow(float phase)
+{
+    const float wrapped = Wrap01(phase);
+    return 1.0f - std::abs((2.0f * wrapped) - 1.0f);
+}
+
+float SkewUnit(float value, float skew)
+{
+    const float x = Clamp01(value);
+    const float amount = Clamp(skew, -1.0f, 1.0f);
+    if(amount < 0.0f)
+    {
+        return std::pow(x, 1.0f + (-amount * 3.0f));
+    }
+    return 1.0f - std::pow(1.0f - x, 1.0f + (amount * 3.0f));
+}
+
 float DbToLinear(float db)
 {
     return std::pow(10.0f, db / 20.0f);
@@ -50,7 +73,7 @@ float OnePoleCoeff(float hz, float sampleRate)
                  1.0f);
 }
 
-const std::array<DaisyDelayFxProfile, 4> kProfiles = {{
+const std::array<DaisyDelayFxProfile, kDaisyDelayFxAlgorithmCount> kProfiles = {{
     {DaisyDelayFxSource::kMultiFxPedal,
      "field_delay_multifx_pedal",
      "Field Delay MultiFX Pedal",
@@ -75,13 +98,35 @@ const std::array<DaisyDelayFxProfile, 4> kProfiles = {{
      "Farmer2K5/daisy-sdram-delaylines",
      "Focused external-buffer delay-line primitive with long fractional stereo "
      "delay and ping-pong feedback."},
+    {DaisyDelayFxSource::kPhantasmagoria,
+     "field_delay_phantasmagoria",
+     "Field Delay Phantasmagoria",
+     "FuzzyLotus/Phantasmagoria",
+     "GPL-3.0 spectral-delay source used as clean-room behavioral reference "
+     "for reverse-grain, smear, erosion, chamber-tap, and freeze-memory ideas."},
+    {DaisyDelayFxSource::kTimeMachine,
+     "field_delay_time_machine",
+     "Field Delay Time Machine",
+     "oamodular/time-machine",
+     "CC BY-NC-SA Time Machine source used as clean-room behavioral reference "
+     "for eight read-head tap mixing, skewed tap distribution, blur, and "
+     "feedback limiting."},
 }};
 
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4> kAlgorithmDescriptors = {{
+const std::array<DaisyDelayFxAlgorithmDescriptor, kDaisyDelayFxAlgorithmCount>
+    kAlgorithmDescriptors = {{
     {DaisyDelayFxSource::kMultiFxPedal, "Tape [multifx]", "Tape", "tape"},
     {DaisyDelayFxSource::kReverbPlayground, "Tank [reverb]", "Tank", "tank"},
     {DaisyDelayFxSource::kFunBox, "Texture [FunBox]", "Texture", "texture"},
     {DaisyDelayFxSource::kSdramDelaylines, "Long [sdram]", "Long", "long"},
+    {DaisyDelayFxSource::kPhantasmagoria,
+     "Spectral [Phantasmagoria]",
+     "Spectral",
+     "spectral"},
+    {DaisyDelayFxSource::kTimeMachine,
+     "8 Tap [TimeMachine]",
+     "8Tap",
+     "timemachine"},
 }};
 
 const DaisyDelayFxProfile& ProfileForSource(DaisyDelayFxSource source)
@@ -135,7 +180,7 @@ enum ParameterSlot : std::size_t
 };
 } // namespace
 
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4>&
+const std::array<DaisyDelayFxAlgorithmDescriptor, kDaisyDelayFxAlgorithmCount>&
 GetDaisyDelayFxAlgorithmDescriptors()
 {
     return kAlgorithmDescriptors;
@@ -336,13 +381,24 @@ void DaisyDelayFxCore::Process(const float* inputLeft,
         Prepare(sampleRate_, maxBlockSize_);
     }
 
-    const float synthBrightness = bundleMode_
+    const bool  bundleSynthControls =
+        bundleMode_ && source_ != DaisyDelayFxSource::kPhantasmagoria
+        && source_ != DaisyDelayFxSource::kTimeMachine;
+    const float synthBrightness = bundleSynthControls
                                       ? EffectiveParameterValueAt(kParamFreeze)
-                                      : EffectiveParameterValueAt(kParamTexture);
-    const float synthDecay = bundleMode_ ? EffectiveParameterValueAt(kParamMidiLevel)
-                                         : EffectiveParameterValueAt(kParamRelease);
-    const float synthLevel = bundleMode_ ? EffectiveParameterValueAt(kParamTempo)
-                                         : EffectiveParameterValueAt(kParamMidiLevel);
+                                      : (bundleMode_ ? 0.32f
+                                                     : EffectiveParameterValueAt(
+                                                           kParamTexture));
+    const float synthDecay = bundleSynthControls
+                                 ? EffectiveParameterValueAt(kParamMidiLevel)
+                                 : (bundleMode_ ? 0.20f
+                                                : EffectiveParameterValueAt(
+                                                      kParamRelease));
+    const float synthLevel = bundleSynthControls
+                                 ? EffectiveParameterValueAt(kParamTempo)
+                                 : (bundleMode_ ? 0.32f
+                                                : EffectiveParameterValueAt(
+                                                      kParamMidiLevel));
     const float mix = EffectiveParameterValueAt(kParamMix);
     const float outputGain = DbToLinear(NativeValueAt(kParamOutput));
     const float attackMs = std::max(0.5f, NativeValueAt(kParamAttack));
@@ -369,6 +425,12 @@ void DaisyDelayFxCore::Process(const float* inputLeft,
                 break;
             case DaisyDelayFxSource::kSdramDelaylines:
                 ProcessSdramDelaylines(inL, inR, &wetL, &wetR);
+                break;
+            case DaisyDelayFxSource::kPhantasmagoria:
+                ProcessPhantasmagoria(inL, inR, &wetL, &wetR);
+                break;
+            case DaisyDelayFxSource::kTimeMachine:
+                ProcessTimeMachine(inL, inR, &wetL, &wetR);
                 break;
             case DaisyDelayFxSource::kMultiFxPedal:
             default:
@@ -832,48 +894,179 @@ void DaisyDelayFxCore::RebuildParameters()
     const bool funbox = source_ == DaisyDelayFxSource::kFunBox;
     const bool reverb = source_ == DaisyDelayFxSource::kReverbPlayground;
     const bool sdram = source_ == DaisyDelayFxSource::kSdramDelaylines;
+    const bool spectral = source_ == DaisyDelayFxSource::kPhantasmagoria;
+    const bool timeMachine = source_ == DaisyDelayFxSource::kTimeMachine;
     const bool bundle = bundleMode_;
+    const bool bundleSynthLabels = bundle && !spectral && !timeMachine;
 
     add("mix", "Mix", "", 0.48f, 0.0f, 100.0f, 0, 0, 0, 1);
-    add("time", sdram ? "Long Time" : "Delay Time", "ms", sdram ? 0.36f : 0.30f,
-        sdram ? 80.0f : 40.0f,
-        sdram ? 8000.0f : (funbox ? 3000.0f : 2200.0f), 0, 0, 1, 2);
+    add("time",
+        sdram ? "Long Time"
+              : (spectral ? "Spectral Time"
+                          : (timeMachine ? "Tap Time" : "Delay Time")),
+        "ms",
+        sdram || timeMachine ? 0.36f : (spectral ? 0.32f : 0.30f),
+        sdram || timeMachine ? 80.0f : (spectral ? 20.0f : 40.0f),
+        sdram || timeMachine ? 8000.0f
+                             : (funbox ? 3000.0f
+                                       : (spectral ? 1800.0f : 2200.0f)),
+        0,
+        0,
+        1,
+        2);
     add("feedback", reverb ? "Decay" : "Feedback", "", reverb ? 0.62f : 0.45f,
         0.0f, 92.0f, 0, 0, 2, 3);
-    add("tone", reverb ? "HF Damp" : "Tone", "", 0.55f, 0.0f, 100.0f, 0, 0, 3, 4);
-    add("texture", funbox ? "Texture" : (reverb ? "Tank Color" : "Grit"),
-        "", funbox ? 0.42f : 0.30f, 0.0f, 100.0f, 0, 0, 4, 5);
-    add("mod", funbox ? "Drift" : "Mod", "", funbox ? 0.36f : 0.22f,
-        0.0f, 100.0f, 0, 0, 5, 6);
+    add("tone",
+        reverb ? "HF Damp" : (spectral ? "Repeat Age" : "Tone"),
+        "",
+        spectral ? 0.34f : 0.55f,
+        0.0f,
+        100.0f,
+        0,
+        0,
+        3,
+        4);
+    add("texture",
+        funbox ? "Texture"
+               : (reverb ? "Tank Color"
+                         : (spectral ? "Reverse Mix"
+                                     : (timeMachine ? "Distribution" : "Grit"))),
+        "",
+        funbox ? 0.42f : (spectral ? 0.36f : (timeMachine ? 0.50f : 0.30f)),
+        0.0f,
+        100.0f,
+        0,
+        0,
+        4,
+        5);
+    add("mod",
+        funbox ? "Drift"
+               : (spectral ? "Tape Warble" : (timeMachine ? "Blur" : "Mod")),
+        "",
+        funbox ? 0.36f : (spectral ? 0.28f : (timeMachine ? 0.22f : 0.22f)),
+        0.0f,
+        100.0f,
+        0,
+        0,
+        5,
+        6);
     add("drive", "Input Drive", "dB", 0.38f, -12.0f, 18.0f, 1, 0, 6, 7);
     add("output", "Output", "dB", 0.63f, -18.0f, 6.0f, 1, 0, 7, 8);
 
-    add("pre_delay", "Pre Delay", "ms", reverb ? 0.26f : 0.12f, 0.0f, 500.0f,
-        0, 1, 0, 9);
+    add("pre_delay",
+        spectral ? "Chamber Pre" : "Pre Delay",
+        "ms",
+        reverb ? 0.26f : (spectral ? 0.18f : 0.12f),
+        0.0f,
+        500.0f,
+        0,
+        1,
+        0,
+        9);
     add("width", "Width", "", 0.65f, 0.0f, 100.0f, 0, 1, 1, 10);
-    add("diffusion", reverb ? "Diffusion" : "Spread", "", reverb ? 0.72f : 0.36f,
-        0.0f, 100.0f, 0, 1, 2, 11);
-    add("damping", "Damping", "", 0.45f, 0.0f, 100.0f, 0, 1, 3, 12);
-    add("tap_ratio", funbox ? "Tap Mode" : "Rhythm", "", 0.34f, 0.0f, 100.0f,
-        0, 1, 4, 13, 4);
-    add("freeze", bundle ? "Synth Bright" : "Freeze Amt", "", bundle ? 0.32f : 0.0f,
-        0.0f, 100.0f, 0, 1, 5, 14);
-    add("midi_level", bundle ? "Synth Decay" : "MIDI Level", "",
-        bundle ? 0.20f : 0.35f, 0.0f, 100.0f, 0, 1, 6, 15);
-    add("tempo", bundle ? "Synth Level" : "Tempo", bundle ? "" : "BPM",
-        bundle ? 0.32f : 0.42f, bundle ? 0.0f : 40.0f, bundle ? 100.0f : 220.0f,
-        0, 1, 7, 16);
+    add("diffusion",
+        reverb ? "Diffusion" : (spectral ? "Smear Diff" : "Spread"),
+        "",
+        reverb ? 0.72f : (spectral ? 0.45f : 0.36f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        2,
+        11);
+    add("damping",
+        spectral ? "Erosion" : "Damping",
+        "",
+        spectral ? 0.28f : 0.45f,
+        0.0f,
+        100.0f,
+        0,
+        1,
+        3,
+        12);
+    add("tap_ratio",
+        funbox ? "Tap Mode"
+               : (spectral ? "Chamber Mix"
+                           : (timeMachine ? "Tap Pattern" : "Rhythm")),
+        "",
+        spectral ? 0.32f : (timeMachine ? 0.40f : 0.34f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        4,
+        13,
+        funbox || timeMachine ? 4 : 0);
+    add("freeze",
+        bundleSynthLabels ? "Synth Bright"
+                          : (spectral ? "Freeze Voice" : "Freeze Amt"),
+        "",
+        bundleSynthLabels ? 0.32f : (spectral ? 0.12f : 0.0f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        5,
+        14);
+    add("midi_level",
+        bundleSynthLabels ? "Synth Decay" : "MIDI Level",
+        "",
+        bundleSynthLabels ? 0.20f : 0.35f,
+        0.0f,
+        100.0f,
+        0,
+        1,
+        6,
+        15);
+    add("tempo",
+        bundleSynthLabels ? "Synth Level" : "Tempo",
+        bundleSynthLabels ? "" : "BPM",
+        bundleSynthLabels ? 0.32f : 0.42f,
+        bundleSynthLabels ? 0.0f : 40.0f,
+        bundleSynthLabels ? 100.0f : 220.0f,
+        0,
+        1,
+        7,
+        16);
 
     add("size", reverb ? "Tank Size" : "Range", "", reverb ? 0.70f : 0.48f,
         0.0f, 100.0f, 0, 2, 0, 17);
-    add("density", funbox ? "Grain Density" : "Density", "", funbox ? 0.55f : 0.40f,
-        0.0f, 100.0f, 0, 2, 1, 18);
+    add("density",
+        funbox ? "Grain Density"
+               : (timeMachine ? "Tap Focus" : "Density"),
+        "",
+        funbox ? 0.55f : (timeMachine ? 0.42f : 0.40f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        1,
+        18);
     add("low_cut", "Low Cut", "Hz", 0.14f, 20.0f, 600.0f, 0, 2, 2, 19);
     add("high_cut", "High Cut", "Hz", 0.80f, 1200.0f, 16000.0f, 0, 2, 3, 20);
-    add("smear", funbox ? "Spectral Smear" : "Smear", "", funbox ? 0.52f : 0.25f,
-        0.0f, 100.0f, 0, 2, 4, 21);
-    add("warp", sdram ? "Interp Warp" : "Warp", "", sdram ? 0.20f : 0.34f,
-        0.0f, 100.0f, 0, 2, 5, 22);
+    add("smear",
+        funbox ? "Spectral Smear"
+               : (timeMachine ? "Blur Spread" : "Smear"),
+        "",
+        funbox ? 0.52f : (timeMachine ? 0.36f : 0.25f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        4,
+        21);
+    add("warp",
+        sdram ? "Interp Warp"
+              : (spectral ? "Freeze Drift"
+                          : (timeMachine ? "Clock Warp" : "Warp")),
+        "",
+        sdram ? 0.20f : (spectral ? 0.22f : 0.34f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        5,
+        22);
     add("attack", "MIDI Attack", "ms", 0.08f, 0.5f, 100.0f, 1, 2, 6, 23);
     add("release", "MIDI Release", "ms", 0.36f, 10.0f, 2000.0f, 0, 2, 7, 24);
 }
@@ -1334,5 +1527,227 @@ void DaisyDelayFxCore::ProcessSdramDelaylines(float inputLeft,
     const float smear = EffectiveParameterValueAt(kParamSmear);
     *outputLeft = Mix(readL, tapL, smear);
     *outputRight = Mix(readR, tapR, smear);
+}
+
+void DaisyDelayFxCore::ProcessPhantasmagoria(float inputLeft,
+                                             float inputRight,
+                                             float* outputLeft,
+                                             float* outputRight)
+{
+    const float sr = static_cast<float>(sampleRate_);
+    const float drive = DbToLinear(NativeValueAt(kParamDrive));
+    const float inL = inputLeft * drive;
+    const float inR = inputRight * drive;
+    const float monoIn = (inL + inR) * 0.5f;
+    const float timeMs = NativeValueAt(kParamTime);
+    const float baseDelay = Clamp(timeMs * 0.001f * sr,
+                                  48.0f,
+                                  delays_[0].size > 1608
+                                      ? static_cast<float>(delays_[0].size - 1600)
+                                      : 48.0f);
+    const float feedback = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.90f,
+                                 0.0f,
+                                 0.90f);
+    const float reverse = EffectiveParameterValueAt(kParamTexture);
+    const float smear = Clamp01(EffectiveParameterValueAt(kParamDiffusion)
+                                + EffectiveParameterValueAt(kParamSmear) * 0.45f);
+    const float erosion = Clamp01(EffectiveParameterValueAt(kParamDamping)
+                                  + EffectiveParameterValueAt(kParamTone) * 0.35f);
+    const float chamber = EffectiveParameterValueAt(kParamTapRatio);
+    const float freeze = EffectiveParameterValueAt(kParamFreeze);
+    const float evolve = EffectiveParameterValueAt(kParamWarp);
+    const float width = EffectiveParameterValueAt(kParamWidth);
+    const float mod = EffectiveParameterValueAt(kParamMod);
+
+    lfoPhase_ = Wrap01(lfoPhase_ + (0.045f + mod * 1.9f) / sr);
+    slowLfoPhase_ = Wrap01(slowLfoPhase_ + (0.011f + evolve * 0.09f) / sr);
+    const float warble = (std::sin(2.0f * kPi * lfoPhase_)
+                          + std::sin(2.0f * kPi * Wrap01(lfoPhase_ * 3.1f))
+                                * 0.35f
+                          + std::sin(2.0f * kPi * Wrap01(lfoPhase_ * 0.13f))
+                                * 0.55f)
+                         * (8.0f + 240.0f * mod * mod);
+
+    delaySmooth_[0] += 0.00035f * ((baseDelay + warble) - delaySmooth_[0]);
+    delaySmooth_[1] += 0.00035f
+                       * ((baseDelay * (1.0f + width * 0.08f) - warble)
+                          - delaySmooth_[1]);
+
+    const float fwdL = delays_[0].Read(delaySmooth_[0]);
+    const float fwdR = delays_[1].Read(delaySmooth_[1]);
+
+    auto grainRead = [baseDelay, warble, this](const DelayLine& line,
+                                               float            phase) {
+        const float aPhase = Wrap01(phase);
+        const float bPhase = Wrap01(phase + 0.5f);
+        const float aWindow = TriangleWindow(aPhase);
+        const float bWindow = TriangleWindow(bPhase);
+        const float aDelay = baseDelay * Mix(0.18f, 1.08f, aPhase) + warble;
+        const float bDelay = baseDelay * Mix(0.18f, 1.08f, bPhase) - warble;
+        const float a = line.Read(aDelay) * aWindow;
+        const float b = line.Read(bDelay) * bWindow;
+        return (a + b) / std::max(0.001f, aWindow + bWindow);
+    };
+
+    const float revL = grainRead(delays_[0], slowLfoPhase_);
+    const float revR = grainRead(delays_[1], Wrap01(slowLfoPhase_ + 0.37f));
+    float wetL = Mix(fwdL, revL, reverse);
+    float wetR = Mix(fwdR, revR, reverse);
+
+    if(smear > 0.001f)
+    {
+        const float tapA = 0.010f * sr;
+        const float tapB = 0.025f * sr;
+        wetL = wetL * (1.0f - smear * 0.42f)
+               + delays_[0].Read(delaySmooth_[0] + tapA) * smear * 0.24f
+               + delays_[0].Read(delaySmooth_[0] + tapB) * smear * 0.20f;
+        wetR = wetR * (1.0f - smear * 0.42f)
+               + delays_[1].Read(delaySmooth_[1] + tapA) * smear * 0.24f
+               + delays_[1].Read(delaySmooth_[1] + tapB) * smear * 0.20f;
+    }
+
+    const float erosionHz = 7800.0f - erosion * 6500.0f;
+    const float erosionCoeff = OnePoleCoeff(erosionHz, sr);
+    dampingState_[0] += erosionCoeff * (wetL - dampingState_[0]);
+    dampingState_[1] += erosionCoeff * (wetR - dampingState_[1]);
+    wetL = Mix(wetL, dampingState_[0], erosion) * (1.0f - erosion * 0.35f);
+    wetR = Mix(wetR, dampingState_[1], erosion) * (1.0f - erosion * 0.35f);
+
+    static constexpr std::array<float, 4> kChamberTapsMs = {{
+        83.0f,
+        151.0f,
+        227.0f,
+        311.0f,
+    }};
+    float chamberSum = 0.0f;
+    for(float tapMs : kChamberTapsMs)
+    {
+        chamberSum += delays_[2].Read(tapMs * 0.001f * sr);
+    }
+    chamberSum *= 0.25f;
+    delays_[2].Write(monoIn + chamberSum * feedback * 0.72f);
+    const float chamberOut = chamberSum * chamber * 0.75f;
+
+    const float evolveDrift = std::sin(2.0f * kPi * slowLfoPhase_) * 18.0f
+                              * evolve * freeze;
+    const float freezeA = delays_[3].Read(0.097f * sr + evolveDrift);
+    const float freezeB = delays_[3].Read(0.149f * sr - evolveDrift * 0.7f);
+    const float freezeC = delays_[3].Read(0.199f * sr + evolveDrift * 0.43f);
+    const float freezeOut = (freezeA + freezeB + freezeC) * 0.3333333f;
+    delays_[3].Write(monoIn * (1.0f - freeze)
+                     + freezeOut * freeze * (0.72f + feedback * 0.20f));
+
+    wetL = FastTanh(wetL + chamberOut + freezeOut * freeze * 0.85f);
+    wetR = FastTanh(wetR + chamberOut + freezeOut * freeze * 0.85f);
+
+    const float toneHz = 1000.0f + (1.0f - EffectiveParameterValueAt(kParamHighCut))
+                                      * 13000.0f;
+    const float toneCoeff = OnePoleCoeff(toneHz, sr);
+    toneState_[0] += toneCoeff * (wetL - toneState_[0]);
+    toneState_[1] += toneCoeff * (wetR - toneState_[1]);
+
+    delays_[0].Write(inL + toneState_[1] * feedback);
+    delays_[1].Write(inR + toneState_[0] * feedback);
+
+    const float mono = (toneState_[0] + toneState_[1]) * 0.5f;
+    *outputLeft = Mix(mono, toneState_[0], width);
+    *outputRight = Mix(mono, toneState_[1], width);
+}
+
+void DaisyDelayFxCore::ProcessTimeMachine(float inputLeft,
+                                          float inputRight,
+                                          float* outputLeft,
+                                          float* outputRight)
+{
+    const float sr = static_cast<float>(sampleRate_);
+    const float drive = DbToLinear(NativeValueAt(kParamDrive));
+    const float inL = inputLeft * drive;
+    const float inR = inputRight * drive;
+    const float timeMs = NativeValueAt(kParamTime);
+    const float baseDelay = Clamp(timeMs * 0.001f * sr,
+                                  48.0f,
+                                  delays_[0].size > 1608
+                                      ? static_cast<float>(delays_[0].size - 1600)
+                                      : 48.0f);
+    const float feedback = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.98f,
+                                 0.0f,
+                                 0.98f);
+    const float distribution = (EffectiveParameterValueAt(kParamTexture) * 2.0f)
+                               - 1.0f;
+    const float blur = Clamp01(EffectiveParameterValueAt(kParamMod)
+                               + EffectiveParameterValueAt(kParamSmear) * 0.35f);
+    const float focus = EffectiveParameterValueAt(kParamDensity);
+    const float width = EffectiveParameterValueAt(kParamWidth);
+    const float warp = EffectiveParameterValueAt(kParamWarp);
+    const int pattern = QuantizedState(ParameterValueAt(kParamTapRatio), 4);
+
+    lfoPhase_ = Wrap01(lfoPhase_ + (0.017f + blur * 0.55f) / sr);
+    slowLfoPhase_ = Wrap01(slowLfoPhase_ + (0.005f + warp * 0.05f) / sr);
+    const float blurLfo = std::sin(2.0f * kPi * lfoPhase_);
+
+    float wetL = 0.0f;
+    float wetR = 0.0f;
+    float ampSum = 0.0f;
+    for(std::size_t i = 0; i < 8; ++i)
+    {
+        float position = static_cast<float>(i + 1) / 8.0f;
+        if(pattern == 1)
+        {
+            position = static_cast<float>((i % 4) + 1) / 4.0f;
+        }
+        else if(pattern == 2)
+        {
+            position = static_cast<float>((i + 1) * (i + 1)) / 64.0f;
+        }
+        else if(pattern == 3)
+        {
+            position = 1.0f - (static_cast<float>(8 - i) / 8.0f)
+                                  * (static_cast<float>(8 - i) / 8.0f);
+        }
+        const float skewed = SkewUnit(position, distribution);
+        const float spread = Mix(0.10f, 1.0f, skewed);
+        const float blurOffset = blurLfo * blur * baseDelay
+                                 * (0.002f + static_cast<float>(i) * 0.0018f);
+        const float stereoOffset = width * baseDelay * 0.012f
+                                   * (static_cast<float>(i % 2) * 2.0f - 1.0f);
+        const float delay = Clamp(baseDelay * spread + blurOffset,
+                                  24.0f,
+                                  delays_[0].size > 0
+                                      ? static_cast<float>(delays_[0].size - 8)
+                                      : 24.0f);
+        const float ampShape = 1.0f
+                               - focus
+                                     * std::abs(static_cast<float>(i) - 3.5f)
+                                           / 3.5f;
+        const float amp = Clamp(0.08f + ampShape * 0.18f, 0.04f, 0.28f);
+        wetL += delays_[0].Read(delay + stereoOffset) * amp;
+        wetR += delays_[1].Read(delay - stereoOffset) * amp;
+        ampSum += amp;
+    }
+    const float ampCoef = 1.0f / std::max(1.0f, ampSum);
+    wetL *= ampCoef;
+    wetR *= ampCoef;
+
+    const float dampingHz = 900.0f + (1.0f - EffectiveParameterValueAt(kParamTone))
+                                        * 9500.0f;
+    const float dampingCoeff = OnePoleCoeff(dampingHz, sr);
+    dampingState_[0] += dampingCoeff * (wetL - dampingState_[0]);
+    dampingState_[1] += dampingCoeff * (wetR - dampingState_[1]);
+    const float limitedL = FastTanh(inL + dampingState_[1] * feedback);
+    const float limitedR = FastTanh(inR + dampingState_[0] * feedback);
+    delays_[0].Write(limitedL);
+    delays_[1].Write(limitedR);
+
+    const float auxTapL = delays_[2].Read(baseDelay * Mix(0.18f, 0.72f, warp));
+    const float auxTapR = delays_[3].Read(baseDelay * Mix(0.22f, 0.86f, warp));
+    delays_[2].Write(inL + auxTapR * feedback * 0.55f);
+    delays_[3].Write(inR + auxTapL * feedback * 0.55f);
+
+    const float smear = EffectiveParameterValueAt(kParamSmear);
+    wetL = Mix(dampingState_[0], auxTapL, smear * 0.55f);
+    wetR = Mix(dampingState_[1], auxTapR, smear * 0.55f);
+    const float mono = (wetL + wetR) * 0.5f;
+    *outputLeft = Mix(mono, wetL, width);
+    *outputRight = Mix(mono, wetR, width);
 }
 } // namespace daisyhost

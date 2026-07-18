@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "spec": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\field-template-april\\field-template-april-synth-bd.json",
+  "outputs": {
+    "svg": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\field-template-april\\field-template-april-synth-bd.svg",
+    "html": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\field-template-april\\field-template-april-synth-bd.html",
+    "png": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\field-template-april\\field-template-april-synth-bd.png"
+  },
+  "checks": {
+    "blockCount": 21,
+    "linkCount": 23,
+    "modLinks": 3,
+    "audioLinks": 9,
+    "controlLinks": 9,
+    "feedbackLinks": 2
+  }
+}
