@@ -2,6 +2,9 @@
 
 Programmable guitar pedal examples for the `DaisyPedal` board helper.
 
+Clean CI checkouts apply `third_party/libDaisy-pedal.patch` to the pinned
+libDaisy commit before building this workspace.
+
 Phase 1 targets the GuitarPedal125b control surface:
 
 - Stereo audio I/O

@@ -1,0 +1,481 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 22b854cc..466b20fd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -32,0 +33 @@ add_library(${TARGET} STATIC
++    ${MODULE_DIR}/daisy_pedal.cpp
+diff --git a/Makefile b/Makefile
+index 239c867f..a166b626 100644
+--- a/Makefile
++++ b/Makefile
+@@ -27,0 +28 @@ daisy_petal \
++daisy_pedal \
+diff --git a/src/dev/oled_ssd130x.h b/src/dev/oled_ssd130x.h
+index 965b1f0c..1a72fdf4 100644
+--- a/src/dev/oled_ssd130x.h
++++ b/src/dev/oled_ssd130x.h
+@@ -56,0 +57,4 @@ class SSD130xI2CTransport
++  public:
++    daisy::I2CHandle& GetI2C() { return i2c_; }
++    uint8_t           GetAddress() { return i2c_address_; }
++
+@@ -391,0 +396,5 @@ class SSD130xDriver
++    /** Get the internal frame buffer */
++    uint8_t* GetBuffer() { return buffer_; }
++    /** Get the transport object */
++    Transport& GetTransport() { return transport_; }
++
+diff --git a/src/hid/disp/oled_display.h b/src/hid/disp/oled_display.h
+index 6b2cd035..62114303 100644
+--- a/src/hid/disp/oled_display.h
++++ b/src/hid/disp/oled_display.h
+@@ -52,0 +53,3 @@ class OledDisplay : public OneBitGraphicsDisplayImpl<OledDisplay<DisplayDriver>>
++    /** Get the internal driver */
++    DisplayDriver& GetDriver() { return driver_; }
++
+diff --git a/src/daisy_pedal.h b/src/daisy_pedal.h
+new file mode 100644
+index 00000000..164fa07f
+--- /dev/null
++++ b/src/daisy_pedal.h
+@@ -0,0 +1,182 @@
++/** @file daisy_pedal.h
++ *  @brief Daisy Seed based board helper for the GuitarPedal125b control surface.
++ *  @ingroup pedal_integration
++ */
++
++#pragma once
++#ifndef DSY_PEDAL_BSP_H
++#define DSY_PEDAL_BSP_H
++
++#include "daisy_seed.h"
++#include "dev/oled_ssd130x.h"
++
++namespace daisy
++{
++/** @addtogroup boards
++    @{
++*/
++
++/** @brief Hardware helper for Daisy Seed based guitar pedals that follow the
++ *  GuitarPedal125b control surface.
++ *  @details Phase 1 targets the 125B layout: 6 knobs, 2 footswitches,
++ *  2 status LEDs, rotary encoder, MIDI, OLED, and relay bypass/mute control.
++ *  @ingroup pedal_integration
++ */
++class DaisyPedal
++{
++  public:
++    /** Footswitch assignments */
++    enum SwitchId
++    {
++        SW_BYPASS, /**< Main bypass/latch footswitch */
++        SW_AUX,    /**< Secondary footswitch for tap/momentary duties */
++        SW_LAST,   /**< Number of switches */
++    };
++
++    /** Knob assignments ordered left-to-right across the panel */
++    enum Knob
++    {
++        KNOB_1,
++        KNOB_2,
++        KNOB_3,
++        KNOB_4,
++        KNOB_5,
++        KNOB_6,
++        KNOB_LAST,
++    };
++
++    /** Status LEDs */
++    enum LedId
++    {
++        LED_1,
++        LED_2,
++        LED_LAST,
++    };
++
++    using Display = OledDisplay<SSD130x4WireSoftSpi128x64Driver>;
++
++    DaisyPedal() {}
++    ~DaisyPedal() {}
++
++    /** Initialize the hardware and helper peripherals.
++     *  This configures the Seed, control inputs, OLED, MIDI, and both relays.
++     */
++    void Init(bool boost = false);
++
++    /** Wait some ms before going on.
++     *  \param delay_ms Delay time in milliseconds.
++     */
++    void DelayMs(size_t delay_ms);
++
++    /** Starts the callback
++     *  \param cb Interleaved callback function
++     */
++    void StartAudio(AudioHandle::InterleavingAudioCallback cb);
++
++    /** Starts the callback
++     *  \param cb Multichannel callback function
++     */
++    void StartAudio(AudioHandle::AudioCallback cb);
++
++    /** Change to a new interleaved callback */
++    void ChangeAudioCallback(AudioHandle::InterleavingAudioCallback cb);
++
++    /** Change to a new multichannel callback */
++    void ChangeAudioCallback(AudioHandle::AudioCallback cb);
++
++    /** Stop the audio engine if it is running. */
++    void StopAudio();
++
++    /** Update the audio sample rate.
++     *  Audio must be stopped for this to work.
++     */
++    void SetAudioSampleRate(SaiHandle::Config::SampleRate samplerate);
++
++    /** Returns the audio sample rate in Hz as a floating point number. */
++    float AudioSampleRate();
++
++    /** Sets the number of samples processed per channel by the audio callback.
++     *  \param size Audio block size
++     */
++    void SetAudioBlockSize(size_t size);
++
++    /** Returns the number of samples per channel in a block of audio. */
++    size_t AudioBlockSize();
++
++    /** Returns the rate in Hz that the audio callback is called. */
++    float AudioCallbackRate();
++
++    /** Start analog to digital conversion. */
++    void StartAdc();
++
++    /** Stop transferring data from the ADC. */
++    void StopAdc();
++
++    /** Process analog controls. */
++    void ProcessAnalogControls();
++
++    /** Process digital controls. */
++    void ProcessDigitalControls();
++
++    /** Process all knobs, switches, and the encoder. */
++    inline void ProcessAllControls()
++    {
++        ProcessAnalogControls();
++        ProcessDigitalControls();
++    }
++
++    /** Get a normalized knob value in the range 0..1.
++     *  \param idx The knob to inspect.
++     */
++    float GetKnobValue(Knob idx) const;
++
++    /** Clear both panel LEDs. */
++    void ClearLeds();
++
++    /** Update both panel LEDs. Call from the main loop. */
++    void UpdateLeds();
++
++    /** Set the relay-driven audio bypass state.
++     *  \param enabled True routes audio around the codec path.
++     */
++    void SetAudioBypass(bool enabled);
++
++    /** Set the relay-driven audio mute state.
++     *  \param enabled True mutes the codec path for pop-free switching.
++     */
++    void SetAudioMute(bool enabled);
++
++    /** Current relay bypass state. */
++    bool AudioBypassEnabled() const { return audio_bypass_enabled_; }
++
++    /** Current relay mute state. */
++    bool AudioMuteEnabled() const { return audio_mute_enabled_; }
++
++    DaisySeed seed;          /**< Daisy Seed base hardware */
++    Display   display;       /**< Monochrome OLED display */
++    MidiUartHandler midi;    /**< MIDI handler routed to the pedal TRS jack */
++    Encoder         encoder; /**< Rotary encoder with click switch */
++    AnalogControl   knob[KNOB_LAST]; /**< Panel knobs */
++    Switch          switches[SW_LAST]; /**< Footswitches */
++    Led             leds[LED_LAST]; /**< Status LEDs */
++
++  private:
++    void SetHidUpdateRates();
++    void InitAnalogControls();
++    void InitSwitches();
++    void InitEncoder();
++    void InitLeds();
++    void InitDisplay();
++    void InitMidi();
++    void InitRelays();
++
++    bool     audio_bypass_enabled_ = false;
++    bool     audio_mute_enabled_   = false;
++    dsy_gpio bypass_relay_;
++    dsy_gpio mute_relay_;
++};
++
++/** @} */
++} // namespace daisy
++
++#endif
+diff --git a/src/daisy_pedal.cpp b/src/daisy_pedal.cpp
+new file mode 100644
+index 00000000..57c6c277
+--- /dev/null
++++ b/src/daisy_pedal.cpp
+@@ -0,0 +1,252 @@
++#include "daisy_pedal.h"
++
++using namespace daisy;
++
++namespace
++{
++constexpr Pin PIN_SW_BYPASS = seed::D6;
++constexpr Pin PIN_SW_AUX    = seed::D5;
++
++constexpr Pin PIN_ENC_A     = seed::D3;
++constexpr Pin PIN_ENC_B     = seed::D2;
++constexpr Pin PIN_ENC_CLICK = seed::D4;
++
++constexpr Pin PIN_KNOB_1 = seed::D15;
++constexpr Pin PIN_KNOB_2 = seed::D16;
++constexpr Pin PIN_KNOB_3 = seed::D17;
++constexpr Pin PIN_KNOB_4 = seed::D18;
++constexpr Pin PIN_KNOB_5 = seed::D19;
++constexpr Pin PIN_KNOB_6 = seed::D20;
++
++constexpr Pin PIN_LED_1 = seed::D22;
++constexpr Pin PIN_LED_2 = seed::D23;
++
++constexpr Pin PIN_OLED_DC   = seed::D9;
++constexpr Pin PIN_OLED_SCLK = seed::D11;
++constexpr Pin PIN_OLED_MOSI = seed::D10;
++
++constexpr Pin PIN_BYPASS_RELAY = seed::D1;
++constexpr Pin PIN_MUTE_RELAY   = seed::D12;
++
++constexpr Pin PIN_MIDI_TX = seed::D30;
++constexpr Pin PIN_MIDI_RX = seed::D29;
++} // namespace
++
++void DaisyPedal::Init(bool boost)
++{
++    seed.Configure();
++    seed.Init(boost);
++    InitSwitches();
++    InitEncoder();
++    InitAnalogControls();
++    InitLeds();
++    InitDisplay();
++    InitMidi();
++    InitRelays();
++    SetAudioBlockSize(48);
++}
++
++void DaisyPedal::DelayMs(size_t delay_ms)
++{
++    seed.DelayMs(delay_ms);
++}
++
++void DaisyPedal::StartAudio(AudioHandle::InterleavingAudioCallback cb)
++{
++    seed.StartAudio(cb);
++}
++
++void DaisyPedal::StartAudio(AudioHandle::AudioCallback cb)
++{
++    seed.StartAudio(cb);
++}
++
++void DaisyPedal::ChangeAudioCallback(AudioHandle::InterleavingAudioCallback cb)
++{
++    seed.ChangeAudioCallback(cb);
++}
++
++void DaisyPedal::ChangeAudioCallback(AudioHandle::AudioCallback cb)
++{
++    seed.ChangeAudioCallback(cb);
++}
++
++void DaisyPedal::StopAudio()
++{
++    seed.StopAudio();
++}
++
++void DaisyPedal::SetAudioSampleRate(SaiHandle::Config::SampleRate samplerate)
++{
++    seed.SetAudioSampleRate(samplerate);
++    SetHidUpdateRates();
++}
++
++float DaisyPedal::AudioSampleRate()
++{
++    return seed.AudioSampleRate();
++}
++
++void DaisyPedal::SetAudioBlockSize(size_t size)
++{
++    seed.SetAudioBlockSize(size);
++    SetHidUpdateRates();
++}
++
++size_t DaisyPedal::AudioBlockSize()
++{
++    return seed.AudioBlockSize();
++}
++
++float DaisyPedal::AudioCallbackRate()
++{
++    return seed.AudioCallbackRate();
++}
++
++void DaisyPedal::StartAdc()
++{
++    seed.adc.Start();
++}
++
++void DaisyPedal::StopAdc()
++{
++    seed.adc.Stop();
++}
++
++void DaisyPedal::ProcessAnalogControls()
++{
++    for(size_t i = 0; i < KNOB_LAST; i++)
++    {
++        knob[i].Process();
++    }
++}
++
++void DaisyPedal::ProcessDigitalControls()
++{
++    encoder.Debounce();
++    for(size_t i = 0; i < SW_LAST; i++)
++    {
++        switches[i].Debounce();
++    }
++}
++
++float DaisyPedal::GetKnobValue(Knob idx) const
++{
++    const size_t safe_idx = idx < KNOB_LAST ? idx : KNOB_1;
++    return knob[safe_idx].Value();
++}
++
++void DaisyPedal::ClearLeds()
++{
++    for(size_t i = 0; i < LED_LAST; i++)
++    {
++        leds[i].Set(0.0f);
++    }
++}
++
++void DaisyPedal::UpdateLeds()
++{
++    for(size_t i = 0; i < LED_LAST; i++)
++    {
++        leds[i].Update();
++    }
++}
++
++void DaisyPedal::SetAudioBypass(bool enabled)
++{
++    audio_bypass_enabled_ = enabled;
++    dsy_gpio_write(&bypass_relay_, enabled ? 1 : 0);
++}
++
++void DaisyPedal::SetAudioMute(bool enabled)
++{
++    audio_mute_enabled_ = enabled;
++    dsy_gpio_write(&mute_relay_, enabled ? 1 : 0);
++}
++
++void DaisyPedal::SetHidUpdateRates()
++{
++    const float rate = AudioCallbackRate();
++    for(size_t i = 0; i < KNOB_LAST; i++)
++    {
++        knob[i].SetSampleRate(rate);
++    }
++    for(size_t i = 0; i < LED_LAST; i++)
++    {
++        leds[i].SetSampleRate(rate);
++    }
++}
++
++void DaisyPedal::InitAnalogControls()
++{
++    AdcChannelConfig cfg[KNOB_LAST];
++    cfg[KNOB_1].InitSingle(PIN_KNOB_1);
++    cfg[KNOB_2].InitSingle(PIN_KNOB_2);
++    cfg[KNOB_3].InitSingle(PIN_KNOB_3);
++    cfg[KNOB_4].InitSingle(PIN_KNOB_4);
++    cfg[KNOB_5].InitSingle(PIN_KNOB_5);
++    cfg[KNOB_6].InitSingle(PIN_KNOB_6);
++    seed.adc.Init(cfg, KNOB_LAST);
++
++    for(size_t i = 0; i < KNOB_LAST; i++)
++    {
++        knob[i].Init(seed.adc.GetPtr(i), AudioCallbackRate());
++    }
++}
++
++void DaisyPedal::InitSwitches()
++{
++    switches[SW_BYPASS].Init(PIN_SW_BYPASS);
++    switches[SW_AUX].Init(PIN_SW_AUX);
++}
++
++void DaisyPedal::InitEncoder()
++{
++    encoder.Init(PIN_ENC_A, PIN_ENC_B, PIN_ENC_CLICK);
++}
++
++void DaisyPedal::InitLeds()
++{
++    leds[LED_1].Init(PIN_LED_1, false, AudioCallbackRate());
++    leds[LED_2].Init(PIN_LED_2, false, AudioCallbackRate());
++    ClearLeds();
++    UpdateLeds();
++}
++
++void DaisyPedal::InitDisplay()
++{
++    Display::Config display_config;
++    display_config.driver_config.transport_config.pin_config.sclk = PIN_OLED_SCLK;
++    display_config.driver_config.transport_config.pin_config.mosi = PIN_OLED_MOSI;
++    display_config.driver_config.transport_config.pin_config.dc   = PIN_OLED_DC;
++    display_config.driver_config.transport_config.pin_config.reset = Pin(PORTX, 0);
++    display.Init(display_config);
++    display.Fill(false);
++    display.Update();
++}
++
++void DaisyPedal::InitMidi()
++{
++    MidiUartHandler::Config midi_config;
++    midi_config.transport_config.periph = UartHandler::Config::Peripheral::USART_1;
++    midi_config.transport_config.tx     = PIN_MIDI_TX;
++    midi_config.transport_config.rx     = PIN_MIDI_RX;
++    midi.Init(midi_config);
++    midi.StartReceive();
++}
++
++void DaisyPedal::InitRelays()
++{
++    bypass_relay_.pin  = PIN_BYPASS_RELAY;
++    bypass_relay_.mode = DSY_GPIO_MODE_OUTPUT_PP;
++    bypass_relay_.pull = DSY_GPIO_NOPULL;
++    dsy_gpio_init(&bypass_relay_);
++
++    mute_relay_.pin  = PIN_MUTE_RELAY;
++    mute_relay_.mode = DSY_GPIO_MODE_OUTPUT_PP;
++    mute_relay_.pull = DSY_GPIO_NOPULL;
++    dsy_gpio_init(&mute_relay_);
++
++    SetAudioBypass(false);
++    SetAudioMute(false);
++}
