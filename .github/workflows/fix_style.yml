@@ -10,15 +10,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: DoozyX/clang-format-lint-action@v0.11
+    - uses: actions/checkout@v7
+    - uses: DoozyX/clang-format-lint-action@v0.20
       with:
         source: '.'
         exclude: './DaisySP ./libDaisy ./cube ./utils ./resources ./**/experimental'
         extensions: 'h,cpp'
         clangFormatVersion: 10
         inplace: True
-    - uses: EndBug/add-and-commit@v4
+    - uses: EndBug/add-and-commit@v10
       with:
         message: 'Automated: committing clang-format changes'
       env:
