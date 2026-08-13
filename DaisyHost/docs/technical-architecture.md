@@ -234,11 +234,14 @@ keeps:
 ### Selection and topology are orthogonal
 
 The selected node determines where live control, Field/Patch surface input, keyboard MIDI,
-CV/gate/test input, menu edits, and automation binding operate. Topology determines audio
-ordering.
+CV/gate configuration, test-input configuration, menu edits, and automation binding operate.
+Topology determines audio ordering and which node is the live audio entry point.
 
-A serial topology can therefore have `node0` first in the audio chain while `node1` is the
-currently selected edit target. This is intentional.
+In a serial topology, host or generated test input is consumed only by the topology's **entry
+node**. A selected downstream node can have its test-input settings edited, but it receives the
+routed output of the upstream node rather than a second injected source. A serial topology can
+therefore have `node0` first in the audio chain while `node1` is the currently selected edit
+target. This is intentional.
 
 ## 6. Session state
 
