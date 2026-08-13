@@ -165,8 +165,16 @@ utility bindings for bypass, tap/trails, mode selection, and freeze operations.
 
 ### SW1/SW2
 
-The two Field switches are host-side momentary controls. Their meaning is app/menu
-specific. The UI exposes only actions that the selected app declares as available.
+The two Field switches are fixed menu-navigation controls in the current host mapping:
+
+- **SW1 Back** targets the selected node's `/menu/navigation/back` action and dispatches
+  one encoder step backward;
+- **SW2 Forward** targets `/menu/navigation/forward` and dispatches one encoder step
+  forward.
+
+Their pressed state is host-side and momentary, but their semantic targets are not
+app-declared alternate switch actions. App-specific utility actions belong on declared
+Field key bindings rather than SW1/SW2.
 
 ### CV and Gate
 
