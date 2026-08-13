@@ -15,7 +15,11 @@ enum class DaisyDelayFxSource
     kReverbPlayground,
     kFunBox,
     kSdramDelaylines,
+    kPhantasmagoria,
+    kTimeMachine,
 };
+
+static constexpr std::size_t kDaisyDelayFxAlgorithmCount = 6;
 
 struct DaisyDelayFxProfile
 {
@@ -34,53 +38,53 @@ struct DaisyDelayFxAlgorithmDescriptor
     const char*        statePrefix;
 };
 
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4>&
+const std::array<DaisyDelayFxAlgorithmDescriptor, kDaisyDelayFxAlgorithmCount>&
 GetDaisyDelayFxAlgorithmDescriptors();
-const DaisyDelayFxAlgorithmDescriptor& GetDaisyDelayFxAlgorithmDescriptor(
-    DaisyDelayFxSource source);
+const DaisyDelayFxAlgorithmDescriptor&
+                   GetDaisyDelayFxAlgorithmDescriptor(DaisyDelayFxSource source);
 DaisyDelayFxSource DaisyDelayFxSourceForAlgorithmIndex(std::size_t index);
-std::size_t DaisyDelayFxAlgorithmIndex(DaisyDelayFxSource source);
+std::size_t        DaisyDelayFxAlgorithmIndex(DaisyDelayFxSource source);
 
 struct DaisyDelayFxParameter
 {
     std::string id;
     std::string label;
     std::string unitLabel;
-    float       normalizedValue = 0.0f;
-    float       defaultNormalizedValue = 0.0f;
+    float       normalizedValue          = 0.0f;
+    float       defaultNormalizedValue   = 0.0f;
     float       effectiveNormalizedValue = 0.0f;
-    float       nativeMinimum = 0.0f;
-    float       nativeMaximum = 1.0f;
-    float       nativeDefault = 0.0f;
-    int         nativePrecision = 0;
-    int         stepCount = 0;
-    int         importanceRank = 0;
-    int         layer = 0;
-    int         knob = 0;
-    bool        automatable = true;
-    bool        stateful = true;
-    bool        menuEditable = true;
+    float       nativeMinimum            = 0.0f;
+    float       nativeMaximum            = 1.0f;
+    float       nativeDefault            = 0.0f;
+    int         nativePrecision          = 0;
+    int         stepCount                = 0;
+    int         importanceRank           = 0;
+    int         layer                    = 0;
+    int         knob                     = 0;
+    bool        automatable              = true;
+    bool        stateful                 = true;
+    bool        menuEditable             = true;
 };
 
 class DaisyDelayFxCore
 {
   public:
     static constexpr std::size_t kPreferredBlockSize = 48;
-    static constexpr std::size_t kDelayLineCount = 4;
-    static constexpr std::size_t kMaxDelaySamples = 384000;
-    static constexpr std::size_t kLayerCount = 3;
-    static constexpr std::size_t kKnobCount = 8;
-    static constexpr std::size_t kFieldKeyCount = 16;
+    static constexpr std::size_t kDelayLineCount     = 4;
+    static constexpr std::size_t kMaxDelaySamples    = 384000;
+    static constexpr std::size_t kLayerCount         = 3;
+    static constexpr std::size_t kKnobCount          = 8;
+    static constexpr std::size_t kFieldKeyCount      = 16;
 
-    explicit DaisyDelayFxCore(
-        DaisyDelayFxSource source = DaisyDelayFxSource::kMultiFxPedal);
+    explicit DaisyDelayFxCore(DaisyDelayFxSource source
+                              = DaisyDelayFxSource::kMultiFxPedal);
 
-    void SetSource(DaisyDelayFxSource source);
-    DaisyDelayFxSource GetSource() const;
+    void                       SetSource(DaisyDelayFxSource source);
+    DaisyDelayFxSource         GetSource() const;
     const DaisyDelayFxProfile& GetProfile() const;
-    void SetBundleMode(bool enabled);
+    void                       SetBundleMode(bool enabled);
 
-    void AttachDelayStorage(float* storage,
+    void AttachDelayStorage(float*      storage,
                             std::size_t lineCount,
                             std::size_t samplesPerLine);
     void Prepare(double sampleRate, std::size_t maxBlockSize);
@@ -100,7 +104,7 @@ class DaisyDelayFxCore
     bool GetParameterValue(const char* parameterId,
                            float*      normalizedValue) const;
     bool SetEffectiveParameterValue(const std::string& parameterId,
-                                    float normalizedValue);
+                                    float              normalizedValue);
     bool SetEffectiveParameterValue(const char* parameterId,
                                     float       normalizedValue);
     bool GetEffectiveParameterValue(const std::string& parameterId,
@@ -110,130 +114,138 @@ class DaisyDelayFxCore
     void ClearEffectiveParameterOverrides();
 
     const std::vector<DaisyDelayFxParameter>& GetParameters() const;
-    const DaisyDelayFxParameter* FindParameter(
-        const std::string& parameterId) const;
+    const DaisyDelayFxParameter*
+                                 FindParameter(const std::string& parameterId) const;
     const DaisyDelayFxParameter* FindParameter(const char* parameterId) const;
-    const char* GetParameterForLayerKnob(std::size_t layer,
-                                         std::size_t knob) const;
+    const char*                  GetParameterForLayerKnob(std::size_t layer,
+                                                          std::size_t knob) const;
     std::string FormatParameterValue(const std::string& parameterId) const;
-    void FormatParameterValue(const char* parameterId,
-                              char*       destination,
-                              std::size_t destinationSize) const;
+    void        FormatParameterValue(const char* parameterId,
+                                     char*       destination,
+                                     std::size_t destinationSize) const;
 
     bool TriggerMomentaryAction(const std::string& actionId);
     bool TriggerFieldKeyAction(std::size_t zeroBasedIndex, bool pressed);
     void SetButtonState(std::size_t zeroBasedIndex, int state);
-    int GetButtonState(std::size_t zeroBasedIndex) const;
+    int  GetButtonState(std::size_t zeroBasedIndex) const;
     void SetInternalSynthMode(int mode);
-    int GetInternalSynthMode() const;
+    int  GetInternalSynthMode() const;
     void SetInternalSynthHoldMode(int mode);
-    int GetInternalSynthHoldMode() const;
+    int  GetInternalSynthHoldMode() const;
     std::array<float, kFieldKeyCount> GetFieldKeyLedValues() const;
 
     void HandleMidiEvent(std::uint8_t status,
                          std::uint8_t data1,
                          std::uint8_t data2);
-    int GetKeyboardOctaveOffset() const;
+    int  GetKeyboardOctaveOffset() const;
 
-    std::unordered_map<std::string, float> CaptureStatefulParameterValues()
-        const;
+    std::unordered_map<std::string, float>
+         CaptureStatefulParameterValues() const;
     void RestoreStatefulParameterValues(
         const std::unordered_map<std::string, float>& values);
 
   private:
     struct DelayLine
     {
-        float*      buffer = nullptr;
-        std::size_t size = 0;
+        float*      buffer     = nullptr;
+        std::size_t size       = 0;
         std::size_t writeIndex = 0;
 
-        void Init(float* externalBuffer, std::size_t externalSize);
-        void Clear();
-        void Write(float sample);
+        void  Init(float* externalBuffer, std::size_t externalSize);
+        void  Clear();
+        void  Write(float sample);
         float Read(float delaySamples) const;
     };
 
     struct SynthVoice
     {
-        int   note = -1;
-        bool  active = false;
-        bool  held = false;
+        int   note      = -1;
+        bool  active    = false;
+        bool  held      = false;
         float frequency = 261.625565f;
-        float velocity = 0.0f;
-        float phase = 0.0f;
-        float envelope = 0.0f;
-        float body = 0.0f;
-        float exciter = 0.0f;
+        float velocity  = 0.0f;
+        float phase     = 0.0f;
+        float envelope  = 0.0f;
+        float body      = 0.0f;
+        float exciter   = 0.0f;
     };
 
-    void RebuildParameters();
-    void UpdateParameterCache();
+    void                         RebuildParameters();
+    void                         UpdateParameterCache();
     const DaisyDelayFxParameter* FindParameterById(const char* id) const;
-    float ParameterValue(const char* id) const;
-    float EffectiveParameterValue(const char* id) const;
-    float NativeValue(const char* id) const;
-    float ParameterValueAt(std::size_t index) const;
-    float EffectiveParameterValueAt(std::size_t index) const;
-    float NativeValueAt(std::size_t index) const;
-    float NativeValue(const DaisyDelayFxParameter& parameter) const;
+    float                        ParameterValue(const char* id) const;
+    float                        EffectiveParameterValue(const char* id) const;
+    float                        NativeValue(const char* id) const;
+    float                        ParameterValueAt(std::size_t index) const;
+    float       EffectiveParameterValueAt(std::size_t index) const;
+    float       NativeValueAt(std::size_t index) const;
+    float       NativeValue(const DaisyDelayFxParameter& parameter) const;
     std::size_t ParameterIndex(const std::string& parameterId) const;
     std::size_t ParameterIndexById(const char* parameterId) const;
 
-    void StartSynthVoice(int note, float velocity);
-    void ReleaseSynthVoice(int note);
-    void ReleaseAllSynthVoices(bool immediate);
+    void        StartSynthVoice(int note, float velocity);
+    void        ReleaseSynthVoice(int note);
+    void        ReleaseAllSynthVoices(bool immediate);
     SynthVoice* FindVoiceForNote(int note);
     SynthVoice* AllocateVoice();
-    float ProcessInternalSynth(float brightness,
-                               float decay,
-                               float level,
-                               float attackMs,
-                               float releaseMs);
-    void ProcessMultiFx(float inputLeft,
-                        float inputRight,
-                        float* outputLeft,
-                        float* outputRight);
-    void ProcessReverbPlayground(float inputLeft,
-                                 float inputRight,
-                                 float* outputLeft,
-                                 float* outputRight);
-    void ProcessFunBox(float inputLeft,
-                       float inputRight,
-                       float* outputLeft,
-                       float* outputRight);
-    void ProcessSdramDelaylines(float inputLeft,
-                                float inputRight,
-                                float* outputLeft,
-                                float* outputRight);
+    float       ProcessInternalSynth(float brightness,
+                                     float decay,
+                                     float level,
+                                     float attackMs,
+                                     float releaseMs);
+    void        ProcessMultiFx(float  inputLeft,
+                               float  inputRight,
+                               float* outputLeft,
+                               float* outputRight);
+    void        ProcessReverbPlayground(float  inputLeft,
+                                        float  inputRight,
+                                        float* outputLeft,
+                                        float* outputRight);
+    void        ProcessFunBox(float  inputLeft,
+                              float  inputRight,
+                              float* outputLeft,
+                              float* outputRight);
+    void        ProcessSdramDelaylines(float  inputLeft,
+                                       float  inputRight,
+                                       float* outputLeft,
+                                       float* outputRight);
+    void        ProcessPhantasmagoria(float  inputLeft,
+                                      float  inputRight,
+                                      float* outputLeft,
+                                      float* outputRight);
+    void        ProcessTimeMachine(float  inputLeft,
+                                   float  inputRight,
+                                   float* outputLeft,
+                                   float* outputRight);
 
     DaisyDelayFxSource source_;
-    double             sampleRate_ = 48000.0;
+    double             sampleRate_   = 48000.0;
     std::size_t        maxBlockSize_ = kPreferredBlockSize;
-    bool               prepared_ = false;
-    bool               bundleMode_ = false;
+    bool               prepared_     = false;
+    bool               bundleMode_   = false;
 
     std::array<DelayLine, kDelayLineCount> delays_;
-    std::vector<DaisyDelayFxParameter> parameters_;
+    std::vector<DaisyDelayFxParameter>     parameters_;
     std::array<std::array<std::string, kKnobCount>, kLayerCount>
         layerKnobParameterIds_{};
 
-    std::array<int, 8>  buttonStates_{};
-    std::array<bool, 128> noteActive_{};
-    static constexpr std::size_t kSynthVoiceCount = 8;
+    std::array<int, 8>                       buttonStates_{};
+    std::array<bool, 128>                    noteActive_{};
+    static constexpr std::size_t             kSynthVoiceCount = 8;
     std::array<SynthVoice, kSynthVoiceCount> synthVoices_{};
-    int                 internalSynthMode_ = 1;
-    int                 internalSynthHoldMode_ = 0;
-    int                 activeMidiNote_ = 60;
-    float               activeMidiFrequencyHz_ = 261.625565f;
-    int                 keyboardOctaveOffset_ = 0;
-    float               notePhase_ = 0.0f;
-    float               noteEnvelope_ = 0.0f;
-    float               lfoPhase_ = 0.0f;
-    float               slowLfoPhase_ = 0.0f;
-    float               delaySmooth_[4] = {};
-    float               dampingState_[4] = {};
-    float               toneState_[2] = {};
-    float               rngState_ = 0.37f;
-    std::uint32_t       seed_ = 0;
+    int                                      internalSynthMode_     = 1;
+    int                                      internalSynthHoldMode_ = 0;
+    int                                      activeMidiNote_        = 60;
+    float         activeMidiFrequencyHz_ = 261.625565f;
+    int           keyboardOctaveOffset_  = 0;
+    float         notePhase_             = 0.0f;
+    float         noteEnvelope_          = 0.0f;
+    float         lfoPhase_              = 0.0f;
+    float         slowLfoPhase_          = 0.0f;
+    float         delaySmooth_[4]        = {};
+    float         dampingState_[4]       = {};
+    float         toneState_[2]          = {};
+    float         rngState_              = 0.37f;
+    std::uint32_t seed_                  = 0;
 };
 } // namespace daisyhost

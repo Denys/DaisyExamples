@@ -4,6 +4,47 @@ Canonical change tracker for `DaisyHost`.
 
 ## [Unreleased]
 
+- add `pedal_multidelay`, the compact multi-delay guitar pedal as a hosted app,
+  so its algorithms and control surface can be auditioned on the desktop
+  without flashing hardware:
+  - add the portable `PedalDelayEngine` with `DIGI`, `TAPE`, `MOD`, `REV`, and
+    `FREEZE`, one active mode at a time, sharing one history service, one
+    fractional-read policy, one delay-time transition policy, a configurable
+    feedback conditioner, modulation sources, a normalized overlap-add reverse
+    grain reader, and an explicit freeze state machine
+  - expose exactly five performance slots per mode (`TIME`, `FEEDBACK`, `MIX`,
+    `COLOR`, `MOTION`) with musician label, engineering label, unit, range,
+    curve, smoothing, and the exact DSP targets each control writes; macros
+    enumerate every target
+  - extend `ParameterDescriptor` with `slotId`, `engineeringLabel`, `curve`,
+    `dspTargets`, `smoothingMs`, `isMacro`, and `provisional`, appended after
+    the existing fields, and serialize them from `describe-app`
+  - add mode selection without restart, bypass with trails, tap tempo, and
+    explicit `capture / hold / accumulate / replace / clear` freeze operations
+    on the menu, the Field key rows, and the gate input
+  - verify with a clean Release build of `unit_tests DaisyHostCLI
+    DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`,
+    full Release CTest passing `337/337` (was `295/295` before the change),
+    37 new pedal tests, a non-silent five-mode `render` scenario, and recorded
+    host block timing per mode; ARM build, Cortex-M7 timing, SDRAM/cache
+    behavior, and hardware audio remain `NOT_CLAIMED`
+  - document the host milestone in `docs/pedal-multidelay.md`
+- extend `field_delay_bundle` from four to six algorithms:
+  - add `Spectral [Phantasmagoria]` as a clean-room behavior adaptation of
+    GPL-3.0 Phantasmagoria reverse-grain, smear, erosion, chamber-tap, and
+    freeze-memory ideas
+  - add `8 Tap [TimeMachine]` as a clean-room behavior adaptation of
+    CC BY-NC-SA OAM Time Machine eight-read-head tap distribution, skew, blur,
+    and feedback-limiting ideas
+  - remap bundle A keys so A1-A6 select algorithms directly and A7/A8 keep
+    octave shift behavior; add the project-local
+    `MyProjects/_projects/Field_delay_bundle/Field_delay_bundle.dvpe`
+    diagram
+  - verify with a red missing-enum build, green Debug `unit_tests` build,
+    focused Debug `DaisyDelayFxCoreTest|DelayFxAdaptationCoreTest` CTest
+    passing `8/8`, `Field_delay_bundle` firmware `make` passing at FLASH
+    `118080 B` / `90.09%`, and QAE passing `0 error(s), 0 warning(s)`; full
+    Release host gate and hardware validation remain separate evidence
 - add source-backed Field delay/Fx adaptations plus a selectable delay bundle
   with matching DaisyHost apps and `MyProjects/_projects/Field_delay_*`
   firmware projects:

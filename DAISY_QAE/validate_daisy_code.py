@@ -16,6 +16,14 @@ Rules:
     MAKEFILE-NO-LIBDAISY/NO-DAISYSP  Makefile missing directories
     LGPL-FLAG-MISSING   LGPL module used without USE_DAISYSP_LGPL = 1
     HALLUCINATED-API    Known fabricated DaisySP method name detected
+    FIELD-KEY-ROW-MAP   Legacy Field A/B key scan mapping detected
+    FIELD-LED-ROW-MAP   Legacy Field A/B LED helper mapping detected
+    FLOAT-PRINTF-NANO   Float printf formatting used without _printf_float
+    FLOAT-SCANF-NANO    Float scanf formatting used without _scanf_float
+    FLOAT-PRINTF-FLAG   Makefile deliberately links float printf support
+    FLOAT-SCANF-FLAG    Makefile deliberately links float scanf support
+    DYNAMIC-ALLOC       Heap allocation detected in firmware source
+    IOSTREAM-USAGE      Desktop-style C++ stream I/O detected
 
 Usage:
     python validate_daisy_code.py <file.cpp>
@@ -63,11 +71,163 @@ def extract_audio_callback(lines: List[str]) -> tuple:
     return (None, None)
 
 
+def _pattern_line(content: str, pattern: str) -> int:
+    match = re.search(pattern, content, re.DOTALL)
+    if not match:
+        return 0
+    return content[:match.start()].count('\n') + 1
+
+
+def check_field_row_mapping_patterns(content: str) -> List[Finding]:
+    """Catch the recurring Daisy Field physical A/B row inversion."""
+    findings = []
+
+    old_key_a = (
+        r'kKeyAIndices\s*\[\s*8\s*\]\s*=\s*\{\s*0\s*,\s*1\s*,\s*2\s*,'
+        r'\s*3\s*,\s*4\s*,\s*5\s*,\s*6\s*,\s*7\s*\}'
+    )
+    old_key_b = (
+        r'kKeyBIndices\s*\[\s*8\s*\]\s*=\s*\{\s*8\s*,\s*9\s*,\s*10\s*,'
+        r'\s*11\s*,\s*12\s*,\s*13\s*,\s*14\s*,\s*15\s*\}'
+    )
+    if re.search(old_key_a, content, re.DOTALL) or re.search(old_key_b, content, re.DOTALL):
+        line = _pattern_line(content, old_key_a) or _pattern_line(content, old_key_b)
+        findings.append(Finding(
+            "ERROR", line, "FIELD-KEY-ROW-MAP",
+            "Legacy Daisy Field A/B scan map detected; physical/logical A uses "
+            "scan 8..15 and physical/logical B uses scan 0..7"
+        ))
+
+    old_led_a_numeric = (
+        r'kLedKeysA\s*\[\s*8\s*\]\s*=\s*\{\s*15\s*,\s*14\s*,\s*13\s*,'
+        r'\s*12\s*,\s*11\s*,\s*10\s*,\s*9\s*,\s*8\s*\}'
+    )
+    old_led_b_numeric = (
+        r'kLedKeysB\s*\[\s*8\s*\]\s*=\s*\{\s*0\s*,\s*1\s*,\s*2\s*,'
+        r'\s*3\s*,\s*4\s*,\s*5\s*,\s*6\s*,\s*7\s*\}'
+    )
+    old_led_a_enum = (
+        r'kLedKeysA\s*\[\s*8\s*\]\s*=\s*\{(?=[^;]*LED_KEY_A1)(?=[^;]*LED_KEY_A8)[^;]*\}'
+    )
+    old_led_b_enum = (
+        r'kLedKeysB\s*\[\s*8\s*\]\s*=\s*\{(?=[^;]*LED_KEY_B1)(?=[^;]*LED_KEY_B8)[^;]*\}'
+    )
+    old_led_patterns = [old_led_a_numeric, old_led_b_numeric, old_led_a_enum, old_led_b_enum]
+    if any(re.search(pattern, content, re.DOTALL) for pattern in old_led_patterns):
+        line = next((_pattern_line(content, pattern) for pattern in old_led_patterns
+                     if _pattern_line(content, pattern)), 0)
+        findings.append(Finding(
+            "ERROR", line, "FIELD-LED-ROW-MAP",
+            "Legacy Daisy Field LED row helper map detected; physical/logical A "
+            "uses native LED_KEY_B1..B8 and physical/logical B uses native "
+            "LED_KEY_A1..A8"
+        ))
+
+    return findings
+
+
+def has_float_printf_format(line: str) -> bool:
+    return bool(re.search(
+        r'\b(?:snprintf|sprintf|printf|PrintLine)\s*\([^;\n]*%[-+ #0-9.]*[aAeEfFgG]',
+        line
+    ))
+
+
+def has_float_scanf_format(line: str) -> bool:
+    return bool(re.search(
+        r'\b(?:scanf|sscanf|fscanf)\s*\([^;\n]*%[*0-9.]*l?[aAeEfFgG]',
+        line
+    ))
+
+
+def check_float_printf_patterns(lines: List[str], has_float_printf_flag: bool) -> List[Finding]:
+    findings = []
+    if has_float_printf_flag:
+        return findings
+
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith('//'):
+            continue
+        if has_float_printf_format(line):
+            findings.append(Finding(
+                "ERROR", i + 1, "FLOAT-PRINTF-NANO",
+                "Float printf format used without _printf_float; default Daisy "
+                "newlib-nano builds can render %f/%g/%e values blank. Use "
+                "integer-only formatting or explicitly budget for -u _printf_float."
+            ))
+    return findings
+
+
+def check_float_scanf_patterns(lines: List[str], has_float_scanf_flag: bool) -> List[Finding]:
+    findings = []
+    if has_float_scanf_flag:
+        return findings
+
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith('//'):
+            continue
+        if has_float_scanf_format(line):
+            findings.append(Finding(
+                "ERROR", i + 1, "FLOAT-SCANF-NANO",
+                "Float scanf format used without _scanf_float; default Daisy "
+                "newlib-nano builds do not provide normal float scanning. Use "
+                "integer/fixed-point parsing or explicitly budget for -u _scanf_float."
+            ))
+    return findings
+
+
+def check_heap_allocation_patterns(lines: List[str]) -> List[Finding]:
+    findings = []
+    allocation_patterns = [
+        (r'\bmalloc\s*\(', "malloc()"),
+        (r'\bcalloc\s*\(', "calloc()"),
+        (r'\brealloc\s*\(', "realloc()"),
+        (r'\bfree\s*\(', "free()"),
+        (r'\bnew\s+\w', "operator new"),
+        (r'\bdelete\s+', "operator delete"),
+    ]
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith('//'):
+            continue
+        for pattern, name in allocation_patterns:
+            if re.search(pattern, line):
+                findings.append(Finding(
+                    "WARN", i + 1, "DYNAMIC-ALLOC",
+                    f"{name} detected; Daisy newlib-nano heap allocation can "
+                    "fragment or fail in long-running audio firmware. Prefer "
+                    "static/fixed-capacity storage."
+                ))
+                break
+    return findings
+
+
 def check_file(filepath: str) -> List[Finding]:
     findings = []
     with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     lines = content.splitlines()
+
+    makefile_path = os.path.join(os.path.dirname(filepath), 'Makefile')
+    makefile = None
+    has_float_printf_flag = False
+    has_float_scanf_flag = False
+    if os.path.exists(makefile_path):
+        with open(makefile_path, 'r', encoding='utf-8', errors='replace') as f:
+            makefile = f.read()
+        has_float_printf_flag = bool(re.search(r'-u\s*_printf_float|-u_printf_float',
+                                               makefile))
+        has_float_scanf_flag = bool(re.search(r'-u\s*_scanf_float|-u_scanf_float',
+                                              makefile))
+
+    findings.extend(check_field_row_mapping_patterns(content))
+    findings.extend(check_float_printf_patterns(lines, has_float_printf_flag))
+    findings.extend(check_float_scanf_patterns(lines, has_float_scanf_flag))
+    findings.extend(check_heap_allocation_patterns(lines))
+    if Path(filepath).suffix.lower() != '.cpp':
+        return findings
 
     cb_start, cb_end = extract_audio_callback(lines)
 
@@ -181,11 +341,29 @@ def check_file(filepath: str) -> List[Finding]:
                 f"{name} used — avoid heap-allocating STL in embedded audio code"
             ))
 
+    iostream_patterns = [
+        (r'#include\s*<iostream>', "<iostream>"),
+        (r'\bstd::cout\b', "std::cout"),
+        (r'\bstd::cin\b', "std::cin"),
+        (r'\bstd::cerr\b', "std::cerr"),
+        (r'\bstd::endl\b', "std::endl"),
+        (r'\bstd::ostream\b', "std::ostream"),
+        (r'\bstd::istream\b', "std::istream"),
+    ]
+    for pattern, name in iostream_patterns:
+        match = re.search(pattern, content)
+        if match:
+            line_num = content[:match.start()].count('\n') + 1
+            findings.append(Finding(
+                "WARN", line_num, "IOSTREAM-USAGE",
+                f"{name} detected; desktop-style streams can pull large "
+                "libstdc++_nano/runtime pieces. Use bounded snprintf or "
+                "libDaisy logger instead."
+            ))
+            break
+
     # ── Rule 8: Makefile checks ──
-    makefile_path = os.path.join(os.path.dirname(filepath), 'Makefile')
-    if os.path.exists(makefile_path):
-        with open(makefile_path, 'r', encoding='utf-8', errors='replace') as f:
-            makefile = f.read()
+    if makefile is not None:
         if not re.search(r'LIBDAISY_DIR', makefile):
             findings.append(Finding(
                 "ERROR", 0, "MAKEFILE-NO-LIBDAISY",
@@ -205,8 +383,20 @@ def check_file(filepath: str) -> List[Finding]:
                 "ERROR", 0, "LGPL-FLAG-MISSING",
                 "Code uses LGPL module but Makefile lacks USE_DAISYSP_LGPL = 1"
             ))
+        if has_float_printf_flag:
+            findings.append(Finding(
+                "WARN", 0, "FLOAT-PRINTF-FLAG",
+                "Makefile links _printf_float; verify flash headroom and keep "
+                "this as an explicit debug or budgeted release choice."
+            ))
+        if has_float_scanf_flag:
+            findings.append(Finding(
+                "WARN", 0, "FLOAT-SCANF-FLAG",
+                "Makefile links _scanf_float; verify flash headroom and prefer "
+                "integer/fixed-point serial parsers when possible."
+            ))
 
-    # ── Rule 9: Hallucinated DaisySP API names ──
+    # ── Rule 10: Hallucinated DaisySP API names ──
     # These method names are invented by LLMs and do not exist in DaisySP.
     # Each entry: wrong_name -> (correct_name, affected_class)
     hallucinated_apis = [
@@ -261,24 +451,26 @@ def main():
         sys.exit(1)
 
     targets = []
+    source_suffixes = {'.cpp', '.h', '.hpp'}
     for arg in sys.argv[1:]:
         p = Path(arg)
-        if p.is_file() and p.suffix == '.cpp':
+        if p.is_file() and p.suffix.lower() in source_suffixes:
             targets.append(str(p))
         elif p.is_dir():
-            targets.extend(str(f) for f in p.rglob('*.cpp'))
+            for suffix in sorted(source_suffixes):
+                targets.extend(str(f) for f in p.rglob(f'*{suffix}'))
         else:
-            print(f"Skipping: {arg} (not a .cpp file or directory)")
+            print(f"Skipping: {arg} (not a C++ source/header file or directory)")
 
     if not targets:
-        print("No .cpp files found.")
+        print("No C++ source/header files found.")
         sys.exit(1)
 
     total_errors = 0
     total_warns = 0
 
     print(f"\nDaisy QAE Linter — checking {len(targets)} file(s)\n")
-    print("─" * 60)
+    print("-" * 60)
 
     for filepath in sorted(targets):
         findings = check_file(filepath)
@@ -286,7 +478,7 @@ def main():
         total_errors += sum(1 for f in findings if f.level == "ERROR")
         total_warns += sum(1 for f in findings if f.level == "WARN")
 
-    print("─" * 60)
+    print("-" * 60)
     print(f"\n  {total_errors} error(s), {total_warns} warning(s)\n")
     sys.exit(1 if total_errors > 0 else 0)
 

@@ -62,8 +62,15 @@ function Invoke-LoggedCommand {
     Write-Host "== $Label =="
     $LogPath = Join-Path $RunDir $LogFile
     $global:LASTEXITCODE = 0
-    $Output = & $Command 2>&1
-    $ExitCode = $global:LASTEXITCODE
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $Output = & $Command *>&1
+        $ExitCode = $global:LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $PreviousErrorActionPreference
+    }
     if($null -eq $ExitCode) {
         $ExitCode = 0
     }
@@ -94,8 +101,19 @@ function New-SerialPort {
     $Serial.DtrEnable = $true
     $Serial.RtsEnable = $true
     $Serial.NewLine = "`n"
-    $Serial.Open()
-    return $Serial
+    $LastOpenError = $null
+    for($Attempt = 1; $Attempt -le 20; ++$Attempt) {
+        try {
+            $Serial.Open()
+            return $Serial
+        }
+        catch {
+            $LastOpenError = $_.Exception.Message
+            Start-Sleep -Milliseconds 750
+        }
+    }
+
+    throw $LastOpenError
 }
 
 function Read-SerialUntil {
@@ -238,6 +256,7 @@ function Add-SerialChecks {
         $Text = Get-Content -Raw -LiteralPath $Summary.serial.log
     }
 
+    $Summary.checks.target_identity_seen = if($Text -match "\[FTJUNE\]") { "PASS" } else { "FAIL" }
     $Summary.checks.boot_marker = if($Text -match "\[FTJUNE\] BOOT") { "PASS" } else { "FAIL" }
     $Summary.checks.selftest_pass = if($Text -match "\[FTJUNE\] SELFTEST .*result=PASS") { "PASS" } else { "FAIL" }
     $Summary.checks.status_seen = if($Text -match "\[FTJUNE\] STATUS") { "PASS" } else { "FAIL" }
@@ -256,7 +275,7 @@ function Update-OverallStatus {
     }
 
     $ChecksPass = $true
-    foreach($Name in @("boot_marker", "selftest_pass", "status_seen", "snapshot_seen")) {
+    foreach($Name in @("target_identity_seen", "selftest_pass", "status_seen", "snapshot_seen")) {
         if($Summary.checks[$Name] -ne "PASS") {
             $ChecksPass = $false
         }

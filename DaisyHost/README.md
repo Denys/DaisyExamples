@@ -100,12 +100,18 @@ internals:
     standalone rhythm-triggered audio; the 2026-04-26 follow-up also tunes the
     default envelope/output/filter path and Field knob pickup behavior so the
     startup patch is audible in host tests without physical knobs muting it
-  - `DelayFxAdaptationCore` hosts four Field-focused delay/Fx source
+  - `PedalDelayCore` hosts the compact multi-delay guitar pedal as
+    `pedal_multidelay`, with `DIGI`, `TAPE`, `MOD`, `REV`, and `FREEZE` modes,
+    five performance slots, bypass/trails, tap tempo, and explicit freeze-state
+    operations; the checked-in smoke scenario exercises all five modes
+  - `DelayFxAdaptationCore` hosts six Field-focused delay/Fx behavior
     adaptations on one portable `DaisyDelayFxCore`: MultiFX tape delay, FDN
-    reverb playground, FunBox reverse/freeze delay, and SDRAM long delaylines;
+    reverb playground, FunBox reverse/freeze delay, SDRAM long delaylines,
+    clean-room Phantasmagoria-inspired spectral delay, and clean-room OAM Time
+    Machine-inspired 8-tap delay;
     it also exposes `field_delay_bundle`, a Field selector that names the
     algorithms by type first: Tape [multifx], Tank [reverb], Texture [FunBox],
-    and Long [sdram]
+    Long [sdram], Spectral [Phantasmagoria], and 8 Tap [TimeMachine]
 - Multi-app host:
   - app selection persists in host session state
   - the Patch shell and mirror drawer bind to app metadata and active patch bindings
@@ -403,10 +409,11 @@ Outputs:
 
 Current local verification note:
 
-- the wrapper-driven full host gate last recorded in these docs was the
-  2026-06-03 Field delay/Fx adaptation pass: `cmd /c build_host.cmd`
-  passed and Release `ctest` passed `293/293`, including the new
-  `DaisyDelayFxCoreTest` / `DelayFxAdaptationCoreTest` coverage,
+- the latest full host gate recorded in these docs is the 2026-08-13
+  `pedal_multidelay` publication pass: the canonical wrapper configured and
+  built all six Release targets, and the resumed direct Release `ctest` passed
+  `337/337`, including the new `PedalDelay*` coverage and pedal CLI checks,
+  the existing `DaisyDelayFxCoreTest` / `DelayFxAdaptationCoreTest` coverage,
   `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`,
   `DaisyHostCliRenderAssertions`, `DaisyHostCliRenderAssertionsPass`, and the
   other CLI smoke tests. Older
@@ -494,6 +501,8 @@ py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
 - `src/apps/BraidsCore.cpp`: DaisyHost-native Braids supported app core
 - `src/apps/HarmoniqsCore.cpp`: DaisyHost-native Harmoniqs supported app core
 - `src/apps/VASynthCore.cpp`: DaisyHost-native VA Synth supported app core
+- `src/PedalDelayEngine.cpp`: portable five-mode compact pedal delay engine
+- `src/apps/PedalDelayCore.cpp`: DaisyHost adapter for `pedal_multidelay`
 - `src/apps/DelayFxAdaptationCore.cpp`: DaisyHost-native Field delay/Fx
   adapter core
 - `src/AppRegistry.cpp`: app registry and factory layer

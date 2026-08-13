@@ -58,6 +58,7 @@ add_library(daisyhost_core STATIC
     src/MidiNotePreview.cpp
     src/MidiLearnMap.cpp
     src/OledDisplayLayout.cpp
+    src/PedalDelayEngine.cpp
     src/SignalGenerator.cpp
     src/StandaloneUiPolicy.cpp
     src/TestInputSignal.cpp
@@ -67,6 +68,7 @@ add_library(daisyhost_core STATIC
     src/apps/DelayFxAdaptationCore.cpp
     src/apps/HarmoniqsCore.cpp
     src/apps/MultiDelayCore.cpp
+    src/apps/PedalDelayCore.cpp
     src/apps/PolyOscCore.cpp
     src/apps/SubharmoniqCore.cpp
     src/apps/TorusCore.cpp
@@ -308,6 +310,7 @@ set(DAISYHOST_UNIT_TEST_SOURCES
     tests/test_midi_note_preview.cpp
     tests/test_multidelay_core.cpp
     tests/test_parameter_parity.cpp
+    tests/test_pedal_delay_core.cpp
     tests/test_polyosc_core.cpp
     tests/test_signal_generator.cpp
     tests/test_standalone_ui_policy.cpp
@@ -440,6 +443,29 @@ add_test(
         $<TARGET_FILE:DaisyHostCLI>
         validate-scenario
         ${PROJECT_SOURCE_DIR}/training/examples/multidelay_smoke.json
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliRenderPedalMultiDelay
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        render
+        ${PROJECT_SOURCE_DIR}/training/examples/pedal_multidelay_smoke.json
+        --output-dir
+        ${PROJECT_BINARY_DIR}/cli_smoke/pedal_multidelay
+        --expect-non-silent
+        --expect-timeline-target-node
+        node0
+        --json
+)
+
+add_test(
+    NAME DaisyHostCliDescribePedalMultiDelay
+    COMMAND
+        $<TARGET_FILE:DaisyHostCLI>
+        describe-app
+        pedal_multidelay
         --json
 )
 

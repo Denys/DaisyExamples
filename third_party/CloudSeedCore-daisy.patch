@@ -1,0 +1,137 @@
+diff --git a/DSP/AllpassDiffuser.h b/DSP/AllpassDiffuser.h
+index 7702b3e..13dd2e2 100644
+--- a/DSP/AllpassDiffuser.h
++++ b/DSP/AllpassDiffuser.h
+@@ -25 +25 @@ THE SOFTWARE.
+-#include <vector>
++#include <array>
+@@ -42 +42 @@ namespace Cloudseed
+-		std::vector<float> seedValues;
++		std::array<float, MaxStageCount * 3> seedValues;
+@@ -116 +116 @@ namespace Cloudseed
+-				filters[i].ModAmount = amount * (0.85 + 0.3 * seedValues[MaxStageCount + i]);
++				filters[i].ModAmount = amount * (0.85f + 0.3f * seedValues[MaxStageCount + i]);
+@@ -124 +124 @@ namespace Cloudseed
+-				filters[i].ModRate = rate * (0.85 + 0.3 * seedValues[MaxStageCount * 2 + i]) / samplerate;
++				filters[i].ModRate = rate * (0.85f + 0.3f * seedValues[MaxStageCount * 2 + i]) / samplerate;
+@@ -158 +158 @@ namespace Cloudseed
+-			this->seedValues = RandomBuffer::Generate(seed, MaxStageCount * 3, crossSeed);
++			RandomBuffer::Generate(seed, seedValues.data(), MaxStageCount * 3, crossSeed);
+diff --git a/DSP/ModulatedAllpass.h b/DSP/ModulatedAllpass.h
+index a661fa7..ac36aed 100644
+--- a/DSP/ModulatedAllpass.h
++++ b/DSP/ModulatedAllpass.h
+@@ -167 +167 @@ namespace Cloudseed
+-			auto mod = std::sinf(modPhase * 2 * M_PI);
++			auto mod = sinf(modPhase * 2 * M_PI);
+diff --git a/DSP/ModulatedDelay.h b/DSP/ModulatedDelay.h
+index 9e26984..69fd127 100644
+--- a/DSP/ModulatedDelay.h
++++ b/DSP/ModulatedDelay.h
+@@ -108 +108 @@ namespace Cloudseed
+-			auto mod = std::sinf(modPhase * 2 * M_PI);
++			auto mod = sinf(modPhase * 2 * M_PI);
+diff --git a/DSP/MultitapDelay.h b/DSP/MultitapDelay.h
+index 982bc6b..934323e 100644
+--- a/DSP/MultitapDelay.h
++++ b/DSP/MultitapDelay.h
+@@ -25,2 +24,0 @@ THE SOFTWARE.
+-#include <vector>
+-#include <memory>
+@@ -46 +44 @@ namespace Cloudseed
+-		std::vector<float> seedValues;
++		std::array<float, MaxTaps * 3> seedValues;
+@@ -102 +100 @@ namespace Cloudseed
+-			float totalGain = 3.0 / std::sqrtf(1 + count);
++			float totalGain = 3.0f / sqrtf(1.0f + count);
+@@ -113 +111 @@ namespace Cloudseed
+-					float decayEffective = std::expf(-offset / lengthSamples * 3.3) * decay + (1-decay);
++					float decayEffective = expf(-offset / lengthSamples * 3.3f) * decay + (1.0f - decay);
+@@ -146 +144 @@ namespace Cloudseed
+-			this->seedValues = RandomBuffer::Generate(seed, MaxTaps * 3, crossSeed);
++			RandomBuffer::Generate(seed, seedValues.data(), MaxTaps * 3, crossSeed);
+diff --git a/DSP/RandomBuffer.cpp b/DSP/RandomBuffer.cpp
+index d43bdef..2242009 100644
+--- a/DSP/RandomBuffer.cpp
++++ b/DSP/RandomBuffer.cpp
+@@ -23,0 +24 @@ THE SOFTWARE.
++#include <vector>
+@@ -29 +30 @@ namespace Cloudseed
+-	std::vector<float> RandomBuffer::Generate(uint64_t seed, int count)
++	void RandomBuffer::Generate(uint64_t seed, float* output, int count)
+@@ -32 +32,0 @@ namespace Cloudseed
+-		std::vector<float> output;
+@@ -37,2 +37 @@ namespace Cloudseed
+-			float fVal = val / (float)UINT_MAX;
+-			output.push_back(fVal);
++			output[i] = val / (float)UINT_MAX;
+@@ -40,2 +38,0 @@ namespace Cloudseed
+-
+-		return output;
+@@ -44 +41 @@ namespace Cloudseed
+-	std::vector<float> RandomBuffer::Generate(uint64_t seed, int count, float crossSeed)
++	void RandomBuffer::Generate(uint64_t seed, float* output, int count, float crossSeed)
+@@ -48,2 +45,4 @@ namespace Cloudseed
+-		auto seriesA = Generate(seedA, count);
+-		auto seriesB = Generate(seedB, count);
++		std::vector<float> seriesA(static_cast<size_t>(count));
++		std::vector<float> seriesB(static_cast<size_t>(count));
++		Generate(seedA, seriesA.data(), count);
++		Generate(seedB, seriesB.data(), count);
+@@ -51 +49,0 @@ namespace Cloudseed
+-		std::vector<float> output;
+@@ -53,3 +51 @@ namespace Cloudseed
+-			output.push_back(seriesA[i] * (1 - crossSeed) + seriesB[i] * crossSeed);
+-
+-		return output;
++			output[i] = seriesA[static_cast<size_t>(i)] * (1 - crossSeed) + seriesB[static_cast<size_t>(i)] * crossSeed;
+diff --git a/DSP/RandomBuffer.h b/DSP/RandomBuffer.h
+index b792773..54ab785 100644
+--- a/DSP/RandomBuffer.h
++++ b/DSP/RandomBuffer.h
+@@ -25 +24,0 @@ THE SOFTWARE.
+-#include <vector>
+@@ -33,2 +32,2 @@ namespace Cloudseed
+-		static std::vector<float> Generate(uint64_t seed, int count);
+-		static std::vector<float> Generate(uint64_t seed, int count, float crossSeed);
++		static void Generate(uint64_t seed, float* output, int count);
++		static void Generate(uint64_t seed, float* output, int count, float crossSeed);
+diff --git a/DSP/ReverbChannel.h b/DSP/ReverbChannel.h
+index 570d78b..8447f2b 100644
+--- a/DSP/ReverbChannel.h
++++ b/DSP/ReverbChannel.h
+@@ -25,2 +24,0 @@ THE SOFTWARE.
+-#include <map>
+-#include <memory>
+@@ -393 +391,2 @@ namespace Cloudseed
+-			auto delayLineSeeds = RandomBuffer::Generate(delayLineSeed, TotalLineCount * 3, crossSeed);
++			float delayLineSeeds[TotalLineCount * 3];
++			RandomBuffer::Generate(delayLineSeed, delayLineSeeds, TotalLineCount * 3, crossSeed);
+diff --git a/DSP/Utils.h b/DSP/Utils.h
+index 97ad74e..93fb681 100644
+--- a/DSP/Utils.h
++++ b/DSP/Utils.h
+@@ -26,0 +27 @@ THE SOFTWARE.
++#include <cstring>
+@@ -71 +72 @@ namespace Cloudseed
+-            return pow10f(input / 20.0);
++            return powf(10.0f, input / 20.0f);
+diff --git a/Parameters.h b/Parameters.h
+index 1863396..5eb531a 100644
+--- a/Parameters.h
++++ b/Parameters.h
+@@ -194,4 +194 @@ namespace Cloudseed
+-            if (ScaleParam(val, paramId) == 1)
+-                strcpy_s(buffer, MAX_STR_SIZE, "ENABLED");
+-            else
+-                strcpy_s(buffer, MAX_STR_SIZE, "DISABLED");
++            snprintf(buffer, maxLen, "%s", ScaleParam(val, paramId) == 1 ? "ENABLED" : "DISABLED");
+@@ -227 +224 @@ namespace Cloudseed
+-                strcpy_s(buffer, MAX_STR_SIZE, "MUTED");
++                snprintf(buffer, maxLen, "%s", "MUTED");
+@@ -257,4 +254 @@ namespace Cloudseed
+-            if (s == 1)
+-                strcpy_s(buffer, MAX_STR_SIZE, "POST");
+-            else
+-                strcpy_s(buffer, MAX_STR_SIZE, "PRE");
++            snprintf(buffer, maxLen, "%s", s == 1 ? "POST" : "PRE");

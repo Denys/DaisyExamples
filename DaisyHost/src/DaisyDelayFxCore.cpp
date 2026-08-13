@@ -9,140 +9,203 @@ namespace daisyhost
 {
 namespace
 {
-constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kPi = 3.14159265358979323846f;
 
-float Clamp(float value, float minValue, float maxValue)
-{
-    return value < minValue ? minValue : (value > maxValue ? maxValue : value);
-}
-
-float Clamp01(float value)
-{
-    return Clamp(value, 0.0f, 1.0f);
-}
-
-float Mix(float a, float b, float amount)
-{
-    return a + (b - a) * Clamp01(amount);
-}
-
-float DbToLinear(float db)
-{
-    return std::pow(10.0f, db / 20.0f);
-}
-
-float MidiNoteToHz(int note)
-{
-    return 440.0f * std::pow(2.0f, (static_cast<float>(note) - 69.0f) / 12.0f);
-}
-
-float FastTanh(float value)
-{
-    const float x = Clamp(value, -4.0f, 4.0f);
-    return x * (27.0f + x * x) / (27.0f + 9.0f * x * x);
-}
-
-float OnePoleCoeff(float hz, float sampleRate)
-{
-    const float clampedHz = Clamp(hz, 5.0f, sampleRate * 0.45f);
-    return Clamp(1.0f - std::exp((-2.0f * kPi * clampedHz) / sampleRate),
-                 0.0001f,
-                 1.0f);
-}
-
-const std::array<DaisyDelayFxProfile, 4> kProfiles = {{
-    {DaisyDelayFxSource::kMultiFxPedal,
-     "field_delay_multifx_pedal",
-     "Field Delay MultiFX Pedal",
-     "balazsbencs/daisy-multifx-pedal",
-     "Tape-style SDRAM delay with feedback color, modulation, grit, and "
-     "product-style mode controls."},
-    {DaisyDelayFxSource::kReverbPlayground,
-     "field_delay_reverb_playground",
-     "Field Delay Reverb Playground",
-     "Farmer2K5/daisy-reverb-playground",
-     "Early reflection, diffusion, and damped FDN/tank behavior adapted into "
-     "a Field-safe delay network."},
-    {DaisyDelayFxSource::kFunBox,
-     "field_delay_funbox",
-     "Field Delay FunBox",
-     "GuitarML/FunBox",
-     "FunBox-inspired Mars/Saturn/Uranus/Pluto family: two-tap delay, spectral "
-     "smear, granular motion, freeze, reverse, and looper-style hold."},
-    {DaisyDelayFxSource::kSdramDelaylines,
-     "field_delay_sdram_delaylines",
-     "Field Delay SDRAM Delaylines",
-     "Farmer2K5/daisy-sdram-delaylines",
-     "Focused external-buffer delay-line primitive with long fractional stereo "
-     "delay and ping-pong feedback."},
-}};
-
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4> kAlgorithmDescriptors = {{
-    {DaisyDelayFxSource::kMultiFxPedal, "Tape [multifx]", "Tape", "tape"},
-    {DaisyDelayFxSource::kReverbPlayground, "Tank [reverb]", "Tank", "tank"},
-    {DaisyDelayFxSource::kFunBox, "Texture [FunBox]", "Texture", "texture"},
-    {DaisyDelayFxSource::kSdramDelaylines, "Long [sdram]", "Long", "long"},
-}};
-
-const DaisyDelayFxProfile& ProfileForSource(DaisyDelayFxSource source)
-{
-    for(const auto& profile : kProfiles)
+    float Clamp(float value, float minValue, float maxValue)
     {
-        if(profile.source == source)
+        return value < minValue ? minValue
+                                : (value > maxValue ? maxValue : value);
+    }
+
+    float Clamp01(float value) { return Clamp(value, 0.0f, 1.0f); }
+
+    float Mix(float a, float b, float amount)
+    {
+        return a + (b - a) * Clamp01(amount);
+    }
+
+    float Wrap01(float value)
+    {
+        value -= std::floor(value);
+        return value < 0.0f ? value + 1.0f : value;
+    }
+
+    float TriangleWindow(float phase)
+    {
+        const float wrapped = Wrap01(phase);
+        return 1.0f - std::abs((2.0f * wrapped) - 1.0f);
+    }
+
+    float SkewUnit(float value, float skew)
+    {
+        const float x      = Clamp01(value);
+        const float amount = Clamp(skew, -1.0f, 1.0f);
+        if(amount < 0.0f)
         {
-            return profile;
+            return std::pow(x, 1.0f + (-amount * 3.0f));
         }
+        return 1.0f - std::pow(1.0f - x, 1.0f + (amount * 3.0f));
     }
-    return kProfiles.front();
-}
 
-int QuantizedState(float normalized, int stepCount)
-{
-    if(stepCount <= 1)
+    float DbToLinear(float db) { return std::pow(10.0f, db / 20.0f); }
+
+    float MidiNoteToHz(int note)
     {
-        return 0;
+        return 440.0f
+               * std::pow(2.0f, (static_cast<float>(note) - 69.0f) / 12.0f);
     }
-    return static_cast<int>(
-        std::round(Clamp01(normalized) * static_cast<float>(stepCount - 1)));
-}
 
-enum ParameterSlot : std::size_t
-{
-    kParamMix = 0,
-    kParamTime,
-    kParamFeedback,
-    kParamTone,
-    kParamTexture,
-    kParamMod,
-    kParamDrive,
-    kParamOutput,
-    kParamPreDelay,
-    kParamWidth,
-    kParamDiffusion,
-    kParamDamping,
-    kParamTapRatio,
-    kParamFreeze,
-    kParamMidiLevel,
-    kParamTempo,
-    kParamSize,
-    kParamDensity,
-    kParamLowCut,
-    kParamHighCut,
-    kParamSmear,
-    kParamWarp,
-    kParamAttack,
-    kParamRelease,
-};
+    float FastTanh(float value)
+    {
+        const float x = Clamp(value, -4.0f, 4.0f);
+        return x * (27.0f + x * x) / (27.0f + 9.0f * x * x);
+    }
+
+    float OnePoleCoeff(float hz, float sampleRate)
+    {
+        const float clampedHz = Clamp(hz, 5.0f, sampleRate * 0.45f);
+        return Clamp(1.0f - std::exp((-2.0f * kPi * clampedHz) / sampleRate),
+                     0.0001f,
+                     1.0f);
+    }
+
+    const std::array<DaisyDelayFxProfile, kDaisyDelayFxAlgorithmCount> kProfiles
+        = {{
+            {DaisyDelayFxSource::kMultiFxPedal,
+             "field_delay_multifx_pedal",
+             "Field Delay MultiFX Pedal",
+             "balazsbencs/daisy-multifx-pedal",
+             "Tape-style SDRAM delay with feedback color, modulation, grit, "
+             "and "
+             "product-style mode controls."},
+            {DaisyDelayFxSource::kReverbPlayground,
+             "field_delay_reverb_playground",
+             "Field Delay Reverb Playground",
+             "Farmer2K5/daisy-reverb-playground",
+             "Early reflection, diffusion, and damped FDN/tank behavior "
+             "adapted into "
+             "a Field-safe delay network."},
+            {DaisyDelayFxSource::kFunBox,
+             "field_delay_funbox",
+             "Field Delay FunBox",
+             "GuitarML/FunBox",
+             "FunBox-inspired Mars/Saturn/Uranus/Pluto family: two-tap delay, "
+             "spectral "
+             "smear, granular motion, freeze, reverse, and looper-style hold."},
+            {DaisyDelayFxSource::kSdramDelaylines,
+             "field_delay_sdram_delaylines",
+             "Field Delay SDRAM Delaylines",
+             "Farmer2K5/daisy-sdram-delaylines",
+             "Focused external-buffer delay-line primitive with long "
+             "fractional stereo "
+             "delay and ping-pong feedback."},
+            {DaisyDelayFxSource::kPhantasmagoria,
+             "field_delay_phantasmagoria",
+             "Field Delay Phantasmagoria",
+             "FuzzyLotus/Phantasmagoria",
+             "GPL-3.0 spectral-delay source used as clean-room behavioral "
+             "reference "
+             "for reverse-grain, smear, erosion, chamber-tap, and "
+             "freeze-memory ideas."},
+            {DaisyDelayFxSource::kTimeMachine,
+             "field_delay_time_machine",
+             "Field Delay Time Machine",
+             "oamodular/time-machine",
+             "CC BY-NC-SA Time Machine source used as clean-room behavioral "
+             "reference "
+             "for eight read-head tap mixing, skewed tap distribution, blur, "
+             "and "
+             "feedback limiting."},
+        }};
+
+    const std::array<DaisyDelayFxAlgorithmDescriptor,
+                     kDaisyDelayFxAlgorithmCount>
+        kAlgorithmDescriptors = {{
+            {DaisyDelayFxSource::kMultiFxPedal,
+             "Tape [multifx]",
+             "Tape",
+             "tape"},
+            {DaisyDelayFxSource::kReverbPlayground,
+             "Tank [reverb]",
+             "Tank",
+             "tank"},
+            {DaisyDelayFxSource::kFunBox,
+             "Texture [FunBox]",
+             "Texture",
+             "texture"},
+            {DaisyDelayFxSource::kSdramDelaylines,
+             "Long [sdram]",
+             "Long",
+             "long"},
+            {DaisyDelayFxSource::kPhantasmagoria,
+             "Spectral [Phantasmagoria]",
+             "Spectral",
+             "spectral"},
+            {DaisyDelayFxSource::kTimeMachine,
+             "8 Tap [TimeMachine]",
+             "8Tap",
+             "timemachine"},
+        }};
+
+    const DaisyDelayFxProfile& ProfileForSource(DaisyDelayFxSource source)
+    {
+        for(const auto& profile : kProfiles)
+        {
+            if(profile.source == source)
+            {
+                return profile;
+            }
+        }
+        return kProfiles.front();
+    }
+
+    int QuantizedState(float normalized, int stepCount)
+    {
+        if(stepCount <= 1)
+        {
+            return 0;
+        }
+        return static_cast<int>(std::round(
+            Clamp01(normalized) * static_cast<float>(stepCount - 1)));
+    }
+
+    enum ParameterSlot : std::size_t
+    {
+        kParamMix = 0,
+        kParamTime,
+        kParamFeedback,
+        kParamTone,
+        kParamTexture,
+        kParamMod,
+        kParamDrive,
+        kParamOutput,
+        kParamPreDelay,
+        kParamWidth,
+        kParamDiffusion,
+        kParamDamping,
+        kParamTapRatio,
+        kParamFreeze,
+        kParamMidiLevel,
+        kParamTempo,
+        kParamSize,
+        kParamDensity,
+        kParamLowCut,
+        kParamHighCut,
+        kParamSmear,
+        kParamWarp,
+        kParamAttack,
+        kParamRelease,
+    };
 } // namespace
 
-const std::array<DaisyDelayFxAlgorithmDescriptor, 4>&
+const std::array<DaisyDelayFxAlgorithmDescriptor, kDaisyDelayFxAlgorithmCount>&
 GetDaisyDelayFxAlgorithmDescriptors()
 {
     return kAlgorithmDescriptors;
 }
 
-const DaisyDelayFxAlgorithmDescriptor& GetDaisyDelayFxAlgorithmDescriptor(
-    DaisyDelayFxSource source)
+const DaisyDelayFxAlgorithmDescriptor&
+GetDaisyDelayFxAlgorithmDescriptor(DaisyDelayFxSource source)
 {
     for(const auto& descriptor : kAlgorithmDescriptors)
     {
@@ -175,11 +238,11 @@ std::size_t DaisyDelayFxAlgorithmIndex(DaisyDelayFxSource source)
     return 0;
 }
 
-void DaisyDelayFxCore::DelayLine::Init(float* externalBuffer,
+void DaisyDelayFxCore::DelayLine::Init(float*      externalBuffer,
                                        std::size_t externalSize)
 {
-    buffer = externalBuffer;
-    size = externalSize;
+    buffer     = externalBuffer;
+    size       = externalSize;
     writeIndex = 0;
     Clear();
 }
@@ -204,7 +267,7 @@ void DaisyDelayFxCore::DelayLine::Write(float sample)
         return;
     }
     buffer[writeIndex] = sample;
-    writeIndex = (writeIndex + 1) % size;
+    writeIndex         = (writeIndex + 1) % size;
 }
 
 float DaisyDelayFxCore::DelayLine::Read(float delaySamples) const
@@ -214,17 +277,17 @@ float DaisyDelayFxCore::DelayLine::Read(float delaySamples) const
         return 0.0f;
     }
 
-    const float boundedDelay = Clamp(delaySamples, 1.0f, static_cast<float>(size - 3));
-    const int   wholeDelay = static_cast<int>(boundedDelay);
-    const float frac = boundedDelay - static_cast<float>(wholeDelay);
+    const float boundedDelay
+        = Clamp(delaySamples, 1.0f, static_cast<float>(size - 3));
+    const int         wholeDelay = static_cast<int>(boundedDelay);
+    const float       frac = boundedDelay - static_cast<float>(wholeDelay);
     const std::size_t newest
         = (writeIndex + size - static_cast<std::size_t>(wholeDelay)) % size;
     const std::size_t older = (newest + size - 1) % size;
     return Mix(buffer[newest], buffer[older], frac);
 }
 
-DaisyDelayFxCore::DaisyDelayFxCore(DaisyDelayFxSource source)
-: source_(source)
+DaisyDelayFxCore::DaisyDelayFxCore(DaisyDelayFxSource source) : source_(source)
 {
     RebuildParameters();
 }
@@ -261,7 +324,7 @@ void DaisyDelayFxCore::SetBundleMode(bool enabled)
     ResetToDefaultState(seed_);
 }
 
-void DaisyDelayFxCore::AttachDelayStorage(float* storage,
+void DaisyDelayFxCore::AttachDelayStorage(float*      storage,
                                           std::size_t lineCount,
                                           std::size_t samplesPerLine)
 {
@@ -276,9 +339,9 @@ void DaisyDelayFxCore::AttachDelayStorage(float* storage,
 
 void DaisyDelayFxCore::Prepare(double sampleRate, std::size_t maxBlockSize)
 {
-    sampleRate_ = sampleRate > 1000.0 ? sampleRate : 48000.0;
+    sampleRate_   = sampleRate > 1000.0 ? sampleRate : 48000.0;
     maxBlockSize_ = maxBlockSize > 0 ? maxBlockSize : kPreferredBlockSize;
-    prepared_ = true;
+    prepared_     = true;
     ResetToDefaultState(seed_);
 }
 
@@ -287,7 +350,7 @@ void DaisyDelayFxCore::ResetToDefaultState(std::uint32_t seed)
     seed_ = seed;
     for(auto& parameter : parameters_)
     {
-        parameter.normalizedValue = parameter.defaultNormalizedValue;
+        parameter.normalizedValue          = parameter.defaultNormalizedValue;
         parameter.effectiveNormalizedValue = parameter.defaultNormalizedValue;
     }
     for(auto& delay : delays_)
@@ -296,16 +359,16 @@ void DaisyDelayFxCore::ResetToDefaultState(std::uint32_t seed)
     }
     buttonStates_.fill(0);
     noteActive_.fill(false);
-    synthVoices_ = {};
-    internalSynthMode_ = 1;
+    synthVoices_           = {};
+    internalSynthMode_     = 1;
     internalSynthHoldMode_ = 0;
-    activeMidiNote_ = 60;
+    activeMidiNote_        = 60;
     activeMidiFrequencyHz_ = MidiNoteToHz(activeMidiNote_);
-    keyboardOctaveOffset_ = 0;
-    notePhase_ = 0.0f;
-    noteEnvelope_ = 0.0f;
-    lfoPhase_ = 0.0f;
-    slowLfoPhase_ = 0.0f;
+    keyboardOctaveOffset_  = 0;
+    notePhase_             = 0.0f;
+    noteEnvelope_          = 0.0f;
+    lfoPhase_              = 0.0f;
+    slowLfoPhase_          = 0.0f;
     for(float& value : delaySmooth_)
     {
         value = 2400.0f;
@@ -316,7 +379,7 @@ void DaisyDelayFxCore::ResetToDefaultState(std::uint32_t seed)
     }
     toneState_[0] = 0.0f;
     toneState_[1] = 0.0f;
-    rngState_ = 0.37f + static_cast<float>((seed % 97u)) * 0.001f;
+    rngState_     = 0.37f + static_cast<float>((seed % 97u)) * 0.001f;
     UpdateParameterCache();
 }
 
@@ -336,28 +399,39 @@ void DaisyDelayFxCore::Process(const float* inputLeft,
         Prepare(sampleRate_, maxBlockSize_);
     }
 
-    const float synthBrightness = bundleMode_
-                                      ? EffectiveParameterValueAt(kParamFreeze)
-                                      : EffectiveParameterValueAt(kParamTexture);
-    const float synthDecay = bundleMode_ ? EffectiveParameterValueAt(kParamMidiLevel)
-                                         : EffectiveParameterValueAt(kParamRelease);
-    const float synthLevel = bundleMode_ ? EffectiveParameterValueAt(kParamTempo)
-                                         : EffectiveParameterValueAt(kParamMidiLevel);
-    const float mix = EffectiveParameterValueAt(kParamMix);
+    const bool bundleSynthControls
+        = bundleMode_ && source_ != DaisyDelayFxSource::kPhantasmagoria
+          && source_ != DaisyDelayFxSource::kTimeMachine;
+    const float synthBrightness
+        = bundleSynthControls
+              ? EffectiveParameterValueAt(kParamFreeze)
+              : (bundleMode_ ? 0.32f
+                             : EffectiveParameterValueAt(kParamTexture));
+    const float synthDecay
+        = bundleSynthControls
+              ? EffectiveParameterValueAt(kParamMidiLevel)
+              : (bundleMode_ ? 0.20f
+                             : EffectiveParameterValueAt(kParamRelease));
+    const float synthLevel
+        = bundleSynthControls
+              ? EffectiveParameterValueAt(kParamTempo)
+              : (bundleMode_ ? 0.32f
+                             : EffectiveParameterValueAt(kParamMidiLevel));
+    const float mix        = EffectiveParameterValueAt(kParamMix);
     const float outputGain = DbToLinear(NativeValueAt(kParamOutput));
-    const float attackMs = std::max(0.5f, NativeValueAt(kParamAttack));
-    const float releaseMs = std::max(10.0f, NativeValueAt(kParamRelease));
+    const float attackMs   = std::max(0.5f, NativeValueAt(kParamAttack));
+    const float releaseMs  = std::max(10.0f, NativeValueAt(kParamRelease));
 
     for(std::size_t i = 0; i < frameCount; ++i)
     {
-        const float left = inputLeft != nullptr ? inputLeft[i] : 0.0f;
+        const float left  = inputLeft != nullptr ? inputLeft[i] : 0.0f;
         const float right = inputRight != nullptr ? inputRight[i] : left;
         const float internalSynth = ProcessInternalSynth(
             synthBrightness, synthDecay, synthLevel, attackMs, releaseMs);
-        const float inL = left + internalSynth;
-        const float inR = right + internalSynth;
-        float wetL = 0.0f;
-        float wetR = 0.0f;
+        const float inL  = left + internalSynth;
+        const float inR  = right + internalSynth;
+        float       wetL = 0.0f;
+        float       wetR = 0.0f;
 
         switch(source_)
         {
@@ -370,19 +444,23 @@ void DaisyDelayFxCore::Process(const float* inputLeft,
             case DaisyDelayFxSource::kSdramDelaylines:
                 ProcessSdramDelaylines(inL, inR, &wetL, &wetR);
                 break;
-            case DaisyDelayFxSource::kMultiFxPedal:
-            default:
-                ProcessMultiFx(inL, inR, &wetL, &wetR);
+            case DaisyDelayFxSource::kPhantasmagoria:
+                ProcessPhantasmagoria(inL, inR, &wetL, &wetR);
                 break;
+            case DaisyDelayFxSource::kTimeMachine:
+                ProcessTimeMachine(inL, inR, &wetL, &wetR);
+                break;
+            case DaisyDelayFxSource::kMultiFxPedal:
+            default: ProcessMultiFx(inL, inR, &wetL, &wetR); break;
         }
 
-        const bool  bypass = buttonStates_[0] == 2;
-        const bool  wetOnly = buttonStates_[0] == 1;
+        const bool bypass  = buttonStates_[0] == 2;
+        const bool wetOnly = buttonStates_[0] == 1;
 
         float outL = bypass ? inL : Mix(wetOnly ? 0.0f : inL, wetL, mix);
         float outR = bypass ? inR : Mix(wetOnly ? 0.0f : inR, wetR, mix);
-        outL = Clamp(outL * outputGain, -1.2f, 1.2f);
-        outR = Clamp(outR * outputGain, -1.2f, 1.2f);
+        outL       = Clamp(outL * outputGain, -1.2f, 1.2f);
+        outR       = Clamp(outR * outputGain, -1.2f, 1.2f);
         if(!std::isfinite(outL))
         {
             outL = 0.0f;
@@ -391,13 +469,13 @@ void DaisyDelayFxCore::Process(const float* inputLeft,
         {
             outR = 0.0f;
         }
-        outputLeft[i] = outL;
+        outputLeft[i]  = outL;
         outputRight[i] = outR;
     }
 }
 
 bool DaisyDelayFxCore::SetParameterValue(const std::string& parameterId,
-                                         float normalizedValue)
+                                         float              normalizedValue)
 {
     return SetParameterValue(parameterId.c_str(), normalizedValue);
 }
@@ -411,7 +489,8 @@ bool DaisyDelayFxCore::SetParameterValue(const char* parameterId,
         return false;
     }
     parameters_[index].normalizedValue = Clamp01(normalizedValue);
-    parameters_[index].effectiveNormalizedValue = parameters_[index].normalizedValue;
+    parameters_[index].effectiveNormalizedValue
+        = parameters_[index].normalizedValue;
     return true;
 }
 
@@ -434,7 +513,8 @@ bool DaisyDelayFxCore::GetParameterValue(const char* parameterId,
 }
 
 bool DaisyDelayFxCore::SetEffectiveParameterValue(
-    const std::string& parameterId, float normalizedValue)
+    const std::string& parameterId,
+    float              normalizedValue)
 {
     return SetEffectiveParameterValue(parameterId.c_str(), normalizedValue);
 }
@@ -452,7 +532,8 @@ bool DaisyDelayFxCore::SetEffectiveParameterValue(const char* parameterId,
 }
 
 bool DaisyDelayFxCore::GetEffectiveParameterValue(
-    const std::string& parameterId, float* normalizedValue) const
+    const std::string& parameterId,
+    float*             normalizedValue) const
 {
     return GetEffectiveParameterValue(parameterId.c_str(), normalizedValue);
 }
@@ -477,19 +558,20 @@ void DaisyDelayFxCore::ClearEffectiveParameterOverrides()
     }
 }
 
-const std::vector<DaisyDelayFxParameter>& DaisyDelayFxCore::GetParameters() const
+const std::vector<DaisyDelayFxParameter>&
+DaisyDelayFxCore::GetParameters() const
 {
     return parameters_;
 }
 
-const DaisyDelayFxParameter* DaisyDelayFxCore::FindParameter(
-    const std::string& parameterId) const
+const DaisyDelayFxParameter*
+DaisyDelayFxCore::FindParameter(const std::string& parameterId) const
 {
     return FindParameter(parameterId.c_str());
 }
 
-const DaisyDelayFxParameter* DaisyDelayFxCore::FindParameter(
-    const char* parameterId) const
+const DaisyDelayFxParameter*
+DaisyDelayFxCore::FindParameter(const char* parameterId) const
 {
     return FindParameterById(parameterId);
 }
@@ -504,8 +586,8 @@ const char* DaisyDelayFxCore::GetParameterForLayerKnob(std::size_t layer,
     return layerKnobParameterIds_[layer][knob].c_str();
 }
 
-std::string DaisyDelayFxCore::FormatParameterValue(
-    const std::string& parameterId) const
+std::string
+DaisyDelayFxCore::FormatParameterValue(const std::string& parameterId) const
 {
     char text[32];
     FormatParameterValue(parameterId.c_str(), text, sizeof(text));
@@ -542,12 +624,12 @@ void DaisyDelayFxCore::FormatParameterValue(const char* parameterId,
 
     if(parameter->unitLabel.empty())
     {
-        std::snprintf(destination,
-                      destinationSize,
-                      "%d%%",
-                      static_cast<int>(std::round(
-                          Clamp01(parameter->effectiveNormalizedValue)
-                          * 100.0f)));
+        std::snprintf(
+            destination,
+            destinationSize,
+            "%d%%",
+            static_cast<int>(std::round(
+                Clamp01(parameter->effectiveNormalizedValue) * 100.0f)));
         return;
     }
 
@@ -595,7 +677,7 @@ bool DaisyDelayFxCore::TriggerMomentaryAction(const std::string& actionId)
 }
 
 bool DaisyDelayFxCore::TriggerFieldKeyAction(std::size_t zeroBasedIndex,
-                                             bool pressed)
+                                             bool        pressed)
 {
     if(zeroBasedIndex >= kFieldKeyCount)
     {
@@ -606,7 +688,8 @@ bool DaisyDelayFxCore::TriggerFieldKeyAction(std::size_t zeroBasedIndex,
     {
         if(pressed)
         {
-            SetButtonState(zeroBasedIndex, (buttonStates_[zeroBasedIndex] + 1) % 3);
+            SetButtonState(zeroBasedIndex,
+                           (buttonStates_[zeroBasedIndex] + 1) % 3);
         }
         return true;
     }
@@ -628,11 +711,13 @@ bool DaisyDelayFxCore::TriggerFieldKeyAction(std::size_t zeroBasedIndex,
         return true;
     }
 
-    static constexpr std::array<int, 8> kWhiteNotes = {{60, 62, 64, 65, 67, 69, 71, 72}};
+    static constexpr std::array<int, 8> kWhiteNotes
+        = {{60, 62, 64, 65, 67, 69, 71, 72}};
     const std::size_t whiteIndex = zeroBasedIndex - 8;
     const int note = kWhiteNotes[whiteIndex] + (keyboardOctaveOffset_ * 12);
     HandleMidiEvent(pressed ? 0x90 : 0x80,
-                    static_cast<std::uint8_t>(Clamp(static_cast<float>(note), 0.0f, 127.0f)),
+                    static_cast<std::uint8_t>(
+                        Clamp(static_cast<float>(note), 0.0f, 127.0f)),
                     pressed ? 100 : 0);
     return true;
 }
@@ -648,7 +733,8 @@ void DaisyDelayFxCore::SetButtonState(std::size_t zeroBasedIndex, int state)
 
 int DaisyDelayFxCore::GetButtonState(std::size_t zeroBasedIndex) const
 {
-    return zeroBasedIndex < buttonStates_.size() ? buttonStates_[zeroBasedIndex] : 0;
+    return zeroBasedIndex < buttonStates_.size() ? buttonStates_[zeroBasedIndex]
+                                                 : 0;
 }
 
 void DaisyDelayFxCore::SetInternalSynthMode(int mode)
@@ -692,17 +778,20 @@ DaisyDelayFxCore::GetFieldKeyLedValues() const
     std::array<float, kFieldKeyCount> values{};
     for(std::size_t i = 0; i < 6; ++i)
     {
-        values[i] = buttonStates_[i] == 0 ? 0.0f
-                                          : (buttonStates_[i] == 1 ? 0.32f : 0.85f);
+        values[i] = buttonStates_[i] == 0
+                        ? 0.0f
+                        : (buttonStates_[i] == 1 ? 0.32f : 0.85f);
     }
     values[6] = keyboardOctaveOffset_ < 0 ? 0.85f : 0.08f;
     values[7] = keyboardOctaveOffset_ > 0 ? 0.85f : 0.08f;
 
-    static constexpr std::array<int, 8> kWhiteNotes = {{60, 62, 64, 65, 67, 69, 71, 72}};
+    static constexpr std::array<int, 8> kWhiteNotes
+        = {{60, 62, 64, 65, 67, 69, 71, 72}};
     for(std::size_t i = 0; i < kWhiteNotes.size(); ++i)
     {
         const int note = kWhiteNotes[i] + (keyboardOctaveOffset_ * 12);
-        values[8 + i] = note >= 0 && note < 128 && noteActive_[note] ? 0.85f : 0.03f;
+        values[8 + i]
+            = note >= 0 && note < 128 && noteActive_[note] ? 0.85f : 0.03f;
     }
     return values;
 }
@@ -785,7 +874,7 @@ void DaisyDelayFxCore::RebuildParameters()
     layerKnobParameterIds_ = {};
 
     std::size_t writeIndex = 0;
-    auto add = [this, &writeIndex](const char* id,
+    auto        add        = [this, &writeIndex](const char* id,
                                    const char* label,
                                    const char* unit,
                                    float       defaultNormalized,
@@ -797,31 +886,34 @@ void DaisyDelayFxCore::RebuildParameters()
                                    int         rank,
                                    int         stepCount = 0) {
         DaisyDelayFxParameter parameter;
-        parameter.id = id;
-        parameter.label = label;
-        parameter.unitLabel = unit != nullptr ? unit : "";
+        parameter.id                     = id;
+        parameter.label                  = label;
+        parameter.unitLabel              = unit != nullptr ? unit : "";
         parameter.defaultNormalizedValue = Clamp01(defaultNormalized);
         parameter.normalizedValue = parameter.defaultNormalizedValue;
         parameter.effectiveNormalizedValue = parameter.defaultNormalizedValue;
-        parameter.nativeMinimum = nativeMin;
-        parameter.nativeMaximum = nativeMax;
-        parameter.nativeDefault = nativeMin + (nativeMax - nativeMin) * parameter.defaultNormalizedValue;
+        parameter.nativeMinimum            = nativeMin;
+        parameter.nativeMaximum            = nativeMax;
+        parameter.nativeDefault
+            = nativeMin
+              + (nativeMax - nativeMin) * parameter.defaultNormalizedValue;
         parameter.nativePrecision = precision;
-        parameter.layer = layer;
-        parameter.knob = knob;
-        parameter.importanceRank = rank;
-        parameter.stepCount = stepCount;
+        parameter.layer           = layer;
+        parameter.knob            = knob;
+        parameter.importanceRank  = rank;
+        parameter.stepCount       = stepCount;
         if(writeIndex < parameters_.size())
         {
-            parameters_[writeIndex] = parameter; // overwrite in place, no realloc
+            parameters_[writeIndex]
+                = parameter; // overwrite in place, no realloc
         }
         else
         {
             parameters_.push_back(parameter); // first build only
         }
         ++writeIndex;
-        if(layer >= 0 && layer < static_cast<int>(kLayerCount)
-           && knob >= 0 && knob < static_cast<int>(kKnobCount))
+        if(layer >= 0 && layer < static_cast<int>(kLayerCount) && knob >= 0
+           && knob < static_cast<int>(kKnobCount))
         {
             layerKnobParameterIds_[static_cast<std::size_t>(layer)]
                                   [static_cast<std::size_t>(knob)]
@@ -829,51 +921,197 @@ void DaisyDelayFxCore::RebuildParameters()
         }
     };
 
-    const bool funbox = source_ == DaisyDelayFxSource::kFunBox;
-    const bool reverb = source_ == DaisyDelayFxSource::kReverbPlayground;
-    const bool sdram = source_ == DaisyDelayFxSource::kSdramDelaylines;
-    const bool bundle = bundleMode_;
+    const bool funbox      = source_ == DaisyDelayFxSource::kFunBox;
+    const bool reverb      = source_ == DaisyDelayFxSource::kReverbPlayground;
+    const bool sdram       = source_ == DaisyDelayFxSource::kSdramDelaylines;
+    const bool spectral    = source_ == DaisyDelayFxSource::kPhantasmagoria;
+    const bool timeMachine = source_ == DaisyDelayFxSource::kTimeMachine;
+    const bool bundle      = bundleMode_;
+    const bool bundleSynthLabels = bundle && !spectral && !timeMachine;
 
     add("mix", "Mix", "", 0.48f, 0.0f, 100.0f, 0, 0, 0, 1);
-    add("time", sdram ? "Long Time" : "Delay Time", "ms", sdram ? 0.36f : 0.30f,
-        sdram ? 80.0f : 40.0f,
-        sdram ? 8000.0f : (funbox ? 3000.0f : 2200.0f), 0, 0, 1, 2);
-    add("feedback", reverb ? "Decay" : "Feedback", "", reverb ? 0.62f : 0.45f,
-        0.0f, 92.0f, 0, 0, 2, 3);
-    add("tone", reverb ? "HF Damp" : "Tone", "", 0.55f, 0.0f, 100.0f, 0, 0, 3, 4);
-    add("texture", funbox ? "Texture" : (reverb ? "Tank Color" : "Grit"),
-        "", funbox ? 0.42f : 0.30f, 0.0f, 100.0f, 0, 0, 4, 5);
-    add("mod", funbox ? "Drift" : "Mod", "", funbox ? 0.36f : 0.22f,
-        0.0f, 100.0f, 0, 0, 5, 6);
+    add("time",
+        sdram ? "Long Time"
+              : (spectral ? "Spectral Time"
+                          : (timeMachine ? "Tap Time" : "Delay Time")),
+        "ms",
+        sdram || timeMachine ? 0.36f : (spectral ? 0.32f : 0.30f),
+        sdram || timeMachine ? 80.0f : (spectral ? 20.0f : 40.0f),
+        sdram || timeMachine
+            ? 8000.0f
+            : (funbox ? 3000.0f : (spectral ? 1800.0f : 2200.0f)),
+        0,
+        0,
+        1,
+        2);
+    add("feedback",
+        reverb ? "Decay" : "Feedback",
+        "",
+        reverb ? 0.62f : 0.45f,
+        0.0f,
+        92.0f,
+        0,
+        0,
+        2,
+        3);
+    add("tone",
+        reverb ? "HF Damp" : (spectral ? "Repeat Age" : "Tone"),
+        "",
+        spectral ? 0.34f : 0.55f,
+        0.0f,
+        100.0f,
+        0,
+        0,
+        3,
+        4);
+    add("texture",
+        funbox
+            ? "Texture"
+            : (reverb ? "Tank Color"
+                      : (spectral ? "Reverse Mix"
+                                  : (timeMachine ? "Distribution" : "Grit"))),
+        "",
+        funbox ? 0.42f : (spectral ? 0.36f : (timeMachine ? 0.50f : 0.30f)),
+        0.0f,
+        100.0f,
+        0,
+        0,
+        4,
+        5);
+    add("mod",
+        funbox ? "Drift"
+               : (spectral ? "Tape Warble" : (timeMachine ? "Blur" : "Mod")),
+        "",
+        funbox ? 0.36f : (spectral ? 0.28f : (timeMachine ? 0.22f : 0.22f)),
+        0.0f,
+        100.0f,
+        0,
+        0,
+        5,
+        6);
     add("drive", "Input Drive", "dB", 0.38f, -12.0f, 18.0f, 1, 0, 6, 7);
     add("output", "Output", "dB", 0.63f, -18.0f, 6.0f, 1, 0, 7, 8);
 
-    add("pre_delay", "Pre Delay", "ms", reverb ? 0.26f : 0.12f, 0.0f, 500.0f,
-        0, 1, 0, 9);
+    add("pre_delay",
+        spectral ? "Chamber Pre" : "Pre Delay",
+        "ms",
+        reverb ? 0.26f : (spectral ? 0.18f : 0.12f),
+        0.0f,
+        500.0f,
+        0,
+        1,
+        0,
+        9);
     add("width", "Width", "", 0.65f, 0.0f, 100.0f, 0, 1, 1, 10);
-    add("diffusion", reverb ? "Diffusion" : "Spread", "", reverb ? 0.72f : 0.36f,
-        0.0f, 100.0f, 0, 1, 2, 11);
-    add("damping", "Damping", "", 0.45f, 0.0f, 100.0f, 0, 1, 3, 12);
-    add("tap_ratio", funbox ? "Tap Mode" : "Rhythm", "", 0.34f, 0.0f, 100.0f,
-        0, 1, 4, 13, 4);
-    add("freeze", bundle ? "Synth Bright" : "Freeze Amt", "", bundle ? 0.32f : 0.0f,
-        0.0f, 100.0f, 0, 1, 5, 14);
-    add("midi_level", bundle ? "Synth Decay" : "MIDI Level", "",
-        bundle ? 0.20f : 0.35f, 0.0f, 100.0f, 0, 1, 6, 15);
-    add("tempo", bundle ? "Synth Level" : "Tempo", bundle ? "" : "BPM",
-        bundle ? 0.32f : 0.42f, bundle ? 0.0f : 40.0f, bundle ? 100.0f : 220.0f,
-        0, 1, 7, 16);
+    add("diffusion",
+        reverb ? "Diffusion" : (spectral ? "Smear Diff" : "Spread"),
+        "",
+        reverb ? 0.72f : (spectral ? 0.45f : 0.36f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        2,
+        11);
+    add("damping",
+        spectral ? "Erosion" : "Damping",
+        "",
+        spectral ? 0.28f : 0.45f,
+        0.0f,
+        100.0f,
+        0,
+        1,
+        3,
+        12);
+    add("tap_ratio",
+        funbox ? "Tap Mode"
+               : (spectral ? "Chamber Mix"
+                           : (timeMachine ? "Tap Pattern" : "Rhythm")),
+        "",
+        spectral ? 0.32f : (timeMachine ? 0.40f : 0.34f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        4,
+        13,
+        funbox || timeMachine ? 4 : 0);
+    add("freeze",
+        bundleSynthLabels ? "Synth Bright"
+                          : (spectral ? "Freeze Voice" : "Freeze Amt"),
+        "",
+        bundleSynthLabels ? 0.32f : (spectral ? 0.12f : 0.0f),
+        0.0f,
+        100.0f,
+        0,
+        1,
+        5,
+        14);
+    add("midi_level",
+        bundleSynthLabels ? "Synth Decay" : "MIDI Level",
+        "",
+        bundleSynthLabels ? 0.20f : 0.35f,
+        0.0f,
+        100.0f,
+        0,
+        1,
+        6,
+        15);
+    add("tempo",
+        bundleSynthLabels ? "Synth Level" : "Tempo",
+        bundleSynthLabels ? "" : "BPM",
+        bundleSynthLabels ? 0.32f : 0.42f,
+        bundleSynthLabels ? 0.0f : 40.0f,
+        bundleSynthLabels ? 100.0f : 220.0f,
+        0,
+        1,
+        7,
+        16);
 
-    add("size", reverb ? "Tank Size" : "Range", "", reverb ? 0.70f : 0.48f,
-        0.0f, 100.0f, 0, 2, 0, 17);
-    add("density", funbox ? "Grain Density" : "Density", "", funbox ? 0.55f : 0.40f,
-        0.0f, 100.0f, 0, 2, 1, 18);
+    add("size",
+        reverb ? "Tank Size" : "Range",
+        "",
+        reverb ? 0.70f : 0.48f,
+        0.0f,
+        100.0f,
+        0,
+        2,
+        0,
+        17);
+    add("density",
+        funbox ? "Grain Density" : (timeMachine ? "Tap Focus" : "Density"),
+        "",
+        funbox ? 0.55f : (timeMachine ? 0.42f : 0.40f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        1,
+        18);
     add("low_cut", "Low Cut", "Hz", 0.14f, 20.0f, 600.0f, 0, 2, 2, 19);
     add("high_cut", "High Cut", "Hz", 0.80f, 1200.0f, 16000.0f, 0, 2, 3, 20);
-    add("smear", funbox ? "Spectral Smear" : "Smear", "", funbox ? 0.52f : 0.25f,
-        0.0f, 100.0f, 0, 2, 4, 21);
-    add("warp", sdram ? "Interp Warp" : "Warp", "", sdram ? 0.20f : 0.34f,
-        0.0f, 100.0f, 0, 2, 5, 22);
+    add("smear",
+        funbox ? "Spectral Smear" : (timeMachine ? "Blur Spread" : "Smear"),
+        "",
+        funbox ? 0.52f : (timeMachine ? 0.36f : 0.25f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        4,
+        21);
+    add("warp",
+        sdram ? "Interp Warp"
+              : (spectral ? "Freeze Drift"
+                          : (timeMachine ? "Clock Warp" : "Warp")),
+        "",
+        sdram ? 0.20f : (spectral ? 0.22f : 0.34f),
+        0.0f,
+        100.0f,
+        0,
+        2,
+        5,
+        22);
     add("attack", "MIDI Attack", "ms", 0.08f, 0.5f, 100.0f, 1, 2, 6, 23);
     add("release", "MIDI Release", "ms", 0.36f, 10.0f, 2000.0f, 0, 2, 7, 24);
 }
@@ -906,7 +1144,8 @@ float DaisyDelayFxCore::NativeValue(const char* id) const
 
 float DaisyDelayFxCore::ParameterValueAt(std::size_t index) const
 {
-    return index < parameters_.size() ? parameters_[index].normalizedValue : 0.0f;
+    return index < parameters_.size() ? parameters_[index].normalizedValue
+                                      : 0.0f;
 }
 
 float DaisyDelayFxCore::EffectiveParameterValueAt(std::size_t index) const
@@ -921,15 +1160,16 @@ float DaisyDelayFxCore::NativeValueAt(std::size_t index) const
     return index < parameters_.size() ? NativeValue(parameters_[index]) : 0.0f;
 }
 
-float DaisyDelayFxCore::NativeValue(const DaisyDelayFxParameter& parameter) const
+float DaisyDelayFxCore::NativeValue(
+    const DaisyDelayFxParameter& parameter) const
 {
     return parameter.nativeMinimum
            + (parameter.nativeMaximum - parameter.nativeMinimum)
                  * Clamp01(parameter.effectiveNormalizedValue);
 }
 
-const DaisyDelayFxParameter* DaisyDelayFxCore::FindParameterById(
-    const char* id) const
+const DaisyDelayFxParameter*
+DaisyDelayFxCore::FindParameterById(const char* id) const
 {
     if(id == nullptr)
     {
@@ -945,8 +1185,8 @@ const DaisyDelayFxParameter* DaisyDelayFxCore::FindParameterById(
     return nullptr;
 }
 
-std::size_t DaisyDelayFxCore::ParameterIndex(
-    const std::string& parameterId) const
+std::size_t
+DaisyDelayFxCore::ParameterIndex(const std::string& parameterId) const
 {
     return ParameterIndexById(parameterId.c_str());
 }
@@ -989,19 +1229,18 @@ void DaisyDelayFxCore::StartSynthVoice(int note, float velocity)
         return;
     }
 
-    rngState_ = std::fmod((rngState_ * 3.9871f) + 0.137f, 1.0f);
+    rngState_           = std::fmod((rngState_ * 3.9871f) + 0.137f, 1.0f);
     const float exciter = (rngState_ * 2.0f) - 1.0f;
 
-    voice->note = note;
-    voice->active = true;
-    voice->held = true;
+    voice->note      = note;
+    voice->active    = true;
+    voice->held      = true;
     voice->frequency = MidiNoteToHz(note);
-    voice->velocity = Clamp01(velocity);
+    voice->velocity  = Clamp01(velocity);
     voice->phase = std::fmod(voice->phase + 0.013f + rngState_ * 0.07f, 1.0f);
-    voice->envelope = std::max(voice->envelope,
-                               internalSynthMode_ == 2 ? 0.02f
-                                                       : voice->velocity);
-    voice->body = 0.0f;
+    voice->envelope = std::max(
+        voice->envelope, internalSynthMode_ == 2 ? 0.02f : voice->velocity);
+    voice->body    = 0.0f;
     voice->exciter = exciter * voice->velocity;
 }
 
@@ -1069,17 +1308,18 @@ float DaisyDelayFxCore::ProcessInternalSynth(float brightness,
         return 0.0f;
     }
 
-    const float sampleRate = static_cast<float>(sampleRate_);
-    const float bright = Clamp01(brightness);
+    const float sampleRate   = static_cast<float>(sampleRate_);
+    const float bright       = Clamp01(brightness);
     const float decaySeconds = 0.12f + 5.8f * decay * decay;
-    const float pluckDecay = std::exp(-1.0f / (decaySeconds * sampleRate));
+    const float pluckDecay   = std::exp(-1.0f / (decaySeconds * sampleRate));
     const float attackCoeff
-        = 1.0f - std::exp(-1.0f / (0.001f * std::max(0.5f, attackMs) * sampleRate));
-    const float releaseCoeff = 1.0f - std::exp(
-        -1.0f
-        / (0.001f
-           * std::max(30.0f, releaseMs + (decay * 1800.0f))
-           * sampleRate));
+        = 1.0f
+          - std::exp(-1.0f / (0.001f * std::max(0.5f, attackMs) * sampleRate));
+    const float releaseCoeff
+        = 1.0f
+          - std::exp(-1.0f
+                     / (0.001f * std::max(30.0f, releaseMs + (decay * 1800.0f))
+                        * sampleRate));
 
     float sum = 0.0f;
     for(auto& voice : synthVoices_)
@@ -1097,32 +1337,35 @@ float DaisyDelayFxCore::ProcessInternalSynth(float brightness,
 
         if(internalSynthMode_ == 1)
         {
-            const bool noteHeld = voice.note >= 0
-                                  && voice.note < static_cast<int>(noteActive_.size())
-                                  && noteActive_[static_cast<std::size_t>(voice.note)];
+            const bool noteHeld
+                = voice.note >= 0
+                  && voice.note < static_cast<int>(noteActive_.size())
+                  && noteActive_[static_cast<std::size_t>(voice.note)];
             const float releasedDecay = std::exp(-1.0f / (0.08f * sampleRate));
-            voice.envelope *= (noteHeld || voice.held) ? pluckDecay
-                                                       : releasedDecay;
+            voice.envelope
+                *= (noteHeld || voice.held) ? pluckDecay : releasedDecay;
         }
         else
         {
-            const bool noteHeld = voice.note >= 0
-                                  && voice.note < static_cast<int>(noteActive_.size())
-                                  && noteActive_[static_cast<std::size_t>(voice.note)];
+            const bool noteHeld
+                = voice.note >= 0
+                  && voice.note < static_cast<int>(noteActive_.size())
+                  && noteActive_[static_cast<std::size_t>(voice.note)];
             const float target = noteHeld || voice.held ? voice.velocity : 0.0f;
-            const float coeff = target > voice.envelope ? attackCoeff
-                                                        : releaseCoeff;
+            const float coeff
+                = target > voice.envelope ? attackCoeff : releaseCoeff;
             voice.envelope += coeff * (target - voice.envelope);
         }
 
         voice.exciter *= 0.988f - (bright * 0.018f);
-        const float phase = 2.0f * kPi * voice.phase;
+        const float phase       = 2.0f * kPi * voice.phase;
         const float fundamental = std::sin(phase);
-        const float second = std::sin(phase * 2.01f);
-        const float third = std::sin(phase * 3.0f);
-        const float partials = fundamental
-                               + bright * ((0.42f * second) + (0.22f * third));
-        const float resonant = partials + voice.exciter * (0.30f + 0.45f * bright);
+        const float second      = std::sin(phase * 2.01f);
+        const float third       = std::sin(phase * 3.0f);
+        const float partials
+            = fundamental + bright * ((0.42f * second) + (0.22f * third));
+        const float resonant
+            = partials + voice.exciter * (0.30f + 0.45f * bright);
         voice.body += (0.02f + bright * 0.18f) * (resonant - voice.body);
         sum += Mix(voice.body, resonant, 0.35f + bright * 0.45f)
                * voice.envelope;
@@ -1136,178 +1379,210 @@ float DaisyDelayFxCore::ProcessInternalSynth(float brightness,
     return Clamp(sum * (0.18f + 0.62f * Clamp01(level)), -0.9f, 0.9f);
 }
 
-void DaisyDelayFxCore::ProcessMultiFx(float inputLeft,
-                                      float inputRight,
+void DaisyDelayFxCore::ProcessMultiFx(float  inputLeft,
+                                      float  inputRight,
                                       float* outputLeft,
                                       float* outputRight)
 {
-    const float sr = static_cast<float>(sampleRate_);
-    const float drive = DbToLinear(NativeValueAt(kParamDrive));
-    const float input = (inputLeft + inputRight) * 0.5f * drive;
+    const float sr     = static_cast<float>(sampleRate_);
+    const float drive  = DbToLinear(NativeValueAt(kParamDrive));
+    const float input  = (inputLeft + inputRight) * 0.5f * drive;
     const float timeMs = NativeValueAt(kParamTime);
-    const float feedback = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.92f, 0.0f, 0.92f);
+    const float feedback
+        = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.92f, 0.0f, 0.92f);
     const float width = EffectiveParameterValueAt(kParamWidth);
-    const float mod = EffectiveParameterValueAt(kParamMod);
-    const float grit = EffectiveParameterValueAt(kParamTexture);
-    const float freezeParam = bundleMode_ ? 0.0f
-                                          : EffectiveParameterValueAt(kParamFreeze);
-    const float freeze = std::max(freezeParam,
-                                  buttonStates_[1] > 0 ? (buttonStates_[1] == 2 ? 1.0f : 0.65f) : 0.0f);
-    const float tapRatio = buttonStates_[3] == 1 ? 0.75f
-                         : (buttonStates_[3] == 2 ? 0.6666667f
-                                                   : Mix(0.5f, 1.0f, ParameterValueAt(kParamTapRatio)));
+    const float mod   = EffectiveParameterValueAt(kParamMod);
+    const float grit  = EffectiveParameterValueAt(kParamTexture);
+    const float freezeParam
+        = bundleMode_ ? 0.0f : EffectiveParameterValueAt(kParamFreeze);
+    const float freeze = std::max(
+        freezeParam,
+        buttonStates_[1] > 0 ? (buttonStates_[1] == 2 ? 1.0f : 0.65f) : 0.0f);
+    const float tapRatio
+        = buttonStates_[3] == 1
+              ? 0.75f
+              : (buttonStates_[3] == 2
+                     ? 0.6666667f
+                     : Mix(0.5f, 1.0f, ParameterValueAt(kParamTapRatio)));
 
     lfoPhase_ += (0.05f + 7.0f * mod * mod) / sr;
     if(lfoPhase_ >= 1.0f)
     {
         lfoPhase_ -= 1.0f;
     }
-    const float lfo = std::sin(2.0f * kPi * lfoPhase_);
-    const float targetDelay = Clamp(timeMs * 0.001f * sr * tapRatio, 24.0f, delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
+    const float lfo         = std::sin(2.0f * kPi * lfoPhase_);
+    const float targetDelay = Clamp(
+        timeMs * 0.001f * sr * tapRatio,
+        24.0f,
+        delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
     delaySmooth_[0] += 0.0006f * (targetDelay - delaySmooth_[0]);
-    delaySmooth_[1] += 0.0006f * ((targetDelay * (1.0f + 0.012f + width * 0.04f)) - delaySmooth_[1]);
+    delaySmooth_[1] += 0.0006f
+                       * ((targetDelay * (1.0f + 0.012f + width * 0.04f))
+                          - delaySmooth_[1]);
     const float flutter = (8.0f + 400.0f * mod * mod) * lfo;
-    const float readL = delays_[0].Read(delaySmooth_[0] + flutter);
-    const float readR = delays_[1].Read(delaySmooth_[1] - flutter);
+    const float readL   = delays_[0].Read(delaySmooth_[0] + flutter);
+    const float readR   = delays_[1].Read(delaySmooth_[1] - flutter);
     const float monoWet = (readL + readR) * 0.5f;
-    const float toneHz = 900.0f + 9000.0f * (1.0f - EffectiveParameterValueAt(kParamTone));
+    const float toneHz
+        = 900.0f + 9000.0f * (1.0f - EffectiveParameterValueAt(kParamTone));
     const float toneCoeff = OnePoleCoeff(toneHz, sr);
     toneState_[0] += toneCoeff * (monoWet - toneState_[0]);
-    const float saturated = FastTanh((toneState_[0] * (1.0f + grit * 4.0f)) + input);
-    const float write = Mix(input + (toneState_[0] * feedback), saturated, grit);
+    const float saturated
+        = FastTanh((toneState_[0] * (1.0f + grit * 4.0f)) + input);
+    const float write
+        = Mix(input + (toneState_[0] * feedback), saturated, grit);
     const float writeBlend = 1.0f - freeze;
     delays_[0].Write((write * writeBlend) + (readL * feedback * freeze));
     delays_[1].Write((write * writeBlend) + (readR * feedback * freeze));
-    *outputLeft = readL;
+    *outputLeft  = readL;
     *outputRight = readR;
 }
 
-void DaisyDelayFxCore::ProcessReverbPlayground(float inputLeft,
-                                               float inputRight,
+void DaisyDelayFxCore::ProcessReverbPlayground(float  inputLeft,
+                                               float  inputRight,
                                                float* outputLeft,
                                                float* outputRight)
 {
-    const float sr = static_cast<float>(sampleRate_);
+    const float sr    = static_cast<float>(sampleRate_);
     const float input = (inputLeft + inputRight) * 0.5f
                         * DbToLinear(NativeValueAt(kParamDrive)) * 0.55f;
-    const float decay = Clamp(0.15f + EffectiveParameterValueAt(kParamFeedback) * 0.82f,
-                              0.0f,
-                              0.92f);
+    const float decay = Clamp(
+        0.15f + EffectiveParameterValueAt(kParamFeedback) * 0.82f, 0.0f, 0.92f);
     const float size = 0.55f + EffectiveParameterValueAt(kParamSize) * 1.8f;
     const float diffusion = Clamp01(EffectiveParameterValueAt(kParamDiffusion)
                                     + (buttonStates_[4] * 0.18f));
-    const float dampingHz = 1200.0f + (1.0f - EffectiveParameterValueAt(kParamDamping))
-                                        * 12000.0f;
+    const float dampingHz
+        = 1200.0f
+          + (1.0f - EffectiveParameterValueAt(kParamDamping)) * 12000.0f;
     const float dampCoeff = OnePoleCoeff(dampingHz, sr);
-    static constexpr std::array<float, 4> kBaseDelaysMs = {{37.0f, 53.0f, 71.0f, 89.0f}};
+    static constexpr std::array<float, 4> kBaseDelaysMs
+        = {{37.0f, 53.0f, 71.0f, 89.0f}};
 
     float taps[4] = {};
     for(std::size_t i = 0; i < 4; ++i)
     {
-        const float delaySamples = Clamp(kBaseDelaysMs[i] * size * 0.001f * sr,
-                                         24.0f,
-                                         delays_[i].size > 0 ? static_cast<float>(delays_[i].size - 8) : 24.0f);
+        const float delaySamples = Clamp(
+            kBaseDelaysMs[i] * size * 0.001f * sr,
+            24.0f,
+            delays_[i].size > 0 ? static_cast<float>(delays_[i].size - 8)
+                                : 24.0f);
         taps[i] = delays_[i].Read(delaySamples);
         dampingState_[i] += dampCoeff * (taps[i] - dampingState_[i]);
     }
 
-    const float a = dampingState_[0];
-    const float b = dampingState_[1];
-    const float c = dampingState_[2];
-    const float d = dampingState_[3];
-    const float h0 = (a + b + c + d) * 0.5f;
-    const float h1 = (a - b + c - d) * 0.5f;
-    const float h2 = (a + b - c - d) * 0.5f;
-    const float h3 = (a - b - c + d) * 0.5f;
+    const float a            = dampingState_[0];
+    const float b            = dampingState_[1];
+    const float c            = dampingState_[2];
+    const float d            = dampingState_[3];
+    const float h0           = (a + b + c + d) * 0.5f;
+    const float h1           = (a - b + c - d) * 0.5f;
+    const float h2           = (a + b - c - d) * 0.5f;
+    const float h3           = (a - b - c + d) * 0.5f;
     const float diffuseInput = input * (0.18f + diffusion * 0.52f);
     delays_[0].Write(diffuseInput + h0 * decay);
     delays_[1].Write(diffuseInput + h1 * decay);
     delays_[2].Write(diffuseInput + h2 * decay);
     delays_[3].Write(diffuseInput + h3 * decay);
 
-    const float width = EffectiveParameterValueAt(kParamWidth);
+    const float width    = EffectiveParameterValueAt(kParamWidth);
     const float preDelay = EffectiveParameterValueAt(kParamPreDelay);
-    const float left = (a + c) * 0.42f + input * preDelay * 0.25f;
-    const float right = (b + d) * 0.42f + input * preDelay * 0.25f;
-    const float mono = (left + right) * 0.5f;
-    *outputLeft = Mix(mono, left, width);
-    *outputRight = Mix(mono, right, width);
+    const float left     = (a + c) * 0.42f + input * preDelay * 0.25f;
+    const float right    = (b + d) * 0.42f + input * preDelay * 0.25f;
+    const float mono     = (left + right) * 0.5f;
+    *outputLeft          = Mix(mono, left, width);
+    *outputRight         = Mix(mono, right, width);
 }
 
-void DaisyDelayFxCore::ProcessFunBox(float inputLeft,
-                                     float inputRight,
+void DaisyDelayFxCore::ProcessFunBox(float  inputLeft,
+                                     float  inputRight,
                                      float* outputLeft,
                                      float* outputRight)
 {
-    const float sr = static_cast<float>(sampleRate_);
-    const float drive = DbToLinear(NativeValueAt(kParamDrive));
-    const float inL = inputLeft * drive;
-    const float inR = inputRight * drive;
+    const float sr     = static_cast<float>(sampleRate_);
+    const float drive  = DbToLinear(NativeValueAt(kParamDrive));
+    const float inL    = inputLeft * drive;
+    const float inR    = inputRight * drive;
     const float timeMs = NativeValueAt(kParamTime);
-    const float feedback = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.88f,
-                                 0.0f,
-                                 0.88f);
-    const float texture = EffectiveParameterValueAt(kParamTexture);
-    const float density = EffectiveParameterValueAt(kParamDensity);
-    const float smear = EffectiveParameterValueAt(kParamSmear);
-    const float mod = EffectiveParameterValueAt(kParamMod);
-    const float width = EffectiveParameterValueAt(kParamWidth);
-    const float reverseAmount = buttonStates_[2] == 0 ? 0.0f
-                              : (buttonStates_[2] == 1 ? 0.45f : 0.85f);
-    const float freezeParam = bundleMode_ ? 0.0f
-                                          : EffectiveParameterValueAt(kParamFreeze);
-    const float freeze = std::max(freezeParam,
-                                  buttonStates_[1] > 0 ? 0.75f : 0.0f);
-    const float ratio = buttonStates_[3] == 2 ? 0.6666667f
-                       : (buttonStates_[3] == 1 ? 0.75f
-                                                 : Mix(0.5f, 1.0f, ParameterValueAt(kParamTapRatio)));
+    const float feedback
+        = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.88f, 0.0f, 0.88f);
+    const float texture       = EffectiveParameterValueAt(kParamTexture);
+    const float density       = EffectiveParameterValueAt(kParamDensity);
+    const float smear         = EffectiveParameterValueAt(kParamSmear);
+    const float mod           = EffectiveParameterValueAt(kParamMod);
+    const float width         = EffectiveParameterValueAt(kParamWidth);
+    const float reverseAmount = buttonStates_[2] == 0
+                                    ? 0.0f
+                                    : (buttonStates_[2] == 1 ? 0.45f : 0.85f);
+    const float freezeParam
+        = bundleMode_ ? 0.0f : EffectiveParameterValueAt(kParamFreeze);
+    const float freeze
+        = std::max(freezeParam, buttonStates_[1] > 0 ? 0.75f : 0.0f);
+    const float ratio
+        = buttonStates_[3] == 2
+              ? 0.6666667f
+              : (buttonStates_[3] == 1
+                     ? 0.75f
+                     : Mix(0.5f, 1.0f, ParameterValueAt(kParamTapRatio)));
 
     slowLfoPhase_ += (0.03f + mod * 4.0f) / sr;
     if(slowLfoPhase_ >= 1.0f)
     {
         slowLfoPhase_ -= 1.0f;
     }
-    const float drift = std::sin(2.0f * kPi * slowLfoPhase_);
-    const float baseDelay = Clamp(timeMs * 0.001f * sr, 24.0f,
-                                  delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
-    delaySmooth_[0] += 0.0008f * ((baseDelay + drift * baseDelay * 0.04f * texture) - delaySmooth_[0]);
-    delaySmooth_[1] += 0.0008f * ((baseDelay * ratio - drift * baseDelay * 0.03f * texture) - delaySmooth_[1]);
+    const float drift     = std::sin(2.0f * kPi * slowLfoPhase_);
+    const float baseDelay = Clamp(
+        timeMs * 0.001f * sr,
+        24.0f,
+        delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
+    delaySmooth_[0] += 0.0008f
+                       * ((baseDelay + drift * baseDelay * 0.04f * texture)
+                          - delaySmooth_[0]);
+    delaySmooth_[1]
+        += 0.0008f
+           * ((baseDelay * ratio - drift * baseDelay * 0.03f * texture)
+              - delaySmooth_[1]);
     const float normalL = delays_[0].Read(delaySmooth_[0]);
-    const float normalR = delays_[1].Read(delaySmooth_[0] * (1.0f + 0.04f * width));
-    const float grainDelay = Clamp(baseDelay * Mix(0.12f, 0.85f, density)
-                                       + drift * baseDelay * 0.18f * smear,
-                                   24.0f,
-                                   delays_[2].size > 0 ? static_cast<float>(delays_[2].size - 8) : 24.0f);
-    const float grain = delays_[2].Read(grainDelay);
-    const float reverseTap = delays_[3].Read(Clamp(baseDelay * (1.0f - 0.65f * drift),
-                                                  24.0f,
-                                                  delays_[3].size > 0 ? static_cast<float>(delays_[3].size - 8) : 24.0f));
-    const float wetL = Mix(normalL, grain, texture);
-    const float wetR = Mix(normalR, reverseTap, Clamp01(texture + reverseAmount));
+    const float normalR
+        = delays_[1].Read(delaySmooth_[0] * (1.0f + 0.04f * width));
+    const float grainDelay = Clamp(
+        baseDelay * Mix(0.12f, 0.85f, density)
+            + drift * baseDelay * 0.18f * smear,
+        24.0f,
+        delays_[2].size > 0 ? static_cast<float>(delays_[2].size - 8) : 24.0f);
+    const float grain      = delays_[2].Read(grainDelay);
+    const float reverseTap = delays_[3].Read(Clamp(
+        baseDelay * (1.0f - 0.65f * drift),
+        24.0f,
+        delays_[3].size > 0 ? static_cast<float>(delays_[3].size - 8) : 24.0f));
+    const float wetL       = Mix(normalL, grain, texture);
+    const float wetR
+        = Mix(normalR, reverseTap, Clamp01(texture + reverseAmount));
     const float writeL = (inL * (1.0f - freeze)) + wetR * feedback;
     const float writeR = (inR * (1.0f - freeze)) + wetL * feedback;
     delays_[0].Write(writeL);
     delays_[1].Write(writeR);
     delays_[2].Write((inL + inR) * 0.5f * (1.0f - freeze) + grain * feedback);
-    delays_[3].Write((inL - inR) * 0.5f * (1.0f - freeze) + reverseTap * feedback);
-    *outputLeft = wetL;
+    delays_[3].Write((inL - inR) * 0.5f * (1.0f - freeze)
+                     + reverseTap * feedback);
+    *outputLeft  = wetL;
     *outputRight = wetR;
 }
 
-void DaisyDelayFxCore::ProcessSdramDelaylines(float inputLeft,
-                                              float inputRight,
+void DaisyDelayFxCore::ProcessSdramDelaylines(float  inputLeft,
+                                              float  inputRight,
                                               float* outputLeft,
                                               float* outputRight)
 {
-    const float sr = static_cast<float>(sampleRate_);
-    const float timeMs = NativeValueAt(kParamTime);
-    const float baseDelay = Clamp(timeMs * 0.001f * sr,
-                                  24.0f,
-                                  delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
-    const float warp = EffectiveParameterValueAt(kParamWarp);
-    const float mod = EffectiveParameterValueAt(kParamMod);
+    const float sr        = static_cast<float>(sampleRate_);
+    const float timeMs    = NativeValueAt(kParamTime);
+    const float baseDelay = Clamp(
+        timeMs * 0.001f * sr,
+        24.0f,
+        delays_[0].size > 0 ? static_cast<float>(delays_[0].size - 8) : 24.0f);
+    const float warp     = EffectiveParameterValueAt(kParamWarp);
+    const float mod      = EffectiveParameterValueAt(kParamMod);
     const float modDepth = mod * mod;
-    const float width = EffectiveParameterValueAt(kParamWidth);
+    const float width    = EffectiveParameterValueAt(kParamWidth);
     lfoPhase_ += (0.02f + 3.0f * mod) / sr;
     if(lfoPhase_ >= 1.0f)
     {
@@ -1315,24 +1590,253 @@ void DaisyDelayFxCore::ProcessSdramDelaylines(float inputLeft,
     }
     const float lfo = std::sin(2.0f * kPi * lfoPhase_);
     delaySmooth_[0] += 0.00035f * (baseDelay - delaySmooth_[0]);
-    delaySmooth_[1] += 0.00035f * ((baseDelay * (1.0f + width * 0.2f)) - delaySmooth_[1]);
-    const float readL = delays_[0].Read(delaySmooth_[0] + lfo * baseDelay * 0.04f * modDepth);
-    const float readR = delays_[1].Read(delaySmooth_[1] - lfo * baseDelay * 0.04f * modDepth);
-    const float tapL = delays_[2].Read(Clamp(baseDelay * Mix(0.25f, 0.95f, warp), 24.0f,
-                                           delays_[2].size > 0 ? static_cast<float>(delays_[2].size - 8) : 24.0f));
-    const float tapR = delays_[3].Read(Clamp(baseDelay * Mix(0.35f, 1.15f, warp), 24.0f,
-                                           delays_[3].size > 0 ? static_cast<float>(delays_[3].size - 8) : 24.0f));
-    const float feedback = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.90f,
-                                 0.0f,
-                                 0.90f);
+    delaySmooth_[1]
+        += 0.00035f * ((baseDelay * (1.0f + width * 0.2f)) - delaySmooth_[1]);
+    const float readL
+        = delays_[0].Read(delaySmooth_[0] + lfo * baseDelay * 0.04f * modDepth);
+    const float readR
+        = delays_[1].Read(delaySmooth_[1] - lfo * baseDelay * 0.04f * modDepth);
+    const float tapL = delays_[2].Read(Clamp(
+        baseDelay * Mix(0.25f, 0.95f, warp),
+        24.0f,
+        delays_[2].size > 0 ? static_cast<float>(delays_[2].size - 8) : 24.0f));
+    const float tapR = delays_[3].Read(Clamp(
+        baseDelay * Mix(0.35f, 1.15f, warp),
+        24.0f,
+        delays_[3].size > 0 ? static_cast<float>(delays_[3].size - 8) : 24.0f));
+    const float feedback
+        = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.90f, 0.0f, 0.90f);
     const float cross = EffectiveParameterValueAt(kParamTexture);
     const float drive = DbToLinear(NativeValueAt(kParamDrive));
     delays_[0].Write((inputLeft * drive) + Mix(readL, readR, cross) * feedback);
-    delays_[1].Write((inputRight * drive) + Mix(readR, readL, cross) * feedback);
+    delays_[1].Write((inputRight * drive)
+                     + Mix(readR, readL, cross) * feedback);
     delays_[2].Write(inputLeft + tapR * feedback * 0.65f);
     delays_[3].Write(inputRight + tapL * feedback * 0.65f);
     const float smear = EffectiveParameterValueAt(kParamSmear);
-    *outputLeft = Mix(readL, tapL, smear);
-    *outputRight = Mix(readR, tapR, smear);
+    *outputLeft       = Mix(readL, tapL, smear);
+    *outputRight      = Mix(readR, tapR, smear);
+}
+
+void DaisyDelayFxCore::ProcessPhantasmagoria(float  inputLeft,
+                                             float  inputRight,
+                                             float* outputLeft,
+                                             float* outputRight)
+{
+    const float sr        = static_cast<float>(sampleRate_);
+    const float drive     = DbToLinear(NativeValueAt(kParamDrive));
+    const float inL       = inputLeft * drive;
+    const float inR       = inputRight * drive;
+    const float monoIn    = (inL + inR) * 0.5f;
+    const float timeMs    = NativeValueAt(kParamTime);
+    const float baseDelay = Clamp(
+        timeMs * 0.001f * sr,
+        48.0f,
+        delays_[0].size > 1608 ? static_cast<float>(delays_[0].size - 1600)
+                               : 48.0f);
+    const float feedback
+        = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.90f, 0.0f, 0.90f);
+    const float reverse = EffectiveParameterValueAt(kParamTexture);
+    const float smear
+        = Clamp01(EffectiveParameterValueAt(kParamDiffusion)
+                  + EffectiveParameterValueAt(kParamSmear) * 0.45f);
+    const float erosion
+        = Clamp01(EffectiveParameterValueAt(kParamDamping)
+                  + EffectiveParameterValueAt(kParamTone) * 0.35f);
+    const float chamber = EffectiveParameterValueAt(kParamTapRatio);
+    const float freeze  = EffectiveParameterValueAt(kParamFreeze);
+    const float evolve  = EffectiveParameterValueAt(kParamWarp);
+    const float width   = EffectiveParameterValueAt(kParamWidth);
+    const float mod     = EffectiveParameterValueAt(kParamMod);
+
+    lfoPhase_     = Wrap01(lfoPhase_ + (0.045f + mod * 1.9f) / sr);
+    slowLfoPhase_ = Wrap01(slowLfoPhase_ + (0.011f + evolve * 0.09f) / sr);
+    const float warble
+        = (std::sin(2.0f * kPi * lfoPhase_)
+           + std::sin(2.0f * kPi * Wrap01(lfoPhase_ * 3.1f)) * 0.35f
+           + std::sin(2.0f * kPi * Wrap01(lfoPhase_ * 0.13f)) * 0.55f)
+          * (8.0f + 240.0f * mod * mod);
+
+    delaySmooth_[0] += 0.00035f * ((baseDelay + warble) - delaySmooth_[0]);
+    delaySmooth_[1]
+        += 0.00035f
+           * ((baseDelay * (1.0f + width * 0.08f) - warble) - delaySmooth_[1]);
+
+    const float fwdL = delays_[0].Read(delaySmooth_[0]);
+    const float fwdR = delays_[1].Read(delaySmooth_[1]);
+
+    auto grainRead = [baseDelay, warble, this](const DelayLine& line,
+                                               float            phase) {
+        const float aPhase  = Wrap01(phase);
+        const float bPhase  = Wrap01(phase + 0.5f);
+        const float aWindow = TriangleWindow(aPhase);
+        const float bWindow = TriangleWindow(bPhase);
+        const float aDelay  = baseDelay * Mix(0.18f, 1.08f, aPhase) + warble;
+        const float bDelay  = baseDelay * Mix(0.18f, 1.08f, bPhase) - warble;
+        const float a       = line.Read(aDelay) * aWindow;
+        const float b       = line.Read(bDelay) * bWindow;
+        return (a + b) / std::max(0.001f, aWindow + bWindow);
+    };
+
+    const float revL = grainRead(delays_[0], slowLfoPhase_);
+    const float revR = grainRead(delays_[1], Wrap01(slowLfoPhase_ + 0.37f));
+    float       wetL = Mix(fwdL, revL, reverse);
+    float       wetR = Mix(fwdR, revR, reverse);
+
+    if(smear > 0.001f)
+    {
+        const float tapA = 0.010f * sr;
+        const float tapB = 0.025f * sr;
+        wetL             = wetL * (1.0f - smear * 0.42f)
+               + delays_[0].Read(delaySmooth_[0] + tapA) * smear * 0.24f
+               + delays_[0].Read(delaySmooth_[0] + tapB) * smear * 0.20f;
+        wetR = wetR * (1.0f - smear * 0.42f)
+               + delays_[1].Read(delaySmooth_[1] + tapA) * smear * 0.24f
+               + delays_[1].Read(delaySmooth_[1] + tapB) * smear * 0.20f;
+    }
+
+    const float erosionHz    = 7800.0f - erosion * 6500.0f;
+    const float erosionCoeff = OnePoleCoeff(erosionHz, sr);
+    dampingState_[0] += erosionCoeff * (wetL - dampingState_[0]);
+    dampingState_[1] += erosionCoeff * (wetR - dampingState_[1]);
+    wetL = Mix(wetL, dampingState_[0], erosion) * (1.0f - erosion * 0.35f);
+    wetR = Mix(wetR, dampingState_[1], erosion) * (1.0f - erosion * 0.35f);
+
+    static constexpr std::array<float, 4> kChamberTapsMs = {{
+        83.0f,
+        151.0f,
+        227.0f,
+        311.0f,
+    }};
+    float                                 chamberSum     = 0.0f;
+    for(float tapMs : kChamberTapsMs)
+    {
+        chamberSum += delays_[2].Read(tapMs * 0.001f * sr);
+    }
+    chamberSum *= 0.25f;
+    delays_[2].Write(monoIn + chamberSum * feedback * 0.72f);
+    const float chamberOut = chamberSum * chamber * 0.75f;
+
+    const float evolveDrift
+        = std::sin(2.0f * kPi * slowLfoPhase_) * 18.0f * evolve * freeze;
+    const float freezeA   = delays_[3].Read(0.097f * sr + evolveDrift);
+    const float freezeB   = delays_[3].Read(0.149f * sr - evolveDrift * 0.7f);
+    const float freezeC   = delays_[3].Read(0.199f * sr + evolveDrift * 0.43f);
+    const float freezeOut = (freezeA + freezeB + freezeC) * 0.3333333f;
+    delays_[3].Write(monoIn * (1.0f - freeze)
+                     + freezeOut * freeze * (0.72f + feedback * 0.20f));
+
+    wetL = FastTanh(wetL + chamberOut + freezeOut * freeze * 0.85f);
+    wetR = FastTanh(wetR + chamberOut + freezeOut * freeze * 0.85f);
+
+    const float toneHz
+        = 1000.0f
+          + (1.0f - EffectiveParameterValueAt(kParamHighCut)) * 13000.0f;
+    const float toneCoeff = OnePoleCoeff(toneHz, sr);
+    toneState_[0] += toneCoeff * (wetL - toneState_[0]);
+    toneState_[1] += toneCoeff * (wetR - toneState_[1]);
+
+    delays_[0].Write(inL + toneState_[1] * feedback);
+    delays_[1].Write(inR + toneState_[0] * feedback);
+
+    const float mono = (toneState_[0] + toneState_[1]) * 0.5f;
+    *outputLeft      = Mix(mono, toneState_[0], width);
+    *outputRight     = Mix(mono, toneState_[1], width);
+}
+
+void DaisyDelayFxCore::ProcessTimeMachine(float  inputLeft,
+                                          float  inputRight,
+                                          float* outputLeft,
+                                          float* outputRight)
+{
+    const float sr        = static_cast<float>(sampleRate_);
+    const float drive     = DbToLinear(NativeValueAt(kParamDrive));
+    const float inL       = inputLeft * drive;
+    const float inR       = inputRight * drive;
+    const float timeMs    = NativeValueAt(kParamTime);
+    const float baseDelay = Clamp(
+        timeMs * 0.001f * sr,
+        48.0f,
+        delays_[0].size > 1608 ? static_cast<float>(delays_[0].size - 1600)
+                               : 48.0f);
+    const float feedback
+        = Clamp(EffectiveParameterValueAt(kParamFeedback) * 0.98f, 0.0f, 0.98f);
+    const float distribution
+        = (EffectiveParameterValueAt(kParamTexture) * 2.0f) - 1.0f;
+    const float blur
+        = Clamp01(EffectiveParameterValueAt(kParamMod)
+                  + EffectiveParameterValueAt(kParamSmear) * 0.35f);
+    const float focus   = EffectiveParameterValueAt(kParamDensity);
+    const float width   = EffectiveParameterValueAt(kParamWidth);
+    const float warp    = EffectiveParameterValueAt(kParamWarp);
+    const int   pattern = QuantizedState(ParameterValueAt(kParamTapRatio), 4);
+
+    lfoPhase_           = Wrap01(lfoPhase_ + (0.017f + blur * 0.55f) / sr);
+    slowLfoPhase_       = Wrap01(slowLfoPhase_ + (0.005f + warp * 0.05f) / sr);
+    const float blurLfo = std::sin(2.0f * kPi * lfoPhase_);
+
+    float wetL   = 0.0f;
+    float wetR   = 0.0f;
+    float ampSum = 0.0f;
+    for(std::size_t i = 0; i < 8; ++i)
+    {
+        float position = static_cast<float>(i + 1) / 8.0f;
+        if(pattern == 1)
+        {
+            position = static_cast<float>((i % 4) + 1) / 4.0f;
+        }
+        else if(pattern == 2)
+        {
+            position = static_cast<float>((i + 1) * (i + 1)) / 64.0f;
+        }
+        else if(pattern == 3)
+        {
+            position = 1.0f
+                       - (static_cast<float>(8 - i) / 8.0f)
+                             * (static_cast<float>(8 - i) / 8.0f);
+        }
+        const float skewed     = SkewUnit(position, distribution);
+        const float spread     = Mix(0.10f, 1.0f, skewed);
+        const float blurOffset = blurLfo * blur * baseDelay
+                                 * (0.002f + static_cast<float>(i) * 0.0018f);
+        const float stereoOffset = width * baseDelay * 0.012f
+                                   * (static_cast<float>(i % 2) * 2.0f - 1.0f);
+        const float delay = Clamp(baseDelay * spread + blurOffset,
+                                  24.0f,
+                                  delays_[0].size > 0
+                                      ? static_cast<float>(delays_[0].size - 8)
+                                      : 24.0f);
+        const float ampShape
+            = 1.0f - focus * std::abs(static_cast<float>(i) - 3.5f) / 3.5f;
+        const float amp = Clamp(0.08f + ampShape * 0.18f, 0.04f, 0.28f);
+        wetL += delays_[0].Read(delay + stereoOffset) * amp;
+        wetR += delays_[1].Read(delay - stereoOffset) * amp;
+        ampSum += amp;
+    }
+    const float ampCoef = 1.0f / std::max(1.0f, ampSum);
+    wetL *= ampCoef;
+    wetR *= ampCoef;
+
+    const float dampingHz
+        = 900.0f + (1.0f - EffectiveParameterValueAt(kParamTone)) * 9500.0f;
+    const float dampingCoeff = OnePoleCoeff(dampingHz, sr);
+    dampingState_[0] += dampingCoeff * (wetL - dampingState_[0]);
+    dampingState_[1] += dampingCoeff * (wetR - dampingState_[1]);
+    const float limitedL = FastTanh(inL + dampingState_[1] * feedback);
+    const float limitedR = FastTanh(inR + dampingState_[0] * feedback);
+    delays_[0].Write(limitedL);
+    delays_[1].Write(limitedR);
+
+    const float auxTapL = delays_[2].Read(baseDelay * Mix(0.18f, 0.72f, warp));
+    const float auxTapR = delays_[3].Read(baseDelay * Mix(0.22f, 0.86f, warp));
+    delays_[2].Write(inL + auxTapR * feedback * 0.55f);
+    delays_[3].Write(inR + auxTapL * feedback * 0.55f);
+
+    const float smear = EffectiveParameterValueAt(kParamSmear);
+    wetL              = Mix(dampingState_[0], auxTapL, smear * 0.55f);
+    wetR              = Mix(dampingState_[1], auxTapR, smear * 0.55f);
+    const float mono  = (wetL + wetR) * 0.5f;
+    *outputLeft       = Mix(mono, wetL, width);
+    *outputRight      = Mix(mono, wetR, width);
 }
 } // namespace daisyhost

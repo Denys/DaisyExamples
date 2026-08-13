@@ -1,7 +1,7 @@
 # Field_delay_bundle
 
-Daisy Field delay bundle that combines the four source-verified delay/Fx
-adaptations into one selectable project.
+Daisy Field extended delay bundle that combines six source-verified delay/Fx
+behavior families into one selectable project.
 
 Algorithms:
 
@@ -9,6 +9,16 @@ Algorithms:
 - Tank [reverb] - adapted from `Farmer2K5/daisy-reverb-playground`
 - Texture [FunBox] - adapted from `GuitarML/FunBox`
 - Long [sdram] - adapted from `Farmer2K5/daisy-sdram-delaylines`
+- Spectral [Phantasmagoria] - clean-room behavior adaptation inspired by
+  `FuzzyLotus/Phantasmagoria`
+- 8 Tap [TimeMachine] - clean-room behavior adaptation inspired by
+  `oamodular/time-machine`
+
+`Phantasmagoria` is GPL-3.0 and `oamodular/time-machine` is CC BY-NC-SA 4.0,
+so this project does not vendor or copy their source. The two extended modes
+use source-inspected behavior classes: reverse-grain reading, smear diffusion,
+erosion, chamber taps, freeze memory, eight read-head tap distribution, blur,
+skew, and feedback limiting.
 
 The bundle prioritizes a compilable Field target and shared DaisyHost behavior.
 Each algorithm keeps its own parameter snapshot, so changing algorithm does not
@@ -16,8 +26,8 @@ erase the previous algorithm's knob settings.
 
 The bundle includes an internal 8-voice pluck/pad resonator for testing and
 performance without an external source. B1-B8 trigger C4-C5, external MIDI
-uses the same voice engine, A5 selects off/pluck/pad, and A6 selects
-momentary/latch/drone hold behavior.
+uses the same voice engine, A1-A6 select algorithms, and A7/A8 shift the
+keyboard octave.
 
 Source cross-check:
 
@@ -28,6 +38,8 @@ Source cross-check:
   `DaisyHost/src/DaisyDelayFxCore.cpp`
 - The shared Field adapter lives in
   `MyProjects/_projects/Field_delay_shared/FieldDelayFieldApp.h`
+- The project-local block diagram lives in
+  `MyProjects/_projects/Field_delay_bundle/Field_delay_bundle.dvpe`
 
 Build:
 

@@ -37,6 +37,8 @@ the heavier CloudSeed parameters behind a compact OLED status page.
 ## Notes
 
 - `CloudSeedCore` is imported into `third_party/CloudSeedCore`.
+- Clean CI checkouts apply `third_party/CloudSeedCore-daisy.patch` to the pinned
+  upstream commit for embedded portability.
 - The Field example uses `ProgramDarkPlate` as its baseline voicing and remaps
   the 8 knobs into a performance-oriented macro layer.
 - The bottom-row key LEDs indicate the active OLED page.

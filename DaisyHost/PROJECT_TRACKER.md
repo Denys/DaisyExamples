@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-06-03
+Last updated: 2026-08-13
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -18,11 +18,13 @@ next safe starting point.
 
 Latest fully green host gate from this checkout:
 
-- `cmd /c build_host.cmd`: passed on 2026-06-03
+- `build_host.cmd -Configuration Release -SkipConfigure -SkipTests`: built the
+  complete Release target set on 2026-08-13 after the publication formatter
+  repair
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `295/295`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `337/337`
 - smoke tests included:
   - `DaisyHostNextWpSuggester`
   - `DaisyHostStandaloneSmoke`
@@ -31,12 +33,109 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliDescribeApp`
   - `DaisyHostCliDescribeBoard`
   - `DaisyHostCliValidateScenario`
+  - `DaisyHostCliRenderPedalMultiDelay`
+  - `DaisyHostCliDescribePedalMultiDelay`
   - `DaisyHostCliDoctor`
   - `DaisyHostCliRender`
   - `DaisyHostCliRenderAssertions`
   - `DaisyHostCliRenderAssertionsPass`
 
 Latest automated gate attempt:
+
+- Date: 2026-08-13
+- Request: publish the compact multi-delay guitar pedal as a DaisyHost-only
+  update without sweeping unrelated DaisyExamples workspace state into Git.
+- Result: `pedal_multidelay` is registered as a hosted app with five selectable
+  algorithms (`DIGI`, `TAPE`, `MOD`, `REV`, `FREEZE`), five performance slots,
+  explicit freeze operations, bypass/trails, tap tempo, CLI description, and a
+  non-silent five-mode render scenario. The publication boundary is a stacked
+  DaisyHost-only branch based on draft PR #9's remote head; dirty submodules,
+  Vault state, caches, experiments, agent worktrees, and the unrelated local
+  developed-programs-catalog commit remain excluded.
+- Evidence:
+  - Release `unit_tests` build passed.
+  - Focused Release CTest `-R "PedalDelay"` passed `37/37`.
+  - Release `DaisyHostCLI` build passed.
+  - `DaisyHostCliRenderPedalMultiDelay` and
+    `DaisyHostCliDescribePedalMultiDelay` passed `2/2`.
+  - The canonical wrapper configured and built `unit_tests`, `DaisyHostCLI`,
+    `DaisyHostHub`, `DaisyHostRender`, `DaisyHostPatch_VST3`, and
+    `DaisyHostPatch_Standalone`; direct resumed Release CTest passed `337/337`.
+  - Scoped `git diff --check -- DaisyHost` passed with line-ending warnings
+    only before the tracking-doc synchronization.
+- Interpretation:
+  - The host implementation is build-, unit-, CLI-, render-, standalone-smoke-,
+    and full-gate-verified in this checkout.
+  - ARM compilation, Cortex-M7 timing, SDRAM/cache behavior, pedal hardware
+    audio, DAW/VST3 loading, and manual GUI interaction were not performed and
+    remain explicitly unclaimed.
+  - Skills materially used: `github:github` for repository/publication routing
+    and `fable-instruction-critique` for the deployed scope-contract audit.
+- Publication CI repair:
+  - Stacked PR #10 merged into draft PR #9, after which GitHub `Fix Style`
+    failed because the eight newly changed C++ files were not compliant with
+    the repository's pinned clang-format 10 whole-file check.
+  - `clang-format 10.0.0 -i` was applied only to those eight DaisyHost C++
+    paths; the matching `--dry-run --Werror` check then passed.
+  - Raw MSBuild reproduced the known duplicate `Path` / `PATH` environment
+    launcher failure. The repository wrapper normalized the environment and
+    built `unit_tests`, `DaisyHostCLI`, `DaisyHostHub`, `DaisyHostRender`,
+    `DaisyHostPatch_VST3`, and `DaisyHostPatch_Standalone`; fresh Release CTest
+    passed `337/337` in `192.70 s`.
+  - No behavior, algorithm, control, or scenario semantics changed in the CI
+    repair; manual DAW, GUI, firmware, and hardware claims remain out of scope.
+- Next safe starting point:
+  - Recommender: `WS10 - External state / debug surface`; runner-up `TF8 -
+    Daisy Field board support`; explicitly wait on `WS9`, `WS11`, `WS12`,
+    `WS13`, `TF17`, and `TF18`.
+  - First safe slice: continue WS10 only for a concrete external-debug consumer
+    that needs more than the existing additive CLI `debugState` payload.
+
+Previous automated gate attempt:
+
+- Date: 2026-06-08
+- Request: extend `field_delay_bundle` beyond the original four source-backed
+  delay modes by adding Phantasmagoria-inspired algorithms plus
+  `oamodular/time-machine`.
+- Result: `field_delay_bundle` now exposes six bundle algorithms:
+  Tape [multifx], Tank [reverb], Texture [FunBox], Long [sdram],
+  Spectral [Phantasmagoria], and 8 Tap [TimeMachine]. The two new modes are
+  clean-room behavior adaptations, not vendored source: Phantasmagoria was
+  verified as GPL-3.0, and OAM Time Machine was verified as CC BY-NC-SA 4.0.
+  The Field A-row mapping is now A1-A6 direct algorithm select, with A7/A8
+  preserved for octave shifting. A project-local
+  `MyProjects/_projects/Field_delay_bundle/Field_delay_bundle.dvpe` diagram
+  records the extended signal/control model.
+- Evidence:
+  - Red host build: `cmake --build build --config Debug --target unit_tests`
+    failed after the test edit because `kPhantasmagoria` and `kTimeMachine`
+    did not exist yet.
+  - Green host build: `cmake --build build --config Debug --target
+    unit_tests` passed after implementation.
+  - Green focused host CTest: `ctest --test-dir build -C Debug
+    --output-on-failure -R "DaisyDelayFxCoreTest|DelayFxAdaptationCoreTest"`
+    passed `8/8`.
+  - Green firmware build:
+    `C:\Program Files\DaisyToolchain\bin\make.exe` passed in
+    `../MyProjects/_projects/Field_delay_bundle`; final link reported FLASH
+    `118080 B` / `90.09%`, SRAM `54476 B` / `10.39%`, RAM_D2 `17224 B` /
+    `5.84%`, and SDRAM `6000 KB` / `9.16%`.
+  - Green firmware QAE:
+    `py -3 ../../../DAISY_QAE/validate_daisy_code.py .` passed `0 error(s),
+    0 warning(s)` for `Field_delay_bundle.cpp`.
+  - Green diff hygiene: `git diff --check -- <touched files>` passed with no
+    whitespace errors; Git reported line-ending normalization warnings only.
+- Interpretation:
+  - This is host-focused-test, firmware-build, and QAE verified. It is not a
+    direct code port of either external project and should be treated as a
+    source-inspired extended bundle.
+  - The firmware still has flash headroom, but 90.09% FLASH is tight enough
+    that future algorithm expansion should be deliberate.
+  - Full Release host gate, scenario-render sweeps, `make program`, physical
+    Field audio/control validation, external MIDI device enumeration, and
+    manual DAW/VST3 validation were not run.
+
+Previous automated gate attempt:
 
 - Date: 2026-06-03
 - Request: adapt four source-verified delay/Fx projects into Daisy Field

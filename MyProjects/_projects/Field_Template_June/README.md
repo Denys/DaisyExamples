@@ -7,12 +7,14 @@ bank, modifier, reset, or hidden-page changes while OLED and LED work no longer
 runs every 1 ms.
 
 The main control difference is the "until touched" algorithm. April used
-pickup/catch: after switching from `K1` to `SW1 + K1`, a stored value became
+pickup/catch: after switching from `K1` to shifted `K1`, a stored value became
 editable only when the physical knob moved near the stored parameter value.
 June instead records the physical knob position at bank/modifier entry and
-keeps the stored value active until that knob moves by more than `0.012`. This
-means `SW1 + K1` cannot change plain `K1`, and plain `K1` becomes editable
-again as soon as `K1` moves after returning to the main bank.
+keeps the stored value active until that knob moves by more than `0.012`. SW1
+is a toggle now, not a hold modifier: press SW1 once to edit the alt bank, press
+it again to return to the main bank. This means alt `K1` cannot change plain
+`K1`, and plain `K1` becomes editable again as soon as `K1` moves after
+returning to the main bank.
 
 ## Runtime Improvements
 
@@ -38,25 +40,28 @@ again as soon as `K1` moves after returning to the main bank.
 | `K6` | `Release` | Main bank |
 | `K7` | `Drive` | Main bank |
 | `K8` | `Color` | Main bank; output level is intentionally hidden |
-| `SW1 + K1` | `EnvAmt` | Alt bank |
-| `SW1 + K2` | `LfoRt` | Alt bank |
-| `SW1 + K3` | `LfoDp` | Alt bank |
-| `SW1 + K4` | `Glide` | Alt bank |
-| `SW1 + K5` | `VelAmt` | Alt bank |
-| `SW1 + K6` | `KeyTrk` | Alt bank |
-| `SW1 + K7` | `Noise` | Alt bank |
-| `SW1 + K8` | `Sub` | Alt bank |
-| `SW2 + K8` | `Level` | Hidden output trim with its own touch gate |
+| `SW1` | Toggle shift bank | `MAIN` / `ALT`; shown on OLED and SW1 LED |
+| `K1` in `ALT` | `EnvAmt` | Alt bank after SW1 toggle |
+| `K2` in `ALT` | `LfoRt` | Alt bank after SW1 toggle; `0.1-12 Hz`, displayed in mHz below `1 Hz` |
+| `K3` in `ALT` | `LfoDp` | Alt bank after SW1 toggle |
+| `K4` in `ALT` | `Glide` | Alt bank after SW1 toggle |
+| `K5` in `ALT` | `VelAmt` | Alt bank after SW1 toggle |
+| `K6` in `ALT` | `KeyTrk` | Alt bank after SW1 toggle |
+| `K7` in `ALT` | `Noise` | Alt bank after SW1 toggle |
+| `K8` in `ALT` | `Sub` | Alt bank after SW1 toggle |
+| `SW2` | Toggle B row mode | `CONTROLS` / `PERFORMANCE`; shown on OLED and SW2 LED |
+| `SW2 + K8` | `Level` | Hidden output trim while SW2 is held, with its own touch gate |
 | `A1-A4` | Waveform select | `SINE`, `TRI`, `SAW`, `SQR` |
 | `A5` | Velocity mode | Cycles `FIX` -> `SCL` -> `PCH` |
 | `A6` | Key tracking mode | Cycles `OFF` -> `HALF` -> `FULL` |
 | `A7` | LFO target | Cycles `OFF` -> `PITCH` -> `FILT` |
 | `A8` | Glide mode | Cycles `OFF` -> `LEG` -> `ON` |
-| `B1-B4` | MIDI transpose select | `-12`, `0`, `+12`, `+24` semitones |
-| `B5` | Panic | All notes off |
-| `B6` | Reset main bank | Restores main defaults and records new touch anchors |
-| `B7` | Reset alt bank | Restores alt defaults and records new touch anchors |
-| `B8` | Reset all | Restores all defaults and records new touch anchors |
+| `B1-B4` | MIDI transpose select | `CONTROLS` mode: `-12`, `0`, `+12`, `+24` semitones |
+| `B5` | Panic | `CONTROLS` mode: all notes off |
+| `B6` | Reset main bank | `CONTROLS` mode: restores main defaults and records new touch anchors |
+| `B7` | Reset alt bank | `CONTROLS` mode: restores alt defaults and records new touch anchors |
+| `B8` | Reset all | `CONTROLS` mode: restores all defaults and records new touch anchors |
+| `B1-B8` | Test note keyboard | `PERFORMANCE` mode: `C4 D4 E4 F4 G4 A4 B4 C5` |
 | MIDI input | Note control | `Note On`, `Note Off`, velocity, `CC64` sustain |
 
 ## LED States
@@ -67,9 +72,14 @@ context and is live. A dim knob LED means a stored value exists but the physical
 knob has not moved since entering that context. While holding `SW2`, `K8` shows
 the hidden output level and its own live/touched state.
 
-The Field key LEDs remain a state display. `A1-A4` and `B1-B4` are one-hot
-selectors. `A5-A8` show tri-state modes with off, blink, and on states. `B5`
-shows the current gate/sustain state, while `B6-B8` mark reset helpers.
+The Field key LEDs stay quiet by default. Active selection groups remain lit:
+`A1-A4` show waveform selection and `B1-B4` show transpose selection while the
+B row is in `CONTROLS` mode. `A5-A8` are tri-state mode indicators: the June
+default is off, the next mode step blinks, and the second mode step is solid on.
+`B5-B8` utility keys stay off until used. In `PERFORMANCE` mode, the B-row LEDs
+show the currently held test notes instead of transpose/reset controls. The SW2
+switch LED is on when B-row `PERFORMANCE` mode is active. The SW1 switch LED is
+on while the `ALT` bank is active.
 
 ## OLED Pages
 
@@ -78,27 +88,36 @@ is being primed. After audio starts, the normal overview is shown unless a
 parameter or state has just changed.
 
 ```text
-JUNE MAIN|ALT
-WAVE  TR:TRANSPOSE
-A5:VELMODE  A6:KEYTRK
-A7:LFOTGT   A8:GLIDE
-P1:VALUE    P5:VALUE
-P2:VALUE    P6:VALUE
-P3:VALUE    P7:VALUE
-P4:VALUE    P8:VALUE
+JUNE CONTROLS|PERFORMANCE
+MAIN|ALT WAVE  TR:TRANSPOSE
+A:VEL KEY LFO GLIDE
+P1:VALUE   P5:VALUE
+P2:VALUE   P6:VALUE
+P3:VALUE   P7:VALUE
+P4:VALUE   P8:VALUE
 ```
 
 The edit zoom appears for about `1.4 s` after a parameter or state change and
-is redrawn at most every `50 ms`.
+is redrawn at most every `50 ms`. OLED value formatting intentionally uses
+integer-only `snprintf` formats because the Make-based Daisy firmware links
+with newlib-nano and does not enable float printf support. LFO rate is the only
+parameter that uses mHz for sub-Hz display; the lowest `0.1 Hz` value is shown
+as `100 mHz`.
 
 ```text
 EDIT MAIN|ALT
 PARAMETER NAME
 LARGE VALUE TEXT
-SW1=Alt  SW2+K8=Level
+SW2:CONTROLS|PERFORMANCE
 ```
 
 ## Build And Flash
+
+The visual source project is [Field_Template_June.dvpe](Field_Template_June.dvpe).
+It mirrors the firmware block structure, hardware target, sample rate, block
+size, parameter ranges/defaults, and Field control bindings. Update it with the
+source whenever DSP structure, control ownership, parameter ranges, or defaults
+change.
 
 Build from the project directory:
 
@@ -118,20 +137,25 @@ connected.
 
 ## Validation
 
-Current software validation on 2026-06-06:
+Current software validation on 2026-06-07 after lowering LFO minimum to
+`0.1 Hz`, adding sub-Hz mHz display for LFO rate, and adding the `.dvpe`
+visual source project:
 
 | Check | Result |
 |---|---|
 | `make` | PASS |
+| `Field_Template_June.dvpe` JSON parse | PASS |
 | Daisy QAE validator | PASS, `0 error(s), 0 warning(s)` |
-| Hardware flash/run | Not performed in this pass |
+| ST-LINK flash | PASS, OpenOCD programmed, verified OK, and reset target on 2026-06-07 |
+| Hardware run observation | Not manually observed after reset |
 
 Current build footprint:
 
 | Region | Used | Capacity | Usage |
 |---|---:|---:|---:|
-| FLASH | `115688 B` | `128 KB` | `88.26%` |
-| SRAM | `52920 B` | `512 KB` | `10.09%` |
+| FLASH | `130424 B` | `128 KB` | `99.51%` |
+| SRAM | `64912 B` | `512 KB` | `12.38%` |
+| RAM_D2 | `17224 B` | `288 KB` | `5.84%` |
 | SDRAM | `0 B` | `64 MB` | `0.00%` |
 
 ## Maintenance Notes

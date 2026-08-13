@@ -18,6 +18,7 @@
 | [BUG-003](#bug-003-field_modalbells-midi-not-working) | Medium | 🔴 OPEN | Field_ModalBells | 2026-02-08 | Verify MIDI init sequence and handler registration |
 | [BUG-004](#bug-004-x0x-display-white-noise-controls-unresponsive) | High | 🟡 INVESTIGATING | x0x_drum_machine | 2026-02-27 | HiHat crash confirmed as root cause — replaced with WhiteNoise+ATone+AdEnv, awaiting flash |
 | [BUG-005](#bug-005-pod-encoder-and-analog-controls-latency-unresponsive) | High | ✅ RESOLVED | POD_EDGE_mono_DSP | 2026-04-12 | Issue analyzed and resolved with split ISR and deadband fix. |
+| [BUG-006](#bug-006-field-oled-values-missing-for-hzms-parameters) | High | ✅ RESOLVED | Field_Template_June | 2026-06-06 | Avoid `%f` OLED formatting under newlib-nano; use integer-only formatters. |
 
 > **Triage rule**: Critical/High bugs should have activity within 48 hours.
 > Update "Last Activity" and "Next Action" every time you touch a bug.
@@ -29,7 +30,7 @@
 **Date**: 2026-02-08  
 **Project**: Field_WavetableDroneLab  
 **Severity**: High  
-**Status**: ✅ RESOLVED
+**Status**: RESOLVED; mapping rule superseded by 2026-06-06 Field row adapter confirmation
 
 ### Problem
 Pressing key B1 lights up LED B8, B2→B7, A1→A8, A2→A7 (mirrored within each row).
@@ -52,16 +53,13 @@ enum {
 }
 ```
 
-**Step 3: Check working project (`field_wavetable_morph_synth`)**
-```cpp
-// Keys: A = indices 0-7, B = indices 8-15
-if(hw_->KeyboardRisingEdge(i)) ...      // A keys
-if(hw_->KeyboardRisingEdge(i + 8)) ...  // B keys
+**Step 3: Check original Field keybed examples (`field/KeyboardTest`, `field/modalvoice`)**
 
-// LEDs: A = 15-i, B = i
-int led_idx = 15 - active_bank_idx;     // A row
-hw_->led_driver.SetLed(active_curve_idx, 1.0f);  // B row
-```
+Both examples use a 16-entry keyboard scale where indices `0..7` are documented
+as the bottom row, and both light that first playable row with native
+`LED_KEY_A1..LED_KEY_A8`. `field/modalvoice` states that it is based on
+`KeyboardTest`, so these two examples agree with the native libDaisy scan
+remapping and contradict the older row-label assumption copied below.
 
 ### Hypotheses
 
@@ -80,21 +78,25 @@ hw_->led_driver.SetLed(active_curve_idx, 1.0f);  // B row
 | 3 | `{15-8}` | `{0-7}` | `{8-15}` | `{7-0}` | ❌ Mirrored |
 | 4 | `{0-7}` | `{8-15}` | `{15-8}` | `{0-7}` | ✅ **WORKS** |
 
-### Resolution
+### Current Resolution
 
-**Root Cause**: The keyboard input indices and LED indices follow DIFFERENT patterns:
-- **Keyboard**: Row A = indices 0-7, Row B = indices 8-15
-- **LEDs**: Row A = indices 15-8 (reversed), Row B = indices 0-7
+**Root Cause**: Physical row names, public keyboard scan indices, and native
+`DaisyField::LED_KEY_A/B` enum names are three different layers:
+- **Keyboard scan**: physical/logical A row = indices `8..15`; physical/logical B row = indices `0..7`.
+- **LED helpers**: physical/logical A row uses native `LED_KEY_B1..B8`; physical/logical B row uses native `LED_KEY_A1..A8`.
+- **Native enum order**: `LED_KEY_B1..B8` are values `0..7`; `LED_KEY_A1..A8` are values `15..8`.
 
-**Correct Mapping**:
+**Correct project-facing mapping**:
 ```cpp
-kKeyAIndices  = {0, 1, 2, 3, 4, 5, 6, 7};       // A1-A8 input
-kKeyBIndices  = {8, 9, 10, 11, 12, 13, 14, 15}; // B1-B8 input
-kLedKeysA     = {15, 14, 13, 12, 11, 10, 9, 8}; // A1-A8 LEDs
-kLedKeysB     = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 LEDs
+kKeyAIndices  = {8, 9, 10, 11, 12, 13, 14, 15}; // A1-A8 input
+kKeyBIndices  = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 input
+kLedKeysA     = {0, 1, 2, 3, 4, 5, 6, 7};       // A1-A8 LEDs via native LED_KEY_B*
+kLedKeysB     = {15, 14, 13, 12, 11, 10, 9, 8}; // B1-B8 LEDs via native LED_KEY_A*
 ```
 
-**Lesson Learned**: Always verify against a known working implementation before making assumptions from documentation or pinout diagrams.
+**Lesson Learned**: Always verify against native `daisy_field.h/.cpp`, original
+Field examples, and a hardware smoke test before copying row labels from docs
+or project-local variable names.
 
 ### Regression Note - Field_delay_bundle
 
@@ -102,7 +104,7 @@ kLedKeysB     = {0, 1, 2, 3, 4, 5, 6, 7};       // B1-B8 LEDs
 **Project**: `MyProjects/_projects/Field_delay_bundle` via shared adapter `Field_delay_shared`
 **Symptom**: Pressing a physical A-row key triggered B-row note behavior; for example, A2 showed `B2 Note D4`.
 **Cause**: The shared adapter trusted older row-index notes instead of the hardware smoke test. In this Field/keybed path, raw scan indices `0..7` are physical B1-B8 and raw scan indices `8..15` are physical A1-A8. The logical core still expects A controls as `0..7` and B notes as `8..15`, so the physical adapter must translate rows before calling the core.
-**Fix**: `KeyboardIndexForPhysicalKey(A, n)` must return `8 + (n - 1)`; `KeyboardIndexForPhysicalKey(B, n)` must return `n - 1`. Keep the logical LED list as `LED_KEY_A1..A8` and `LED_KEY_B1..B8`; do not reuse LED enum order as keyboard input order.
+**Fix**: `KeyboardIndexForPhysicalKey(A, n)` must return `8 + (n - 1)`; `KeyboardIndexForPhysicalKey(B, n)` must return `n - 1`. Physical/logical A LEDs must use native `LED_KEY_B1..B8`; physical/logical B LEDs must use native `LED_KEY_A1..A8`. Do not reuse LED enum names as keyboard input order.
 **Why this repeats**: `DaisyField::LED_KEY_*`, raw `KeyboardRisingEdge()` indices, physical silk-screen row names, and project-local logical key roles are four different layers. New projects often collapse them into one mental model. Do not do that: name physical row mapping and logical key roles separately.
 **Hardware check added**: `Field_delay_bundle` uses A1-A4 LEDs as algorithm-select indicators, while B-row presses open an OLED zoom such as `B2 Note D4 key` and force the same-number B LED while the physical B key is held.
 **2026-06-04 follow-up**: B keys correctly triggered notes but lit A-row key LEDs. Fix: the shared adapter now treats logical A LED values as `LED_KEY_B*` and logical B LED values as `LED_KEY_A*`, preserving key number order. The bundle also now reconciles physical B pressed state each control pass so missed falling edges cannot leave a B note stuck on.
@@ -133,11 +135,11 @@ B-row keys should select strike type (Soft/Medium/Hard/etc.) and trigger active 
 // Row B: Select strike type
 for(int i = 0; i < 8; i++)
 {
-    if(hw.KeyboardRisingEdge(kKeyBIndices[i]))  // kKeyBIndices = {8,9,...,15}
+    if(hw.KeyboardRisingEdge(kKeyBIndices[i]))  // physical B row via FieldDefaults
     {
         // Clear all B LEDs first
         for(int j = 0; j < 8; j++)
-            keyLeds.SetB(j, false);  // Uses kLedKeysB[j] = {0,1,...,7}
+            keyLeds.SetB(j, false);  // physical B LEDs via FieldDefaults
 
         // Set new strike type
         strike_type = i;
@@ -162,8 +164,8 @@ for(int i = 0; i < 8; i++)
 - Could cause audio buffer overrun or DSP overload
 
 **Step 3: Check kKeyBIndices mapping**
-- `kKeyBIndices = {8, 9, 10, 11, 12, 13, 14, 15}` (confirmed correct from BUG-001)
-- Should trigger correctly
+- Current `FieldDefaults` uses `kKeyBIndices = {0, 1, 2, 3, 4, 5, 6, 7}` for the physical/logical B row.
+- Older notes that marked `{8..15}` as B-row input are superseded by the 2026-06-06 native/example verification above.
 
 ### Hypotheses
 
@@ -400,13 +402,68 @@ The UI layer implemented a deadband filter incorrectly. `prev_knobX_` was update
 
 ---
 
-**Document Version**: 1.5
-**Last Updated**: 2026-04-12
+## BUG-006: Field OLED Values Missing for Hz/ms Parameters
+
+**Date**: 2026-06-06
+**Project**: Field_Template_June
+**Severity**: High
+**Status**: RESOLVED
+**Owner**: Codex + Claude CLI audit
+**Last Activity**: 2026-06-06
+
+### Problem
+
+On hardware, `K1 Cutoff`, `K3 Attack`, and `K4 Decay` values did not visibly
+render on the Field OLED when moved. `K2 Resonance` and `K5 Sustain` did render.
+
+### Expected
+
+All moved knob values should display consistently. Unit-specific values such as
+Hz and ms must render as reliably as plain percent values.
+
+### Analysis
+
+The knob state path was not the root cause: the values were captured and written
+to the parameter bank. The visual split matched formatter type:
+
+- Failing values used float formatting such as `%.0f Hz`, `%.0f ms`, or `%.1fk`.
+- Working values used integer formatting such as `%d%%`.
+
+Daisy Make projects link with `--specs=nano.specs` through
+`libDaisy/core/Makefile`. Unless the project deliberately links
+`-u _printf_float`, newlib-nano does not provide normal float `printf`
+formatting. The result can be blank or missing OLED/serial text for `%f`
+formats even when the numeric value itself is correct.
+
+### Resolution
+
+`Field_Template_June` now uses integer-only formatters for Hz, ms, compact kHz,
+and compact seconds. Shared Field helpers `FormatHertz()` and
+`FormatMilliseconds()` were updated to avoid `%f`.
+
+Do not treat `-u _printf_float` as the default solution. It can be useful for a
+deliberate debug build, but it increases firmware size and can push Field
+templates over the 128 KB flash region.
+
+### Lessons Learned
+
+- If percent values show but Hz/ms values are blank, check for float `printf`
+  formatting before blaming OLED layout, stale focus state, or knob routing.
+- Prefer integer conversion before `snprintf()` in firmware UI: integer Hz,
+  integer ms, and manually rounded compact tenths.
+- Add `_printf_float` only with an explicit size check and a reason that
+  justifies the flash cost.
+
+---
+
+**Document Version**: 1.6
+**Last Updated**: 2026-06-06
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.6 | 2026-06-06 | BUG-006: Field OLED value blanks caused by newlib-nano float printf formatting |
 | 1.5 | 2026-04-12 | BUG-005: Pod Encoder and Analog Controls Latency Fixed (Audio ISR mapping + Hysteresis) |
 | 1.4 | 2026-02-27 | BUG-004: Fix Attempt 3 (HiHat<> root cause confirmed; replaced with WhiteNoise+ATone+AdEnv) |
 | 1.3 | 2026-02-27 | Added BUG-004 (x0x display + controls) with I2C contention and boot-noise findings |

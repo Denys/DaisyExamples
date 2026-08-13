@@ -1,0 +1,735 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Field Template June",
+      "author": "Codex / Daisy QAE",
+      "description": "Controls-optimized Daisy Field mono template: MIDI note input, glide, oscillator plus sub plus noise, ADSR amplitude, SVF low-pass, soft drive, output trim, banked Field controls, OLED status, and key LED feedback.",
+      "created": "2026-06-07T00:00:00Z",
+      "modified": "2026-06-07T17:43:52.001Z",
+      "version": "1.0.0",
+      "targetHardware": "field",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "midi_note_1",
+        "definitionId": "midi_note",
+        "position": {
+          "x": -1280,
+          "y": -240
+        },
+        "parameterValues": {
+          "channel": "omni",
+          "sustainCc": 64,
+          "notePriority": "last"
+        },
+        "label": "MIDI NOTE + CC64"
+      },
+      {
+        "id": "midi_to_freq_1",
+        "definitionId": "midi_to_freq",
+        "position": {
+          "x": -1040,
+          "y": -360
+        },
+        "parameterValues": {
+          "transposeDefaultSemitones": 0,
+          "transposeChoices": [
+            -12,
+            0,
+            12,
+            24
+          ]
+        },
+        "label": "NOTE + TRANSPOSE TO Hz"
+      },
+      {
+        "id": "glide_slew_1",
+        "definitionId": "slew",
+        "position": {
+          "x": -800,
+          "y": -240
+        },
+        "parameterValues": {
+          "timeMinSeconds": 0,
+          "timeMaxSeconds": 0.8,
+          "modeDefault": "LEGATO"
+        },
+        "enabledCvPorts": [
+          "time"
+        ],
+        "label": "GLIDE SLEW"
+      },
+      {
+        "id": "osc_main_1",
+        "definitionId": "oscillator",
+        "position": {
+          "x": -480,
+          "y": -700
+        },
+        "parameterValues": {
+          "waveformDefault": "WAVE_SAW",
+          "waveformChoices": [
+            "WAVE_SIN",
+            "WAVE_TRI",
+            "WAVE_SAW",
+            "WAVE_SQUARE"
+          ],
+          "amp": 0.7,
+          "pulseWidthMin": 0.08,
+          "pulseWidthMax": 0.92
+        },
+        "enabledCvPorts": [
+          "freq",
+          "pw"
+        ],
+        "label": "MAIN OSC"
+      },
+      {
+        "id": "osc_sub_1",
+        "definitionId": "oscillator",
+        "position": {
+          "x": -480,
+          "y": -280
+        },
+        "parameterValues": {
+          "frequencyRatio": 0.5,
+          "waveformDefault": "WAVE_SAW",
+          "squareWhenMainSquare": true,
+          "ampMax": 0.45
+        },
+        "enabledCvPorts": [
+          "freq",
+          "amp"
+        ],
+        "label": "SUB OSC"
+      },
+      {
+        "id": "noise_1",
+        "definitionId": "white_noise",
+        "position": {
+          "x": -320,
+          "y": 320
+        },
+        "parameterValues": {
+          "mixMin": 0,
+          "mixMax": 0.3,
+          "default": 0
+        },
+        "label": "NOISE SOURCE"
+      },
+      {
+        "id": "source_mixer_1",
+        "definitionId": "mixer",
+        "position": {
+          "x": 60,
+          "y": -640
+        },
+        "parameterValues": {
+          "inputs": 3,
+          "mainColorGainMin": 0.6,
+          "mainColorGainMax": 1
+        },
+        "label": "OSC + SUB + NOISE MIX"
+      },
+      {
+        "id": "adsr_1",
+        "definitionId": "adsr",
+        "position": {
+          "x": -460,
+          "y": 420
+        },
+        "parameterValues": {
+          "attackMinSeconds": 0.001,
+          "attackMaxSeconds": 1.501,
+          "decayMinSeconds": 0.001,
+          "decayMaxSeconds": 2.001,
+          "sustainDefault": 0.78,
+          "releaseMinSeconds": 0.001,
+          "releaseMaxSeconds": 2.501
+        },
+        "enabledCvPorts": [
+          "attack",
+          "decay",
+          "sustain",
+          "release"
+        ],
+        "label": "ADSR"
+      },
+      {
+        "id": "amp_vca_1",
+        "definitionId": "vca",
+        "position": {
+          "x": 60,
+          "y": -180
+        },
+        "parameterValues": {
+          "velocityModes": [
+            "FIX",
+            "SCL",
+            "PCH"
+          ]
+        },
+        "enabledCvPorts": [
+          "gain"
+        ],
+        "label": "ENVELOPE + VELOCITY VCA"
+      },
+      {
+        "id": "filter_svf_1",
+        "definitionId": "svf",
+        "position": {
+          "x": 380,
+          "y": -220
+        },
+        "parameterValues": {
+          "mode": "lowpass",
+          "cutoffMinHz": 50,
+          "cutoffMaxHz": 12050,
+          "resonanceMin": 0.15,
+          "resonanceMax": 0.95,
+          "envAmountMaxHz": 7000,
+          "keyTrackMaxHz": 2500,
+          "lfoDepthMaxHz": 3500,
+          "runtimeClampMinHz": 40,
+          "runtimeClampMaxHz": 18000
+        },
+        "enabledCvPorts": [
+          "cutoff",
+          "res"
+        ],
+        "label": "SVF LOWPASS"
+      },
+      {
+        "id": "drive_1",
+        "definitionId": "overdrive",
+        "position": {
+          "x": 380,
+          "y": -440
+        },
+        "parameterValues": {
+          "implementation": "tanh",
+          "driveGainMin": 1,
+          "driveGainMax": 8,
+          "drive": null
+        },
+        "enabledCvPorts": [
+          "drive"
+        ],
+        "label": "SOFT DRIVE"
+      },
+      {
+        "id": "output_gain_1",
+        "definitionId": "gain",
+        "position": {
+          "x": 600,
+          "y": -400
+        },
+        "parameterValues": {
+          "levelDefault": 0.8,
+          "control": "SW2 + K8 hidden level"
+        },
+        "enabledCvPorts": [
+          "level"
+        ],
+        "label": "OUTPUT LEVEL"
+      },
+      {
+        "id": "audio_output_1",
+        "definitionId": "audio_output",
+        "position": {
+          "x": 600,
+          "y": -220
+        },
+        "parameterValues": {
+          "channels": "dual mono"
+        },
+        "label": "AUDIO OUT L/R"
+      },
+      {
+        "id": "lfo_1",
+        "definitionId": "lfo",
+        "position": {
+          "x": -60,
+          "y": 500
+        },
+        "parameterValues": {
+          "waveform": "WAVE_SIN",
+          "freqMinHz": 0.1,
+          "freqMaxHz": 12,
+          "displayBelow1Hz": "mHz",
+          "amp": 1,
+          "targetDefault": "FILT",
+          "targetChoices": [
+            "OFF",
+            "PITCH",
+            "FILT"
+          ]
+        },
+        "enabledCvPorts": [
+          "freq",
+          "amp"
+        ],
+        "label": "LFO 0.1-12 Hz"
+      },
+      {
+        "id": "lfo_pitch_depth_1",
+        "definitionId": "vca",
+        "position": {
+          "x": 360,
+          "y": 340
+        },
+        "parameterValues": {
+          "pitchDepthMaxRatio": 0.03,
+          "enabledWhen": "LFO target = PITCH"
+        },
+        "enabledCvPorts": [
+          "gain"
+        ],
+        "label": "LFO PITCH DEPTH"
+      },
+      {
+        "id": "lfo_filter_depth_1",
+        "definitionId": "vca",
+        "position": {
+          "x": 340,
+          "y": 560
+        },
+        "parameterValues": {
+          "filterDepthMaxHz": 3500,
+          "enabledWhen": "LFO target = FILT"
+        },
+        "enabledCvPorts": [
+          "gain"
+        ],
+        "label": "LFO FILTER DEPTH"
+      },
+      {
+        "id": "main_knob_bank_1",
+        "definitionId": "knob",
+        "position": {
+          "x": -1320,
+          "y": -60
+        },
+        "parameterValues": {
+          "bank": "MAIN",
+          "touchGateThreshold": 0.012,
+          "labels": [
+            "Cutoff",
+            "Reso",
+            "Attack",
+            "Decay",
+            "Sustain",
+            "Release",
+            "Drive",
+            "Color"
+          ],
+          "defaults": [
+            0.58,
+            0.12,
+            0.02,
+            0.22,
+            0.78,
+            0.24,
+            0.12,
+            0.5
+          ]
+        },
+        "label": "K1-K8 MAIN BANK"
+      },
+      {
+        "id": "alt_knob_bank_1",
+        "definitionId": "knob",
+        "position": {
+          "x": -1320,
+          "y": 80
+        },
+        "parameterValues": {
+          "bank": "ALT",
+          "touchGateThreshold": 0.012,
+          "labels": [
+            "EnvAmt",
+            "LfoRt",
+            "LfoDp",
+            "Glide",
+            "VelAmt",
+            "KeyTrk",
+            "Noise",
+            "Sub"
+          ],
+          "defaults": [
+            0.42,
+            0.18,
+            0.14,
+            0.1,
+            0.7,
+            0.5,
+            0,
+            0.18
+          ],
+          "lfoRateRangeHz": [
+            0.1,
+            12
+          ]
+        },
+        "label": "K1-K8 ALT BANK"
+      },
+      {
+        "id": "sw1_bank_toggle_1",
+        "definitionId": "switch",
+        "position": {
+          "x": -1280,
+          "y": 220
+        },
+        "parameterValues": {
+          "function": "toggle MAIN/ALT bank",
+          "ledOnWhen": "ALT",
+          "recordsNewTouchAnchors": true
+        },
+        "label": "SW1 BANK TOGGLE"
+      },
+      {
+        "id": "sw2_bmode_toggle_1",
+        "definitionId": "switch",
+        "position": {
+          "x": -1260,
+          "y": 400
+        },
+        "parameterValues": {
+          "function": "toggle B row CONTROLS/PERFORMANCE",
+          "performanceNotes": [
+            "C4",
+            "D4",
+            "E4",
+            "F4",
+            "G4",
+            "A4",
+            "B4",
+            "C5"
+          ],
+          "heldModifier": "SW2 + K8 edits hidden output level"
+        },
+        "label": "SW2 B MODE"
+      },
+      {
+        "id": "field_keybed_1",
+        "definitionId": "keyboard_input",
+        "position": {
+          "x": -920,
+          "y": 380
+        },
+        "parameterValues": {
+          "physicalA": "wave select A1-A4, tri-state modes A5-A8",
+          "physicalBControls": "transpose B1-B4, panic/reset B5-B8",
+          "physicalBPerformance": "C4 D4 E4 F4 G4 A4 B4 C5",
+          "scanRule": "A uses Keyboard indices 8-15, B uses 0-7"
+        },
+        "label": "FIELD KEYBED A/B"
+      },
+      {
+        "id": "oled_display_1",
+        "definitionId": "oled_display",
+        "position": {
+          "x": 620,
+          "y": 120
+        },
+        "parameterValues": {
+          "overviewHz": 20,
+          "zoomDurationMs": 1400,
+          "valueFormat": "integer Hz/ms/percent; LFO below 1 Hz uses mHz"
+        },
+        "label": "OLED OVERVIEW + ZOOM"
+      },
+      {
+        "id": "key_leds_1",
+        "definitionId": "led_array",
+        "position": {
+          "x": 620,
+          "y": 320
+        },
+        "parameterValues": {
+          "updateHz": 60,
+          "defaultPolicy": "off unless active selection or active performance note",
+          "a5ToA8Modes": "default off, next blink, second on"
+        },
+        "label": "KEY + KNOB LED FEEDBACK"
+      },
+      {
+        "id": "416a9253-e3a1-4886-8561-635bfb69ea36",
+        "definitionId": "whitenoise",
+        "position": {
+          "x": -240,
+          "y": 100
+        },
+        "parameterValues": {
+          "amp": 0.5
+        },
+        "selected": false
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-midi-freq",
+        "sourceBlockId": "midi_note_1",
+        "sourcePortId": "pitch",
+        "targetBlockId": "midi_to_freq_1",
+        "targetPortId": "note",
+        "type": "cv"
+      },
+      {
+        "id": "conn-freq-glide",
+        "sourceBlockId": "midi_to_freq_1",
+        "sourcePortId": "out",
+        "targetBlockId": "glide_slew_1",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-glide-osc",
+        "sourceBlockId": "glide_slew_1",
+        "sourcePortId": "out",
+        "targetBlockId": "osc_main_1",
+        "targetPortId": "freq",
+        "type": "cv"
+      },
+      {
+        "id": "conn-glide-sub",
+        "sourceBlockId": "glide_slew_1",
+        "sourcePortId": "out",
+        "targetBlockId": "osc_sub_1",
+        "targetPortId": "freq",
+        "type": "cv"
+      },
+      {
+        "id": "conn-midi-gate",
+        "sourceBlockId": "midi_note_1",
+        "sourcePortId": "gate",
+        "targetBlockId": "adsr_1",
+        "targetPortId": "gate",
+        "type": "trigger"
+      },
+      {
+        "id": "conn-main-mixer",
+        "sourceBlockId": "osc_main_1",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in1",
+        "type": "audio"
+      },
+      {
+        "id": "conn-sub-mixer",
+        "sourceBlockId": "osc_sub_1",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in2",
+        "type": "audio"
+      },
+      {
+        "id": "conn-noise-mixer",
+        "sourceBlockId": "noise_1",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in3",
+        "type": "audio"
+      },
+      {
+        "id": "conn-mix-vca",
+        "sourceBlockId": "source_mixer_1",
+        "sourcePortId": "out",
+        "targetBlockId": "amp_vca_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-env-vca",
+        "sourceBlockId": "adsr_1",
+        "sourcePortId": "out",
+        "targetBlockId": "amp_vca_1",
+        "targetPortId": "gain",
+        "type": "cv"
+      },
+      {
+        "id": "conn-vca-filter",
+        "sourceBlockId": "amp_vca_1",
+        "sourcePortId": "out",
+        "targetBlockId": "filter_svf_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-filter-drive",
+        "sourceBlockId": "filter_svf_1",
+        "sourcePortId": "lp",
+        "targetBlockId": "drive_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-drive-level",
+        "sourceBlockId": "drive_1",
+        "sourcePortId": "out",
+        "targetBlockId": "output_gain_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-level-out",
+        "sourceBlockId": "output_gain_1",
+        "sourcePortId": "out",
+        "targetBlockId": "audio_output_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "conn-lfo-pitch-depth",
+        "sourceBlockId": "lfo_1",
+        "sourcePortId": "out",
+        "targetBlockId": "lfo_pitch_depth_1",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-lfo-filter-depth",
+        "sourceBlockId": "lfo_1",
+        "sourcePortId": "out",
+        "targetBlockId": "lfo_filter_depth_1",
+        "targetPortId": "in",
+        "type": "cv"
+      },
+      {
+        "id": "conn-pitchmod-osc",
+        "sourceBlockId": "lfo_pitch_depth_1",
+        "sourcePortId": "out",
+        "targetBlockId": "osc_main_1",
+        "targetPortId": "freq_mod",
+        "type": "cv"
+      },
+      {
+        "id": "conn-filtermod-svf",
+        "sourceBlockId": "lfo_filter_depth_1",
+        "sourcePortId": "out",
+        "targetBlockId": "filter_svf_1",
+        "targetPortId": "cutoff_mod",
+        "type": "cv"
+      },
+      {
+        "id": "conn-main-controls-filter-drive",
+        "sourceBlockId": "main_knob_bank_1",
+        "sourcePortId": "values",
+        "targetBlockId": "filter_svf_1",
+        "targetPortId": "cutoff_res",
+        "type": "control"
+      },
+      {
+        "id": "conn-main-controls-env",
+        "sourceBlockId": "main_knob_bank_1",
+        "sourcePortId": "values",
+        "targetBlockId": "adsr_1",
+        "targetPortId": "times",
+        "type": "control"
+      },
+      {
+        "id": "conn-main-controls-drive",
+        "sourceBlockId": "main_knob_bank_1",
+        "sourcePortId": "values",
+        "targetBlockId": "drive_1",
+        "targetPortId": "drive",
+        "type": "control"
+      },
+      {
+        "id": "conn-alt-controls-lfo",
+        "sourceBlockId": "alt_knob_bank_1",
+        "sourcePortId": "values",
+        "targetBlockId": "lfo_1",
+        "targetPortId": "freq",
+        "type": "control"
+      },
+      {
+        "id": "conn-alt-controls-glide",
+        "sourceBlockId": "alt_knob_bank_1",
+        "sourcePortId": "values",
+        "targetBlockId": "glide_slew_1",
+        "targetPortId": "time",
+        "type": "control"
+      },
+      {
+        "id": "conn-controls-display",
+        "sourceBlockId": "sw1_bank_toggle_1",
+        "sourcePortId": "state",
+        "targetBlockId": "oled_display_1",
+        "targetPortId": "bank_state",
+        "type": "control"
+      },
+      {
+        "id": "conn-keybed-leds",
+        "sourceBlockId": "field_keybed_1",
+        "sourcePortId": "events",
+        "targetBlockId": "key_leds_1",
+        "targetPortId": "states",
+        "type": "control"
+      },
+      {
+        "id": "bef15800-42f8-442f-8c16-d83088d10b32",
+        "sourceBlockId": "osc_main_1",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in_1",
+        "type": "audio"
+      },
+      {
+        "id": "e08d541b-8e96-4514-8866-f229803ecd07",
+        "sourceBlockId": "osc_sub_1",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in_2",
+        "type": "audio"
+      },
+      {
+        "id": "26afe0b2-be3d-4649-aafe-98fa5dd9d7a1",
+        "sourceBlockId": "416a9253-e3a1-4886-8561-635bfb69ea36",
+        "sourcePortId": "out",
+        "targetBlockId": "source_mixer_1",
+        "targetPortId": "in_3",
+        "type": "audio"
+      },
+      {
+        "id": "682bec50-550b-48a0-abb7-1b19f42c6d8f",
+        "sourceBlockId": "filter_svf_1",
+        "sourcePortId": "low",
+        "targetBlockId": "drive_1",
+        "targetPortId": "in",
+        "type": "audio"
+      },
+      {
+        "id": "0d0771b4-96e6-411d-845d-0ae7d6dfd67e",
+        "sourceBlockId": "output_gain_1",
+        "sourcePortId": "out",
+        "targetBlockId": "audio_output_1",
+        "targetPortId": "left",
+        "type": "audio"
+      },
+      {
+        "id": "6d19359f-27f9-4d2a-96e6-e0cab84c27fa",
+        "sourceBlockId": "output_gain_1",
+        "sourcePortId": "out",
+        "targetBlockId": "audio_output_1",
+        "targetPortId": "right",
+        "type": "audio"
+      }
+    ],
+    "polyVoiceBlankets": [],
+    "hardwareConfig": {
+      "platform": "field",
+      "pinMapping": {},
+      "fieldControlMappings": [],
+      "peripherals": {
+        "useExternalCodec": false,
+        "useSdram": false,
+        "audioBlockSize": 48,
+        "sampleRate": 48000
+      }
+    }
+  }
+}

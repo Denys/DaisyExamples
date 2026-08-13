@@ -1,0 +1,3159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Field Template June Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gojs/release/go.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --panel-2: #edf3f7;
+      --ink: #172026;
+      --muted: #60717f;
+      --line: #d7e0e8;
+      --june: #146b68;
+      --june-soft: #e3f5f2;
+      --april: #536b2f;
+      --april-soft: #eef5e6;
+      --delay: #2f6f9f;
+      --delay-soft: #e7f0f8;
+      --warn: #9f5a10;
+      --warn-soft: #fff3dc;
+      --ok: #147a4d;
+      --risk: #9f3f2f;
+      --shadow: 0 16px 34px rgba(22, 33, 44, 0.08);
+      color-scheme: light;
+      font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--delay);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(20, 107, 104, 0.35);
+      outline-offset: 2px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #13202a;
+      color: #f8fbff;
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 22px;
+    }
+
+    .brand strong {
+      font-size: 17px;
+      line-height: 1.18;
+    }
+
+    .brand span {
+      color: #b8c7d3;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    nav {
+      display: grid;
+      gap: 7px;
+    }
+
+    nav a {
+      color: #e1edf5;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: #1f3440;
+      border-color: #335463;
+      text-decoration: none;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1640px;
+      width: 100%;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    h1 {
+      font-size: clamp(26px, 3vw, 38px);
+      line-height: 1.08;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 21px;
+      line-height: 1.22;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 15px;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 98ch;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      background: #eef3f7;
+      border-radius: 5px;
+      padding: 1px 4px;
+      font-size: 0.92em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+
+    .btn:hover,
+    button:hover,
+    button.is-active {
+      background: var(--june-soft);
+      border-color: #8fc9c2;
+      text-decoration: none;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.is-current {
+      display: block;
+    }
+
+    section {
+      margin-bottom: 22px;
+    }
+
+    .panel,
+    .metric,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      padding: 14px;
+      min-height: 112px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .metric label {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .metric strong {
+      font-size: 23px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric small {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .card.june {
+      border-top: 4px solid var(--june);
+    }
+
+    .card.april {
+      border-top: 4px solid var(--april);
+    }
+
+    .card.delay {
+      border-top: 4px solid var(--delay);
+    }
+
+    .card.warn {
+      border-top: 4px solid var(--warn);
+    }
+
+    .card ul,
+    .card ol,
+    .panel ul,
+    .panel ol {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      color: var(--muted);
+      background: #fbfdff;
+    }
+
+    .tag.pass {
+      color: var(--ok);
+      border-color: #a9d7bf;
+      background: #e8f6ee;
+    }
+
+    .tag.warn {
+      color: var(--warn);
+      border-color: #e8c58e;
+      background: var(--warn-soft);
+    }
+
+    .tag.june {
+      color: var(--june);
+      border-color: #9fd4ce;
+      background: var(--june-soft);
+    }
+
+    .table {
+      display: grid;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 0.8fr 1.1fr 1.1fr 1.2fr;
+      min-height: 48px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .row.three {
+      grid-template-columns: 0.8fr 1.2fr 1.2fr;
+    }
+
+    .row.two {
+      grid-template-columns: 0.9fr 1.5fr;
+    }
+
+    .row.synth {
+      grid-template-columns: 0.85fr 1.15fr 1.15fr 1.45fr 1fr;
+    }
+
+    .architecture-note {
+      margin: 0 0 14px;
+      font-size: 14px;
+    }
+
+    .architecture-tabs,
+    .diagram-toolbar,
+    .graph-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .architecture-tabs {
+      margin: 4px 0 16px;
+    }
+
+    .architecture-tabs button {
+      min-width: 190px;
+      font-weight: 700;
+    }
+
+    .arch-view {
+      display: none;
+    }
+
+    .arch-view.is-active {
+      display: block;
+    }
+
+    .diagram-toolbar,
+    .graph-toolbar {
+      margin: 10px 0 12px;
+    }
+
+    .diagram-toolbar .spacer,
+    .graph-toolbar .spacer {
+      flex: 1 1 auto;
+    }
+
+    .diagram-toolbar button,
+    .graph-toolbar button {
+      padding: 8px 10px;
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+    }
+
+    .cell {
+      padding: 11px 12px;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+      line-height: 1.42;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+
+    .cell:last-child {
+      border-right: 0;
+    }
+
+    .cell.head {
+      background: #edf3f7;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .lane-chart {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .lane-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .lane-track {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      min-height: 36px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 5px;
+      overflow: hidden;
+    }
+
+    .lane-bar {
+      min-width: 74px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 8px;
+      color: #132027;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .lane-bar.june {
+      background: var(--june-soft);
+      border-color: #9fd4ce;
+    }
+
+    .lane-bar.april {
+      background: var(--april-soft);
+      border-color: #c8d9a5;
+    }
+
+    .lane-bar.delay {
+      background: var(--delay-soft);
+      border-color: #b5d0e3;
+    }
+
+    .lane-bar.neutral {
+      background: var(--panel-2);
+    }
+
+    .ruler {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .ruler-scale {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 0 6px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .memory-bars {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .memory-bar {
+      display: grid;
+      gap: 5px;
+    }
+
+    .memory-bar label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-shell {
+      height: 10px;
+      border-radius: 999px;
+      background: #e7edf2;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--june);
+    }
+
+    .bar-fill.april {
+      background: var(--april);
+    }
+
+    .bar-fill.delay {
+      background: var(--delay);
+    }
+
+    .diagram-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      overflow: auto;
+      min-height: 320px;
+    }
+
+    .diagram-box.full {
+      min-height: 610px;
+      overflow: hidden;
+    }
+
+    .diagram-viewport {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      overflow: auto;
+      min-height: 500px;
+      padding: 12px;
+    }
+
+    .diagram-box .mermaid {
+      min-width: 0;
+      transform-origin: 0 0;
+    }
+
+    .diagram-box .mermaid svg {
+      max-width: none;
+      height: auto;
+    }
+
+    .diagram-box.is-expanded,
+    .graph-card.is-expanded,
+    .delay-diagram-card.is-expanded {
+      position: fixed;
+      inset: 16px;
+      z-index: 40;
+      min-height: auto;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      box-shadow: 0 24px 80px rgba(16, 32, 39, 0.28);
+    }
+
+    .diagram-box.is-expanded .diagram-viewport {
+      min-height: calc(100vh - 170px);
+    }
+
+    .delay-diagram-card.is-expanded .delay-diagram-frame {
+      min-height: calc(100vh - 210px);
+    }
+
+    body.has-expanded {
+      overflow: hidden;
+    }
+
+    #architecture > .architecture-tabs,
+    #architecture > .arch-view,
+    #architecture > .graph-card {
+      display: none !important;
+    }
+
+    .block-diagram-card {
+      margin-top: 16px;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .delay-diagram-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .delay-diagram-card {
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .delay-diagram-card.overview {
+      border-top: 4px solid var(--delay);
+    }
+
+    .delay-diagram-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .delay-diagram-toolbar .spacer {
+      flex: 1 1 auto;
+    }
+
+    .delay-diagram-frame {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      overflow: auto;
+      min-height: 560px;
+      padding: 12px;
+    }
+
+    .delay-diagram-frame img {
+      display: block;
+      max-width: none;
+      height: auto;
+    }
+
+    .delay-diagram-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .block-diagram-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .block-diagram-toolbar .spacer {
+      flex: 1 1 auto;
+    }
+
+    .block-view {
+      display: none;
+    }
+
+    .block-view.is-active {
+      display: block;
+    }
+
+    .synth-map-viewport {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fbfd;
+      overflow: auto;
+      min-height: 720px;
+      padding: 14px;
+    }
+
+    .synth-map {
+      --map-scale: 1;
+      width: 1660px;
+      height: 760px;
+      position: relative;
+      transform: scale(var(--map-scale));
+      transform-origin: 0 0;
+      background:
+        linear-gradient(#eef4f8 1px, transparent 1px),
+        linear-gradient(90deg, #eef4f8 1px, transparent 1px),
+        #ffffff;
+      background-size: 20px 20px;
+      border-radius: 8px;
+    }
+
+    .synth-map.is-expanded {
+      width: 1780px;
+    }
+
+    .synth-wires {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .wire-audio {
+      fill: none;
+      stroke: #008fd3;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      marker-end: url(#audioArrow);
+    }
+
+    .wire-control {
+      fill: none;
+      stroke: #18a84b;
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      marker-end: url(#controlArrow);
+    }
+
+    .wire-mod {
+      fill: none;
+      stroke: #f07a20;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 8 8;
+      marker-end: url(#modArrow);
+    }
+
+    .wire-feedback {
+      fill: none;
+      stroke: #6f7f89;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 4 7;
+      marker-end: url(#feedbackArrow);
+    }
+
+    .junction-dot {
+      fill: #008fd3;
+      stroke: #ffffff;
+      stroke-width: 2;
+    }
+
+    .map-block,
+    .map-frame {
+      position: absolute;
+      box-sizing: border-box;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 8px 24px rgba(16, 32, 39, 0.08);
+      overflow: hidden;
+    }
+
+    .map-frame {
+      border: 3px solid #e33b3b;
+      background: rgba(255, 241, 241, 0.55);
+      box-shadow: none;
+    }
+
+    .map-frame > strong {
+      position: absolute;
+      top: -1px;
+      left: 14px;
+      transform: translateY(-50%);
+      background: #ffffff;
+      color: #d82121;
+      padding: 0 8px;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .map-block {
+      border: 2px solid #9fb0bd;
+      padding: 10px 12px;
+      display: grid;
+      align-content: start;
+      gap: 5px;
+      font-size: 12px;
+      line-height: 1.25;
+      color: #172026;
+    }
+
+    .map-block strong {
+      font-size: 15px;
+      line-height: 1.15;
+      color: #14242c;
+    }
+
+    .map-block small,
+    .map-block span {
+      color: #526777;
+      overflow-wrap: anywhere;
+    }
+
+    .map-block.sound {
+      border-color: #008fd3;
+    }
+
+    .map-block.processor {
+      border-color: #0f766e;
+    }
+
+    .map-block.control {
+      border-color: #18a84b;
+      color: #0c5828;
+      background: #f2fff6;
+    }
+
+    .map-block.control strong {
+      color: #0c7a35;
+    }
+
+    .map-block.mod {
+      border-color: #f07a20;
+      background: #fff6ec;
+    }
+
+    .map-block.mod strong {
+      color: #c55110;
+    }
+
+    .map-block.output {
+      border-color: #d82121;
+      background: #fff5f5;
+    }
+
+    .map-block.output strong {
+      color: #b91c1c;
+    }
+
+    .map-block.pitch {
+      border-color: #34495e;
+      background: #f2f6fa;
+    }
+
+    .map-block.mixer {
+      border-color: #008fd3;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .sum-symbol {
+      font-size: 46px;
+      line-height: 1;
+      color: #008fd3;
+      font-weight: 700;
+    }
+
+    .mini-wave {
+      width: 100%;
+      height: 34px;
+    }
+
+    .map-tag {
+      display: inline-flex;
+      width: fit-content;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 999px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #526777;
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .signal-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .signal-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .signal-legend i {
+      width: 30px;
+      height: 4px;
+      display: inline-block;
+      border-radius: 999px;
+      background: var(--legend-color);
+    }
+
+    .signal-legend i.dashed {
+      background: repeating-linear-gradient(90deg, var(--legend-color) 0 8px, transparent 8px 14px);
+    }
+
+    .software-lanes {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .software-lane {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .software-lane label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding-top: 12px;
+    }
+
+    .software-steps {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .software-step {
+      border: 1px solid var(--line);
+      border-top: 4px solid #2563eb;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 10px;
+      min-height: 78px;
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .software-step.state {
+      border-top-color: #7c3aed;
+    }
+
+    .software-step.audio {
+      border-top-color: #166534;
+    }
+
+    .software-step.visual {
+      border-top-color: #0f766e;
+    }
+
+    .software-step.guard {
+      border-top-color: #b91c1c;
+    }
+
+    .software-step strong {
+      font-size: 13px;
+    }
+
+    .map-expanded-shell {
+      position: fixed;
+      inset: 16px;
+      z-index: 45;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 80px rgba(16, 32, 39, 0.28);
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .map-expanded-shell .synth-map-viewport {
+      min-height: calc(100vh - 130px);
+    }
+
+    .render-warning {
+      color: var(--risk);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .graph-card {
+      margin-top: 14px;
+    }
+
+    .gojs-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    #gojsDiagram {
+      width: 100%;
+      height: 720px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .graph-card.is-expanded #gojsDiagram {
+      height: calc(100vh - 220px);
+    }
+
+    .gojs-detail {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 14px;
+      min-height: 220px;
+      overflow: auto;
+    }
+
+    .gojs-detail h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .gojs-detail p {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .gojs-detail dl {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .gojs-detail dt {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .gojs-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fbfdff;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend-chip::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--chip-color, #60717f);
+    }
+
+    .fallback-graph {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .fallback-nodes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .fallback-node {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--panel-2);
+    }
+
+    .fallback-node.june {
+      background: var(--june-soft);
+      border-color: #9fd4ce;
+    }
+
+    .fallback-node.april {
+      background: var(--april-soft);
+      border-color: #c8d9a5;
+    }
+
+    .fallback-node.delay {
+      background: var(--delay-soft);
+      border-color: #b5d0e3;
+    }
+
+    .fallback-node.ok {
+      background: #e8f6ee;
+      border-color: #a9d7bf;
+    }
+
+    .fallback-links {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .control-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field-surface {
+      background: #101b23;
+      border-radius: 8px;
+      padding: 16px;
+      color: #eaf4f8;
+      display: grid;
+      gap: 14px;
+      min-height: 360px;
+    }
+
+    .surface-row {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .surface-key,
+    .surface-knob,
+    .surface-switch,
+    .surface-oled {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .surface-knob {
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      position: relative;
+    }
+
+    .surface-knob::before {
+      content: "";
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 6px solid #65c7be;
+      border-top-color: #273b45;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    .surface-key {
+      min-height: 54px;
+      font-size: 12px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+    }
+
+    .surface-key span,
+    .surface-knob span {
+      color: #bdd2dc;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .surface-switch {
+      min-height: 48px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      font-size: 12px;
+    }
+
+    .surface-oled {
+      background: #e8f7f4;
+      color: #10252b;
+      text-align: left;
+      min-height: 108px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .evidence {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 14px 0 24px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: relative;
+        height: auto;
+      }
+
+      nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric-grid,
+      .grid-2,
+      .grid-3,
+      .control-map,
+      .gojs-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 16px;
+      }
+
+      .topline {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      nav,
+      .surface-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .row,
+      .row.three,
+      .row.two,
+      .row.synth,
+      .lane,
+      .ruler {
+        grid-template-columns: 1fr;
+      }
+
+      .cell {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .cell:last-child {
+        border-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <strong>Field Template June</strong>
+        <span>Controls-optimized Daisy Field template derived from April and Field delay references.</span>
+      </div>
+      <nav aria-label="Dashboard pages">
+        <a href="#overview" data-page-link="overview" class="active">Overview</a>
+        <a href="#architecture" data-page-link="architecture">Architecture</a>
+        <a href="#delay-bundle" data-page-link="delay-bundle">Delay Bundle</a>
+        <a href="#timing" data-page-link="timing">Timing Analysis</a>
+        <a href="#responsiveness" data-page-link="responsiveness">Responsiveness</a>
+        <a href="#cpu-memory" data-page-link="cpu-memory">CPU &amp; Memory</a>
+        <a href="#io" data-page-link="io">I/O &amp; Peripherals</a>
+        <a href="#parameters" data-page-link="parameters">Parameters</a>
+        <a href="#build" data-page-link="build">Build &amp; Config</a>
+        <a href="#tests" data-page-link="tests">Test Results</a>
+        <a href="#logs" data-page-link="logs">Logs &amp; Evidence</a>
+      </nav>
+    </aside>
+
+    <main id="main">
+      <div class="topline">
+        <div>
+          <h1>Field_Template_June Controls Dashboard</h1>
+          <p>Dedicated report for the new Daisy Field template with until-touched controls, capped visual refresh, build/QAE evidence, and comparison against <code>Field_Template_April</code> and <code>Field_delay_bundle</code>.</p>
+        </div>
+        <div class="actions" aria-label="Project links">
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/README.md">Project README</a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/HARDWARE_TESTPLAN.md">Hardware Test Plan</a>
+          <a class="btn" href="../../../MyProjects/_projects/Field_Template_June/Field_Template_June.cpp">Source</a>
+        </div>
+      </div>
+
+      <section id="overview" class="page panel is-current">
+        <h2>Overview</h2>
+        <div class="metric-grid">
+          <div class="metric">
+            <label>Build</label>
+            <strong>PASS</strong>
+            <small><code>make</code> completed for <code>Field_Template_June</code>.</small>
+          </div>
+          <div class="metric">
+            <label>QAE</label>
+            <strong>0 / 0</strong>
+            <small>No validator errors or warnings after UTF-8 rerun.</small>
+          </div>
+          <div class="metric">
+            <label>Control Loop</label>
+            <strong>1 ms</strong>
+            <small>Controls stay in the main loop; visual I/O is capped separately.</small>
+          </div>
+          <div class="metric">
+            <label>Flash Path</label>
+            <strong>ST-Link</strong>
+            <small>Hardware plan uses <code>make program</code>, not manual DFU.</small>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card june">
+            <h3>What Changed</h3>
+            <p>June replaces near-value pickup with movement-gated until-touched control. Each active bank or hidden modifier records raw knob positions at entry, protects stored values, and attaches only when the knob moves.</p>
+          </div>
+          <div class="card april">
+            <h3>April Baseline</h3>
+            <p>April is still the clean source baseline: external-MIDI mono synth, main/alt banked knobs, hidden output level, tri-state key LEDs, and OLED overview/zoom.</p>
+          </div>
+          <div class="card delay">
+            <h3>Delay Reference</h3>
+            <p><code>Field_delay_bundle</code> supplied the strongest runtime pattern: movement-gated layers, 50 ms OLED cadence, 16 ms LED cadence, and bounded MIDI event processing.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture" class="page panel">
+        <h2>Architecture</h2>
+        <p class="architecture-note">Current June firmware has two separate structures: a software runtime that owns control sampling, state handoff, display, LEDs, MIDI, and serial commands; and a mono synth voice that turns the stored state into audio inside the 48-sample callback.</p>
+
+        <div class="card block-diagram-card">
+          <h3>Comprehensible Block Diagram</h3>
+          <p>The synth view is hand-routed rather than auto-laid out: blue cables are audio, green cables are UI controls, orange dashed cables are modulation, and gray dashed cables are UI feedback. Controls are attached directly to the sound-processing unit they affect.</p>
+          <div class="block-diagram-toolbar" aria-label="Block diagram controls">
+            <button type="button" class="is-active" data-block-view="synth">Synth + Controls</button>
+            <button type="button" data-block-view="software">Software Runtime</button>
+            <span class="spacer"></span>
+            <button type="button" data-block-action="fit">Fit</button>
+            <button type="button" data-block-action="readable">Readable</button>
+            <button type="button" data-block-action="zoom-out">Zoom -</button>
+            <button type="button" data-block-action="zoom-in">Zoom +</button>
+            <button type="button" data-block-action="expand">Expand</button>
+          </div>
+
+          <div class="block-view is-active" data-block-panel="synth">
+            <div class="synth-map-viewport">
+              <div class="synth-map" data-block-zoom="100" aria-label="Field Template June synth block diagram">
+                <svg class="synth-wires" viewBox="0 0 1660 760" aria-hidden="true">
+                  <defs>
+                    <marker id="audioArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#008fd3"></path>
+                    </marker>
+                    <marker id="controlArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#18a84b"></path>
+                    </marker>
+                    <marker id="modArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#f07a20"></path>
+                    </marker>
+                    <marker id="feedbackArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L0,6 L9,3 z" fill="#6f7f89"></path>
+                    </marker>
+                  </defs>
+
+                  <path class="wire-audio" d="M205 365 H250"></path>
+                  <path class="wire-audio" d="M520 250 H590 V330 H620"></path>
+                  <path class="wire-audio" d="M520 340 H620"></path>
+                  <path class="wire-audio" d="M520 430 H590 V360 H620"></path>
+                  <circle class="junction-dot" cx="590" cy="330" r="5"></circle>
+                  <circle class="junction-dot" cx="590" cy="360" r="5"></circle>
+                  <path class="wire-audio" d="M760 345 H835"></path>
+                  <path class="wire-audio" d="M955 345 H1015"></path>
+                  <path class="wire-audio" d="M1175 345 H1225"></path>
+                  <path class="wire-audio" d="M1345 345 H1390"></path>
+                  <path class="wire-audio" d="M1490 345 H1530"></path>
+
+                  <path class="wire-control" d="M135 130 V305"></path>
+                  <path class="wire-control" d="M320 130 V210"></path>
+                  <path class="wire-control" d="M415 130 V300"></path>
+                  <path class="wire-control" d="M510 130 V390"></path>
+                  <path class="wire-control" d="M675 135 V250"></path>
+                  <path class="wire-control" d="M1050 135 V250"></path>
+                  <path class="wire-control" d="M895 135 V300"></path>
+                  <path class="wire-control" d="M1260 135 V285"></path>
+                  <path class="wire-control" d="M1435 135 V285"></path>
+
+                  <path class="wire-mod" d="M895 505 V390"></path>
+                  <path class="wire-mod" d="M985 505 V455 H1080 V405"></path>
+                  <path class="wire-mod" d="M1115 505 V405"></path>
+
+                  <path class="wire-feedback" d="M1440 390 V620 H1450 V650"></path>
+                </svg>
+
+                <div class="map-block control" style="left:40px;top:35px;width:205px;height:96px">
+                  <strong>Pitch / note controls</strong>
+                  <span>MIDI notes + CC64</span>
+                  <span>SW2 Performance B1-B8: C4-C5</span>
+                  <span>B1-B4 transpose, A8 + K4 glide</span>
+                </div>
+
+                <div class="map-block pitch" style="left:45px;top:305px;width:175px;height:138px">
+                  <span class="map-tag">note/gate source</span>
+                  <strong>Pitch + gate</strong>
+                  <span>target frequency</span>
+                  <span>transpose + glide smoothing</span>
+                  <span>A7 Pitch LFO in frequency math</span>
+                </div>
+
+                <div class="map-block control" style="left:270px;top:35px;width:275px;height:96px">
+                  <strong>Sound generator controls</strong>
+                  <span>A1-A4 waveform, K8 Main Color</span>
+                  <span>K8 Alt Sub, K7 Alt Noise</span>
+                </div>
+                <div class="map-frame" style="left:250px;top:175px;width:300px;height:315px"><strong>Sound generators</strong></div>
+                <div class="map-block sound" style="left:300px;top:215px;width:220px;height:70px">
+                  <strong>Main oscillator</strong>
+                  <span>A1-A4 wave, K8 Color/PW</span>
+                </div>
+                <div class="map-block sound" style="left:300px;top:305px;width:220px;height:70px">
+                  <strong>Sub oscillator</strong>
+                  <span>freq/2, K8 Alt Sub</span>
+                </div>
+                <div class="map-block sound" style="left:300px;top:395px;width:220px;height:70px">
+                  <strong>White noise</strong>
+                  <span>K7 Alt Noise, max 0.30 mix</span>
+                </div>
+
+                <div class="map-block control" style="left:610px;top:55px;width:190px;height:80px">
+                  <strong>Pre-filter mix controls</strong>
+                  <span>Sub and noise amounts</span>
+                </div>
+                <div class="map-frame" style="left:610px;top:245px;width:170px;height:210px"><strong>Pre-filter mixer</strong></div>
+                <div class="map-block mixer" style="left:635px;top:300px;width:110px;height:100px">
+                  <div class="sum-symbol">SUM</div>
+                  <span>osc + sub + noise</span>
+                </div>
+
+                <div class="map-block control" style="left:840px;top:55px;width:135px;height:80px">
+                  <strong>Amp controls</strong>
+                  <span>A5 Velocity</span>
+                  <span>K5 Alt VelAmt</span>
+                </div>
+                <div class="map-block processor" style="left:835px;top:305px;width:120px;height:80px">
+                  <strong>Envelope amp</strong>
+                  <span>source * env * velocity</span>
+                </div>
+
+                <div class="map-block control" style="left:995px;top:55px;width:205px;height:80px">
+                  <strong>Filter controls</strong>
+                  <span>K1 Cutoff, K2 Reso</span>
+                  <span>K1 Alt EnvAmt, A6 KeyTrack</span>
+                </div>
+                <div class="map-frame" style="left:1015px;top:245px;width:170px;height:200px"><strong>Filter</strong></div>
+                <div class="map-block processor" style="left:1040px;top:300px;width:120px;height:100px">
+                  <strong>SVF LPF</strong>
+                  <span>base cutoff + env + keytrack + LFO</span>
+                </div>
+
+                <div class="map-block control" style="left:1220px;top:55px;width:150px;height:80px">
+                  <strong>Drive controls</strong>
+                  <span>K7 Main Drive</span>
+                  <span>1x to 8x gain</span>
+                </div>
+                <div class="map-frame" style="left:1225px;top:245px;width:145px;height:200px"><strong>Drive</strong></div>
+                <div class="map-block processor" style="left:1245px;top:305px;width:105px;height:80px">
+                  <strong>tanh drive</strong>
+                  <span>soft clip</span>
+                </div>
+
+                <div class="map-block control" style="left:1390px;top:55px;width:145px;height:80px">
+                  <strong>Level controls</strong>
+                  <span>hold SW2 + K8</span>
+                  <span>hidden output level</span>
+                </div>
+                <div class="map-block output" style="left:1390px;top:300px;width:100px;height:90px">
+                  <strong>Level</strong>
+                  <span>final gain</span>
+                </div>
+                <div class="map-block output" style="left:1530px;top:285px;width:110px;height:120px">
+                  <strong>Output</strong>
+                  <span>stereo L/R DAC</span>
+                </div>
+
+                <div class="map-block mod" style="left:820px;top:505px;width:240px;height:105px">
+                  <strong>ADSR envelope</strong>
+                  <span>K3 Attack, K4 Decay, K5 Sustain, K6 Release</span>
+                  <svg class="mini-wave" viewBox="0 0 180 34" aria-hidden="true">
+                    <path d="M5 28 L42 5 L82 20 H125 L170 29" fill="none" stroke="#f07a20" stroke-width="3"></path>
+                  </svg>
+                </div>
+                <div class="map-block mod" style="left:1070px;top:505px;width:260px;height:105px">
+                  <strong>LFO</strong>
+                  <span>K2 Alt Rate, K3 Alt Depth</span>
+                  <span>A7 target: Filter wire here, Pitch handled in frequency math</span>
+                  <svg class="mini-wave" viewBox="0 0 180 34" aria-hidden="true">
+                    <path d="M4 18 C24 2, 42 2, 62 18 S100 34, 120 18 S158 2, 176 18" fill="none" stroke="#f07a20" stroke-width="3"></path>
+                  </svg>
+                </div>
+                <div class="map-block control" style="left:1335px;top:650px;width:230px;height:65px">
+                  <strong>OLED + LEDs</strong>
+                  <span>show stored values, selections, SW2 Controls/Performance</span>
+                </div>
+              </div>
+            </div>
+            <div class="signal-legend">
+              <span><i style="--legend-color:#008fd3"></i>audio signal</span>
+              <span><i style="--legend-color:#18a84b"></i>control mapping</span>
+              <span><i class="dashed" style="--legend-color:#f07a20"></i>modulation</span>
+              <span><i class="dashed" style="--legend-color:#6f7f89"></i>UI feedback</span>
+            </div>
+          </div>
+
+          <div class="block-view" data-block-panel="software">
+            <div class="software-lanes" aria-label="Field Template June software runtime lanes">
+              <div class="software-lane">
+                <label>Input scan</label>
+                <div class="software-steps">
+                  <div class="software-step"><strong>Field controls</strong><span>K1-K8, SW1/SW2, A/B keybed</span></div>
+                  <div class="software-step"><strong>External MIDI</strong><span>Note on/off, velocity, CC64 sustain</span></div>
+                  <div class="software-step"><strong>USB serial</strong><span>HELP, STATUS, SNAP, SELFTEST</span></div>
+                  <div class="software-step guard"><strong>Bounded work</strong><span>max 16 MIDI events per tick</span></div>
+                  <div class="software-step"><strong>1 ms pacing</strong><span>System::Delay(1)</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Main loop</label>
+                <div class="software-steps">
+                  <div class="software-step"><strong>ProcessAllControls</strong><span>raw hardware state</span></div>
+                  <div class="software-step guard"><strong>Until-touched gate</strong><span>anchors + capture masks</span></div>
+                  <div class="software-step state"><strong>ParamBankSet</strong><span>Main, Alt, Level stored values</span></div>
+                  <div class="software-step state"><strong>SynthState</strong><span>wave, modes, transpose, level</span></div>
+                  <div class="software-step visual"><strong>Dirty visual flags</strong><span>display and LEDs scheduled</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Audio lane</label>
+                <div class="software-steps">
+                  <div class="software-step audio"><strong>AudioCallback</strong><span>48-sample block</span></div>
+                  <div class="software-step audio"><strong>Read stored state</strong><span>no control scanning</span></div>
+                  <div class="software-step audio"><strong>Mono synth DSP</strong><span>osc, env, lfo, filter, drive</span></div>
+                  <div class="software-step audio"><strong>Stereo output</strong><span>left/right DAC samples</span></div>
+                  <div class="software-step guard"><strong>Boundary</strong><span>no OLED or serial work in audio</span></div>
+                </div>
+              </div>
+              <div class="software-lane">
+                <label>Visual lane</label>
+                <div class="software-steps">
+                  <div class="software-step visual"><strong>OLED</strong><span>50 ms cap, dirty redraw</span></div>
+                  <div class="software-step visual"><strong>Knob LEDs</strong><span>stored logical values</span></div>
+                  <div class="software-step visual"><strong>Key LEDs</strong><span>selections and tri-state modes</span></div>
+                  <div class="software-step state"><strong>Feedback text</strong><span>SW2 Controls/Performance</span></div>
+                  <div class="software-step guard"><strong>Rate separation</strong><span>human-rate UI, audio-rate DSP</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="architecture-tabs" aria-label="Architecture diagram selector">
+          <button type="button" class="is-active" data-arch-view="software">Software Architecture</button>
+          <button type="button" data-arch-view="synth">Synth Structure</button>
+        </div>
+
+        <div class="arch-view is-active" data-arch-panel="software">
+          <div class="diagram-box full">
+            <h3>Software Architecture</h3>
+            <p>Main-loop ownership is separated from audio ownership. The diagram emphasizes rates, handoff state, and what is intentionally kept out of the audio callback.</p>
+            <div class="diagram-toolbar">
+              <button type="button" data-mermaid-action="fit">Fit</button>
+              <button type="button" data-mermaid-action="readable">Readable</button>
+              <button type="button" data-mermaid-action="zoom-out">Zoom -</button>
+              <button type="button" data-mermaid-action="zoom-in">Zoom +</button>
+              <span class="spacer"></span>
+              <button type="button" data-mermaid-action="expand">Expand</button>
+            </div>
+            <div class="diagram-viewport">
+              <div class="mermaid" data-zoom="135">
+flowchart TD
+    accTitle: Field Template June Software Architecture
+    accDescr: Shows how Field controls, MIDI, serial, stored state, dirty flags, visual refresh, and the 48-sample audio callback are separated.
+
+    classDef inputStyle fill:#34495E,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef loopStyle fill:#2563EB,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef stateStyle fill:#7C3AED,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef visualStyle fill:#0F766E,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef audioStyle fill:#166534,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef guardStyle fill:#B91C1C,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+
+    subgraph layer_inputs["1. Hardware and Host Inputs"]
+        knobs["K1-K8 ADC knobs"]:::inputStyle
+        switches["SW1 bank toggle&lt;br/&gt;SW2 B-mode toggle / Level hold"]:::inputStyle
+        keybed["A/B keybed"]:::inputStyle
+        midi_in["External MIDI input"]:::inputStyle
+        serial_in["USB serial commands"]:::inputStyle
+    end
+
+    subgraph layer_main["2. Main Loop, 1 ms cadence"]
+        scan["ProcessAllControls()"]:::loopStyle
+        serial["ProcessSerialCommands()"]:::loopStyle
+        midi_tick["Drain MIDI queue&lt;br/&gt;max 16 events/tick"]:::loopStyle
+        ui["ProcessUi()"]:::loopStyle
+        gate["Until-touched gate&lt;br/&gt;entry anchors + capture masks"]:::guardStyle
+        key_logic["Keybed state machine&lt;br/&gt;wave / transpose / performance / reset"]:::loopStyle
+        voice_dirty["ApplyVoiceSetup()&lt;br/&gt;only when voice_dirty"]:::loopStyle
+        visual_sched["UpdateUiOutputs()&lt;br/&gt;dirty scheduling"]:::visualStyle
+        delay["System::Delay(1)"]:::loopStyle
+    end
+
+    subgraph layer_state["3. Stored Runtime State"]
+        banks["ParamBankSet&lt;br/&gt;Main, Alt, hidden Level"]:::stateStyle
+        captures["Raw anchors&lt;br/&gt;captured masks"]:::stateStyle
+        synth_state["SynthState&lt;br/&gt;wave, modes, transpose, output level"]:::stateStyle
+        midi_state["MidiState&lt;br/&gt;note, gate, velocity, sustain"]:::stateStyle
+        dirty["Dirty flags&lt;br/&gt;voice, display, LEDs"]:::stateStyle
+    end
+
+    subgraph layer_visual["4. Human-Rate Visual I/O"]
+        oled["OLED overview/focus&lt;br/&gt;50 ms cap"]:::visualStyle
+        key_leds["Key LEDs&lt;br/&gt;mode and selection state"]:::visualStyle
+        knob_leds["Knob LEDs&lt;br/&gt;stored logical values"]:::visualStyle
+    end
+
+    subgraph layer_audio["5. Audio Callback, 48 samples"]
+        callback["AudioCallback()"]:::audioStyle
+        dsp["Mono synth DSP&lt;br/&gt;osc, sub, noise, env, lfo, filter, drive"]:::audioStyle
+        dac["Stereo audio output"]:::audioStyle
+    end
+
+    knobs -->|"raw sample"| scan
+    switches -->|"edge state"| scan
+    keybed -->|"button states"| scan
+    midi_in -->|"queued messages"| midi_tick
+    serial_in -->|"HELP / STATUS / SNAP / SELFTEST"| serial
+
+    scan --> serial --> midi_tick --> ui
+    ui -->|"record anchors on context entry"| captures
+    captures --> gate
+    ui --> gate
+    gate -->|"write only after movement > 0.012"| banks
+    ui --> key_logic --> synth_state
+    midi_tick --> midi_state
+    banks -->|"mark changed params"| dirty
+    key_logic --> dirty
+    dirty --> voice_dirty --> synth_state
+    dirty --> visual_sched
+    visual_sched --> oled
+    visual_sched --> key_leds
+    visual_sched --> knob_leds
+    visual_sched --> delay
+
+    banks -.->|"stored parameter reads"| callback
+    synth_state -.->|"setter state reads"| callback
+    midi_state -.->|"note/gate reads"| callback
+    callback --> dsp --> dac
+              </div>
+            </div>
+          </div>
+
+          <div class="table" style="margin-top:14px">
+            <div class="row synth">
+              <div class="cell head">Software block</div>
+              <div class="cell head">What runs there</div>
+              <div class="cell head">Cadence</div>
+              <div class="cell head">State handoff</div>
+              <div class="cell head">Current evidence</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Boot and priming</div>
+              <div class="cell"><code>Init</code>, startup OLED, <code>StartAdc</code>, <code>PrimeControls</code>, MIDI init, then <code>StartAudio</code>.</div>
+              <div class="cell">One-time before audio starts.</div>
+              <div class="cell">Raw knob anchors are recorded before active control editing starts.</div>
+              <div class="cell">Prevents boot-time parameter jumps.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Main loop</div>
+              <div class="cell">Controls, serial commands, bounded MIDI handling, telemetry, UI logic, and dirty visual scheduling.</div>
+              <div class="cell">1 ms delay per loop.</div>
+              <div class="cell">Writes stored banks, mode state, note state, and dirty flags.</div>
+              <div class="cell"><code>kMainLoopDelayMs = 1</code>, MIDI cap <code>16</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Until-touched gate</div>
+              <div class="cell">Compares each active knob to its bank or modifier entry anchor before accepting edits.</div>
+              <div class="cell">Every main-loop control pass.</div>
+              <div class="cell">Writes Main, Alt, or hidden Level values only after deliberate movement.</div>
+              <div class="cell">Threshold <code>0.012</code>, write deadband <code>0.0005</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Visual output</div>
+              <div class="cell">Knob LEDs, key LEDs, overview OLED, focus zoom, SW2 Controls/Performance state text.</div>
+              <div class="cell">LED cap 16 ms; OLED cap 50 ms.</div>
+              <div class="cell">Reads stored logical values, not raw ADC positions.</div>
+              <div class="cell">Dirty flags avoid full-rate redraw/transmit.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Audio callback</div>
+              <div class="cell">Per-sample oscillator, sub, noise, ADSR, LFO, filter, drive, and output gain processing.</div>
+              <div class="cell">48 samples per block, about 1 ms at 48 kHz.</div>
+              <div class="cell">Reads stored state; does not scan controls, redraw OLED, or handle serial text.</div>
+              <div class="cell">Keeps UI work outside the audio lane.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-view" data-arch-panel="synth">
+          <div class="diagram-box full">
+            <h3>Synth Structure</h3>
+            <p>This view follows the audio path from notes and mapped UI parameters through generators, modulators, filter, envelope, drive, and output level.</p>
+            <div class="diagram-toolbar">
+              <button type="button" data-mermaid-action="fit">Fit</button>
+              <button type="button" data-mermaid-action="readable">Readable</button>
+              <button type="button" data-mermaid-action="zoom-out">Zoom -</button>
+              <button type="button" data-mermaid-action="zoom-in">Zoom +</button>
+              <span class="spacer"></span>
+              <button type="button" data-mermaid-action="expand">Expand</button>
+            </div>
+            <div class="diagram-viewport">
+              <div class="mermaid" data-zoom="135">
+flowchart TD
+    accTitle: Field Template June Synth Structure
+    accDescr: Shows the mono synth signal path and the actual Field controls mapped to each generator, modulator, filter, amp, drive, and output block.
+
+    classDef sourceStyle fill:#34495E,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef controlStyle fill:#2563EB,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef generatorStyle fill:#D35400,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef modStyle fill:#7C3AED,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef filterStyle fill:#0F766E,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef ampStyle fill:#166534,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef outputStyle fill:#B91C1C,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+
+    subgraph layer_note["1. Note, Gate, and Performance Sources"]
+        midi_notes["External MIDI notes&lt;br/&gt;velocity + CC64 sustain"]:::sourceStyle
+        brow_notes["SW2 Performance mode&lt;br/&gt;B1-B8 test notes C4-C5"]:::sourceStyle
+        transpose["B1-B4 Controls mode&lt;br/&gt;transpose -12 / 0 / +12 / +24"]:::controlStyle
+        glide_ctrl["A8 glide mode&lt;br/&gt;K4 Alt Glide"]:::controlStyle
+    end
+
+    subgraph layer_generators["2. Sound Generators"]
+        pitch["Target frequency&lt;br/&gt;transpose + glide smoothing"]:::sourceStyle
+        osc["Main oscillator&lt;br/&gt;A1-A4 waveform&lt;br/&gt;K8 Main Color"]:::generatorStyle
+        sub["Sub oscillator&lt;br/&gt;K8 Alt Sub&lt;br/&gt;freq/2"]:::generatorStyle
+        noise["WhiteNoise&lt;br/&gt;K7 Alt Noise&lt;br/&gt;max 0.30 mix"]:::generatorStyle
+        premix["Pre-filter source mix"]:::generatorStyle
+    end
+
+    subgraph layer_modulators["3. Modulators"]
+        env["ADSR envelope&lt;br/&gt;K3-K6 Main A/D/S/R"]:::modStyle
+        lfo["Sine LFO&lt;br/&gt;K2 Alt Rate, K3 Alt Depth"]:::modStyle
+        lfo_target["A7 LFO target&lt;br/&gt;Off / Pitch / Filter"]:::controlStyle
+        keytrack["A6 KeyTrack&lt;br/&gt;Off / Half / Full"]:::controlStyle
+        velocity["A5 Velocity mode&lt;br/&gt;K5 Alt VelAmt"]:::controlStyle
+        env_amt["K1 Alt EnvAmt"]:::controlStyle
+    end
+
+    subgraph layer_shaping["4. Filter, Amp, and Drive"]
+        amp["Envelope and velocity amp"]:::ampStyle
+        filter["SVF low-pass filter&lt;br/&gt;K1 Cutoff, K2 Reso"]:::filterStyle
+        drive["tanh drive&lt;br/&gt;K7 Main Drive"]:::ampStyle
+        level["Output level&lt;br/&gt;hold SW2 + K8"]:::outputStyle
+    end
+
+    subgraph layer_output["5. Output"]
+        dac["Stereo audio output"]:::outputStyle
+        oled["OLED + key/knob LEDs&lt;br/&gt;show stored mapped values"]:::controlStyle
+    end
+
+    midi_notes --> pitch
+    brow_notes --> pitch
+    transpose --> pitch
+    glide_ctrl --> pitch
+    pitch --> osc
+    pitch --> sub
+    osc --> premix
+    sub --> premix
+    noise --> premix
+    premix --> amp
+    midi_notes --> env
+    brow_notes --> env
+    env --> amp
+    velocity --> amp
+    amp --> filter
+    env -->|"cutoff contribution"| filter
+    env_amt --> filter
+    keytrack --> filter
+    lfo -->|"pitch target"| osc
+    lfo -->|"pitch target"| sub
+    lfo -->|"filter target"| filter
+    lfo_target --> lfo
+    filter --> drive --> level --> dac
+    osc -.->|"UI feedback"| oled
+    env -.->|"UI feedback"| oled
+    filter -.->|"UI feedback"| oled
+    level -.->|"UI feedback while edited"| oled
+              </div>
+            </div>
+          </div>
+
+          <div class="table" style="margin-top:14px">
+            <div class="row synth">
+              <div class="cell head">Synth block</div>
+              <div class="cell head">Controllable parameters</div>
+              <div class="cell head">Mapped controls/UI</div>
+              <div class="cell head">Audio role</div>
+              <div class="cell head">Display/LED feedback</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Main oscillator</div>
+              <div class="cell">Waveform; pulse width and source color.</div>
+              <div class="cell">A1-A4 select Sine, Tri, Saw, Square. K8 in Main bank controls <code>Color</code>.</div>
+              <div class="cell">Primary pitched source; LFO can modulate pitch when A7 target is Pitch.</div>
+              <div class="cell">OLED <code>Wave</code>/<code>Color</code>; key LEDs show selected wave; K8 LED shows stored Color.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Sub oscillator</div>
+              <div class="cell">Sub level; waveform follows main with square preserved, otherwise saw.</div>
+              <div class="cell">SW1 toggles Alt bank; K8 controls <code>Sub</code>.</div>
+              <div class="cell">One octave below the main oscillator, mixed before filtering.</div>
+              <div class="cell">OLED/K8 LED show Alt <code>Sub</code> when Alt bank is active.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Noise source</div>
+              <div class="cell">White-noise mix amount.</div>
+              <div class="cell">SW1 toggles Alt bank; K7 controls <code>Noise</code>.</div>
+              <div class="cell">Adds up to 30 percent noise into the pre-filter mix.</div>
+              <div class="cell">OLED/K7 LED show Alt <code>Noise</code>.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Envelope</div>
+              <div class="cell">Attack, Decay, Sustain, Release.</div>
+              <div class="cell">K3-K6 in Main bank control <code>Attack</code>, <code>Decay</code>, <code>Sustain</code>, <code>Release</code>.</div>
+              <div class="cell">Shapes amplitude and also contributes to filter cutoff through EnvAmt.</div>
+              <div class="cell">OLED focus/overview and K3-K6 LEDs show stored ADSR values.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">LFO</div>
+              <div class="cell">Rate, depth, target.</div>
+              <div class="cell">SW1 toggles Alt bank; K2 controls <code>LfoRt</code>, K3 controls <code>LfoDp</code>. A7 cycles Off, Pitch, Filter.</div>
+              <div class="cell">Sine LFO modulates pitch or filter only when A7 selects a target.</div>
+              <div class="cell">OLED/K2/K3 LEDs show rate/depth; A7 LED shows target state.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Filter</div>
+              <div class="cell">Base cutoff, resonance, envelope amount, key tracking, optional LFO cutoff modulation.</div>
+              <div class="cell">K1 Main <code>Cutoff</code>, K2 Main <code>Reso</code>, K1 Alt <code>EnvAmt</code>, A6 KeyTrack, A7 Filter target.</div>
+              <div class="cell">SVF low-pass follows note, envelope, key tracking, and LFO contributions.</div>
+              <div class="cell">OLED/K1/K2 LEDs show base cutoff/resonance; A6/A7 LEDs show mode selections.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Glide and pitch</div>
+              <div class="cell">Transpose, glide time, glide mode, note source.</div>
+              <div class="cell">B1-B4 controls mode transpose -12/0/+12/+24. A8 selects Off/Legato/On. K4 Alt controls Glide. SW2 toggles B row between controls and performance test notes C4-C5.</div>
+              <div class="cell">Smooths frequency toward the current MIDI or B-row performance note.</div>
+              <div class="cell">OLED shows Trans/Glide and SW2 Controls/Performance state; key LEDs show selected modes.</div>
+            </div>
+            <div class="row synth">
+              <div class="cell">Amp, drive, output</div>
+              <div class="cell">Velocity response, drive gain, hidden master output level.</div>
+              <div class="cell">A5 cycles velocity mode. K5 Alt controls <code>VelAmt</code>. K7 Main controls <code>Drive</code>. Hold SW2 and move K8 for hidden <code>Level</code>.</div>
+              <div class="cell">Applies envelope/velocity amplitude, tanh drive, then output-level scaling.</div>
+              <div class="cell">OLED and LEDs show active mapped values; hidden Level appears while SW2+K8 is edited.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card graph-card">
+          <h3>GoJS Interactive Architecture Explorer</h3>
+          <p id="gojsCaption">Source-grounded relationship graph for June runtime ownership.</p>
+          <div class="graph-toolbar">
+            <button type="button" class="is-active" data-graph="software">Software Runtime</button>
+            <button type="button" data-graph="synth">Synth Voice</button>
+            <span class="spacer"></span>
+            <button type="button" data-gojs-action="zoom-out">Zoom -</button>
+            <button type="button" data-gojs-action="zoom-in">Zoom +</button>
+            <button type="button" data-gojs-action="fit">Fit</button>
+            <button type="button" data-gojs-action="expand">Expand</button>
+          </div>
+          <div class="gojs-shell">
+            <div id="gojsDiagram" aria-label="Interactive GoJS architecture graph"></div>
+            <aside class="gojs-detail" id="gojsDetails" aria-live="polite">
+              <h4>Selection Details</h4>
+              <p>Select a node or link to inspect ownership, cadence, mapped controls, and handoff role.</p>
+            </aside>
+          </div>
+          <div class="gojs-legend" id="gojsLegend" aria-label="GoJS legend"></div>
+        </div>
+
+        <div class="table" style="margin-top:14px">
+          <div class="row">
+            <div class="cell head">Surface</div>
+            <div class="cell head">Field_Template_April</div>
+            <div class="cell head">Field_Template_June</div>
+            <div class="cell head">Field_delay_bundle</div>
+          </div>
+          <div class="row">
+            <div class="cell">Control model</div>
+            <div class="cell">Near-value pickup/catch with stored logical values.</div>
+            <div class="cell">Until-touched movement gate per bank/modifier entry.</div>
+            <div class="cell">Until-touched layer gates for base, SW1, and SW2 layers.</div>
+          </div>
+          <div class="row">
+            <div class="cell">Visual I/O</div>
+            <div class="cell">OLED and LED work every main-loop pass.</div>
+            <div class="cell">OLED capped at 50 ms; LEDs capped at 16 ms.</div>
+            <div class="cell">Same 50 ms / 16 ms visual cadence family.</div>
+          </div>
+          <div class="row">
+            <div class="cell">DSP scope</div>
+            <div class="cell">Small mono synth starter.</div>
+            <div class="cell">Same small mono synth, optimized runtime shell.</div>
+            <div class="cell">Large multi-algorithm delay/Fx bundle with internal voice.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="delay-bundle" class="page panel">
+        <h2>Delay Bundle</h2>
+        <p><code>Field_delay_bundle</code> is the richest Field-family reference in this dashboard because it combines the Field control surface, movement-gated parameter layers, internal note sources, external MIDI, SDRAM delay memory, and four selectable delay algorithms. These diagrams separate the reusable runtime/control idea from the DSP topology inside each algorithm.</p>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="card delay">
+            <h3>What The Overview Shows</h3>
+            <p>The all-in-one view shows the shared execution shell: input drive and internal synth mix feed <code>DaisyDelayFxCore::Process</code>, one selected algorithm runs per audio block, and the Field surface writes normalized state through movement-gated control layers.</p>
+          </div>
+          <div class="card june">
+            <h3>What The Detail Sheets Add</h3>
+            <p>The algorithm sheets expand A1-A4 into actual delay structures: tape lines and flutter, FDN reverb tank, texture/grain tap handling, and long SDRAM stereo delay with fractional reads and cross feedback.</p>
+          </div>
+        </div>
+
+        <div class="delay-diagram-grid" aria-label="Delay bundle synth block diagrams">
+          <div class="card delay-diagram-card overview">
+            <h3>Original All-In-One Bundle Diagram</h3>
+            <p>Shared audio/control structure for <code>Field_delay_bundle</code>: Field controls, MIDI/B-row notes, parameter router, internal pluck/pad voice, selected algorithm execution, SDRAM storage, dry/wet safety output, OLED/LED feedback, and CV mirrors.</p>
+            <div class="delay-diagram-toolbar" aria-label="Overview delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-bd.html">Standalone</a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-bd.svg" alt="Field_delay_bundle all-in-one block diagram" data-delay-image data-delay-width="1900" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">quality: no high warnings</span>
+              <span>Best for runtime ownership and control handoff.</span>
+            </div>
+          </div>
+
+          <div class="card delay delay-diagram-card">
+            <h3>A1 Tape [multifx]</h3>
+            <p>Two shared tape-delay lines with per-channel time targets, fractional interpolation, feedback return, one-pole tone filtering, flutter modulation, freeze-aware write gating, and FastTanh grit before wet/dry output.</p>
+            <div class="delay-diagram-toolbar" aria-label="Tape delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tape-detail.html">Standalone</a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tape-detail.svg" alt="A1 Tape multifx delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A1 selects tape time/feedback/tone behavior from the shared parameter set.</span>
+            </div>
+          </div>
+
+          <div class="card delay delay-diagram-card">
+            <h3>A2 Tank [reverb]</h3>
+            <p>Four delay lines form a small feedback-delay network. Input diffusion feeds the tank, Hadamard-style mixing redistributes energy, damping and diffusion shape decay density, and width mixes the stereo wet return.</p>
+            <div class="delay-diagram-toolbar" aria-label="Tank reverb diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tank-detail.html">Standalone</a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-tank-detail.svg" alt="A2 Tank reverb feedback-delay-network block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A2 makes the delay memory behave as a reverb tank rather than a repeat line.</span>
+            </div>
+          </div>
+
+          <div class="card delay delay-diagram-card">
+            <h3>A3 Texture [FunBox]</h3>
+            <p>Texture mode fans the same input into normal taps, grain taps, and reverse/accent taps. Slow drift and density smear the read positions, feedback returns through the texture blend, and freeze can hold the write head.</p>
+            <div class="delay-diagram-toolbar" aria-label="Texture delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-texture-detail.html">Standalone</a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-texture-detail.svg" alt="A3 Texture FunBox delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag pass">detail diagram</span>
+              <span>A3 is the strongest visual reference for multi-tap texture and freeze behavior.</span>
+            </div>
+          </div>
+
+          <div class="card delay delay-diagram-card">
+            <h3>A4 Long [sdram]</h3>
+            <p>Long mode uses external SDRAM as the main musical delay store. It derives primary, secondary, and warp read taps from a smoothed time target, cross-feeds stereo feedback, filters the return, and optionally freezes writes.</p>
+            <div class="delay-diagram-toolbar" aria-label="Long SDRAM delay diagram controls">
+              <a class="btn" href="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-long-detail.html">Standalone</a>
+              <span class="spacer"></span>
+              <button type="button" data-delay-action="fit">Fit</button>
+              <button type="button" data-delay-action="readable">Readable</button>
+              <button type="button" data-delay-action="zoom-out">Zoom -</button>
+              <button type="button" data-delay-action="zoom-in">Zoom +</button>
+              <button type="button" data-delay-action="expand">Expand</button>
+            </div>
+            <div class="delay-diagram-frame">
+              <img src="../delay-algorithm-structure/synth-block-diagram/field-delay-bundle-long-detail.svg" alt="A4 Long SDRAM delay block diagram" data-delay-image data-delay-width="1660" data-delay-zoom="100">
+            </div>
+            <div class="delay-diagram-meta">
+              <span class="tag warn">densest topology</span>
+              <span>A4 intentionally keeps visible long-memory reads and cross-feedback because those are the defining behavior.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="timing" class="page panel">
+        <h2>Timing Analysis</h2>
+        <p>The important design point is not that every task runs faster. It is that every task runs at a rate matched to its job: controls at 1 ms, LEDs at human-visible refresh, and OLED at a capped dirty redraw rate.</p>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="card june">
+            <h3>June Timing Lanes</h3>
+            <div class="lane-chart">
+              <div class="ruler"><span></span><div class="ruler-scale"><span>0 ms</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.00</span></div></div>
+              <div class="lane"><div class="lane-label">Audio callback<br>48 samples</div><div class="lane-track"><span class="lane-bar june">mono DSP</span><span class="lane-bar june">filter/env</span><span class="lane-bar neutral">out</span></div></div>
+              <div class="lane"><div class="lane-label">Main loop<br>1 ms</div><div class="lane-track"><span class="lane-bar june">MIDI <=16</span><span class="lane-bar june">controls</span><span class="lane-bar june">touch gate</span><span class="lane-bar neutral">dirty flags</span></div></div>
+              <div class="lane"><div class="lane-label">LED lane<br>16 ms cap</div><div class="lane-track"><span class="lane-bar june">knob values</span><span class="lane-bar june">key states</span><span class="lane-bar june">swap/transmit</span></div></div>
+              <div class="lane"><div class="lane-label">OLED lane<br>50 ms cap</div><div class="lane-track"><span class="lane-bar june">dirty check</span><span class="lane-bar june">overview/zoom</span><span class="lane-bar june">display update</span></div></div>
+            </div>
+          </div>
+          <div class="diagram-box">
+            <h3>Mermaid Timing Sequence</h3>
+            <div class="mermaid">
+sequenceDiagram
+  participant HW as Field controls
+  participant Main as 1 ms main loop
+  participant Gate as Until-touched gate
+  participant UI as Visual schedulers
+  participant Audio as Audio callback
+
+  HW->>Main: ProcessAllControls
+  Main->>Gate: compare raw knob with entry anchor
+  Gate-->>Main: write only after movement threshold
+  Main->>UI: set dirty flags
+  UI-->>UI: LED update when 16 ms elapsed
+  UI-->>UI: OLED update when 50 ms elapsed
+  Main->>Audio: simple parameter/state reads
+  Audio->>Audio: mono synth DSP per block
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="responsiveness" class="page panel">
+        <h2>Responsiveness</h2>
+        <div class="grid-2">
+          <div class="diagram-box">
+            <h3>Until-Touched State Machine</h3>
+            <div class="mermaid">
+stateDiagram-v2
+  [*] --> Stored
+  Stored --> Armed: bank, modifier, boot, or reset records raw anchor
+  Armed --> Armed: movement <= 0.012
+  Armed --> Live: movement > 0.012
+  Live --> Live: raw knob writes active parameter
+  Live --> Armed: switch bank or modifier
+  Live --> Armed: reset bank or all defaults
+            </div>
+          </div>
+          <div class="card june">
+            <h3>What This Means On K1</h3>
+            <p>Plain <code>K1</code> writes <code>Cutoff</code> only while the main bank is active and after <code>K1</code> has moved from the main-bank entry anchor. Tapping <code>SW1</code> toggles the Alt bank; when Alt is active, <code>K1</code> writes <code>EnvAmt</code> and cannot overwrite stored <code>Cutoff</code>.</p>
+            <ul>
+              <li>No need to hunt for the old stored value.</li>
+              <li>No immediate jump when changing bank or modifier.</li>
+              <li>Reset defaults remain stable until knobs move again.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table" style="margin-top:14px">
+          <div class="row three">
+            <div class="cell head">Scenario</div>
+            <div class="cell head">April</div>
+            <div class="cell head">June</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Switch main -> alt</div>
+            <div class="cell">Alt value waits until physical knob is near stored value.</div>
+            <div class="cell">Alt value waits until physical knob moves from switch-entry position.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Return alt -> main</div>
+            <div class="cell">Main value waits for near-match pickup.</div>
+            <div class="cell">Main value attaches on first deliberate movement after release.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Reset defaults</div>
+            <div class="cell">Capture clears; near-match is needed again.</div>
+            <div class="cell">New raw anchors are recorded; defaults are protected until movement.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cpu-memory" class="page panel">
+        <h2>CPU &amp; Memory</h2>
+        <div class="grid-3">
+          <div class="card april">
+            <h3>Field_Template_April</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>114128 B / 128 KB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:87.07%"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>52832 B / 512 KB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:10.08%"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB</span></label><div class="bar-shell"><div class="bar-fill april" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="card june">
+            <h3>Field_Template_June</h3>
+            <div class="memory-bars">
+              <div class="memory-bar"><label><span>FLASH</span><span>115688 B / 128 KB</span></label><div class="bar-shell"><div class="bar-fill" style="width:88.26%"></div></div></div>
+              <div class="memory-bar"><label><span>SRAM</span><span>52920 B / 512 KB</span></label><div class="bar-shell"><div class="bar-fill" style="width:10.09%"></div></div></div>
+              <div class="memory-bar"><label><span>SDRAM</span><span>0 B / 64 MB</span></label><div class="bar-shell"><div class="bar-fill" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="card delay">
+            <h3>Field_delay_bundle</h3>
+            <p>The delay bundle is a heavier reference by design. It is useful for runtime scheduling and layer behavior, not as a memory-footprint target for the small template.</p>
+            <ul>
+              <li>Uses shared DaisyHost delay core.</li>
+              <li>Attaches SDRAM delay storage.</li>
+              <li>Includes multiple algorithms plus internal voice.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="io" class="page panel">
+        <h2>I/O &amp; Peripherals</h2>
+        <div class="control-map">
+          <div class="field-surface" aria-label="Daisy Field control surface schematic">
+            <div class="surface-oled">
+JUNE MAIN
+SAW  TR:0
+A5:SCL A6:HALF
+A7:FILT A8:LEG
+            </div>
+            <div class="surface-row">
+              <div class="surface-knob">K1<span>Cutoff / EnvAmt</span></div>
+              <div class="surface-knob">K2<span>Reso / LfoRt</span></div>
+              <div class="surface-knob">K3<span>Attack / LfoDp</span></div>
+              <div class="surface-knob">K4<span>Decay / Glide</span></div>
+              <div class="surface-knob">K5<span>Sustain / VelAmt</span></div>
+              <div class="surface-knob">K6<span>Release / KeyTrk</span></div>
+              <div class="surface-knob">K7<span>Drive / Noise</span></div>
+              <div class="surface-knob">K8<span>Color / Sub / Level</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-key">A1<span>Sine</span></div>
+              <div class="surface-key">A2<span>Tri</span></div>
+              <div class="surface-key">A3<span>Saw</span></div>
+              <div class="surface-key">A4<span>Sqr</span></div>
+              <div class="surface-key">A5<span>Velocity</span></div>
+              <div class="surface-key">A6<span>Keytrack</span></div>
+              <div class="surface-key">A7<span>LFO target</span></div>
+              <div class="surface-key">A8<span>Glide</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-key">B1<span>-12</span></div>
+              <div class="surface-key">B2<span>0</span></div>
+              <div class="surface-key">B3<span>+12</span></div>
+              <div class="surface-key">B4<span>+24</span></div>
+              <div class="surface-key">B5<span>Panic</span></div>
+              <div class="surface-key">B6<span>Reset Main</span></div>
+              <div class="surface-key">B7<span>Reset Alt</span></div>
+              <div class="surface-key">B8<span>Reset All</span></div>
+            </div>
+            <div class="surface-row">
+              <div class="surface-switch">SW1<span>Alt bank toggle</span></div>
+              <div class="surface-switch">SW2<span>B mode / Level hold</span></div>
+            </div>
+          </div>
+          <div class="diagram-box">
+            <h3>Control And Display Flow</h3>
+            <div class="mermaid">
+flowchart TD
+  Knobs["K1-K8 raw ADC values"] --> Context["Active context: Main, Alt, or Level"]
+  Switches["SW1 toggle bank, SW2 toggle B mode or hold Level"] --> Context
+  Context --> Anchor["Record raw entry anchor"]
+  Anchor --> Gate["Wait for movement > 0.012"]
+  Gate --> Stored["Write stored logical value"]
+  Stored --> Oled["OLED zoom and overview"]
+  Stored --> KnobLeds["Knob LEDs show stored value"]
+  Keys["A/B keybed"] --> Modes["Wave, transpose, mode, reset, panic"]
+  Modes --> KeyLeds["Tri-state key LEDs"]
+  Modes --> Oled
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="parameters" class="page panel">
+        <h2>Parameters</h2>
+        <div class="table">
+          <div class="row">
+            <div class="cell head">Knob</div>
+            <div class="cell head">Main Bank</div>
+            <div class="cell head">Alt Bank (SW1 toggle)</div>
+            <div class="cell head">SW2 hold</div>
+          </div>
+          <div class="row"><div class="cell">K1</div><div class="cell">Cutoff</div><div class="cell">EnvAmt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K2</div><div class="cell">Reso</div><div class="cell">LfoRt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K3</div><div class="cell">Attack</div><div class="cell">LfoDp</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K4</div><div class="cell">Decay</div><div class="cell">Glide</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K5</div><div class="cell">Sustain</div><div class="cell">VelAmt</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K6</div><div class="cell">Release</div><div class="cell">KeyTrk</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K7</div><div class="cell">Drive</div><div class="cell">Noise</div><div class="cell">No hidden mapping</div></div>
+          <div class="row"><div class="cell">K8</div><div class="cell">Color</div><div class="cell">Sub</div><div class="cell">Level</div></div>
+        </div>
+      </section>
+
+      <section id="build" class="page panel">
+        <h2>Build &amp; Config</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Firmware Target</h3>
+            <ul>
+              <li><code>TARGET = Field_Template_June</code></li>
+              <li><code>CPP_SOURCES = Field_Template_June.cpp</code></li>
+              <li><code>LIBDAISY_DIR = ../../../libDaisy</code></li>
+              <li><code>DAISYSP_DIR = ../../../DaisySP</code></li>
+              <li>Audio block size is the Field recommended 48-sample block.</li>
+            </ul>
+          </div>
+          <div class="card june">
+            <h3>Flash And Test Commands</h3>
+            <ul>
+              <li><code>make</code> builds the firmware.</li>
+              <li><code>py -3 ../../../DAISY_QAE/validate_daisy_code.py .</code> runs QAE.</li>
+              <li><code>make program</code> flashes through ST-Link.</li>
+              <li><code>.\run_hardware_testplan.ps1 -Flash</code> runs build, QAE, ST-Link flash, and hardware checklist.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="tests" class="page panel">
+        <h2>Test Results</h2>
+        <div class="table">
+          <div class="row three">
+            <div class="cell head">Check</div>
+            <div class="cell head">Result</div>
+            <div class="cell head">Evidence</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Firmware build</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>make</code>, exit 0. FLASH <code>115688 B</code>, SRAM <code>52920 B</code>.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Daisy QAE</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>0 error(s), 0 warning(s)</code> after UTF-8 rerun.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Hardware test runner smoke</div>
+            <div class="cell"><span class="tag pass">PASS</span></div>
+            <div class="cell"><code>run_hardware_testplan.ps1 -SkipBuild -NonInteractive</code>, exit 0.</div>
+          </div>
+          <div class="row three">
+            <div class="cell">Hardware flash/run</div>
+            <div class="cell"><span class="tag warn">PENDING</span></div>
+            <div class="cell">Not run in this pass. Use ST-Link command when the Field is connected.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="logs" class="page panel">
+        <h2>Logs &amp; Evidence</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Current Command Evidence</h3>
+            <div class="evidence">
+              <span><code>make</code> in <code>MyProjects/_projects/Field_Template_June</code>: exit 0.</span>
+              <span>Memory: FLASH <code>115688 B / 128 KB</code>, SRAM <code>52920 B / 512 KB</code>, SDRAM <code>0 B / 64 MB</code>.</span>
+              <span>QAE first run failed before findings because Windows used cp1252 output; UTF-8 rerun passed.</span>
+              <span>Hardware runner non-interactive/no-flash path: exit 0.</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Source Evidence</h3>
+            <ul>
+              <li>June touch threshold and visual caps: <code>Field_Template_June.cpp:18-26</code>.</li>
+              <li>June movement gate: <code>Field_Template_June.cpp:229</code>.</li>
+              <li>June bank switching anchors: <code>Field_Template_June.cpp:341-348</code>.</li>
+              <li>June output level gate: <code>Field_Template_June.cpp:513</code>.</li>
+              <li>June bank knob gate: <code>Field_Template_June.cpp:534</code>.</li>
+              <li>June deferred UI outputs: <code>Field_Template_June.cpp:783-797</code>.</li>
+              <li>June startup/control prime: <code>Field_Template_June.cpp:896-924</code>.</li>
+              <li>April pickup/catch baseline: <code>Field_Template_April.cpp:18</code>, <code>433-460</code>.</li>
+              <li>Field delay timing and touch reference: <code>FieldDelayFieldApp.h:33-38</code>, <code>332-345</code>, <code>736-741</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Generated from local source inspection and validation on <time datetime="2026-06-07">2026-06-07</time>. CDN access is required for live Mermaid and GoJS rendering when opened from disk.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const mermaidConfig = {
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        fontFamily: "Segoe UI, sans-serif",
+        primaryColor: "#e3f5f2",
+        primaryTextColor: "#172026",
+        primaryBorderColor: "#8fc9c2",
+        lineColor: "#60717f",
+        secondaryColor: "#eef5e6",
+        tertiaryColor: "#e7f0f8"
+      }
+    };
+
+    if (window.mermaid) {
+      window.mermaid.initialize(mermaidConfig);
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function captureMermaidSources() {
+      document.querySelectorAll(".mermaid").forEach(diagram => {
+        if (!diagram.dataset.source) {
+          diagram.dataset.source = diagram.textContent.trim();
+        }
+      });
+    }
+
+    let mermaidCounter = 0;
+
+    async function renderMermaidInPage(page) {
+      if (!window.mermaid || !page) {
+        return;
+      }
+      const diagrams = page.querySelectorAll(".mermaid");
+      for (const diagram of diagrams) {
+        const source = diagram.dataset.source || diagram.textContent.trim();
+        const existingSvg = diagram.querySelector("svg");
+        if (diagram.dataset.rendered === "true" && existingSvg) {
+          continue;
+        }
+        try {
+          const renderId = `field-template-june-${Date.now()}-${mermaidCounter++}`;
+          const rendered = await window.mermaid.render(renderId, source);
+          diagram.innerHTML = rendered.svg;
+          diagram.dataset.rendered = "true";
+          if (rendered.bindFunctions) {
+            rendered.bindFunctions(diagram);
+          }
+          applyMermaidZoom(diagram);
+        } catch (error) {
+          console.error("Mermaid render failed", error);
+          diagram.dataset.rendered = "error";
+          diagram.innerHTML = `<div class="render-warning">Mermaid render failed. Source retained below.</div><pre>${escapeHtml(source)}</pre>`;
+        }
+      }
+    }
+
+    function applyMermaidZoom(diagram) {
+      if (!diagram) {
+        return;
+      }
+      const zoom = Number(diagram.dataset.zoom || 100);
+      const svg = diagram.querySelector("svg");
+      if (svg) {
+        svg.style.width = `${zoom}%`;
+        svg.style.maxWidth = "none";
+        svg.style.height = "auto";
+      }
+    }
+
+    function setMermaidZoom(button, nextZoom) {
+      const box = button.closest(".diagram-box");
+      const diagram = box ? box.querySelector(".mermaid") : null;
+      if (!diagram) {
+        return;
+      }
+      const boundedZoom = Math.max(65, Math.min(240, nextZoom));
+      diagram.dataset.zoom = String(boundedZoom);
+      applyMermaidZoom(diagram);
+    }
+
+    function setArchitectureView(name) {
+      const selected = name === "synth" ? "synth" : "software";
+      document.querySelectorAll("[data-arch-view]").forEach(button => {
+        button.classList.toggle("is-active", button.dataset.archView === selected);
+      });
+      document.querySelectorAll("[data-arch-panel]").forEach(panel => {
+        panel.classList.toggle("is-active", panel.dataset.archPanel === selected);
+      });
+      const panel = document.querySelector(`[data-arch-panel="${selected}"]`);
+      if (panel) {
+        renderMermaidInPage(panel);
+      }
+      setGraph(selected);
+    }
+
+    function activeBlockMap() {
+      return document.querySelector(".block-view.is-active .synth-map");
+    }
+
+    function setBlockView(name) {
+      const selected = name === "software" ? "software" : "synth";
+      document.querySelectorAll("[data-block-view]").forEach(button => {
+        button.classList.toggle("is-active", button.dataset.blockView === selected);
+      });
+      document.querySelectorAll("[data-block-panel]").forEach(panel => {
+        panel.classList.toggle("is-active", panel.dataset.blockPanel === selected);
+      });
+      if (selected === "synth") {
+        window.setTimeout(fitActiveBlockMapOnce, 30);
+      }
+    }
+
+    function setBlockZoom(nextZoom) {
+      const map = activeBlockMap();
+      if (!map) {
+        return;
+      }
+      const bounded = Math.max(0.55, Math.min(1.65, nextZoom));
+      map.dataset.blockZoom = String(Math.round(bounded * 100));
+      map.style.setProperty("--map-scale", bounded.toFixed(2));
+      const viewport = map.closest(".synth-map-viewport");
+      if (viewport) {
+        viewport.style.minHeight = `${Math.max(520, Math.ceil(760 * bounded) + 28)}px`;
+      }
+    }
+
+    function fitActiveBlockMapOnce() {
+      const map = activeBlockMap();
+      if (!map || map.dataset.fitApplied === "true") {
+        return;
+      }
+      const viewport = map.closest(".synth-map-viewport");
+      if (!viewport || viewport.clientWidth < 320) {
+        return;
+      }
+      const fitScale = Math.min(1, (viewport.clientWidth - 32) / 1660);
+      setBlockZoom(fitScale);
+      map.dataset.fitApplied = "true";
+    }
+
+    function currentBlockZoom() {
+      const map = activeBlockMap();
+      return map ? Number(map.dataset.blockZoom || 100) / 100 : 1;
+    }
+
+    function setBlockExpanded(button) {
+      const card = button.closest(".block-diagram-card");
+      const activePanel = card ? card.querySelector(".block-view.is-active") : null;
+      if (!card || !activePanel) {
+        return;
+      }
+      let shell = document.querySelector(".map-expanded-shell");
+      if (shell) {
+        const content = shell.firstElementChild;
+        shell.replaceWith(content);
+        document.body.classList.remove("has-expanded");
+        document.querySelectorAll("[data-block-action='expand']").forEach(item => {
+          item.textContent = "Expand";
+        });
+        return;
+      }
+      shell = document.createElement("div");
+      shell.className = "map-expanded-shell";
+      activePanel.replaceWith(shell);
+      shell.appendChild(activePanel);
+      document.body.classList.add("has-expanded");
+      button.textContent = "Exit Full";
+    }
+
+    function delayDiagramImage(button) {
+      const card = button.closest(".delay-diagram-card");
+      return card ? card.querySelector("[data-delay-image]") : null;
+    }
+
+    function currentDelayDiagramZoom(button) {
+      const image = delayDiagramImage(button);
+      return image ? Number(image.dataset.delayZoom || 100) / 100 : 1;
+    }
+
+    function setDelayDiagramZoom(button, nextZoom) {
+      const image = delayDiagramImage(button);
+      if (!image) {
+        return;
+      }
+      const bounded = Math.max(0.35, Math.min(1.8, nextZoom));
+      const baseWidth = Number(image.dataset.delayWidth || image.naturalWidth || 1660);
+      image.dataset.delayZoom = String(Math.round(bounded * 100));
+      image.style.width = `${Math.round(baseWidth * bounded)}px`;
+    }
+
+    function fitDelayDiagram(button) {
+      const image = delayDiagramImage(button);
+      const frame = image ? image.closest(".delay-diagram-frame") : null;
+      if (!image || !frame || frame.clientWidth < 320) {
+        return;
+      }
+      const baseWidth = Number(image.dataset.delayWidth || image.naturalWidth || 1660);
+      const fitScale = Math.min(1, (frame.clientWidth - 28) / baseWidth);
+      setDelayDiagramZoom(button, fitScale);
+    }
+
+    function fitDelayDiagramsInPage(page) {
+      page.querySelectorAll(".delay-diagram-card [data-delay-action='fit']").forEach(button => {
+        fitDelayDiagram(button);
+      });
+    }
+
+    function setDelayDiagramExpanded(button) {
+      const card = button.closest(".delay-diagram-card");
+      if (!card) {
+        return;
+      }
+      const expanded = !card.classList.contains("is-expanded");
+      document.querySelectorAll(".delay-diagram-card.is-expanded").forEach(item => {
+        if (item !== card) {
+          item.classList.remove("is-expanded");
+          const expandButton = item.querySelector("[data-delay-action='expand']");
+          if (expandButton) {
+            expandButton.textContent = "Expand";
+          }
+        }
+      });
+      card.classList.toggle("is-expanded", expanded);
+      document.body.classList.toggle("has-expanded", expanded);
+      button.textContent = expanded ? "Exit Full" : "Expand";
+      window.setTimeout(() => fitDelayDiagram(button), 40);
+    }
+
+    const nodeStyles = {
+      input: { fill: "#e7eef4", stroke: "#34495e", chip: "#34495e" },
+      loop: { fill: "#eaf1ff", stroke: "#2563eb", chip: "#2563eb" },
+      state: { fill: "#f2eafe", stroke: "#7c3aed", chip: "#7c3aed" },
+      visual: { fill: "#e4f5f1", stroke: "#0f766e", chip: "#0f766e" },
+      audio: { fill: "#e8f6ee", stroke: "#166534", chip: "#166534" },
+      guard: { fill: "#fdeaea", stroke: "#b91c1c", chip: "#b91c1c" },
+      control: { fill: "#eaf1ff", stroke: "#2563eb", chip: "#2563eb" },
+      generator: { fill: "#fff1e7", stroke: "#d35400", chip: "#d35400" },
+      mod: { fill: "#f2eafe", stroke: "#7c3aed", chip: "#7c3aed" },
+      filter: { fill: "#e4f5f1", stroke: "#0f766e", chip: "#0f766e" },
+      output: { fill: "#fdeaea", stroke: "#b91c1c", chip: "#b91c1c" },
+      neutral: { fill: "#edf3f7", stroke: "#60717f", chip: "#60717f" }
+    };
+
+    const linkStyles = {
+      control: { stroke: "#2563eb", width: 1.7, dash: null },
+      state: { stroke: "#7c3aed", width: 1.8, dash: [6, 4] },
+      event: { stroke: "#d35400", width: 1.8, dash: null },
+      schedule: { stroke: "#60717f", width: 1.4, dash: [3, 5] },
+      visual: { stroke: "#0f766e", width: 1.7, dash: null },
+      audio: { stroke: "#166534", width: 2.4, dash: null },
+      mod: { stroke: "#7c3aed", width: 1.9, dash: [2, 3] },
+      guard: { stroke: "#b91c1c", width: 2.1, dash: null }
+    };
+
+    const graphData = {
+      software: {
+        caption: "Software runtime explorer: actual function ownership, stored-state handoff, visual-rate caps, and audio callback boundaries.",
+        legend: ["input", "loop", "state", "visual", "audio", "guard"],
+        groups: [
+          { key: "gInputs", text: "Inputs", kind: "input" },
+          { key: "gMain", text: "1 ms Main Loop", kind: "loop" },
+          { key: "gState", text: "Stored State", kind: "state" },
+          { key: "gVisual", text: "Visual Outputs", kind: "visual" },
+          { key: "gAudio", text: "Audio Callback", kind: "audio" }
+        ],
+        nodes: [
+          { key: "knobs", text: "K1-K8 ADC knobs", role: "Raw physical values", group: "gInputs", kind: "input", cadence: "sampled in main loop", owner: "ProcessAllControls", controls: "K1-K8", detail: "Raw ADC values are never treated as the displayed parameter value until the active context captures movement." },
+          { key: "switches", text: "SW1 / SW2", role: "Mode and modifier buttons", group: "gInputs", kind: "input", cadence: "edge processed", owner: "ProcessUi", controls: "SW1 toggles Main/Alt. SW2 toggles B-row Controls/Performance and acts as Level hold while pressed.", detail: "SW1 is a toggle, not hold. SW2 has both a rising-edge mode toggle and a held hidden Level modifier." },
+          { key: "keybed", text: "A/B keybed", role: "Wave, transpose, modes, performance notes", group: "gInputs", kind: "input", cadence: "main loop", owner: "HandleKeybedControls", controls: "A1-A8, B1-B8", detail: "A-row controls synth modes. B-row is controls or performance notes depending on SW2 state." },
+          { key: "midiIn", text: "External MIDI", role: "Note, velocity, sustain", group: "gInputs", kind: "input", cadence: "bounded event drain", owner: "ProcessMidiEvent", controls: "MIDI note on/off, CC64", detail: "The main loop drains at most 16 MIDI events per tick to bound non-audio work." },
+          { key: "serialIn", text: "USB serial", role: "Test and telemetry commands", group: "gInputs", kind: "input", cadence: "main loop", owner: "ProcessSerialCommands", controls: "HELP, STATUS, SNAP, SELFTEST", detail: "Serial commands are main-loop only and do not run in the audio callback." },
+
+          { key: "scan", text: "ProcessAllControls", role: "Read Field hardware state", group: "gMain", kind: "loop", cadence: "1 ms", owner: "main()", detail: "Scans knobs, switches, and keybed before UI processing." },
+          { key: "serialCmd", text: "ProcessSerialCommands", role: "Non-audio command parser", group: "gMain", kind: "loop", cadence: "1 ms", owner: "main()", detail: "Handles diagnostic commands and can mark display/LED state dirty." },
+          { key: "midiTick", text: "MIDI event tick", role: "Drain up to 16 events", group: "gMain", kind: "loop", cadence: "1 ms cap", owner: "main()", detail: "Prevents unbounded MIDI processing from stretching the main loop." },
+          { key: "processUi", text: "ProcessUi", role: "Context, banks, key logic, dirty flags", group: "gMain", kind: "loop", cadence: "1 ms", owner: "main()", detail: "Samples raw knobs, handles SW1/SW2 behavior, applies until-touched gates, and updates UI outputs." },
+          { key: "touchGate", text: "Until-touched gate", role: "Anchor + capture mask guard", group: "gMain", kind: "guard", cadence: "per active control", owner: "ProcessBankKnobs / ProcessOutputLevel", controls: "All banked knobs and hidden Level", detail: "A value writes only after movement exceeds 0.012 from the context-entry anchor; further writes use 0.0005 deadband." },
+          { key: "keyLogic", text: "Keybed controls", role: "Mode state and test notes", group: "gMain", kind: "loop", cadence: "1 ms", owner: "HandleKeybedControls", controls: "A1-A8, B1-B8", detail: "Updates waveform, velocity mode, key tracking, LFO target, glide mode, transpose, reset/panic, or B-row performance notes." },
+          { key: "applyVoice", text: "ApplyVoiceSetup", role: "Setter-only synth update", group: "gMain", kind: "loop", cadence: "only when voice_dirty", owner: "ProcessUi", detail: "Updates oscillator wave/PW/amp, ADSR times, and LFO frequency outside the audio callback when mode/state changes require it." },
+          { key: "visualSched", text: "UpdateUiOutputs", role: "Dirty visual scheduler", group: "gMain", kind: "visual", cadence: "1 ms checks", owner: "ProcessUi", detail: "Runs display/LED work only when dirty or when the cap interval has elapsed." },
+          { key: "loopDelay", text: "System::Delay(1)", role: "Loop pacing", group: "gMain", kind: "loop", cadence: "1 ms", owner: "main()", detail: "The main loop is intentionally paced; audio is driven by its callback, not by this delay." },
+
+          { key: "banks", text: "ParamBankSet", role: "Main / Alt / hidden Level", group: "gState", kind: "state", cadence: "stored logical values", owner: "ProcessUi", controls: "K1-K8 Main, K1-K8 Alt, SW2+K8 Level", detail: "The displayed and heard parameters come from stored bank values, not from raw knob position." },
+          { key: "anchors", text: "Entry anchors", role: "Raw reference positions", group: "gState", kind: "state", cadence: "context entry", owner: "RecordBankAnchors / ResetOutputLevelAnchor", detail: "Separate anchors prevent old physical knob positions from jumping newly selected parameters." },
+          { key: "synthState", text: "SynthState", role: "Wave, modes, transpose, level", group: "gState", kind: "state", cadence: "event updates", owner: "Keybed and UI logic", detail: "Holds waveform, velocity mode, key tracking, LFO target, glide mode, transpose, and output level." },
+          { key: "midiState", text: "MidiState", role: "Note, gate, velocity, sustain", group: "gState", kind: "state", cadence: "MIDI/event updates", owner: "MIDI and performance keys", detail: "The audio callback reads current note/gate/velocity and sustain state from here." },
+          { key: "dirtyFlags", text: "Dirty flags", role: "Voice / display / LEDs", group: "gState", kind: "state", cadence: "set on changes", owner: "UI logic", detail: "Dirty flags decouple event changes from expensive visual or setter work." },
+
+          { key: "oled", text: "OLED renderer", role: "Overview and focus zoom", group: "gVisual", kind: "visual", cadence: "50 ms cap", owner: "RenderDisplay", detail: "Displays actual stored parameter values, SW2 mode, focus, and mode selections." },
+          { key: "knobLeds", text: "Knob LEDs", role: "Stored value bars", group: "gVisual", kind: "visual", cadence: "16 ms cap", owner: "UpdateKnobLeds", detail: "Shows logical bank values after capture, not raw knob locations." },
+          { key: "keyLeds", text: "Key LEDs", role: "Selections and tri-state modes", group: "gVisual", kind: "visual", cadence: "16 ms cap", owner: "UpdateKeyLeds", detail: "Shows waveform, transpose, velocity/keytrack/LFO/glide selections, and performance mode state." },
+
+          { key: "audioCb", text: "AudioCallback", role: "Audio-only execution lane", group: "gAudio", kind: "audio", cadence: "48 samples", owner: "Daisy audio engine", detail: "Reads stored state and performs DSP. It does not scan controls, parse serial commands, or draw OLED." },
+          { key: "voiceDsp", text: "Mono synth DSP", role: "Osc, sub, noise, env, LFO, filter, drive", group: "gAudio", kind: "audio", cadence: "per sample", owner: "AudioCallback", detail: "Computes frequency glide, LFO, envelope, filter cutoff/resonance, tanh drive, and stereo output." },
+          { key: "dac", text: "Stereo DAC out", role: "Audio output", group: "gAudio", kind: "audio", cadence: "per sample", owner: "AudioCallback", detail: "Writes identical shaped signal to left and right output channels." }
+        ],
+        links: [
+          { from: "knobs", to: "scan", text: "raw sample", kind: "control" },
+          { from: "switches", to: "scan", text: "edge state", kind: "control" },
+          { from: "keybed", to: "scan", text: "button state", kind: "control" },
+          { from: "scan", to: "serialCmd", text: "loop order", kind: "schedule" },
+          { from: "serialIn", to: "serialCmd", text: "commands", kind: "event" },
+          { from: "serialCmd", to: "midiTick", text: "loop order", kind: "schedule" },
+          { from: "midiIn", to: "midiTick", text: "queued MIDI", kind: "event" },
+          { from: "midiTick", to: "midiState", text: "note/gate/cc64", kind: "state" },
+          { from: "midiTick", to: "processUi", text: "loop order", kind: "schedule" },
+          { from: "processUi", to: "anchors", text: "record context entry", kind: "state" },
+          { from: "anchors", to: "touchGate", text: "compare raw movement", kind: "guard" },
+          { from: "processUi", to: "touchGate", text: "active bank/modifier", kind: "control" },
+          { from: "touchGate", to: "banks", text: "write after movement", kind: "guard" },
+          { from: "processUi", to: "keyLogic", text: "A/B actions", kind: "control" },
+          { from: "keyLogic", to: "synthState", text: "modes and transpose", kind: "state" },
+          { from: "banks", to: "dirtyFlags", text: "param changed", kind: "state" },
+          { from: "keyLogic", to: "dirtyFlags", text: "mode changed", kind: "event" },
+          { from: "dirtyFlags", to: "applyVoice", text: "voice_dirty", kind: "event" },
+          { from: "applyVoice", to: "synthState", text: "setter state", kind: "state" },
+          { from: "dirtyFlags", to: "visualSched", text: "display/LED dirty", kind: "visual" },
+          { from: "visualSched", to: "oled", text: "50 ms cap", kind: "visual" },
+          { from: "visualSched", to: "knobLeds", text: "16 ms cap", kind: "visual" },
+          { from: "visualSched", to: "keyLeds", text: "16 ms cap", kind: "visual" },
+          { from: "visualSched", to: "loopDelay", text: "loop tail", kind: "schedule" },
+          { from: "banks", to: "audioCb", text: "stored params", kind: "state" },
+          { from: "synthState", to: "audioCb", text: "modes/level", kind: "state" },
+          { from: "midiState", to: "audioCb", text: "note/gate", kind: "state" },
+          { from: "audioCb", to: "voiceDsp", text: "per-sample DSP", kind: "audio" },
+          { from: "voiceDsp", to: "dac", text: "stereo samples", kind: "audio" }
+        ]
+      },
+      synth: {
+        caption: "Synth voice explorer: actual signal path plus mapped Field controls for generators, modulators, filter, amp, drive, and output.",
+        legend: ["input", "generator", "mod", "filter", "audio", "output", "control"],
+        groups: [
+          { key: "gNote", text: "Note and Gate Sources", kind: "input" },
+          { key: "gControl", text: "Mapped UI Parameters", kind: "loop" },
+          { key: "gGen", text: "Sound Generators", kind: "generator" },
+          { key: "gMod", text: "Modulators", kind: "mod" },
+          { key: "gShape", text: "Filter, Amp, Drive", kind: "filter" },
+          { key: "gOut", text: "Output and Feedback", kind: "output" }
+        ],
+        nodes: [
+          { key: "midiNotes", text: "MIDI notes", role: "External note, velocity, sustain", group: "gNote", kind: "input", cadence: "event-driven", controls: "MIDI NoteOn/Off, CC64", owner: "ProcessMidiEvent", detail: "Provides primary playable note source and velocity. Sustain can hold gate after note release." },
+          { key: "perfNotes", text: "B-row performance notes", role: "Built-in test keyboard", group: "gNote", kind: "input", cadence: "main loop", controls: "SW2 Performance; B1-B8 = C4-C5", owner: "HandleKeybedControls", detail: "A test-performance mode routes B-row keys to MIDI note behavior for quick hardware checks." },
+          { key: "pitch", text: "Pitch and glide", role: "Target frequency smoothing", group: "gNote", kind: "state", cadence: "per sample", controls: "B1-B4 transpose, A8 mode, K4 Alt Glide", owner: "AudioCallback", detail: "Frequency slews toward target using the current glide mode and amount; transpose shifts note source." },
+
+          { key: "waveKeys", text: "Wave select", role: "Oscillator waveform", group: "gControl", kind: "loop", controls: "A1 Sine, A2 Tri, A3 Saw, A4 Square", owner: "Keybed controls", detail: "Sets the main oscillator waveform; sub waveform follows with square preserved, otherwise saw." },
+          { key: "color", text: "Color", role: "Pulse width and source tint", group: "gControl", kind: "loop", controls: "K8 Main", owner: "ParamBankSet Main", detail: "Sets oscillator pulse width from about 0.08 to 0.92 and scales source tone from 0.6 to 1.0." },
+          { key: "subControl", text: "Sub", role: "Sub oscillator level", group: "gControl", kind: "loop", controls: "SW1 Alt, K8", owner: "ParamBankSet Alt", detail: "Controls sub oscillator amplitude and mix contribution." },
+          { key: "noiseControl", text: "Noise", role: "White-noise mix", group: "gControl", kind: "loop", controls: "SW1 Alt, K7", owner: "ParamBankSet Alt", detail: "Adds up to 30 percent white noise before the filter." },
+          { key: "filterControl", text: "Filter controls", role: "Cutoff, resonance, env, keytrack", group: "gControl", kind: "loop", controls: "K1/K2 Main, K1 Alt, A6", owner: "ParamBankSet + SynthState", detail: "Base cutoff and resonance are main-bank controls; EnvAmt and KeyTrack add dynamic cutoff movement." },
+          { key: "envControl", text: "ADSR controls", role: "Envelope shape", group: "gControl", kind: "loop", controls: "K3-K6 Main", owner: "ParamBankSet Main", detail: "Attack, decay, sustain, and release are set in ApplyVoiceSetup when dirty." },
+          { key: "lfoControl", text: "LFO controls", role: "Rate, depth, target", group: "gControl", kind: "loop", controls: "K2/K3 Alt, A7", owner: "ParamBankSet + SynthState", detail: "A7 selects Off/Pitch/Filter; K2 Alt sets rate and K3 Alt sets depth." },
+          { key: "ampControl", text: "Amp controls", role: "Velocity, drive, output level", group: "gControl", kind: "loop", controls: "A5, K5 Alt, K7 Main, SW2+K8", owner: "ParamBankSet + SynthState", detail: "A5/K5 Alt shape velocity behavior; K7 Main sets tanh drive; SW2+K8 edits hidden Level." },
+
+          { key: "osc", text: "Main oscillator", role: "Primary tone source", group: "gGen", kind: "generator", cadence: "per sample", owner: "AudioCallback", detail: "Uses selected waveform, color/PW, current frequency, and optional pitch LFO." },
+          { key: "sub", text: "Sub oscillator", role: "One-octave support", group: "gGen", kind: "generator", cadence: "per sample", owner: "AudioCallback", detail: "Runs at half the main oscillator frequency and follows the main waveform family." },
+          { key: "noise", text: "WhiteNoise", role: "Noise layer", group: "gGen", kind: "generator", cadence: "per sample", owner: "AudioCallback", detail: "Mixed before filtering with amount from Alt Noise." },
+          { key: "premix", text: "Pre-filter mix", role: "Osc + sub + noise sum", group: "gGen", kind: "generator", cadence: "per sample", owner: "AudioCallback", detail: "Combines the sound generators before envelope amplitude and filtering." },
+
+          { key: "env", text: "ADSR envelope", role: "Amp and cutoff contour", group: "gMod", kind: "mod", cadence: "per sample", controls: "K3-K6 Main", owner: "Adsr", detail: "Processes gate from MIDI or B-row performance notes and feeds both amplitude and filter cutoff." },
+          { key: "lfo", text: "Sine LFO", role: "Pitch or filter modulation", group: "gMod", kind: "mod", cadence: "per sample", controls: "K2/K3 Alt, A7", owner: "Oscillator lfo", detail: "Modulates pitch by a small ratio or filter cutoff by a Hz offset depending on A7 target." },
+          { key: "velocity", text: "Velocity scale", role: "Amplitude response", group: "gMod", kind: "mod", cadence: "per sample", controls: "A5, K5 Alt, MIDI velocity", owner: "VelocityScale", detail: "Combines MIDI velocity and selected velocity mode before final amp scaling." },
+
+          { key: "amp", text: "Envelope amp", role: "Source * envelope * velocity", group: "gShape", kind: "audio", cadence: "per sample", owner: "AudioCallback", detail: "Applies the envelope and velocity scale before the filter." },
+          { key: "filter", text: "SVF low-pass", role: "Tone shaping", group: "gShape", kind: "filter", cadence: "per sample", controls: "K1/K2 Main, K1 Alt, A6, A7", owner: "Svf", detail: "Cutoff combines base value, envelope amount, key tracking, and optional LFO. Resonance maps from 0.15 to 0.95." },
+          { key: "drive", text: "tanh drive", role: "Soft clipping", group: "gShape", kind: "audio", cadence: "per sample", controls: "K7 Main", owner: "AudioCallback", detail: "Drive gain maps from 1x to 8x before tanh shaping." },
+          { key: "level", text: "Output level", role: "Final gain", group: "gShape", kind: "output", cadence: "per sample", controls: "hold SW2 + K8", owner: "SynthState", detail: "Hidden Level scales the final driven signal before stereo output." },
+
+          { key: "stereoOut", text: "Stereo output", role: "Left/right DAC samples", group: "gOut", kind: "output", cadence: "per sample", owner: "AudioCallback", detail: "The current synth voice writes the same shaped signal to both output channels." },
+          { key: "uiFeedback", text: "OLED and LEDs", role: "Stored value feedback", group: "gOut", kind: "visual", cadence: "50 ms / 16 ms caps", owner: "UpdateUiOutputs", detail: "Feedback reflects stored logical values and selections, including SW2 Controls/Performance state." }
+        ],
+        links: [
+          { from: "midiNotes", to: "pitch", text: "note/velocity", kind: "event" },
+          { from: "perfNotes", to: "pitch", text: "test note", kind: "event" },
+          { from: "waveKeys", to: "osc", text: "waveform", kind: "control" },
+          { from: "color", to: "osc", text: "PW/tint", kind: "control" },
+          { from: "subControl", to: "sub", text: "level", kind: "control" },
+          { from: "noiseControl", to: "noise", text: "mix", kind: "control" },
+          { from: "pitch", to: "osc", text: "freq", kind: "audio" },
+          { from: "pitch", to: "sub", text: "freq / 2", kind: "audio" },
+          { from: "osc", to: "premix", text: "audio", kind: "audio" },
+          { from: "sub", to: "premix", text: "audio", kind: "audio" },
+          { from: "noise", to: "premix", text: "audio", kind: "audio" },
+          { from: "midiNotes", to: "env", text: "gate", kind: "event" },
+          { from: "perfNotes", to: "env", text: "gate", kind: "event" },
+          { from: "envControl", to: "env", text: "A/D/S/R", kind: "control" },
+          { from: "lfoControl", to: "lfo", text: "rate/depth/target", kind: "control" },
+          { from: "lfo", to: "osc", text: "pitch target", kind: "mod" },
+          { from: "lfo", to: "sub", text: "pitch target", kind: "mod" },
+          { from: "velocity", to: "amp", text: "velocity scale", kind: "mod" },
+          { from: "ampControl", to: "velocity", text: "mode/amount", kind: "control" },
+          { from: "premix", to: "amp", text: "source", kind: "audio" },
+          { from: "env", to: "amp", text: "amplitude", kind: "mod" },
+          { from: "amp", to: "filter", text: "audio", kind: "audio" },
+          { from: "filterControl", to: "filter", text: "cutoff/res/env/keytrack", kind: "control" },
+          { from: "env", to: "filter", text: "cutoff env", kind: "mod" },
+          { from: "lfo", to: "filter", text: "filter target", kind: "mod" },
+          { from: "filter", to: "drive", text: "low-pass", kind: "audio" },
+          { from: "ampControl", to: "drive", text: "drive", kind: "control" },
+          { from: "drive", to: "level", text: "shaped audio", kind: "audio" },
+          { from: "ampControl", to: "level", text: "hidden level", kind: "control" },
+          { from: "level", to: "stereoOut", text: "stereo samples", kind: "audio" },
+          { from: "waveKeys", to: "uiFeedback", text: "selection", kind: "visual" },
+          { from: "filterControl", to: "uiFeedback", text: "stored values", kind: "visual" },
+          { from: "envControl", to: "uiFeedback", text: "stored values", kind: "visual" },
+          { from: "ampControl", to: "uiFeedback", text: "stored values", kind: "visual" }
+        ]
+      }
+    };
+
+    function renderFallbackGraph(container, graph) {
+      if (!container || !graph) {
+        return;
+      }
+      const nodeHtml = graph.nodes.map(node => `<div class="fallback-node ${node.kind || "neutral"}">${escapeHtml(node.text)}</div>`).join("");
+      const linkHtml = graph.links.map(link => {
+        const from = graph.nodes.find(node => node.key === link.from);
+        const to = graph.nodes.find(node => node.key === link.to);
+        return `<span>${escapeHtml(from ? from.text : link.from)} -> ${escapeHtml(to ? to.text : link.to)} <code>${escapeHtml(link.text || "")}</code></span>`;
+      }).join("");
+      container.innerHTML = `<div class="fallback-graph"><div class="fallback-nodes">${nodeHtml}</div><div class="fallback-links">${linkHtml}</div></div>`;
+    }
+
+    function graphNodesWithGroups(graph) {
+      const groups = (graph.groups || []).map(group => ({ ...group, isGroup: true }));
+      return [...groups, ...(graph.nodes || [])];
+    }
+
+    function graphNodeByKey(graph, key) {
+      return graphNodesWithGroups(graph).find(node => node.key === key);
+    }
+
+    function renderGraphLegend(graph) {
+      const legend = document.getElementById("gojsLegend");
+      if (!legend || !graph) {
+        return;
+      }
+      const kinds = graph.legend || [];
+      legend.innerHTML = kinds.map(kind => {
+        const style = nodeStyles[kind] || nodeStyles.neutral;
+        const label = kind.charAt(0).toUpperCase() + kind.slice(1);
+        return `<span class="legend-chip" style="--chip-color:${style.chip}">${escapeHtml(label)}</span>`;
+      }).join("");
+      const linkKinds = [...new Set((graph.links || []).map(link => link.kind || "control"))];
+      legend.innerHTML += linkKinds.map(kind => {
+        const style = linkStyles[kind] || linkStyles.control;
+        const label = `${kind.charAt(0).toUpperCase()}${kind.slice(1)} link`;
+        return `<span class="legend-chip" style="--chip-color:${style.stroke}">${escapeHtml(label)}</span>`;
+      }).join("");
+    }
+
+    function renderGraphDetails(graph, selectedData) {
+      const details = document.getElementById("gojsDetails");
+      if (!details || !graph) {
+        return;
+      }
+      if (!selectedData) {
+        const nodeCount = graph.nodes ? graph.nodes.length : 0;
+        const linkCount = graph.links ? graph.links.length : 0;
+        details.innerHTML = `
+          <h4>${escapeHtml(graph.caption.split(":")[0])}</h4>
+          <p>${escapeHtml(graph.caption)}</p>
+          <dl>
+            <dt>What GoJS adds here</dt>
+            <dd>Grouped ownership lanes, typed links, selectable node metadata, zoomable canvas layout, and readable high-density structure.</dd>
+            <dt>Graph size</dt>
+            <dd>${nodeCount} nodes, ${linkCount} links</dd>
+          </dl>`;
+        return;
+      }
+      if (selectedData.from && selectedData.to) {
+        const from = graphNodeByKey(graph, selectedData.from);
+        const to = graphNodeByKey(graph, selectedData.to);
+        details.innerHTML = `
+          <h4>${escapeHtml(selectedData.text || "Link")}</h4>
+          <p>${escapeHtml((from ? from.text : selectedData.from) + " -> " + (to ? to.text : selectedData.to))}</p>
+          <dl>
+            <dt>Link type</dt><dd>${escapeHtml(selectedData.kind || "control")}</dd>
+            <dt>Meaning</dt><dd>${escapeHtml(selectedData.detail || selectedData.text || "Relationship")}</dd>
+          </dl>`;
+        return;
+      }
+      details.innerHTML = `
+        <h4>${escapeHtml(selectedData.text || "Node")}</h4>
+        <p>${escapeHtml(selectedData.role || selectedData.detail || "")}</p>
+        <dl>
+          <dt>Kind</dt><dd>${escapeHtml(selectedData.kind || "neutral")}</dd>
+          <dt>Owner</dt><dd>${escapeHtml(selectedData.owner || "n/a")}</dd>
+          <dt>Cadence</dt><dd>${escapeHtml(selectedData.cadence || "n/a")}</dd>
+          <dt>Mapped controls</dt><dd>${escapeHtml(selectedData.controls || "n/a")}</dd>
+          <dt>Details</dt><dd>${escapeHtml(selectedData.detail || "n/a")}</dd>
+        </dl>`;
+    }
+
+    function initGoJS() {
+      const container = document.getElementById("gojsDiagram");
+      if (!container || !window.go) {
+        return null;
+      }
+      const $ = go.GraphObject.make;
+      const diagram = $(go.Diagram, "gojsDiagram", {
+        initialAutoScale: go.Diagram.Uniform,
+        layout: $(go.LayeredDigraphLayout, { direction: 0, layerSpacing: 54, columnSpacing: 34 }),
+        "undoManager.isEnabled": false,
+        allowCopy: false,
+        allowDelete: false,
+        allowMove: true,
+        "toolManager.mouseWheelBehavior": go.ToolManager.WheelZoom
+      });
+
+      diagram.groupTemplate =
+        $(go.Group, "Auto",
+          {
+            layout: $(go.LayeredDigraphLayout, { direction: 0, layerSpacing: 34, columnSpacing: 24 }),
+            selectable: true,
+            computesBoundsAfterDrag: true,
+            handlesDragDropForMembers: true
+          },
+          $(go.Shape, "RoundedRectangle",
+            { strokeWidth: 1.6, parameter1: 8, fill: "rgba(237,243,247,0.55)" },
+            new go.Binding("fill", "kind", kind => (nodeStyles[kind] || nodeStyles.neutral).fill),
+            new go.Binding("stroke", "kind", kind => (nodeStyles[kind] || nodeStyles.neutral).stroke)),
+          $(go.Panel, "Vertical",
+            { margin: 8 },
+            $(go.TextBlock,
+              {
+                alignment: go.Spot.Left,
+                margin: new go.Margin(0, 0, 8, 0),
+                font: "700 13px Segoe UI, sans-serif",
+                stroke: "#172026"
+              },
+              new go.Binding("text", "text")),
+            $(go.Placeholder, { padding: 10 })
+          )
+        );
+
+      diagram.nodeTemplate =
+        $(go.Node, "Auto",
+          { minSize: new go.Size(170, 70), selectionAdorned: true },
+          $(go.Shape, "RoundedRectangle",
+            { strokeWidth: 1.4, parameter1: 8 },
+            new go.Binding("fill", "kind", kind => (nodeStyles[kind] || nodeStyles.neutral).fill),
+            new go.Binding("stroke", "kind", kind => (nodeStyles[kind] || nodeStyles.neutral).stroke)),
+          $(go.Panel, "Vertical",
+            { margin: new go.Margin(9, 11, 9, 11), defaultAlignment: go.Spot.Left },
+            $(go.TextBlock,
+              {
+                wrap: go.TextBlock.WrapFit,
+                maxSize: new go.Size(210, NaN),
+                stroke: "#172026",
+                font: "700 12px Segoe UI, sans-serif"
+              },
+              new go.Binding("text", "text")),
+            $(go.TextBlock,
+              {
+                margin: new go.Margin(4, 0, 0, 0),
+                wrap: go.TextBlock.WrapFit,
+                maxSize: new go.Size(220, NaN),
+                stroke: "#526777",
+                font: "11px Segoe UI, sans-serif"
+              },
+              new go.Binding("text", "role")),
+            $(go.TextBlock,
+              {
+                margin: new go.Margin(7, 0, 0, 0),
+                stroke: "#60717f",
+                font: "10px Consolas, monospace"
+              },
+              new go.Binding("text", "cadence", cadence => cadence ? `rate: ${cadence}` : ""),
+              new go.Binding("visible", "cadence", cadence => !!cadence))
+          )
+        );
+      diagram.linkTemplate =
+        $(go.Link,
+          { routing: go.Link.AvoidsNodes, corner: 8, curve: go.Link.JumpOver },
+          $(go.Shape,
+            { stroke: "#7b8a97", strokeWidth: 1.3 },
+            new go.Binding("stroke", "kind", kind => (linkStyles[kind] || linkStyles.control).stroke),
+            new go.Binding("strokeWidth", "kind", kind => (linkStyles[kind] || linkStyles.control).width),
+            new go.Binding("strokeDashArray", "kind", kind => (linkStyles[kind] || linkStyles.control).dash)),
+          $(go.Shape,
+            { toArrow: "Standard", stroke: "#7b8a97", fill: "#7b8a97" },
+            new go.Binding("stroke", "kind", kind => (linkStyles[kind] || linkStyles.control).stroke),
+            new go.Binding("fill", "kind", kind => (linkStyles[kind] || linkStyles.control).stroke)),
+          $(go.Panel, "Auto",
+            $(go.Shape, "RoundedRectangle", { fill: "rgba(255,255,255,0.92)", stroke: "#d7e0e8", parameter1: 6 }),
+            $(go.TextBlock, { margin: new go.Margin(3, 6, 3, 6), font: "11px Segoe UI, sans-serif", stroke: "#60717f" }, new go.Binding("text", "text"))
+          )
+        );
+      diagram.addDiagramListener("ChangedSelection", event => {
+        const graph = graphData[diagram.currentGraphName || "software"] || graphData.software;
+        const part = event.diagram.selection.first();
+        renderGraphDetails(graph, part ? part.data : null);
+      });
+      return diagram;
+    }
+
+    let activeDiagram = null;
+
+    function setGraph(name) {
+      const graphName = graphData[name] ? name : "software";
+      const graph = graphData[graphName];
+      const caption = document.getElementById("gojsCaption");
+      if (caption) {
+        caption.textContent = graph.caption;
+      }
+      document.querySelectorAll("[data-graph]").forEach(button => {
+        button.classList.toggle("is-active", button.dataset.graph === graphName);
+      });
+      renderGraphLegend(graph);
+      renderGraphDetails(graph, null);
+      if (activeDiagram) {
+        activeDiagram.currentGraphName = graphName;
+        const model = new go.GraphLinksModel(graphNodesWithGroups(graph), graph.links);
+        model.linkKeyProperty = "key";
+        activeDiagram.model = model;
+        window.setTimeout(() => {
+          activeDiagram.requestUpdate();
+          activeDiagram.zoomToFit();
+        }, 30);
+      } else {
+        renderFallbackGraph(document.getElementById("gojsDiagram"), graph);
+      }
+    }
+
+    function showPage(pageId) {
+      const fallback = document.getElementById("overview");
+      const target = document.getElementById(pageId) || fallback;
+      document.querySelectorAll(".page").forEach(page => {
+        page.classList.toggle("is-current", page === target);
+      });
+      document.querySelectorAll("[data-page-link]").forEach(link => {
+        link.classList.toggle("active", link.dataset.pageLink === target.id);
+      });
+      if (target.id === "architecture" && activeDiagram) {
+        activeDiagram.requestUpdate();
+        activeDiagram.zoomToFit();
+      }
+      if (target.id === "architecture") {
+        window.setTimeout(fitActiveBlockMapOnce, 30);
+      }
+      if (target.id === "delay-bundle") {
+        window.setTimeout(() => fitDelayDiagramsInPage(target), 30);
+      }
+      renderMermaidInPage(target);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      captureMermaidSources();
+      activeDiagram = initGoJS();
+      setGraph("software");
+      document.querySelectorAll("[data-block-view]").forEach(button => {
+        button.addEventListener("click", () => {
+          setBlockView(button.dataset.blockView);
+        });
+      });
+      document.querySelectorAll("[data-block-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          const action = button.dataset.blockAction;
+          const map = activeBlockMap();
+          if (action === "fit" && map) {
+            const viewport = map.closest(".synth-map-viewport");
+            const fitScale = viewport ? (viewport.clientWidth - 32) / 1660 : 0.8;
+            setBlockZoom(fitScale);
+          } else if (action === "readable" && map) {
+            setBlockZoom(1);
+          } else if (action === "zoom-in" && map) {
+            setBlockZoom(currentBlockZoom() + 0.1);
+          } else if (action === "zoom-out" && map) {
+            setBlockZoom(currentBlockZoom() - 0.1);
+          } else if (action === "expand") {
+            setBlockExpanded(button);
+          }
+        });
+      });
+      document.querySelectorAll("[data-delay-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          const action = button.dataset.delayAction;
+          if (action === "fit") {
+            fitDelayDiagram(button);
+          } else if (action === "readable") {
+            setDelayDiagramZoom(button, 1);
+          } else if (action === "zoom-in") {
+            setDelayDiagramZoom(button, currentDelayDiagramZoom(button) + 0.1);
+          } else if (action === "zoom-out") {
+            setDelayDiagramZoom(button, currentDelayDiagramZoom(button) - 0.1);
+          } else if (action === "expand") {
+            setDelayDiagramExpanded(button);
+          }
+        });
+      });
+      document.querySelectorAll("[data-arch-view]").forEach(button => {
+        button.addEventListener("click", () => {
+          setArchitectureView(button.dataset.archView);
+        });
+      });
+      document.querySelectorAll("[data-mermaid-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          const box = button.closest(".diagram-box");
+          const diagram = box ? box.querySelector(".mermaid") : null;
+          const currentZoom = Number(diagram ? diagram.dataset.zoom || 100 : 100);
+          const action = button.dataset.mermaidAction;
+          if (action === "fit") {
+            setMermaidZoom(button, 100);
+          } else if (action === "readable") {
+            setMermaidZoom(button, 135);
+          } else if (action === "zoom-in") {
+            setMermaidZoom(button, currentZoom + 15);
+          } else if (action === "zoom-out") {
+            setMermaidZoom(button, currentZoom - 15);
+          } else if (action === "expand" && box) {
+            const expanded = !box.classList.contains("is-expanded");
+            box.classList.toggle("is-expanded", expanded);
+            document.body.classList.toggle("has-expanded", expanded);
+            button.textContent = expanded ? "Exit Full" : "Expand";
+          }
+        });
+      });
+      document.querySelectorAll("[data-graph]").forEach(button => {
+        button.addEventListener("click", () => {
+          setGraph(button.dataset.graph);
+        });
+      });
+      document.querySelectorAll("[data-gojs-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (!activeDiagram) {
+            return;
+          }
+          const action = button.dataset.gojsAction;
+          if (action === "zoom-in") {
+            activeDiagram.scale = Math.min(2.2, activeDiagram.scale * 1.18);
+          } else if (action === "zoom-out") {
+            activeDiagram.scale = Math.max(0.25, activeDiagram.scale / 1.18);
+          } else if (action === "fit") {
+            activeDiagram.zoomToFit();
+          } else if (action === "expand") {
+            const card = button.closest(".graph-card");
+            if (card) {
+              const expanded = !card.classList.contains("is-expanded");
+              card.classList.toggle("is-expanded", expanded);
+              document.body.classList.toggle("has-expanded", expanded);
+              button.textContent = expanded ? "Exit Full" : "Expand";
+              window.setTimeout(() => {
+                activeDiagram.requestUpdate();
+                activeDiagram.zoomToFit();
+              }, 80);
+            }
+          }
+        });
+      });
+      document.querySelectorAll("[data-page-link]").forEach(link => {
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          const pageId = link.dataset.pageLink;
+          history.pushState(null, "", `#${pageId}`);
+          showPage(pageId);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+      window.addEventListener("popstate", () => {
+        showPage((location.hash || "#overview").slice(1));
+      });
+      showPage((location.hash || "#overview").slice(1));
+    });
+  </script>
+</body>
+</html>

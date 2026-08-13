@@ -58,32 +58,32 @@ struct HostedAppCapabilities
 
 struct HostedAppPatchBindings
 {
-    std::array<std::string, 4> knobControlIds{};
-    std::array<std::string, 4> knobParameterIds{};
-    std::array<std::string, 4> knobDetailLabels{};
-    std::array<std::string, 8> fieldKnobControlIds{};
-    std::array<std::string, 8> fieldKnobParameterIds{};
-    std::array<std::string, 8> fieldKnobDetailLabels{};
+    std::array<std::string, 4>  knobControlIds{};
+    std::array<std::string, 4>  knobParameterIds{};
+    std::array<std::string, 4>  knobDetailLabels{};
+    std::array<std::string, 8>  fieldKnobControlIds{};
+    std::array<std::string, 8>  fieldKnobParameterIds{};
+    std::array<std::string, 8>  fieldKnobDetailLabels{};
     std::array<std::string, 16> fieldKeyMenuItemIds{};
     std::array<std::string, 16> fieldKeyDetailLabels{};
-    std::string                encoderControlId;
-    std::string                encoderButtonControlId;
-    std::array<std::string, 4> cvInputPortIds{};
-    std::array<std::string, 2> gateInputPortIds{};
-    std::string                gateOutputPortId;
-    std::array<std::string, 4> audioInputPortIds{};
-    std::array<std::string, 4> audioOutputPortIds{};
-    std::string                midiInputPortId;
-    std::string                midiOutputPortId;
-    std::array<int, 2>         mainOutputChannels{{0, 1}};
+    std::string                 encoderControlId;
+    std::string                 encoderButtonControlId;
+    std::array<std::string, 4>  cvInputPortIds{};
+    std::array<std::string, 2>  gateInputPortIds{};
+    std::string                 gateOutputPortId;
+    std::array<std::string, 4>  audioInputPortIds{};
+    std::array<std::string, 4>  audioOutputPortIds{};
+    std::string                 midiInputPortId;
+    std::string                 midiOutputPortId;
+    std::array<int, 2>          mainOutputChannels{{0, 1}};
 };
 
 struct ParameterDescriptor
 {
     std::string   id;
     std::string   label;
-    float         normalizedValue = 0.0f;
-    float         defaultNormalizedValue = 0.0f;
+    float         normalizedValue          = 0.0f;
+    float         defaultNormalizedValue   = 0.0f;
     float         effectiveNormalizedValue = 0.0f;
     std::string   unitLabel;
     int           stepCount       = 0;
@@ -96,6 +96,24 @@ struct ParameterDescriptor
     float         nativeMaximum   = 1.0f;
     float         nativeDefault   = 0.0f;
     int           nativePrecision = 2;
+
+    // Pedal control contract. Appended after the legacy fields so existing
+    // positional aggregate initialisers keep compiling.
+    //
+    // slotId: musician-facing panel slot ("TIME", "FEEDBACK", ...). Empty when
+    //   the parameter is not one of the five pedal performance slots.
+    // engineeringLabel: physically/DSP meaningful name for `label`. Empty
+    //   means "not declared"; pedal-style apps fill it for every control.
+    // curve: linear | log | bipolar | custom.
+    // dspTargets: exact internal parameters this control writes. A macro
+    //   enumerates every one of them.
+    std::string              slotId;
+    std::string              engineeringLabel;
+    std::string              curve;
+    std::vector<std::string> dspTargets;
+    float                    smoothingMs = 0.0f;
+    bool                     isMacro     = false;
+    bool                     provisional = false;
 };
 
 struct MetaControllerDescriptor
@@ -126,8 +144,8 @@ struct MenuItem
 {
     std::string        id;
     std::string        label;
-    bool               editable      = false;
-    MenuItemActionKind actionKind    = MenuItemActionKind::kReadonly;
+    bool               editable        = false;
+    MenuItemActionKind actionKind      = MenuItemActionKind::kReadonly;
     float              normalizedValue = 0.0f;
     std::string        valueText;
     std::string        targetSectionId;
@@ -143,12 +161,12 @@ struct MenuSection
 
 struct MenuModel
 {
-    bool                    isOpen          = false;
-    bool                    isEditing       = false;
+    bool                     isOpen    = false;
+    bool                     isEditing = false;
     std::vector<std::string> sectionStack;
     std::vector<MenuSection> sections;
-    std::string             currentSectionId = "root";
-    int                     currentSelection = 0;
+    std::string              currentSectionId = "root";
+    int                      currentSelection = 0;
 };
 
 class HostedAppCore
@@ -156,29 +174,28 @@ class HostedAppCore
   public:
     virtual ~HostedAppCore() {}
 
-    virtual std::string GetAppId() const          = 0;
-    virtual std::string GetAppDisplayName() const = 0;
-    virtual HostedAppCapabilities GetCapabilities() const = 0;
-    virtual HostedAppPatchBindings GetPatchBindings() const = 0;
+    virtual std::string            GetAppId() const          = 0;
+    virtual std::string            GetAppDisplayName() const = 0;
+    virtual HostedAppCapabilities  GetCapabilities() const   = 0;
+    virtual HostedAppPatchBindings GetPatchBindings() const  = 0;
 
     virtual void Prepare(double sampleRate, std::size_t maxBlockSize) = 0;
-    virtual void Process(const AudioBufferView& input,
+    virtual void Process(const AudioBufferView&      input,
                          const AudioBufferWriteView& output,
-                         std::size_t frameCount)
+                         std::size_t                 frameCount)
         = 0;
     virtual void SetControl(const std::string& controlId, float normalizedValue)
         = 0;
-    virtual void SetEncoderDelta(int delta)                = 0;
-    virtual void SetEncoderPress(bool pressed)             = 0;
+    virtual void SetEncoderDelta(int delta)    = 0;
+    virtual void SetEncoderPress(bool pressed) = 0;
     virtual void SetPortInput(const std::string& portId, const PortValue& value)
         = 0;
     virtual PortValue GetPortOutput(const std::string& portId) const = 0;
-    virtual void TickUi(double deltaMs)                             = 0;
-    virtual bool SetParameterValue(const std::string& parameterId,
-                                   float              normalizedValue)
+    virtual void      TickUi(double deltaMs)                         = 0;
+    virtual bool      SetParameterValue(const std::string& parameterId,
+                                        float              normalizedValue)
         = 0;
-    virtual bool SetEffectiveParameterValue(const std::string&,
-                                            float)
+    virtual bool SetEffectiveParameterValue(const std::string&, float)
     {
         return false;
     }
@@ -189,44 +206,42 @@ class HostedAppCore
             SetEffectiveParameterValue(parameter.id, parameter.normalizedValue);
         }
     }
-    virtual ParameterValueLookup GetControlValue(
-        const std::string& controlId) const = 0;
-    virtual ParameterValueLookup GetParameterValue(
-        const std::string& parameterId) const = 0;
-    virtual ParameterValueLookup GetEffectiveParameterValue(
-        const std::string& parameterId) const = 0;
-    virtual const std::vector<MetaControllerDescriptor>& GetMetaControllers() const
+    virtual ParameterValueLookup
+    GetControlValue(const std::string& controlId) const = 0;
+    virtual ParameterValueLookup
+    GetParameterValue(const std::string& parameterId) const = 0;
+    virtual ParameterValueLookup
+    GetEffectiveParameterValue(const std::string& parameterId) const = 0;
+    virtual const std::vector<MetaControllerDescriptor>&
+    GetMetaControllers() const
     {
-        static const std::vector<MetaControllerDescriptor> kEmptyMetaControllers;
+        static const std::vector<MetaControllerDescriptor>
+            kEmptyMetaControllers;
         return kEmptyMetaControllers;
     }
-    virtual std::array<float, 16> GetFieldKeyLedValues() const
-    {
-        return {};
-    }
+    virtual std::array<float, 16> GetFieldKeyLedValues() const { return {}; }
     virtual bool SetMetaControllerValue(const std::string&, float)
     {
         return false;
     }
-    virtual ParameterValueLookup GetMetaControllerValue(
-        const std::string&) const
+    virtual ParameterValueLookup
+    GetMetaControllerValue(const std::string&) const
     {
         return {};
     }
     virtual void ResetToDefaultState(std::uint32_t seed = 0) = 0;
     virtual std::unordered_map<std::string, float>
-    CaptureStatefulParameterValues() const = 0;
+                 CaptureStatefulParameterValues() const = 0;
     virtual void RestoreStatefulParameterValues(
         const std::unordered_map<std::string, float>& values)
         = 0;
-    virtual const std::vector<ParameterDescriptor>& GetParameters() const
-        = 0;
-    virtual const MenuModel& GetMenuModel() const = 0;
-    virtual void MenuRotate(int delta)            = 0;
-    virtual void MenuPress()                      = 0;
+    virtual const std::vector<ParameterDescriptor>& GetParameters() const = 0;
+    virtual const MenuModel&                        GetMenuModel() const  = 0;
+    virtual void                                    MenuRotate(int delta) = 0;
+    virtual void                                    MenuPress()           = 0;
     virtual void SetMenuItemValue(const std::string& itemId,
                                   float              normalizedValue)
         = 0;
-    virtual const DisplayModel& GetDisplayModel() const             = 0;
+    virtual const DisplayModel& GetDisplayModel() const = 0;
 };
 } // namespace daisyhost

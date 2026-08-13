@@ -1,0 +1,596 @@
+{
+  "title": "Field_delay_bundle Signal and Controls Block Diagram",
+  "canvas": {
+    "width": 1900,
+    "height": 1040
+  },
+  "rules": {
+    "maxModHorizontal": 260
+  },
+  "metadata": {
+    "summary": "Source-backed block diagram for the Daisy Field delay bundle. Blue cables are audio, green cables are controls/state writes, orange dashed cables are modulation-like DSP state, and gray dashed cables are UI/state feedback.",
+    "trace": [
+      {
+        "id": "bundle-wrapper",
+        "source": "MyProjects/_projects/Field_delay_bundle/Field_delay_bundle.cpp:1-5 includes the shared Field app and calls RunFieldDelayBundleProject."
+      },
+      {
+        "id": "controls-report",
+        "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:5-8 describes audio input, external MIDI, B-row notes, A1-A4 algorithm selection, A5/A6 synth modes, and A7/A8 octave shift."
+      },
+      {
+        "id": "knob-layers",
+        "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:42-68 lists movement-gated knob layers for Base, SW1, and SW2."
+      },
+      {
+        "id": "field-runtime",
+        "source": "MyProjects/_projects/Field_delay_shared/FieldDelayFieldApp.h:316-329 forwards the 48-sample audio callback to DaisyDelayFxCore::Process."
+      },
+      {
+        "id": "field-controls",
+        "source": "MyProjects/_projects/Field_delay_shared/FieldDelayFieldApp.h:332-365 writes moved knobs to the active layer parameters; lines 368-470 dispatch A/B keys."
+      },
+      {
+        "id": "field-snapshots",
+        "source": "MyProjects/_projects/Field_delay_shared/FieldDelayFieldApp.h:267-314 saves/restores per-algorithm parameter snapshots around source switching."
+      },
+      {
+        "id": "field-io",
+        "source": "MyProjects/_projects/Field_delay_shared/FieldDelayFieldApp.h:714-728 configures 48 kHz, 48-frame blocks, attaches SDRAM delay storage, primes controls, starts MIDI, and starts audio."
+      },
+      {
+        "id": "core-api",
+        "source": "DaisyHost/include/daisyhost/DaisyDelayFxCore.h:12-18 defines the four sources; lines 65-93 define the core and Process API; lines 215-235 define delay lines, voices, LFO, smoothing, damping, and tone state."
+      },
+      {
+        "id": "core-process",
+        "source": "DaisyHost/src/DaisyDelayFxCore.cpp:323-397 sums audio with internal synth, dispatches the selected algorithm, applies dry/wet, bypass, wet-only, gain, clamp, and writes stereo output."
+      },
+      {
+        "id": "internal-synth",
+        "source": "DaisyHost/src/DaisyDelayFxCore.cpp:710-746 handles MIDI note on/off; lines 970-1136 implement the 8-voice pluck/pad synth."
+      },
+      {
+        "id": "algorithms",
+        "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1139-1337 implements MultiFX tape, Reverb tank, FunBox texture, and SDRAM long delay algorithms."
+      }
+    ]
+  },
+  "frames": [
+    {
+      "label": "Field surface controls",
+      "x": 30,
+      "y": 20,
+      "w": 1840,
+      "h": 160,
+      "color": "#18a84b",
+      "fill": "#eefcf3"
+    },
+    {
+      "label": "Selectable delay algorithms: one source is active at a time",
+      "x": 735,
+      "y": 320,
+      "w": 530,
+      "h": 365,
+      "color": "#e33b3b",
+      "fill": "#fff5f5"
+    },
+    {
+      "label": "Shared runtime state and feedback",
+      "x": 30,
+      "y": 730,
+      "w": 1840,
+      "h": 190,
+      "color": "#8aa0ad",
+      "fill": "#f8fbfd"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "note_controls",
+      "kind": "control",
+      "x": 45,
+      "y": 65,
+      "w": 250,
+      "h": 96,
+      "label": "Note and octave controls",
+      "lines": [
+        "B1-B8 play C4-C5",
+        "External MIDI notes",
+        "A7/A8 shift octave"
+      ]
+    },
+    {
+      "id": "synth_controls",
+      "kind": "control",
+      "x": 330,
+      "y": 65,
+      "w": 210,
+      "h": 96,
+      "label": "Internal synth controls",
+      "lines": [
+        "A5 Off / Pluck / Pad",
+        "A6 Moment / Latch / Drone",
+        "K6-K8 on SW1/SW2"
+      ]
+    },
+    {
+      "id": "algorithm_controls",
+      "kind": "control",
+      "x": 575,
+      "y": 65,
+      "w": 240,
+      "h": 96,
+      "label": "Algorithm selection",
+      "lines": [
+        "A1 Tape",
+        "A2 Tank",
+        "A3 Texture, A4 Long"
+      ]
+    },
+    {
+      "id": "knob_layers",
+      "kind": "control",
+      "x": 850,
+      "y": 60,
+      "w": 360,
+      "h": 112,
+      "label": "K1-K8 movement-gated layers",
+      "lines": [
+        "Base: mix, time, feedback, tone",
+        "SW1: pre-delay, width, synth",
+        "SW2: range, density, filters",
+        "No write until physical movement"
+      ]
+    },
+    {
+      "id": "output_controls",
+      "kind": "control",
+      "x": 1245,
+      "y": 65,
+      "w": 230,
+      "h": 96,
+      "label": "Output and mode controls",
+      "lines": [
+        "Mix and output gain",
+        "Bypass / wet-only state",
+        "Input drive"
+      ]
+    },
+    {
+      "id": "oled_leds",
+      "kind": "note",
+      "x": 1510,
+      "y": 60,
+      "w": 320,
+      "h": 112,
+      "label": "OLED + key/knob LEDs",
+      "lines": [
+        "Algorithm, octave, layer values",
+        "1.2 s parameter zoom",
+        "A-row selection and B-row notes",
+        "Knob LEDs mirror K values"
+      ]
+    },
+    {
+      "id": "parameter_router",
+      "kind": "control",
+      "x": 850,
+      "y": 205,
+      "w": 360,
+      "h": 105,
+      "label": "Parameter router",
+      "lines": [
+        "3 layers x 8 knobs",
+        "SetParameterValue writes normalized state",
+        "Selected algorithm reads same parameter ids"
+      ]
+    },
+    {
+      "id": "audio_in",
+      "kind": "pitch",
+      "x": 45,
+      "y": 420,
+      "w": 140,
+      "h": 96,
+      "label": "Audio In L/R",
+      "lines": [
+        "Field ADC",
+        "Stereo input"
+      ]
+    },
+    {
+      "id": "input_sum",
+      "kind": "mixer",
+      "x": 235,
+      "y": 405,
+      "w": 190,
+      "h": 125,
+      "label": "Input drive + synth sum",
+      "lines": [
+        "Audio input",
+        "+ internal synth",
+        "Drive applied inside algorithms",
+        "Mono or stereo feed"
+      ]
+    },
+    {
+      "id": "active_source",
+      "kind": "processor",
+      "x": 480,
+      "y": 395,
+      "w": 205,
+      "h": 145,
+      "label": "DaisyDelayFxCore::Process",
+      "lines": [
+        "Reads active source_",
+        "Dispatches one algorithm",
+        "48 frames at 48 kHz",
+        "Bundle mode remaps synth params"
+      ]
+    },
+    {
+      "id": "selected_algorithm",
+      "kind": "processor",
+      "x": 765,
+      "y": 350,
+      "w": 465,
+      "h": 100,
+      "label": "Selected algorithm execution",
+      "lines": [
+        "Only source_ selected by A1-A4 runs",
+        "Reads the shared parameter state",
+        "Returns one stereo wet signal"
+      ]
+    },
+    {
+      "id": "alg_tape",
+      "kind": "processor",
+      "x": 765,
+      "y": 480,
+      "w": 215,
+      "h": 95,
+      "label": "A1 Tape [multifx]",
+      "lines": [
+        "2-line tape delay",
+        "time, feedback, tone",
+        "mod flutter, grit"
+      ]
+    },
+    {
+      "id": "alg_tank",
+      "kind": "processor",
+      "x": 1015,
+      "y": 480,
+      "w": 215,
+      "h": 95,
+      "label": "A2 Tank [reverb]",
+      "lines": [
+        "4-line FDN tank",
+        "size, diffusion",
+        "damping and width"
+      ]
+    },
+    {
+      "id": "alg_texture",
+      "kind": "processor",
+      "x": 765,
+      "y": 580,
+      "w": 215,
+      "h": 105,
+      "label": "A3 Texture [FunBox]",
+      "lines": [
+        "normal + grain taps",
+        "reverse accent",
+        "density, smear, freeze"
+      ]
+    },
+    {
+      "id": "alg_long",
+      "kind": "processor",
+      "x": 1015,
+      "y": 580,
+      "w": 215,
+      "h": 105,
+      "label": "A4 Long [sdram]",
+      "lines": [
+        "long stereo delay",
+        "fractional reads",
+        "cross feedback, warp"
+      ]
+    },
+    {
+      "id": "wet_mix",
+      "kind": "mixer",
+      "x": 1320,
+      "y": 405,
+      "w": 205,
+      "h": 125,
+      "label": "Dry/Wet + safety output",
+      "lines": [
+        "Mix wet with input",
+        "Bypass or wet-only",
+        "Output dB gain",
+        "Clamp non-finite values"
+      ]
+    },
+    {
+      "id": "audio_out",
+      "kind": "output",
+      "x": 1580,
+      "y": 425,
+      "w": 145,
+      "h": 95,
+      "label": "Audio Out L/R",
+      "lines": [
+        "Field DAC",
+        "Stereo output"
+      ]
+    },
+    {
+      "id": "internal_synth",
+      "kind": "sound",
+      "x": 235,
+      "y": 590,
+      "w": 260,
+      "h": 120,
+      "label": "8-voice pluck/pad resonator",
+      "lines": [
+        "MIDI and B-row trigger voices",
+        "Velocity and held note state",
+        "Brightness, decay, level",
+        "Returns mono synth sample"
+      ]
+    },
+    {
+      "id": "bundle_snapshots",
+      "kind": "note",
+      "x": 500,
+      "y": 590,
+      "w": 210,
+      "h": 110,
+      "label": "Per-algorithm snapshots",
+      "lines": [
+        "Save before A1-A4 switch",
+        "Restore selected algorithm state",
+        "Reset knob touch gates"
+      ]
+    },
+    {
+      "id": "delay_storage",
+      "kind": "note",
+      "x": 830,
+      "y": 770,
+      "w": 380,
+      "h": 110,
+      "label": "External SDRAM delay storage",
+      "lines": [
+        "4 delay lines",
+        "384000 samples per line",
+        "Attached before audio starts",
+        "Read/write state for all algorithms"
+      ]
+    },
+    {
+      "id": "runtime_note",
+      "kind": "note",
+      "x": 45,
+      "y": 775,
+      "w": 360,
+      "h": 105,
+      "label": "Field runtime cadence",
+      "lines": [
+        "Audio: 48-sample callback",
+        "Main loop: controls, MIDI, display",
+        "OLED: 50 ms, LEDs: 16 ms",
+        "Main loop delay: 1 ms"
+      ]
+    },
+    {
+      "id": "cv_mirror",
+      "kind": "output",
+      "x": 1530,
+      "y": 205,
+      "w": 245,
+      "h": 95,
+      "label": "CV mirror outputs",
+      "lines": [
+        "CV out 1 follows K1",
+        "CV out 2 follows K2",
+        "Utility feedback only"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "audio_in",
+      "to": "input_sum",
+      "kind": "audio",
+      "points": [
+        [185, 468],
+        [235, 468]
+      ],
+      "trace": ["core-process"]
+    },
+    {
+      "from": "internal_synth",
+      "to": "input_sum",
+      "kind": "audio",
+      "label": "mono synth",
+      "points": [
+        [365, 590],
+        [365, 560],
+        [330, 560],
+        [330, 530]
+      ],
+      "trace": ["internal-synth", "core-process"]
+    },
+    {
+      "from": "input_sum",
+      "to": "active_source",
+      "kind": "audio",
+      "points": [
+        [425, 468],
+        [480, 468]
+      ],
+      "trace": ["core-process"]
+    },
+    {
+      "from": "active_source",
+      "to": "selected_algorithm",
+      "kind": "audio",
+      "label": "selected source",
+      "points": [
+        [685, 468],
+        [730, 468],
+        [730, 400],
+        [765, 400]
+      ],
+      "trace": ["core-process", "algorithms"]
+    },
+    {
+      "from": "selected_algorithm",
+      "to": "wet_mix",
+      "kind": "audio",
+      "label": "wet L/R",
+      "points": [
+        [1230, 400],
+        [1290, 400],
+        [1290, 468],
+        [1320, 468]
+      ],
+      "trace": ["algorithms", "core-process"]
+    },
+    {
+      "from": "wet_mix",
+      "to": "audio_out",
+      "kind": "audio",
+      "points": [
+        [1525, 468],
+        [1580, 468]
+      ],
+      "trace": ["core-process"]
+    },
+    {
+      "from": "note_controls",
+      "to": "internal_synth",
+      "kind": "control",
+      "points": [
+        [170, 161],
+        [170, 250],
+        [225, 250],
+        [225, 650],
+        [235, 650]
+      ],
+      "trace": ["controls-report", "field-controls", "internal-synth"]
+    },
+    {
+      "from": "synth_controls",
+      "to": "internal_synth",
+      "kind": "control",
+      "points": [
+        [435, 161],
+        [435, 560],
+        [365, 560],
+        [365, 590]
+      ],
+      "trace": ["controls-report", "field-controls", "internal-synth"]
+    },
+    {
+      "from": "algorithm_controls",
+      "to": "active_source",
+      "kind": "control",
+      "label": "SetSource",
+      "points": [
+        [695, 161],
+        [695, 245],
+        [580, 245],
+        [580, 395]
+      ],
+      "trace": ["field-controls", "field-snapshots", "core-api"]
+    },
+    {
+      "from": "knob_layers",
+      "to": "parameter_router",
+      "kind": "control",
+      "label": "touched knob",
+      "points": [
+        [1030, 172],
+        [1030, 205]
+      ],
+      "trace": ["knob-layers", "field-controls"]
+    },
+    {
+      "from": "parameter_router",
+      "to": "selected_algorithm",
+      "kind": "control",
+      "label": "parameter state",
+      "points": [
+        [1030, 310],
+        [1030, 350]
+      ],
+      "trace": ["knob-layers", "field-controls", "core-api"]
+    },
+    {
+      "from": "output_controls",
+      "to": "wet_mix",
+      "kind": "control",
+      "points": [
+        [1360, 161],
+        [1360, 405]
+      ],
+      "trace": ["knob-layers", "core-process"]
+    },
+    {
+      "from": "active_source",
+      "to": "bundle_snapshots",
+      "kind": "feedback",
+      "label": "save/restore",
+      "points": [
+        [590, 540],
+        [590, 590]
+      ],
+      "trace": ["field-snapshots"]
+    },
+    {
+      "from": "delay_storage",
+      "to": "selected_algorithm",
+      "kind": "feedback",
+      "label": "read/write",
+      "points": [
+        [1020, 770],
+        [1020, 710],
+        [1255, 710],
+        [1255, 430],
+        [1230, 430]
+      ],
+      "trace": ["field-io", "core-api", "algorithms"]
+    },
+    {
+      "from": "parameter_router",
+      "to": "oled_leds",
+      "kind": "feedback",
+      "label": "formatted values",
+      "points": [
+        [1210, 258],
+        [1495, 258],
+        [1495, 116],
+        [1510, 116]
+      ],
+      "trace": ["field-controls", "field-runtime"]
+    },
+    {
+      "from": "knob_layers",
+      "to": "cv_mirror",
+      "kind": "feedback",
+      "label": "K1/K2 mirror",
+      "points": [
+        [1210, 172],
+        [1495, 172],
+        [1495, 250],
+        [1530, 250]
+      ],
+      "trace": ["field-controls"]
+    }
+  ]
+}

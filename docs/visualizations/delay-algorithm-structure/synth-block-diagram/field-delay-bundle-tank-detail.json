@@ -1,0 +1,56 @@
+{
+  "title": "Field_delay_bundle A2 Tank [reverb] Algorithm Detail",
+  "canvas": {"width": 1660, "height": 820},
+  "rules": {"maxModHorizontal": 260, "frameHeaderHeight": 30},
+  "metadata": {
+    "summary": "Detail block diagram for the Tank [reverb] mode. This sheet shows the four-line feedback delay network, damping filters, diffusion injection, Hadamard-style feedback matrix, and stereo output pair.",
+    "trace": [
+      {"id": "process-dispatch", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:362-366 dispatches kReverbPlayground to ProcessReverbPlayground."},
+      {"id": "tank-input", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1190-1203 computes driven mono input, decay, size, diffusion, and damping coefficient."},
+      {"id": "tank-reads", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1204-1212 reads four size-scaled base delays and applies damping state."},
+      {"id": "tank-matrix", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1214-1226 builds sum/difference feedback terms and writes four lines."},
+      {"id": "tank-output", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1228-1234 builds stereo output from paired damped taps and width."},
+      {"id": "bundle-controls", "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:59-68 lists K1-K8 base/SW1/SW2 mappings for the bundle."}
+    ]
+  },
+  "frames": [
+    {"label": "Tank controls", "x": 35, "y": 20, "w": 1590, "h": 150, "color": "#18a84b", "fill": "#eefcf3"},
+    {"label": "Four-line FDN tank", "x": 35, "y": 180, "w": 1590, "h": 455, "color": "#e33b3b", "fill": "#fff5f5"},
+    {"label": "Output integration", "x": 1050, "y": 665, "w": 575, "h": 120, "color": "#8aa0ad", "fill": "#f8fbfd"}
+  ],
+  "blocks": [
+    {"id": "size_control", "kind": "control", "x": 70, "y": 65, "w": 220, "h": 70, "label": "Size and range controls", "lines": ["K1 SW2 Tank Size", "base taps 37/53/71/89 ms"]},
+    {"id": "decay_control", "kind": "control", "x": 320, "y": 65, "w": 220, "h": 70, "label": "Decay and diffusion controls", "lines": ["K3 Decay", "K3 SW1 Diffusion"]},
+    {"id": "damp_control", "kind": "control", "x": 570, "y": 65, "w": 220, "h": 90, "label": "Damping and color controls", "lines": ["K4 HF Damp", "K4 SW1 Damping", "K5 Tank Color"]},
+    {"id": "width_control", "kind": "control", "x": 820, "y": 65, "w": 220, "h": 70, "label": "Width and pre-delay controls", "lines": ["K2 SW1 Width", "K1 SW1 Pre Delay"]},
+    {"id": "gain_control", "kind": "control", "x": 1070, "y": 65, "w": 220, "h": 90, "label": "Bundle gain controls", "lines": ["K1 Mix", "K7 Input drive", "K8 Output"]},
+    {"id": "audio_in", "kind": "pitch", "x": 65, "y": 350, "w": 145, "h": 90, "label": "Algorithm input", "lines": ["audio in + internal synth", "left/right samples"]},
+    {"id": "drive_sum", "kind": "mixer", "x": 255, "y": 335, "w": 170, "h": 110, "label": "Driven mono input", "lines": ["(L + R) * 0.5", "drive * 0.55"]},
+    {"id": "diffusion", "kind": "processor", "x": 485, "y": 335, "w": 175, "h": 110, "label": "Diffusion injector", "lines": ["input * diffusion", "feeds every tank line"]},
+    {"id": "tank_reads", "kind": "processor", "x": 485, "y": 500, "w": 200, "h": 105, "label": "Four delay-line reads", "lines": ["base taps scaled by size", "lines 0..3"]},
+    {"id": "damping", "kind": "processor", "x": 760, "y": 500, "w": 185, "h": 105, "label": "Per-line damping", "lines": ["one-pole damping state", "a, b, c, d taps"]},
+    {"id": "matrix", "kind": "processor", "x": 1015, "y": 500, "w": 220, "h": 105, "label": "Hadamard feedback mix", "lines": ["h0..h3 sum/difference", "scaled by decay"]},
+    {"id": "tank_writes", "kind": "note", "x": 760, "y": 335, "w": 220, "h": 110, "label": "Four feedback writes", "lines": ["diffuse input + matrix terms", "writes delay lines 0..3"]},
+    {"id": "stereo_pair", "kind": "mixer", "x": 1305, "y": 455, "w": 190, "h": 105, "label": "Stereo width and early mix", "lines": ["left = a + c", "right = b + d", "width + pre-delay"]},
+    {"id": "bundle_mix", "kind": "output", "x": 1110, "y": 705, "w": 210, "h": 70, "label": "Bundle dry/wet and gain", "lines": ["mix, bypass, wet-only, output dB"]},
+    {"id": "audio_out", "kind": "output", "x": 1390, "y": 705, "w": 170, "h": 70, "label": "Audio Out L/R", "lines": ["returned to Field DAC"]}
+  ],
+  "links": [
+    {"from": "audio_in", "to": "drive_sum", "kind": "audio", "points": [[210, 395], [255, 395]], "trace": ["tank-input"]},
+    {"from": "drive_sum", "to": "diffusion", "kind": "audio", "points": [[425, 390], [485, 390]], "trace": ["tank-input", "tank-matrix"]},
+    {"from": "diffusion", "to": "tank_writes", "kind": "audio", "points": [[660, 390], [760, 390]], "trace": ["tank-matrix"]},
+    {"from": "tank_writes", "to": "tank_reads", "kind": "feedback", "points": [[870, 445], [870, 470], [585, 470], [585, 500]], "trace": ["tank-matrix", "tank-reads"]},
+    {"from": "tank_reads", "to": "damping", "kind": "audio", "points": [[685, 552], [760, 552]], "trace": ["tank-reads"]},
+    {"from": "damping", "to": "matrix", "kind": "audio", "points": [[945, 552], [1015, 552]], "trace": ["tank-matrix"]},
+    {"from": "matrix", "to": "tank_writes", "kind": "feedback", "points": [[1125, 500], [1125, 300], [870, 300], [870, 335]], "trace": ["tank-matrix"]},
+    {"from": "damping", "to": "stereo_pair", "kind": "audio", "points": [[945, 520], [970, 475], [1265, 475], [1265, 508], [1305, 508]], "trace": ["tank-output"]},
+    {"from": "stereo_pair", "to": "bundle_mix", "kind": "audio", "points": [[1400, 560], [1400, 650], [1215, 650], [1215, 705]], "trace": ["tank-output"]},
+    {"from": "bundle_mix", "to": "audio_out", "kind": "audio", "points": [[1320, 740], [1390, 740]], "trace": ["tank-output"]},
+    {"from": "size_control", "to": "tank_reads", "kind": "control", "points": [[180, 135], [40, 135], [40, 625], [585, 625], [585, 605]], "trace": ["bundle-controls", "tank-reads"]},
+    {"from": "decay_control", "to": "matrix", "kind": "control", "points": [[430, 135], [430, 655], [1125, 655], [1125, 605]], "trace": ["bundle-controls", "tank-matrix"]},
+    {"from": "decay_control", "to": "diffusion", "kind": "control", "points": [[540, 100], [570, 100], [570, 335]], "trace": ["bundle-controls", "tank-input", "tank-matrix"]},
+    {"from": "damp_control", "to": "damping", "kind": "control", "points": [[680, 135], [680, 470], [850, 470], [850, 500]], "trace": ["bundle-controls", "tank-reads"]},
+    {"from": "width_control", "to": "stereo_pair", "kind": "control", "points": [[930, 135], [930, 215], [1400, 215], [1400, 455]], "trace": ["bundle-controls", "tank-output"]},
+    {"from": "gain_control", "to": "drive_sum", "kind": "control", "points": [[1180, 135], [1180, 165], [340, 165], [340, 335]], "trace": ["bundle-controls", "tank-input"]}
+  ]
+}

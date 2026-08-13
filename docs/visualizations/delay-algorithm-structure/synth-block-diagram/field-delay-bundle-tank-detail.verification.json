@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "spec": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-tank-detail.json",
+  "outputs": {
+    "svg": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-tank-detail.svg",
+    "html": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-tank-detail.html",
+    "png": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-tank-detail.png"
+  },
+  "checks": {
+    "blockCount": 15,
+    "linkCount": 16,
+    "modLinks": 0,
+    "audioLinks": 8,
+    "controlLinks": 6,
+    "feedbackLinks": 2
+  },
+  "quality": {
+    "ok": true,
+    "readabilityScore": 50,
+    "metrics": {
+      "frameHeaderOverlaps": 0,
+      "linkBlockCollisions": 0,
+      "unrelatedCableCrossings": 9,
+      "sharedCableOverlaps": 1,
+      "longRuns": 6
+    },
+    "warnings": [
+      {
+        "severity": "low",
+        "path": "/links/10",
+        "message": "control segment is 490px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/10",
+        "message": "control segment is 545px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/11",
+        "message": "control segment is 520px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/11",
+        "message": "control segment is 695px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/14",
+        "message": "control segment is 470px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "low",
+        "path": "/links/15",
+        "message": "control segment is 840px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "9 unrelated cable crossing(s) detected; inspect whether jump-over or rerouting is needed"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "1 long shared cable overlap(s) detected; stagger parallel routes or use buses"
+      }
+    ]
+  }
+}

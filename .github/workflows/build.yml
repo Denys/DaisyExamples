@@ -10,17 +10,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
+    - uses: actions/checkout@v7
+    - name: Initialize build submodules
+      run: |
+        git submodule update --init --depth 1 DaisySP libDaisy stmlib third_party/CloudSeedCore
+        git -C DaisySP submodule update --init --depth 1 DaisySP-LGPL
+        git -C DaisySP apply --unidiff-zero ../third_party/DaisySP-pedal.patch
+        git -C third_party/CloudSeedCore apply --unidiff-zero ../CloudSeedCore-daisy.patch
+        git -C libDaisy apply --unidiff-zero ../third_party/libDaisy-pedal.patch
     - name: arm-none-eabi-gcc
       uses: fiam/arm-none-eabi-gcc@v1
       with:
-        release: '9-2019-q4'
+        release: '10-2020-q4'
     - name: Build Libraries
       run: ./ci/build_libs.sh
     - name: setup python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
     - name: Build Examples
@@ -28,7 +33,8 @@ jobs:
     - name: Create Distributable Binaries
       run: python ./ci/build_dist.py -ru
     - name: Deploy Dist
-      uses: EndBug/add-and-commit@v4
+      if: github.event_name == 'push'
+      uses: EndBug/add-and-commit@v10
       with:
         message: 'Automated: Committing Dist folder' 
       env:

@@ -16,8 +16,8 @@ class ParamZoomState
   public:
     void Init(float initial_value = 0.0f)
     {
-        active_index_ = -1;
-        active_value_ = initial_value;
+        active_index_  = -1;
+        active_value_  = initial_value;
         last_event_ms_ = 0;
         for(int i = 0; i < kInstrumentParams; ++i)
             last_values_[i] = initial_value;
@@ -37,9 +37,9 @@ class ParamZoomState
         {
             if(fabsf(values[i] - last_values_[i]) > threshold)
             {
-                active_index_ = i;
-                active_value_ = values[i];
-                last_event_ms_ = now_ms;
+                active_index_   = i;
+                active_value_   = values[i];
+                last_event_ms_  = now_ms;
                 last_values_[i] = values[i];
             }
         }
@@ -52,11 +52,11 @@ class ParamZoomState
 
     void Clear()
     {
-        active_index_ = -1;
+        active_index_  = -1;
         last_event_ms_ = 0;
     }
 
-    int ActiveIndex() const { return active_index_; }
+    int   ActiveIndex() const { return active_index_; }
     float ActiveValue() const { return active_value_; }
 
   private:
@@ -76,7 +76,8 @@ class OneHotKeyLedBank
     void ClearA() { active_a_ = -1; }
     void ClearB() { active_b_ = -1; }
 
-    void Update(float active_brightness = 1.0f, float inactive_brightness = 0.0f)
+    void Update(float active_brightness   = 1.0f,
+                float inactive_brightness = 0.0f)
     {
         if(!hw_)
             return;
@@ -95,7 +96,7 @@ class OneHotKeyLedBank
     }
 
   private:
-    DaisyField* hw_      = nullptr;
+    DaisyField* hw_       = nullptr;
     int         active_a_ = -1;
     int         active_b_ = -1;
 };
@@ -162,7 +163,7 @@ class FieldTriStateKeyLEDs
     void Update(uint32_t now_ms,
                 float    on_brightness    = 1.0f,
                 float    blink_brightness = 1.0f,
-                uint32_t blink_period_ms   = 250)
+                uint32_t blink_period_ms  = 250)
     {
         if(!hw_)
             return;
@@ -173,16 +174,14 @@ class FieldTriStateKeyLEDs
 
         for(int i = 0; i < 8; ++i)
         {
-            hw_->led_driver.SetLed(kLedKeysA[i],
-                                   LedBrightness(state_a_[i],
-                                                 on_brightness,
-                                                 blink_brightness,
-                                                 blink_on));
-            hw_->led_driver.SetLed(kLedKeysB[i],
-                                   LedBrightness(state_b_[i],
-                                                 on_brightness,
-                                                 blink_brightness,
-                                                 blink_on));
+            hw_->led_driver.SetLed(
+                kLedKeysA[i],
+                LedBrightness(
+                    state_a_[i], on_brightness, blink_brightness, blink_on));
+            hw_->led_driver.SetLed(
+                kLedKeysB[i],
+                LedBrightness(
+                    state_b_[i], on_brightness, blink_brightness, blink_on));
         }
 
         hw_->led_driver.SwapBuffersAndTransmit();
@@ -203,9 +202,9 @@ class FieldTriStateKeyLEDs
         }
     }
 
-    DaisyField*  hw_      = nullptr;
-    KeyLedState  state_a_[8] = {};
-    KeyLedState  state_b_[8] = {};
+    DaisyField* hw_         = nullptr;
+    KeyLedState state_a_[8] = {};
+    KeyLedState state_b_[8] = {};
 };
 
 inline const char* WaveformName(int waveform)
@@ -227,19 +226,29 @@ inline void FormatPercent(char* buffer, size_t size, float value)
 
 inline void FormatMilliseconds(char* buffer, size_t size, float seconds)
 {
-    snprintf(buffer, size, "%.0f ms", seconds * 1000.0f);
+    snprintf(buffer, size, "%d ms", static_cast<int>(seconds * 1000.0f + 0.5f));
 }
 
 inline void FormatHertz(char* buffer, size_t size, float hertz)
 {
-    snprintf(buffer, size, "%.0f Hz", hertz);
+    snprintf(buffer, size, "%d Hz", static_cast<int>(hertz + 0.5f));
 }
 
 inline void FormatMidiNoteName(char* buffer, size_t size, uint8_t note)
 {
     static const char* kNames[12] = {
-        "C", "C#", "D", "D#", "E", "F",
-        "F#", "G", "G#", "A", "A#", "B",
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
     };
     const int octave = static_cast<int>(note) / 12 - 1;
     snprintf(buffer, size, "%s%d", kNames[note % 12], octave);

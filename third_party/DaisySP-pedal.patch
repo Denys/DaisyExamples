@@ -1,0 +1,917 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8b30547..ee1080c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,0 +9,5 @@ Source/Control/phasor.cpp
++Source/DaisyPedal/bypassfader.cpp
++Source/DaisyPedal/multirate.cpp
++Source/DaisyPedal/noisegate.cpp
++Source/DaisyPedal/octavegenerator.cpp
++Source/DaisyPedal/taptempo.cpp
+@@ -59,0 +65 @@ target_include_directories(DaisySP PUBLIC
++  "Source/DaisyPedal"
+diff --git a/Makefile b/Makefile
+index a409dc1..803ca95 100644
+--- a/Makefile
++++ b/Makefile
+@@ -14,0 +15,8 @@ phasor \
++PEDAL_MOD_DIR = DaisyPedal
++PEDAL_MODULES = \
++bypassfader \
++multirate \
++noisegate \
++octavegenerator \
++taptempo \
++
+@@ -83,0 +92 @@ CPP_SOURCES += $(addsuffix .cpp, $(MODULE_DIR)/$(CONTROL_MOD_DIR)/$(CONTROL_MODU
++CPP_SOURCES += $(addsuffix .cpp, $(MODULE_DIR)/$(PEDAL_MOD_DIR)/$(PEDAL_MODULES))
+@@ -167,0 +177 @@ C_INCLUDES = \
++-I$(MODULE_DIR)/$(PEDAL_MOD_DIR) \
+diff --git a/Source/daisysp.h b/Source/daisysp.h
+index 5301907..a427b94 100644
+--- a/Source/daisysp.h
++++ b/Source/daisysp.h
+@@ -69,0 +70,7 @@
++/** DaisyPedal Modules */
++#include "DaisyPedal/bypassfader.h"
++#include "DaisyPedal/multirate.h"
++#include "DaisyPedal/noisegate.h"
++#include "DaisyPedal/octavegenerator.h"
++#include "DaisyPedal/taptempo.h"
++
+diff --git a/Source/DaisyPedal/bypassfader.cpp b/Source/DaisyPedal/bypassfader.cpp
+new file mode 100644
+index 0000000..ddf1ec5
+--- /dev/null
++++ b/Source/DaisyPedal/bypassfader.cpp
+@@ -0,0 +1,64 @@
++#include "bypassfader.h"
++#include <cmath>
++
++using namespace daisysp;
++
++void BypassFader::Init(float sample_rate)
++{
++    sample_rate_ = sample_rate;
++    wet_mix_     = 1.0f;
++    target_mix_  = 1.0f;
++    fade_time_   = 0.01f;
++    UpdateStep();
++}
++
++float BypassFader::Process(float dry, float wet)
++{
++    Advance();
++    const float dry_mix = 1.0f - wet_mix_;
++    return (dry * dry_mix) + (wet * wet_mix_);
++}
++
++void BypassFader::Advance()
++{
++    if(wet_mix_ < target_mix_)
++    {
++        wet_mix_ += step_;
++        if(wet_mix_ > target_mix_)
++            wet_mix_ = target_mix_;
++    }
++    else if(wet_mix_ > target_mix_)
++    {
++        wet_mix_ -= step_;
++        if(wet_mix_ < target_mix_)
++            wet_mix_ = target_mix_;
++    }
++}
++
++void BypassFader::SetBypass(bool bypass)
++{
++    target_mix_ = bypass ? 0.0f : 1.0f;
++}
++
++void BypassFader::SetFadeTime(float fade_time)
++{
++    fade_time_ = fade_time > 0.0f ? fade_time : 0.0f;
++    UpdateStep();
++}
++
++bool BypassFader::Transitioning() const
++{
++    return fabsf(target_mix_ - wet_mix_) > 1.0e-6f;
++}
++
++void BypassFader::UpdateStep()
++{
++    if(fade_time_ <= 0.0f || sample_rate_ <= 0.0f)
++    {
++        step_ = 1.0f;
++        return;
++    }
++
++    const float samples = fade_time_ * sample_rate_;
++    step_               = samples > 1.0f ? 1.0f / samples : 1.0f;
++}
+diff --git a/Source/DaisyPedal/bypassfader.h b/Source/DaisyPedal/bypassfader.h
+new file mode 100644
+index 0000000..f752a2d
+--- /dev/null
++++ b/Source/DaisyPedal/bypassfader.h
+@@ -0,0 +1,85 @@
++/** @file bypassfader.h
++ *  @brief Smooth bypass-transition helper for pedal signal paths.
++ *  @ingroup pedal_control
++ */
++
++/*
++Copyright (c) 2026
++
++Use of this source code is governed by an MIT-style
++license that can be found in the LICENSE file or at
++https://opensource.org/licenses/MIT.
++*/
++
++#pragma once
++#ifndef DSY_PEDAL_BYPASSFADER_H
++#define DSY_PEDAL_BYPASSFADER_H
++
++#ifdef __cplusplus
++namespace daisysp
++{
++/** Smooth dry/wet crossfader that is useful for pedal bypass transitions.
++ *
++ *  ## Example
++ *  ~~~~
++ *  BypassFader fader;
++ *  fader.Init(48000.0f);
++ *  fader.SetFadeTime(0.02f);
++ *  fader.SetBypass(false);
++ *  float mixed = fader.Process(dry, wet);
++ *  ~~~~
++ *
++ *  @ingroup pedal_control
++ */
++class BypassFader
++{
++  public:
++    BypassFader() {}
++    ~BypassFader() {}
++
++    /** Initialize the bypass fader.
++     *  \param sample_rate Audio sample rate in Hz.
++     */
++    void Init(float sample_rate);
++
++    /** Crossfade between dry and wet signals.
++     *  \param dry Signal to pass while bypassed.
++     *  \param wet Signal to pass while active.
++     */
++    float Process(float dry, float wet);
++
++    /** Advance the fade state by one sample without mixing audio. */
++    void Advance();
++
++    /** Set the bypass state.
++     *  \param bypass True favors the dry signal, false favors the wet signal.
++     */
++    void SetBypass(bool bypass);
++
++    /** Set the fade time in seconds. */
++    void SetFadeTime(float fade_time);
++
++    /** Current wet mix position in the range 0..1. */
++    float GetFadePosition() const { return wet_mix_; }
++
++    /** Current dry mix position in the range 0..1. */
++    float GetDryMix() const { return 1.0f - wet_mix_; }
++
++    /** Returns true while the fader is moving toward its target. */
++    bool Transitioning() const;
++
++    /** Returns true when the dry path is the active target. */
++    bool Bypassed() const { return target_mix_ <= 0.0f; }
++
++  private:
++    void UpdateStep();
++
++    float sample_rate_;
++    float fade_time_;
++    float wet_mix_;
++    float target_mix_;
++    float step_;
++};
++} // namespace daisysp
++#endif
++#endif
+diff --git a/Source/DaisyPedal/multirate.cpp b/Source/DaisyPedal/multirate.cpp
+new file mode 100644
+index 0000000..41d139b
+--- /dev/null
++++ b/Source/DaisyPedal/multirate.cpp
+@@ -0,0 +1,50 @@
++#include "multirate.h"
++
++using namespace daisysp;
++
++void Multirate::Init(float sample_rate, size_t ratio)
++{
++    sample_rate_  = sample_rate;
++    cutoff_hz_    = sample_rate * 0.25f;
++    filtered_     = 0.0f;
++    held_         = 0.0f;
++    phase_        = 0;
++    fresh_sample_ = false;
++    anti_alias_.Init();
++    anti_alias_.SetFilterMode(OnePole::FILTER_MODE_LOW_PASS);
++    SetRatio(ratio);
++    SetCutoff(cutoff_hz_);
++}
++
++float Multirate::Process(float in)
++{
++    filtered_     = anti_alias_.Process(in);
++    fresh_sample_ = false;
++
++    if(ratio_ <= 1)
++    {
++        held_         = filtered_;
++        fresh_sample_ = true;
++        return held_;
++    }
++
++    if(++phase_ >= ratio_)
++    {
++        phase_        = 0;
++        held_         = filtered_;
++        fresh_sample_ = true;
++    }
++    return held_;
++}
++
++void Multirate::SetRatio(size_t ratio)
++{
++    ratio_ = ratio > 0 ? ratio : 1;
++    phase_ = 0;
++}
++
++void Multirate::SetCutoff(float cutoff_hz)
++{
++    cutoff_hz_ = cutoff_hz > 1.0f ? cutoff_hz : 1.0f;
++    anti_alias_.SetFrequency(cutoff_hz_ / sample_rate_);
++}
+diff --git a/Source/DaisyPedal/multirate.h b/Source/DaisyPedal/multirate.h
+new file mode 100644
+index 0000000..ae5be32
+--- /dev/null
++++ b/Source/DaisyPedal/multirate.h
+@@ -0,0 +1,85 @@
++/** @file multirate.h
++ *  @brief Lightweight low-rate conditioning helper for pedal DSP.
++ *  @ingroup pedal_pitch
++ */
++
++/*
++Copyright (c) 2026
++
++Use of this source code is governed by an MIT-style
++license that can be found in the LICENSE file or at
++https://opensource.org/licenses/MIT.
++*/
++
++#pragma once
++#ifndef DSY_PEDAL_MULTIRATE_H
++#define DSY_PEDAL_MULTIRATE_H
++
++#include <stddef.h>
++
++#ifdef __cplusplus
++#include "Filters/onepole.h"
++
++namespace daisysp
++{
++/** Lightweight anti-aliased downsampler that returns a held low-rate signal at
++ *  the original audio rate.
++ *
++ *  ## Example
++ *  ~~~~
++ *  Multirate conditioner;
++ *  conditioner.Init(48000.0f, 4);
++ *  float held = conditioner.Process(in);
++ *  ~~~~
++ *
++ *  @ingroup pedal_pitch
++ */
++class Multirate
++{
++  public:
++    Multirate() {}
++    ~Multirate() {}
++
++    /** Initialize the multirate helper.
++     *  \param sample_rate Input sample rate in Hz.
++     *  \param ratio Downsample ratio, where 1 means full rate.
++     */
++    void Init(float sample_rate, size_t ratio = 2);
++
++    /** Process a sample and return the held low-rate value. */
++    float Process(float in);
++
++    /** Set the downsample ratio. */
++    void SetRatio(size_t ratio);
++
++    /** Set the anti-alias cutoff in Hz. */
++    void SetCutoff(float cutoff_hz);
++
++    /** Returns true if the last Process call captured a fresh low-rate sample. */
++    bool FreshSample() const { return fresh_sample_; }
++
++    /** The current low-rate held value. */
++    float LowRateValue() const { return held_; }
++
++    /** The current filtered full-rate value before hold/decimation. */
++    float FilteredValue() const { return filtered_; }
++
++    /** The current low-rate sample rate. */
++    float LowRateSampleRate() const { return sample_rate_ / static_cast<float>(ratio_); }
++
++    /** The current downsample ratio. */
++    size_t GetRatio() const { return ratio_; }
++
++  private:
++    OnePole anti_alias_;
++    float   sample_rate_;
++    float   cutoff_hz_;
++    float   filtered_;
++    float   held_;
++    size_t  ratio_;
++    size_t  phase_;
++    bool    fresh_sample_;
++};
++} // namespace daisysp
++#endif
++#endif
+diff --git a/Source/DaisyPedal/noisegate.cpp b/Source/DaisyPedal/noisegate.cpp
+new file mode 100644
+index 0000000..83ba1d0
+--- /dev/null
++++ b/Source/DaisyPedal/noisegate.cpp
+@@ -0,0 +1,93 @@
++#include "noisegate.h"
++#include <algorithm>
++#include <cmath>
++
++using namespace daisysp;
++
++void NoiseGate::Init(float sample_rate)
++{
++    sample_rate_ = sample_rate;
++    threshold_   = 0.03f;
++    hysteresis_  = 0.01f;
++    attack_      = 0.002f;
++    release_     = 0.080f;
++    range_       = 0.0f;
++    envelope_    = 0.0f;
++    gain_        = 0.0f;
++    is_open_     = false;
++    UpdateAttackCoeff();
++    UpdateReleaseCoeff();
++}
++
++float NoiseGate::Process(float in)
++{
++    const float detector = fabsf(in);
++    const float env_coeff
++        = detector > envelope_ ? attack_coeff_ : release_coeff_;
++    envelope_ += env_coeff * (detector - envelope_);
++
++    const float close_threshold
++        = std::max(0.0f, threshold_ - hysteresis_);
++
++    if(is_open_)
++    {
++        if(envelope_ < close_threshold)
++            is_open_ = false;
++    }
++    else if(envelope_ >= threshold_)
++    {
++        is_open_ = true;
++    }
++
++    const float target_gain = is_open_ ? 1.0f : range_;
++    const float gain_coeff  = is_open_ ? attack_coeff_ : release_coeff_;
++    gain_ += gain_coeff * (target_gain - gain_);
++    return in * gain_;
++}
++
++void NoiseGate::SetThreshold(float threshold)
++{
++    threshold_ = std::max(0.0f, std::min(1.0f, threshold));
++}
++
++void NoiseGate::SetHysteresis(float hysteresis)
++{
++    hysteresis_ = std::max(0.0f, std::min(1.0f, hysteresis));
++}
++
++void NoiseGate::SetAttack(float attack)
++{
++    attack_ = attack > 0.0f ? attack : 0.0f;
++    UpdateAttackCoeff();
++}
++
++void NoiseGate::SetRelease(float release)
++{
++    release_ = release > 0.0f ? release : 0.0f;
++    UpdateReleaseCoeff();
++}
++
++void NoiseGate::SetRange(float range)
++{
++    range_ = std::max(0.0f, std::min(1.0f, range));
++}
++
++void NoiseGate::UpdateAttackCoeff()
++{
++    if(attack_ <= 0.0f || sample_rate_ <= 0.0f)
++    {
++        attack_coeff_ = 1.0f;
++        return;
++    }
++    attack_coeff_ = 1.0f - expf(-1.0f / (attack_ * sample_rate_));
++}
++
++void NoiseGate::UpdateReleaseCoeff()
++{
++    if(release_ <= 0.0f || sample_rate_ <= 0.0f)
++    {
++        release_coeff_ = 1.0f;
++        return;
++    }
++    release_coeff_ = 1.0f - expf(-1.0f / (release_ * sample_rate_));
++}
+diff --git a/Source/DaisyPedal/noisegate.h b/Source/DaisyPedal/noisegate.h
+new file mode 100644
+index 0000000..7b54cf8
+--- /dev/null
++++ b/Source/DaisyPedal/noisegate.h
+@@ -0,0 +1,98 @@
++/** @file noisegate.h
++ *  @brief Envelope-following gate for pedal signal chains.
++ *  @ingroup pedal_dynamics
++ */
++
++/*
++Copyright (c) 2026
++
++Use of this source code is governed by an MIT-style
++license that can be found in the LICENSE file or at
++https://opensource.org/licenses/MIT.
++*/
++
++#pragma once
++#ifndef DSY_PEDAL_NOISEGATE_H
++#define DSY_PEDAL_NOISEGATE_H
++
++#ifdef __cplusplus
++namespace daisysp
++{
++/** Simple envelope-following noise gate with hysteresis.
++ *
++ *  ## Parameters
++ *
++ *  - threshold: open threshold in linear amplitude
++ *  - hysteresis: close threshold offset below the open threshold
++ *  - attack: opening time in seconds
++ *  - release: closing time in seconds
++ *  - range: closed gain floor in linear amplitude
++ *
++ *  ## Example
++ *  ~~~~
++ *  NoiseGate gate;
++ *  gate.Init(48000.0f);
++ *  gate.SetThreshold(0.03f);
++ *  gate.SetRelease(0.08f);
++ *  float out = gate.Process(in);
++ *  ~~~~
++ *
++ *  @ingroup pedal_dynamics
++ */
++class NoiseGate
++{
++  public:
++    NoiseGate() {}
++    ~NoiseGate() {}
++
++    /** Initialize the noise gate.
++     *  \param sample_rate Audio sample rate in Hz.
++     */
++    void Init(float sample_rate);
++
++    /** Process a single audio sample through the gate. */
++    float Process(float in);
++
++    /** Set the open threshold in linear amplitude (0..1). */
++    void SetThreshold(float threshold);
++
++    /** Set the close hysteresis in linear amplitude (0..1). */
++    void SetHysteresis(float hysteresis);
++
++    /** Set how quickly the gate opens, in seconds. */
++    void SetAttack(float attack);
++
++    /** Set how quickly the gate closes, in seconds. */
++    void SetRelease(float release);
++
++    /** Set the closed gain range in linear amplitude (0..1). */
++    void SetRange(float range);
++
++    /** Returns the current detector envelope. */
++    float GetEnvelope() const { return envelope_; }
++
++    /** Returns the current gain reduction state. */
++    float GetGain() const { return gain_; }
++
++    /** Returns true while the gate is open. */
++    bool IsOpen() const { return is_open_; }
++
++  private:
++    void UpdateAttackCoeff();
++    void UpdateReleaseCoeff();
++
++    float sample_rate_;
++    float threshold_;
++    float hysteresis_;
++    float attack_;
++    float release_;
++    float range_;
++    float envelope_;
++    float gain_;
++    float attack_coeff_;
++    float release_coeff_;
++    bool  is_open_;
++};
++} // namespace daisysp
++#endif
++#endif
+diff --git a/Source/DaisyPedal/octavegenerator.cpp b/Source/DaisyPedal/octavegenerator.cpp
+new file mode 100644
+index 0000000..b434f80
+--- /dev/null
++++ b/Source/DaisyPedal/octavegenerator.cpp
+@@ -0,0 +1,76 @@
++#include "octavegenerator.h"
++#include "Utility/dsp.h"
++#include <cmath>
++
++using namespace daisysp;
++
++void OctaveGenerator::Init(float sample_rate)
++{
++    sample_rate_    = sample_rate;
++    drive_          = 2.0f;
++    tone_           = 0.5f;
++    sub_gain_       = 1.0f;
++    up_gain_        = 0.0f;
++    sub_octave_     = 0.0f;
++    octave_up_      = 0.0f;
++    last_positive_  = true;
++    sub_polarity_   = 1.0f;
++
++    tracker_.Init();
++    tracker_.SetFilterMode(OnePole::FILTER_MODE_LOW_PASS);
++    tracker_.SetFrequency(600.0f / sample_rate_);
++
++    sub_tone_.Init();
++    sub_tone_.SetFilterMode(OnePole::FILTER_MODE_LOW_PASS);
++
++    up_tone_.Init();
++    up_tone_.SetFilterMode(OnePole::FILTER_MODE_LOW_PASS);
++
++    sub_dc_.Init(sample_rate_);
++    up_dc_.Init(sample_rate_);
++    UpdateTone();
++}
++
++float OctaveGenerator::Process(float in)
++{
++    const float driven = tanhf(drive_ * in);
++    const float track  = tracker_.Process(driven);
++    const bool  positive = track >= 0.0f;
++    if(!last_positive_ && positive)
++    {
++        sub_polarity_ = -sub_polarity_;
++    }
++    last_positive_ = positive;
++
++    const float amplitude = fabsf(track);
++    const float sub_raw   = amplitude * sub_polarity_;
++    const float up_raw    = (fabsf(driven) * 2.0f) - 1.0f;
++
++    sub_octave_ = sub_dc_.Process(sub_tone_.Process(sub_raw));
++    octave_up_  = up_dc_.Process(up_tone_.Process(up_raw));
++
++    return (sub_gain_ * sub_octave_) + (up_gain_ * octave_up_);
++}
++
++void OctaveGenerator::SetDrive(float drive)
++{
++    drive_ = drive > 0.0f ? drive : 0.0f;
++}
++
++void OctaveGenerator::SetTone(float tone)
++{
++    if(tone < 0.0f)
++        tone = 0.0f;
++    if(tone > 1.0f)
++        tone = 1.0f;
++    tone_ = tone;
++    UpdateTone();
++}
++
++void OctaveGenerator::UpdateTone()
++{
++    const float sub_cutoff = fclamp(120.0f + (tone_ * 1880.0f), 20.0f, sample_rate_ * 0.45f);
++    const float up_cutoff  = fclamp(300.0f + (tone_ * 7700.0f), 20.0f, sample_rate_ * 0.45f);
++    sub_tone_.SetFrequency(sub_cutoff / sample_rate_);
++    up_tone_.SetFrequency(up_cutoff / sample_rate_);
++}
+diff --git a/Source/DaisyPedal/octavegenerator.h b/Source/DaisyPedal/octavegenerator.h
+new file mode 100644
+index 0000000..881d286
+--- /dev/null
++++ b/Source/DaisyPedal/octavegenerator.h
+@@ -0,0 +1,90 @@
++/** @file octavegenerator.h
++ *  @brief Sub-octave and octave-up generator for monophonic pedal inputs.
++ *  @ingroup pedal_pitch
++ */
++
++/*
++Copyright (c) 2026
++
++Use of this source code is governed by an MIT-style
++license that can be found in the LICENSE file or at
++https://opensource.org/licenses/MIT.
++*/
++
++#pragma once
++#ifndef DSY_PEDAL_OCTAVEGENERATOR_H
++#define DSY_PEDAL_OCTAVEGENERATOR_H
++
++#ifdef __cplusplus
++#include "Filters/onepole.h"
++#include "Utility/dcblock.h"
++
++namespace daisysp
++{
++/** Guitar-friendly octave generator that produces sub-octave and octave-up
++ *  voices from a monophonic input.
++ *
++ *  ## Example
++ *  ~~~~
++ *  OctaveGenerator octave;
++ *  octave.Init(48000.0f);
++ *  octave.SetSubGain(1.0f);
++ *  octave.SetUpGain(0.3f);
++ *  float wet = octave.Process(in);
++ *  ~~~~
++ *
++ *  @ingroup pedal_pitch
++ */
++class OctaveGenerator
++{
++  public:
++    OctaveGenerator() {}
++    ~OctaveGenerator() {}
++
++    /** Initialize the octave generator.
++     *  \param sample_rate Audio sample rate in Hz.
++     */
++    void Init(float sample_rate);
++
++    /** Process one sample and return the wet octave mix. */
++    float Process(float in);
++
++    /** Input drive before octave extraction. */
++    void SetDrive(float drive);
++
++    /** Tone shaping amount in the range 0..1. */
++    void SetTone(float tone);
++
++    /** Set the sub-octave blend. */
++    void SetSubGain(float gain) { sub_gain_ = gain; }
++
++    /** Set the octave-up blend. */
++    void SetUpGain(float gain) { up_gain_ = gain; }
++
++    /** Latest sub-octave voice. */
++    float GetSubOctave() const { return sub_octave_; }
++
++    /** Latest octave-up voice. */
++    float GetOctaveUp() const { return octave_up_; }
++
++  private:
++    void UpdateTone();
++
++    float   sample_rate_;
++    float   drive_;
++    float   tone_;
++    float   sub_gain_;
++    float   up_gain_;
++    float   sub_octave_;
++    float   octave_up_;
++    bool    last_positive_;
++    float   sub_polarity_;
++    OnePole tracker_;
++    OnePole sub_tone_;
++    OnePole up_tone_;
++    DcBlock sub_dc_;
++    DcBlock up_dc_;
++};
++} // namespace daisysp
++#endif
++#endif
+diff --git a/Source/DaisyPedal/taptempo.cpp b/Source/DaisyPedal/taptempo.cpp
+new file mode 100644
+index 0000000..811f039
+--- /dev/null
++++ b/Source/DaisyPedal/taptempo.cpp
+@@ -0,0 +1,79 @@
++#include "taptempo.h"
++#include <algorithm>
++
++using namespace daisysp;
++
++void TapTempo::Init(float sample_rate, float default_bpm)
++{
++    sample_rate_     = sample_rate;
++    min_bpm_         = 30.0f;
++    max_bpm_         = 300.0f;
++    phase_           = 0.0f;
++    sample_counter_  = 0;
++    last_tap_sample_ = 0;
++    have_tap_        = false;
++    SetTempoBpm(default_bpm);
++}
++
++bool TapTempo::Process()
++{
++    ++sample_counter_;
++    phase_ += phase_inc_;
++    if(phase_ >= 1.0f)
++    {
++        phase_ -= 1.0f;
++        return true;
++    }
++    return false;
++}
++
++void TapTempo::TriggerTap()
++{
++    if(have_tap_)
++    {
++        const uint32_t delta = sample_counter_ - last_tap_sample_;
++        if(delta > 0)
++        {
++            const float tapped_bpm = (60.0f * sample_rate_) / static_cast<float>(delta);
++            if(tapped_bpm >= min_bpm_ && tapped_bpm <= max_bpm_)
++            {
++                SetTempoBpm(tapped_bpm);
++            }
++        }
++    }
++    last_tap_sample_ = sample_counter_;
++    have_tap_        = true;
++    ResetPhase();
++}
++
++void TapTempo::SetTempoBpm(float bpm)
++{
++    bpm_ = std::max(min_bpm_, std::min(max_bpm_, bpm));
++    UpdatePhaseIncrement();
++}
++
++void TapTempo::SetMinMaxBpm(float min_bpm, float max_bpm)
++{
++    min_bpm_ = min_bpm > 1.0f ? min_bpm : 1.0f;
++    max_bpm_ = max_bpm > min_bpm_ ? max_bpm : min_bpm_ + 1.0f;
++    SetTempoBpm(bpm_);
++}
++
++void TapTempo::ResetPhase(float phase)
++{
++    if(phase < 0.0f)
++        phase = 0.0f;
++    if(phase > 1.0f)
++        phase = 1.0f;
++    phase_ = phase;
++}
++
++uint32_t TapTempo::GetSamplesPerBeat() const
++{
++    return static_cast<uint32_t>(sample_rate_ / GetTempoHz());
++}
++
++void TapTempo::UpdatePhaseIncrement()
++{
++    phase_inc_ = GetTempoHz() / sample_rate_;
++}
+diff --git a/Source/DaisyPedal/taptempo.h b/Source/DaisyPedal/taptempo.h
+new file mode 100644
+index 0000000..b9fdaa5
+--- /dev/null
++++ b/Source/DaisyPedal/taptempo.h
+@@ -0,0 +1,96 @@
++/** @file taptempo.h
++ *  @brief Tap-tempo helper for pedal footswitch timing.
++ *  @ingroup pedal_control
++ */
++
++/*
++Copyright (c) 2026
++
++Use of this source code is governed by an MIT-style
++license that can be found in the LICENSE file or at
++https://opensource.org/licenses/MIT.
++*/
++
++#pragma once
++#ifndef DSY_PEDAL_TAPTEMPO_H
++#define DSY_PEDAL_TAPTEMPO_H
++
++#include <stdint.h>
++
++#ifdef __cplusplus
++namespace daisysp
++{
++/** Tap-tempo helper that tracks a beat phase at audio rate.
++ *
++ *  ## Example
++ *  ~~~~
++ *  TapTempo tempo;
++ *  tempo.Init(48000.0f, 120.0f);
++ *  tempo.TriggerTap();
++ *  bool downbeat = tempo.Process();
++ *  ~~~~
++ *
++ *  @ingroup pedal_control
++ */
++class TapTempo
++{
++  public:
++    TapTempo() {}
++    ~TapTempo() {}
++
++    /** Initialize the tap tempo helper.
++     *  \param sample_rate Audio sample rate in Hz.
++     *  \param default_bpm Initial tempo in beats per minute.
++     */
++    void Init(float sample_rate, float default_bpm = 120.0f);
++
++    /** Advance the phase by one sample.
++     *  \return True when a new beat begins.
++     */
++    bool Process();
++
++    /** Register a new tap. */
++    void TriggerTap();
++
++    /** Set the tempo in beats per minute. */
++    void SetTempoBpm(float bpm);
++
++    /** Set the valid tap tempo range in BPM. */
++    void SetMinMaxBpm(float min_bpm, float max_bpm);
++
++    /** Reset the beat phase.
++     *  \param phase New phase in the range 0..1.
++     */
++    void ResetPhase(float phase = 0.0f);
++
++    /** Current tempo in BPM. */
++    float GetTempoBpm() const { return bpm_; }
++
++    /** Current tempo in Hz. */
++    float GetTempoHz() const { return bpm_ / 60.0f; }
++
++    /** Current phase in the range 0..1. */
++    float GetPhase() const { return phase_; }
++
++    /** Current beat length in milliseconds. */
++    float GetMsPerBeat() const { return 60000.0f / bpm_; }
++
++    /** Current beat length in samples. */
++    uint32_t GetSamplesPerBeat() const;
++
++  private:
++    void UpdatePhaseIncrement();
++
++    float    sample_rate_;
++    float    bpm_;
++    float    min_bpm_;
++    float    max_bpm_;
++    float    phase_;
++    float    phase_inc_;
++    uint32_t sample_counter_;
++    uint32_t last_tap_sample_;
++    bool     have_tap_;
++};
++} // namespace daisysp
++#endif
++#endif

@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "spec": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-long-detail.json",
+  "outputs": {
+    "svg": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-long-detail.svg",
+    "html": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-long-detail.html",
+    "png": "C:\\Users\\denko\\Gemini\\Antigravity\\DVPE_Daisy-Visual-Programming-Environment\\DaisyExamples\\docs\\visualizations\\delay-algorithm-structure\\synth-block-diagram\\field-delay-bundle-long-detail.png"
+  },
+  "checks": {
+    "blockCount": 16,
+    "linkCount": 19,
+    "modLinks": 1,
+    "audioLinks": 8,
+    "controlLinks": 7,
+    "feedbackLinks": 3
+  },
+  "quality": {
+    "ok": true,
+    "readabilityScore": 39,
+    "metrics": {
+      "frameHeaderOverlaps": 0,
+      "linkBlockCollisions": 0,
+      "unrelatedCableCrossings": 15,
+      "sharedCableOverlaps": 2,
+      "longRuns": 2
+    },
+    "warnings": [
+      {
+        "severity": "medium",
+        "path": "/links/7",
+        "message": "UI/state feedback segment is 538px; long feedback wires can dominate the diagram"
+      },
+      {
+        "severity": "low",
+        "path": "/links/18",
+        "message": "control segment is 840px; consider moving the control closer or adding a local router"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "15 unrelated cable crossing(s) detected; inspect whether jump-over or rerouting is needed"
+      },
+      {
+        "severity": "medium",
+        "path": "/links",
+        "message": "2 long shared cable overlap(s) detected; stagger parallel routes or use buses"
+      }
+    ]
+  }
+}

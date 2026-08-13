@@ -1,0 +1,61 @@
+{
+  "title": "Field_delay_bundle A4 Long [sdram] Algorithm Detail",
+  "canvas": {"width": 1660, "height": 820},
+  "rules": {"maxModHorizontal": 260, "frameHeaderHeight": 30},
+  "metadata": {
+    "summary": "Detail block diagram for the Long [sdram] mode. This sheet shows long base-time mapping, slow fractional reads, secondary warp taps, ping-pong cross feedback, smear blending, and external SDRAM delay storage.",
+    "trace": [
+      {"id": "process-dispatch", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:370-372 dispatches kSdramDelaylines to ProcessSdramDelaylines."},
+      {"id": "long-time", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1302-1318 maps long time to baseDelay, reads warp/mod/width, updates LFO, and smooths primary read positions."},
+      {"id": "long-reads", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1319-1324 reads primary L/R and secondary warp taps from four delay lines."},
+      {"id": "long-write", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1325-1333 computes feedback, cross amount, drive, and writes ping-pong/cross feedback into delay lines."},
+      {"id": "long-output", "source": "DaisyHost/src/DaisyDelayFxCore.cpp:1334-1336 blends primary reads with warp taps by smear and returns wet L/R."},
+      {"id": "storage", "source": "DaisyHost/include/daisyhost/DaisyDelayFxCore.h:68-70 defines 48-frame preferred blocks, four delay lines, and 384000 samples per line."},
+      {"id": "bundle-controls", "source": "MyProjects/_projects/Field_delay_bundle/CONTROLS.md:59-68 lists K1-K8 base/SW1/SW2 mappings for the bundle."}
+    ]
+  },
+  "frames": [
+    {"label": "Long delay controls", "x": 35, "y": 20, "w": 1590, "h": 130, "color": "#18a84b", "fill": "#eefcf3"},
+    {"label": "Long external-buffer delay algorithm", "x": 35, "y": 180, "w": 1590, "h": 455, "color": "#e33b3b", "fill": "#fff5f5"},
+    {"label": "Shared SDRAM and output integration", "x": 55, "y": 665, "w": 1570, "h": 120, "color": "#8aa0ad", "fill": "#f8fbfd"}
+  ],
+  "blocks": [
+    {"id": "time_control", "kind": "control", "x": 70, "y": 65, "w": 220, "h": 70, "label": "Long time controls", "lines": ["K2 Long Time", "K1 SW2 Range"]},
+    {"id": "mod_control", "kind": "control", "x": 320, "y": 65, "w": 220, "h": 70, "label": "Mod and width controls", "lines": ["K6 Mod", "K2 SW1 Width"]},
+    {"id": "warp_control", "kind": "control", "x": 570, "y": 65, "w": 220, "h": 70, "label": "Warp and smear controls", "lines": ["K6 SW2 Warp", "K5 SW2 Smear"]},
+    {"id": "feedback_control", "kind": "control", "x": 820, "y": 65, "w": 220, "h": 70, "label": "Feedback and cross controls", "lines": ["K3 Feedback", "K5 Grit/Cross"]},
+    {"id": "gain_control", "kind": "control", "x": 1070, "y": 65, "w": 220, "h": 70, "label": "Gain controls", "lines": ["K7 Input drive", "K8 Output after bundle mix"]},
+    {"id": "audio_in", "kind": "pitch", "x": 65, "y": 350, "w": 145, "h": 90, "label": "Algorithm input", "lines": ["audio in + internal synth", "left/right samples"]},
+    {"id": "drive_stereo", "kind": "mixer", "x": 255, "y": 335, "w": 170, "h": 110, "label": "Driven stereo input", "lines": ["input L/R", "drive in write path"]},
+    {"id": "base_time", "kind": "processor", "x": 485, "y": 255, "w": 190, "h": 105, "label": "Long base-time mapper", "lines": ["time ms to samples", "clamped to storage size"]},
+    {"id": "slow_lfo", "kind": "mod", "x": 725, "y": 255, "w": 190, "h": 110, "label": "Slow LFO modulation", "lines": ["lfoPhase_", "small proportional offset"], "wave": "lfo"},
+    {"id": "primary_reads", "kind": "processor", "x": 500, "y": 455, "w": 205, "h": 105, "label": "Primary fractional reads", "lines": ["readL/readR", "smooth L/R delay"]},
+    {"id": "warp_taps", "kind": "processor", "x": 760, "y": 455, "w": 205, "h": 105, "label": "Secondary warp taps", "lines": ["tapL/tapR", "warped base proportions"]},
+    {"id": "pingpong", "kind": "processor", "x": 1035, "y": 440, "w": 210, "h": 115, "label": "Ping-pong cross feedback", "lines": ["cross mixes L/R", "writes four lines"]},
+    {"id": "smear_blend", "kind": "mixer", "x": 1320, "y": 455, "w": 175, "h": 100, "label": "Smear blend", "lines": ["primary vs warp taps", "wet L/R"]},
+    {"id": "storage", "kind": "note", "x": 95, "y": 705, "w": 320, "h": 70, "label": "External SDRAM storage", "lines": ["4 lines x 384000 samples", "shared delay buffers"]},
+    {"id": "bundle_mix", "kind": "output", "x": 1110, "y": 705, "w": 210, "h": 70, "label": "Bundle dry/wet and gain", "lines": ["mix, bypass, wet-only, output dB"]},
+    {"id": "audio_out", "kind": "output", "x": 1390, "y": 705, "w": 170, "h": 70, "label": "Audio Out L/R", "lines": ["returned to Field DAC"]}
+  ],
+  "links": [
+    {"from": "audio_in", "to": "drive_stereo", "kind": "audio", "points": [[210, 395], [255, 395]], "trace": ["long-write"]},
+    {"from": "drive_stereo", "to": "pingpong", "kind": "audio", "points": [[340, 445], [340, 610], [1140, 610], [1140, 555]], "trace": ["long-write"]},
+    {"from": "base_time", "to": "primary_reads", "kind": "control", "points": [[580, 360], [580, 455]], "trace": ["long-time", "long-reads"]},
+    {"from": "base_time", "to": "warp_taps", "kind": "control", "points": [[675, 360], [675, 390], [862, 390], [862, 455]], "trace": ["long-time", "long-reads"]},
+    {"from": "slow_lfo", "to": "primary_reads", "kind": "mod", "points": [[725, 310], [705, 310], [705, 455]], "trace": ["long-time", "long-reads"]},
+    {"from": "primary_reads", "to": "pingpong", "kind": "audio", "points": [[705, 508], [735, 508], [735, 405], [1035, 405], [1035, 490]], "trace": ["long-reads", "long-write"]},
+    {"from": "warp_taps", "to": "pingpong", "kind": "audio", "points": [[965, 532], [1035, 532]], "trace": ["long-reads", "long-write"]},
+    {"from": "pingpong", "to": "primary_reads", "kind": "feedback", "points": [[1140, 440], [1140, 400], [602, 400], [602, 455]], "trace": ["long-write", "long-reads"]},
+    {"from": "pingpong", "to": "warp_taps", "kind": "feedback", "points": [[1035, 470], [862, 470], [862, 455]], "trace": ["long-write", "long-reads"]},
+    {"from": "primary_reads", "to": "smear_blend", "kind": "audio", "points": [[705, 485], [735, 485], [735, 405], [1300, 405], [1300, 485], [1320, 485]], "trace": ["long-output"]},
+    {"from": "warp_taps", "to": "smear_blend", "kind": "audio", "points": [[965, 545], [1000, 545], [1000, 610], [1300, 610], [1300, 525], [1320, 525]], "trace": ["long-output"]},
+    {"from": "smear_blend", "to": "bundle_mix", "kind": "audio", "points": [[1408, 555], [1408, 650], [1215, 650], [1215, 705]], "trace": ["long-output"]},
+    {"from": "bundle_mix", "to": "audio_out", "kind": "audio", "points": [[1320, 740], [1390, 740]], "trace": ["long-output"]},
+    {"from": "storage", "to": "primary_reads", "kind": "feedback", "points": [[255, 705], [255, 660], [602, 660], [602, 560]], "trace": ["storage", "long-reads"]},
+    {"from": "time_control", "to": "base_time", "kind": "control", "points": [[180, 135], [180, 220], [580, 220], [580, 255]], "trace": ["bundle-controls", "long-time"]},
+    {"from": "mod_control", "to": "slow_lfo", "kind": "control", "points": [[430, 135], [430, 205], [820, 205], [820, 255]], "trace": ["bundle-controls", "long-time"]},
+    {"from": "warp_control", "to": "warp_taps", "kind": "control", "points": [[680, 135], [680, 430], [862, 430], [862, 455]], "trace": ["bundle-controls", "long-reads", "long-output"]},
+    {"from": "feedback_control", "to": "pingpong", "kind": "control", "points": [[930, 135], [930, 405], [1140, 405], [1140, 440]], "trace": ["bundle-controls", "long-write"]},
+    {"from": "gain_control", "to": "drive_stereo", "kind": "control", "points": [[1180, 135], [1180, 165], [340, 165], [340, 335]], "trace": ["bundle-controls", "long-write"]}
+  ]
+}
