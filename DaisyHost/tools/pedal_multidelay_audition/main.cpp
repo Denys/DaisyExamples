@@ -34,10 +34,10 @@ constexpr double      kSampleRate            = 48000.0;
 constexpr std::size_t kBlockSize             = 48;
 constexpr std::size_t kProfileWarmupBlocks   = 1000;
 constexpr std::size_t kProfileMeasuredBlocks = 50000;
-constexpr double      kMinimumAudibleRms      = 1.0e-6;
-constexpr double      kMinimumTailRms         = 1.0e-6;
-constexpr double      kMaximumAllowedPeak     = 20.0;
-constexpr double      kPi                     = 3.14159265358979323846;
+constexpr double      kMinimumAudibleRms     = 1.0e-6;
+constexpr double      kMinimumTailRms        = 1.0e-6;
+constexpr double      kMaximumAllowedPeak    = 20.0;
+constexpr double      kPi                    = 3.14159265358979323846;
 
 std::string Trim(std::string value)
 {
@@ -52,9 +52,10 @@ std::string Trim(std::string value)
 
 std::string ToUpper(std::string value)
 {
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
-        return static_cast<char>(std::toupper(c));
-    });
+    std::transform(
+        value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::toupper(c));
+        });
     return value;
 }
 
@@ -87,8 +88,8 @@ float ParseFloat(const std::string& text, const std::string& fieldName)
 
 double ParseDouble(const std::string& text, const std::string& fieldName)
 {
-    std::size_t consumed = 0;
-    const double value   = std::stod(text, &consumed);
+    std::size_t  consumed = 0;
+    const double value    = std::stod(text, &consumed);
     if(consumed != text.size() || !std::isfinite(value))
     {
         throw std::runtime_error("Invalid " + fieldName + ": " + text);
@@ -183,10 +184,10 @@ struct Event
         kFreezeClear,
     };
 
-    std::size_t      frame = 0;
-    Kind             kind  = Kind::kSlot;
-    PedalSlot        slot  = PedalSlot::kTime;
-    float            value = 0.0f;
+    std::size_t      frame       = 0;
+    Kind             kind        = Kind::kSlot;
+    PedalSlot        slot        = PedalSlot::kTime;
+    float            value       = 0.0f;
     PedalFreezeState freezeState = PedalFreezeState::kIdle;
 };
 
@@ -222,8 +223,8 @@ std::vector<Event> ParseEvents(const std::string& eventText)
         const double timeSeconds = ParseDouble(parts[0], "event time");
         Event        event;
         const double exactFrame = timeSeconds * kSampleRate;
-        event.frame = static_cast<std::size_t>(
-            std::llround(exactFrame / static_cast<double>(kBlockSize)))
+        event.frame             = static_cast<std::size_t>(std::llround(
+                          exactFrame / static_cast<double>(kBlockSize)))
                       * kBlockSize;
 
         const std::string kind = ToUpper(parts[1]);
@@ -233,9 +234,10 @@ std::vector<Event> ParseEvents(const std::string& eventText)
             {
                 throw std::runtime_error("Malformed slot event: " + token);
             }
-            event.kind  = Event::Kind::kSlot;
-            event.slot  = ParseSlot(parts[2]);
-            event.value = std::clamp(ParseFloat(parts[3], "slot value"), 0.0f, 1.0f);
+            event.kind = Event::Kind::kSlot;
+            event.slot = ParseSlot(parts[2]);
+            event.value
+                = std::clamp(ParseFloat(parts[3], "slot value"), 0.0f, 1.0f);
         }
         else if(kind == "FREEZE")
         {
@@ -299,10 +301,8 @@ std::vector<Scenario> ReadMatrix(const fs::path& path)
         scenario.durationSeconds = ParseDouble(fields[4], "duration");
         for(std::size_t slot = 0; slot < scenario.slots.size(); ++slot)
         {
-            scenario.slots[slot]
-                = std::clamp(ParseFloat(fields[5 + slot], "normalized slot"),
-                             0.0f,
-                             1.0f);
+            scenario.slots[slot] = std::clamp(
+                ParseFloat(fields[5 + slot], "normalized slot"), 0.0f, 1.0f);
         }
         scenario.eventText  = fields[10];
         scenario.events     = ParseEvents(scenario.eventText);
@@ -318,8 +318,9 @@ std::vector<Scenario> ReadMatrix(const fs::path& path)
 
     if(scenarios.size() != 15)
     {
-        throw std::runtime_error("Audition matrix must contain exactly 15 cells; got "
-                                 + std::to_string(scenarios.size()));
+        throw std::runtime_error(
+            "Audition matrix must contain exactly 15 cells; got "
+            + std::to_string(scenarios.size()));
     }
     return scenarios;
 }
@@ -349,8 +350,8 @@ class SourceGenerator
         {
             const double local = std::fmod(t, 0.40);
             const float  sign  = (static_cast<std::size_t>(t / 0.40) & 1U) == 0U
-                                     ? 1.0f
-                                     : -1.0f;
+                                   ? 1.0f
+                                   : -1.0f;
             return sign * 0.9f * static_cast<float>(std::exp(-180.0 * local));
         }
         if(source_ == "single_pluck")
@@ -368,7 +369,7 @@ class SourceGenerator
   private:
     float RandomSigned()
     {
-        state_ = state_ * 1664525U + 1013904223U;
+        state_           = state_ * 1664525U + 1013904223U;
         const float unit = static_cast<float>((state_ >> 8U) & 0x00FFFFFFU)
                            / static_cast<float>(0x01000000U);
         return unit * 2.0f - 1.0f;
@@ -379,8 +380,7 @@ class SourceGenerator
         const float envelope = static_cast<float>(std::exp(-24.0 * local));
         const float harmonic
             = 0.34f * static_cast<float>(std::sin(2.0 * kPi * 110.0 * local))
-              + 0.18f
-                    * static_cast<float>(std::sin(2.0 * kPi * 220.0 * local));
+              + 0.18f * static_cast<float>(std::sin(2.0 * kPi * 220.0 * local));
         return envelope * (0.48f * RandomSigned() + harmonic);
     }
 
@@ -432,9 +432,7 @@ void ApplyEvent(PedalDelayEngine& engine, const Event& event)
         case Event::Kind::kFreezeState:
             engine.SetFreezeState(event.freezeState);
             break;
-        case Event::Kind::kFreezeClear:
-            engine.FreezeClear();
-            break;
+        case Event::Kind::kFreezeClear: engine.FreezeClear(); break;
     }
 }
 
@@ -454,7 +452,7 @@ void WriteLe32(std::ostream& output, std::uint32_t value)
     output.write(bytes, 4);
 }
 
-void WriteFloat32Wav(const fs::path& path,
+void WriteFloat32Wav(const fs::path&           path,
                      const std::vector<float>& interleaved,
                      std::uint32_t             sampleRate,
                      std::uint16_t             channels)
@@ -549,11 +547,12 @@ RenderMetrics MeasureRender(const std::vector<float>& interleaved,
         return metrics;
     }
 
-    double totalSquares = 0.0;
-    double tailSquares  = 0.0;
-    double stereoDiff   = 0.0;
-    const std::size_t frames = interleaved.size() / 2U;
-    const std::size_t tailStart = frames > tailFrames ? frames - tailFrames : 0U;
+    double            totalSquares = 0.0;
+    double            tailSquares  = 0.0;
+    double            stereoDiff   = 0.0;
+    const std::size_t frames       = interleaved.size() / 2U;
+    const std::size_t tailStart
+        = frames > tailFrames ? frames - tailFrames : 0U;
     float previousLeft = 0.0f;
 
     for(std::size_t frame = 0; frame < frames; ++frame)
@@ -592,13 +591,16 @@ RenderMetrics MeasureRender(const std::vector<float>& interleaved,
     const double sampleCount = static_cast<double>(frames * 2U);
     const double tailSampleCount
         = static_cast<double>((frames - tailStart) * 2U);
-    metrics.rms = sampleCount > 0.0 ? std::sqrt(totalSquares / sampleCount) : 0.0;
-    metrics.tailRms
-        = tailSampleCount > 0.0 ? std::sqrt(tailSquares / tailSampleCount) : 0.0;
+    metrics.rms
+        = sampleCount > 0.0 ? std::sqrt(totalSquares / sampleCount) : 0.0;
+    metrics.tailRms = tailSampleCount > 0.0
+                          ? std::sqrt(tailSquares / tailSampleCount)
+                          : 0.0;
     metrics.stereoDifference
-        = frames > 0 ? std::sqrt(stereoDiff / static_cast<double>(frames)) : 0.0;
+        = frames > 0 ? std::sqrt(stereoDiff / static_cast<double>(frames))
+                     : 0.0;
     metrics.checksum = Fnv1a64(interleaved);
-    metrics.passed = metrics.nonFinite == 0 && metrics.nonZero > 0
+    metrics.passed   = metrics.nonFinite == 0 && metrics.nonZero > 0
                      && metrics.rms > kMinimumAudibleRms
                      && metrics.peak < kMaximumAllowedPeak
                      && (!expectTail || metrics.tailRms > kMinimumTailRms);
@@ -616,8 +618,8 @@ struct RenderResult
 };
 
 RenderResult RenderScenario(const Scenario& scenario,
-                            const fs::path&  outputDirectory,
-                            std::uint32_t    seed)
+                            const fs::path& outputDirectory,
+                            std::uint32_t   seed)
 {
     EngineFixture fixture;
     ApplyScenarioState(fixture, scenario);
@@ -630,7 +632,7 @@ RenderResult RenderScenario(const Scenario& scenario,
 
     const std::size_t frames = static_cast<std::size_t>(
         std::llround(scenario.durationSeconds * kSampleRate));
-    std::vector<float> interleaved(frames * 2U, 0.0f);
+    std::vector<float>            interleaved(frames * 2U, 0.0f);
     std::array<float, kBlockSize> inputLeft{};
     std::array<float, kBlockSize> inputRight{};
     std::array<float, kBlockSize> outputLeft{};
@@ -669,10 +671,11 @@ RenderResult RenderScenario(const Scenario& scenario,
     result.scenario         = scenario;
     result.finalFreezeState = fixture.engine.GetFreezeState();
     result.nativeSlots      = initialNativeSlots;
-    result.metrics = MeasureRender(
-        interleaved, static_cast<std::size_t>(0.5 * kSampleRate), scenario.expectTail);
-    result.wavPath      = outputDirectory / (scenario.name + ".wav");
-    result.manifestPath = outputDirectory / (scenario.name + ".json");
+    result.metrics          = MeasureRender(interleaved,
+                                   static_cast<std::size_t>(0.5 * kSampleRate),
+                                   scenario.expectTail);
+    result.wavPath          = outputDirectory / (scenario.name + ".wav");
+    result.manifestPath     = outputDirectory / (scenario.name + ".json");
     WriteFloat32Wav(result.wavPath,
                     interleaved,
                     static_cast<std::uint32_t>(kSampleRate),
@@ -706,10 +709,11 @@ RenderResult RenderScenario(const Scenario& scenario,
     }
     manifest << "],\n"
              << "  \"events\": \"" << JsonEscape(scenario.eventText) << "\",\n"
-             << "  \"expect_tail\": " << (scenario.expectTail ? "true" : "false")
-             << ",\n"
+             << "  \"expect_tail\": "
+             << (scenario.expectTail ? "true" : "false") << ",\n"
              << "  \"final_freeze_state\": \""
-             << daisyhost::PedalFreezeStateName(result.finalFreezeState) << "\",\n"
+             << daisyhost::PedalFreezeStateName(result.finalFreezeState)
+             << "\",\n"
              << "  \"metrics\": {\n"
              << "    \"peak\": " << result.metrics.peak << ",\n"
              << "    \"rms\": " << result.metrics.rms << ",\n"
@@ -717,13 +721,14 @@ RenderResult RenderScenario(const Scenario& scenario,
              << "    \"max_step\": " << result.metrics.maxStep << ",\n"
              << "    \"stereo_difference_rms\": "
              << result.metrics.stereoDifference << ",\n"
-             << "    \"non_finite_samples\": " << result.metrics.nonFinite << ",\n"
+             << "    \"non_finite_samples\": " << result.metrics.nonFinite
+             << ",\n"
              << "    \"non_zero_frames\": " << result.metrics.nonZero << ",\n"
              << "    \"checksum_fnv1a64\": \"" << result.metrics.checksum
              << "\"\n"
              << "  },\n"
-             << "  \"status\": \""
-             << (result.metrics.passed ? "PASS" : "FAIL") << "\"\n"
+             << "  \"status\": \"" << (result.metrics.passed ? "PASS" : "FAIL")
+             << "\"\n"
              << "}\n";
     return result;
 }
@@ -735,23 +740,24 @@ double Percentile(const std::vector<double>& values, double quantile)
         return 0.0;
     }
     std::vector<double> scratch(values);
-    const std::size_t rank = static_cast<std::size_t>(
+    const std::size_t   rank = static_cast<std::size_t>(
         std::ceil(quantile * static_cast<double>(scratch.size())));
-    const std::size_t index = std::min(
-        scratch.size() - 1U, rank == 0U ? 0U : rank - 1U);
-    std::nth_element(
-        scratch.begin(), scratch.begin() + static_cast<std::ptrdiff_t>(index), scratch.end());
+    const std::size_t index
+        = std::min(scratch.size() - 1U, rank == 0U ? 0U : rank - 1U);
+    std::nth_element(scratch.begin(),
+                     scratch.begin() + static_cast<std::ptrdiff_t>(index),
+                     scratch.end());
     return scratch[index];
 }
 
 double MeasureClockOverheadUs()
 {
-    using Clock = std::chrono::steady_clock;
+    using Clock    = std::chrono::steady_clock;
     double minimum = std::numeric_limits<double>::infinity();
     for(std::size_t iteration = 0; iteration < 10000; ++iteration)
     {
-        const auto start = Clock::now();
-        const auto stop  = Clock::now();
+        const auto   start = Clock::now();
+        const auto   stop  = Clock::now();
         const double duration
             = std::chrono::duration<double, std::micro>(stop - start).count();
         minimum = std::min(minimum, duration);
@@ -762,21 +768,21 @@ double MeasureClockOverheadUs()
 struct TimingSummary
 {
     std::string mode;
-    std::size_t warmupBlocks        = 0;
-    std::size_t measuredBlocks      = 0;
-    double      measuredDurationS   = 0.0;
-    double      blockBudgetUs       = 0.0;
-    double      meanUs              = 0.0;
-    double      p99Us               = 0.0;
-    double      p999Us              = 0.0;
-    double      maxUs               = 0.0;
-    double      marginP999Us        = 0.0;
-    double      tailUtilization     = 0.0;
-    std::size_t deadlineMisses      = 0;
-    double      deadlineMissRate    = 0.0;
-    double      maxLatenessUs       = 0.0;
-    std::size_t processingFailures  = 0;
-    double      timerOverheadUs     = 0.0;
+    std::size_t warmupBlocks       = 0;
+    std::size_t measuredBlocks     = 0;
+    double      measuredDurationS  = 0.0;
+    double      blockBudgetUs      = 0.0;
+    double      meanUs             = 0.0;
+    double      p99Us              = 0.0;
+    double      p999Us             = 0.0;
+    double      maxUs              = 0.0;
+    double      marginP999Us       = 0.0;
+    double      tailUtilization    = 0.0;
+    std::size_t deadlineMisses     = 0;
+    double      deadlineMissRate   = 0.0;
+    double      maxLatenessUs      = 0.0;
+    std::size_t processingFailures = 0;
+    double      timerOverheadUs    = 0.0;
     std::string status;
 };
 
@@ -798,7 +804,8 @@ void ConfigureProfileMode(EngineFixture& fixture, PedalDelayMode mode)
     }
     for(std::size_t slot = 0; slot < values.size(); ++slot)
     {
-        fixture.engine.SetSlotNormalized(static_cast<PedalSlot>(slot), values[slot]);
+        fixture.engine.SetSlotNormalized(static_cast<PedalSlot>(slot),
+                                         values[slot]);
     }
     fixture.engine.Reset();
 }
@@ -828,10 +835,10 @@ TimingSummary ProfileMode(PedalDelayMode mode, double timerOverheadUs)
     std::array<float, kBlockSize> outputRight{};
     for(std::size_t frame = 0; frame < kBlockSize; ++frame)
     {
-        inputLeft[frame]
-            = 0.35f * static_cast<float>(std::sin(2.0 * kPi * 317.0
-                                                  * static_cast<double>(frame)
-                                                  / kSampleRate));
+        inputLeft[frame] = 0.35f
+                           * static_cast<float>(std::sin(
+                               2.0 * kPi * 317.0 * static_cast<double>(frame)
+                               / kSampleRate));
         inputRight[frame] = inputLeft[frame];
     }
 
@@ -893,12 +900,14 @@ TimingSummary ProfileMode(PedalDelayMode mode, double timerOverheadUs)
     }
 
     TimingSummary summary;
-    summary.mode              = daisyhost::PedalDelayModeName(mode);
-    summary.warmupBlocks      = kProfileWarmupBlocks;
-    summary.measuredBlocks    = kProfileMeasuredBlocks;
-    summary.measuredDurationS = static_cast<double>(kProfileMeasuredBlocks * kBlockSize)
-                                / kSampleRate;
-    summary.blockBudgetUs = 1000000.0 * static_cast<double>(kBlockSize) / kSampleRate;
+    summary.mode           = daisyhost::PedalDelayModeName(mode);
+    summary.warmupBlocks   = kProfileWarmupBlocks;
+    summary.measuredBlocks = kProfileMeasuredBlocks;
+    summary.measuredDurationS
+        = static_cast<double>(kProfileMeasuredBlocks * kBlockSize)
+          / kSampleRate;
+    summary.blockBudgetUs
+        = 1000000.0 * static_cast<double>(kBlockSize) / kSampleRate;
     summary.meanUs = std::accumulate(durations.begin(), durations.end(), 0.0)
                      / static_cast<double>(durations.size());
     summary.p99Us  = Percentile(durations, 0.99);
@@ -906,17 +915,16 @@ TimingSummary ProfileMode(PedalDelayMode mode, double timerOverheadUs)
     summary.maxUs  = *std::max_element(durations.begin(), durations.end());
     summary.marginP999Us    = summary.blockBudgetUs - summary.p999Us;
     summary.tailUtilization = summary.p999Us / summary.blockBudgetUs;
-    summary.deadlineMisses = static_cast<std::size_t>(std::count_if(
-        durations.begin(), durations.end(), [&](double duration) {
+    summary.deadlineMisses  = static_cast<std::size_t>(
+        std::count_if(durations.begin(), durations.end(), [&](double duration) {
             return duration > summary.blockBudgetUs;
         }));
-    summary.deadlineMissRate
-        = static_cast<double>(summary.deadlineMisses)
-          / static_cast<double>(summary.measuredBlocks);
+    summary.deadlineMissRate = static_cast<double>(summary.deadlineMisses)
+                               / static_cast<double>(summary.measuredBlocks);
     summary.maxLatenessUs
         = std::max(0.0, summary.maxUs - summary.blockBudgetUs);
     summary.processingFailures = processingFailures;
-    summary.timerOverheadUs     = timerOverheadUs;
+    summary.timerOverheadUs    = timerOverheadUs;
     if(!Clock::is_steady || processingFailures != 0U)
     {
         summary.status = "HOST_MEASUREMENT_INVALID";
@@ -963,12 +971,14 @@ std::string OsIdentity()
 #endif
 }
 
-void WriteTimingReports(const fs::path& outputDirectory,
+void WriteTimingReports(const fs::path&                   outputDirectory,
                         const std::vector<TimingSummary>& summaries)
 {
     std::ofstream csv(outputDirectory / "host_profile.csv");
-    csv << "mode,warmup_blocks,measured_blocks,measured_duration_s,block_budget_us,"
-           "mean_us,p99_us,p99_9_us,max_us,margin_p99_9_us,tail_utilization_ratio,"
+    csv << "mode,warmup_blocks,measured_blocks,measured_duration_s,block_"
+           "budget_us,"
+           "mean_us,p99_us,p99_9_us,max_us,margin_p99_9_us,tail_utilization_"
+           "ratio,"
            "deadline_miss_count,deadline_miss_rate,max_lateness_us,"
            "processing_failure_count,timer_overhead_us,status\n";
     csv << std::setprecision(12);
@@ -984,7 +994,8 @@ void WriteTimingReports(const fs::path& outputDirectory,
             << ',' << summary.timerOverheadUs << ',' << summary.status << '\n';
     }
 
-    std::ofstream environment(outputDirectory / "host_profile_environment.json");
+    std::ofstream environment(outputDirectory
+                              / "host_profile_environment.json");
     environment << "{\n"
                 << "  \"clock\": \"std::chrono::steady_clock\",\n"
                 << "  \"clock_is_steady\": "
@@ -1006,12 +1017,14 @@ void WriteTimingReports(const fs::path& outputDirectory,
                 << "}\n";
 }
 
-void WriteAggregateManifest(const fs::path& outputDirectory,
+void WriteAggregateManifest(const fs::path&                  outputDirectory,
                             const std::vector<RenderResult>& results)
 {
     std::ofstream csv(outputDirectory / "audition_manifest.csv");
-    csv << "scenario,mode,cell,source,duration_s,time_norm,feedback_norm,mix_norm,"
-           "color_norm,motion_norm,time_native,feedback_native,mix_native,color_native,"
+    csv << "scenario,mode,cell,source,duration_s,time_norm,feedback_norm,mix_"
+           "norm,"
+           "color_norm,motion_norm,time_native,feedback_native,mix_native,"
+           "color_native,"
            "motion_native,wav,peak,rms,tail_rms,max_step,stereo_difference_rms,"
            "non_finite_samples,checksum_fnv1a64,final_freeze_state,status\n";
     csv << std::setprecision(12);
@@ -1032,8 +1045,8 @@ void WriteAggregateManifest(const fs::path& outputDirectory,
         csv << ',' << result.wavPath.filename().string() << ','
             << result.metrics.peak << ',' << result.metrics.rms << ','
             << result.metrics.tailRms << ',' << result.metrics.maxStep << ','
-            << result.metrics.stereoDifference << ',' << result.metrics.nonFinite
-            << ',' << result.metrics.checksum << ','
+            << result.metrics.stereoDifference << ','
+            << result.metrics.nonFinite << ',' << result.metrics.checksum << ','
             << daisyhost::PedalFreezeStateName(result.finalFreezeState) << ','
             << (result.metrics.passed ? "PASS" : "FAIL") << '\n';
     }
@@ -1067,7 +1080,8 @@ Arguments ParseArguments(int argc, char** argv)
     if(arguments.matrix.empty() || arguments.outputDirectory.empty())
     {
         throw std::runtime_error(
-            "Usage: pedal_multidelay_audition --matrix <csv> --output-dir <dir>");
+            "Usage: pedal_multidelay_audition --matrix <csv> --output-dir "
+            "<dir>");
     }
     return arguments;
 }
@@ -1086,9 +1100,10 @@ int main(int argc, char** argv)
         bool allRendersPassed = true;
         for(std::size_t index = 0; index < scenarios.size(); ++index)
         {
-            auto result = RenderScenario(scenarios[index],
-                                         arguments.outputDirectory,
-                                         static_cast<std::uint32_t>(17U + index));
+            auto result
+                = RenderScenario(scenarios[index],
+                                 arguments.outputDirectory,
+                                 static_cast<std::uint32_t>(17U + index));
             std::cout << result.scenario.name << ' '
                       << (result.metrics.passed ? "PASS" : "FAIL")
                       << " peak=" << result.metrics.peak
@@ -1100,7 +1115,7 @@ int main(int argc, char** argv)
         }
         WriteAggregateManifest(arguments.outputDirectory, results);
 
-        const double timerOverheadUs = MeasureClockOverheadUs();
+        const double               timerOverheadUs = MeasureClockOverheadUs();
         std::vector<TimingSummary> timing;
         for(PedalDelayMode mode : {PedalDelayMode::kDigi,
                                    PedalDelayMode::kTape,
@@ -1119,12 +1134,13 @@ int main(int argc, char** argv)
         }
         WriteTimingReports(arguments.outputDirectory, timing);
 
-        const bool profileValid = std::all_of(
-            timing.begin(), timing.end(), [](const TimingSummary& summary) {
-                return summary.status != "HOST_MEASUREMENT_INVALID"
+        const bool profileValid = std::all_of(timing.begin(),
+                                              timing.end(),
+                                              [](const TimingSummary& summary) {
+                                                  return summary.status != "HOST_MEASUREMENT_INVALID"
                        && summary.status != "INSUFFICIENT_SAMPLE_COUNT"
                        && summary.processingFailures == 0U;
-            });
+                                              });
 
         if(!allRendersPassed || !profileValid)
         {
