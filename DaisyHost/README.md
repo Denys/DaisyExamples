@@ -1,538 +1,354 @@
+<div align="center">
+  <img src="assets/daisyhost-icon-compact.png" width="96" alt="DaisyHost icon">
+</div>
+
 # DaisyHost
 
-`DaisyHost` is a Windows-first desktop host for Daisy apps. The current target
-is a visible two-node virtual `Daisy Patch` rack that can host multiple
-DaisyHost app cores inside the same `VST3` and standalone shell, plus a small
-launcher hub.
+**A Windows-first desktop lab for Daisy audio apps.** Run supported DaisyHost app cores as a
+standalone JUCE application or VST3, switch between virtual **Daisy Patch** and
+**Daisy Field** control surfaces, chain two hosted apps, inject test/MIDI/CV-style control,
+and render deterministic scenarios without reflashing hardware for every experiment.
 
-## Read Local Docs First
+> DaisyHost models **app and board semantics**, not the STM32/libDaisy machine. A green host
+> test or a good-sounding desktop render is useful evidence for the host implementation; it is
+> not Cortex-M7 timing, SDRAM/cache, analog I/O, CV-voltage, or hardware validation.
 
-If you are editing this workspace, use the local docs before relying on older
-thread context:
+Current source version: `0.2.0`.
 
-- [AGENTS.md](AGENTS.md)
-- [PROJECT_TRACKER.md](PROJECT_TRACKER.md)
-- [WORKSTREAM_TRACKER.md](WORKSTREAM_TRACKER.md)
-- [CHECKPOINT.md](CHECKPOINT.md)
-- [CHANGELOG.md](CHANGELOG.md)
+## Why DaisyHost exists
 
-Review these high-priority tracking files on every implementation iteration.
-`PROJECT_TRACKER.md` is the current roadmap, recommended work order, and
-per-iteration testing ledger; always update it at the end of each iteration,
-and update the other tracking files when their truth changed.
-`WORKSTREAM_TRACKER.md` is the dedicated forward-looking portfolio tracker for
-the post-WS7 parallel workstreams and is mirrored back into
-`PROJECT_TRACKER.md`.
+Embedded-audio iteration gets tedious when every small DSP or control change requires a build,
+flash, cable shuffle, and fresh interpretation of what the hardware did. DaisyHost moves the
+parts that can safely run on a desktop into a common host:
 
-For every WP plan or closeout, lead with a manager-readable summary before file
-or test detail: what needs implementation or what was implemented, why it
-matters, what it unlocks, what depends on it, what remains blocked, what is out
-of scope, what evidence proves it, and the next safe starting point.
+- **Audition supported app cores** with live audio or built-in test signals.
+- **Use Patch or Field-style controls** instead of a generic parameter spreadsheet.
+- **Run two apps together** with a small, explicit rack instead of an arbitrary graph.
+- **Exercise MIDI, CV/gate-style control, automation, and modulation** through one state model.
+- **Render repeatable test scenarios** to WAV + JSON for regression, debugging, and datasets.
+- **Inspect the same app metadata from CLI** when exact parameter IDs, ranges, or mappings matter.
 
-If the task depends on skill selection, reusable workflow choice, or
-`Expected UF` / `Observed UF` updates, also read
-[SKILL_PLAYBOOK.md](SKILL_PLAYBOOK.md).
+DaisyHost does **not** ingest arbitrary libDaisy firmware and magically turn it into a desktop
+plugin. Humanity has not yet automated away every unpleasant integration boundary.
 
-Current source version is `0.2.0`. This README describes the refreshed
-workspace at a high level and points to the local docs that track verification
-status and current follow-ups.
+## Quick start
 
-For Phase 3 offline rendering and dataset generation, also read:
+From `DaisyHost/` on Windows, use the checked-in wrapper:
 
-- [training/README.md](training/README.md)
-
-## Scope
-
-The current workspace intentionally models board semantics instead of firmware
-internals:
-
-- Patch controls: four knobs, encoder, encoder button
-- Patch ports: audio, CV, gate, and MIDI jacks exposed as typed virtual ports
-- Patch display: OLED text/bar model rendered by the desktop UI
-- Host interaction: mouse-friendly controls plus a virtual MIDI keyboard that
-  can be played with the mouse or from the computer keyboard using
-  `A/W/S/E/D...` with `Z/X` octave shifts
-- MIDI preview: note input from the on-screen keyboard, computer keyboard, or a
-  connected external MIDI keyboard is rendered as a smoothed standalone preview
-  tone and fed into `MultiDelay`
-- MIDI learn: control learn is CC-based; use controller knobs/sliders rather
-  than note keys
-- MIDI tracking: the Host Tools panel shows current standalone MIDI input status
-  plus a rolling log of recent note/CC/program messages; in standalone, external
-  MIDI devices must still be enabled in the JUCE `Settings...` dialog
-- Real Daisy Field hardware can now be flashed with
-  [field/DaisyHostController](../field/DaisyHostController/README.md) to act
-  as a standard USB MIDI controller for DaisyHost MIDI learn and note input
-- Current standalone default stays on `Host In`; alternate internal sources are
-  available from the mirrored host drawer and shared menu when live input is
-  muted or unavailable
-- The JUCE standalone mute banner is suppressed in-app; live input mute behavior
-  still follows the standalone host safety setting
-- Shared app cores:
-  - `MultiDelayCore` remains the deterministic regression fixture and continues
-    to back the firmware adapter in [patch/MultiDelay](../patch/MultiDelay/README.md)
-    plus the first Daisy Field firmware adapter in
-    [field/MultiDelay](../field/MultiDelay/README.md) and the generated
-    adapter proof in [field/MultiDelayGenerated](../field/MultiDelayGenerated/README.md)
-  - `TorusCore` is the first nontrivial second hosted app, using a DaisyHost-native
-    Patch wrapper with Torus-style semantics and menu/control assignment
-  - `CloudSeedCore` is now a first-class supported hosted app, built on top of a
-    portable `DaisyCloudSeedCore` wrapper around the imported
-    `third_party/CloudSeedCore` with a performance-first Patch control model
-    and a deterministic parameter arpeggiator for rhythmic CloudSeed parameter
-    stepping
-  - `BraidsCore` is now a first-class supported hosted app, built on top of a
-    portable `DaisyBraidsCore` wrapper around the imported Braids oscillator
-    sources with a percussion-first MIDI/gate control model
-  - `HarmoniqsCore` is now a first-class supported hosted app, built on top of
-    a portable `DaisyHarmoniqsCore` additive wrapper with `Spectrum` /
-    `Envelope` page remapping and MIDI/gate triggering
-  - `VASynthCore` is now a first-class supported hosted app, built on top of a
-    portable `DaisyVASynthCore` seven-voice subtractive wrapper with `Osc` /
-    `Filter` / `Motion` pages and MIDI-first polyphonic triggering
-  - `PolyOscCore` is now a first-class supported hosted app, built on top of a
-    portable `DaisyPolyOscCore` wrapper for the original Patch `PolyOsc`
-    three-oscillator source behavior
-  - `SubharmoniqCore` is now a first-class supported hosted app, built on top
-    of a portable `DaisySubharmoniqCore` inspired by Subharmonicon-style
-    subharmonic oscillators, dual four-step sequencers, integer rhythm
-    dividers, Field-oriented page controls, and an internal tempo clock for
-    standalone rhythm-triggered audio; the 2026-04-26 follow-up also tunes the
-    default envelope/output/filter path and Field knob pickup behavior so the
-    startup patch is audible in host tests without physical knobs muting it
-  - `PedalDelayCore` hosts the compact multi-delay guitar pedal as
-    `pedal_multidelay`, with `DIGI`, `TAPE`, `MOD`, `REV`, and `FREEZE` modes,
-    five performance slots, bypass/trails, tap tempo, and explicit freeze-state
-    operations; the checked-in smoke scenario exercises all five modes
-  - `DelayFxAdaptationCore` hosts six Field-focused delay/Fx behavior
-    adaptations on one portable `DaisyDelayFxCore`: MultiFX tape delay, FDN
-    reverb playground, FunBox reverse/freeze delay, SDRAM long delaylines,
-    clean-room Phantasmagoria-inspired spectral delay, and clean-room OAM Time
-    Machine-inspired 8-tap delay;
-    it also exposes `field_delay_bundle`, a Field selector that names the
-    algorithms by type first: Tape [multifx], Tank [reverb], Texture [FunBox],
-    Long [sdram], Spectral [Phantasmagoria], and 8 Tap [TimeMachine]
-- Multi-app host:
-  - app selection persists in host session state
-  - the Patch shell and mirror drawer bind to app metadata and active patch bindings
-  - the processor now exposes a fixed five-slot DAW automation bank with stable
-    ids `daisyhost.slot1` .. `daisyhost.slot5`
-  - those slots rebind to the active app's top-ranked automatable canonical
-    parameters while session persistence remains canonical by app parameter id
-  - `multidelay` and `cloudseed` now expose named MetaControllers through the
-    existing mirrored menu/drawer path, so one macro can steer multiple
-    canonical parameters without adding a second persistence layer
-  - the processor also exposes an in-process effective-state snapshot for live
-    parameter, mapped-slot, MetaController, CV, gate, and audio-input inspection
-  - the live plugin and standalone app now run exactly two hosted nodes
-    (`node0`, `node1`) at a time with:
-    - selected-node-targeted Patch controls, drawer/menu actions, CV/gate/test
-      inputs, keyboard MIDI, and five-slot DAW automation
-    - four operator-facing audio-only topology presets:
-      `node0_only`, `node1_only`, `node0_to_node1`, `node1_to_node0`
-    - a visible two-node rack header with per-node app selectors and role
-      labels, clearer topology direction copy, and selected-node target hints
-      for Patch and Field boards
-    - a board-id-based factory seam with `daisy_patch` as the default board
-      and `daisy_field` supported as a host-side Field surface
-- Headless rendering:
-  - `DaisyHostRender.exe` loads a scenario JSON, renders offline, and writes
-    `audio.wav` plus `manifest.json`
-  - `DaisyHostCLI.exe` provides agent/CI-friendly discovery, scenario
-    validation, render, snapshot, smoke, and doctor commands around the same
-    core contracts
-  - existing `doctor --json` now reports source/build readiness without adding
-    a new command: the stable top-level fields remain
-    `ok`, `buildDir`, `sourceDir`, `config`, and `checks`; each check now adds
-    `category`, `kind`, `severity`, and `hint`; and additive top-level objects
-    report `source`, `build`, `ctest`, `environment`, and `blockers`
-  - doctor readiness covers expected source-root files, build-tree files,
-    generated artifacts including Hub and VST3 outputs, expected CTest
-    registrations including `DaisyHostCliDoctor`, and the duplicate
-    `Path` / `PATH` Windows environment hazard
-  - scenarios drive apps through canonical parameter ids, typed Patch ports,
-    and optional compatibility menu actions
-  - optional `nodes[]` / `routes[]` contracts now allow internal two-node audio
-    render proofs while keeping legacy single-app scenarios valid
-  - render manifests and CLI render-result JSON now include node-targeted
-    debug readback for resolved timeline target nodes, target-resolution
-    source, render nodes, and routes
-  - CLI `snapshot --json` and `render --json` also include an additive
-    `debugState` object for board/selected-node identity, entry/output role
-    labels, routes, selected-node target cues, render timeline events,
-    per-node event counts, and grouped target-node counts
-  - `training/render_dataset.py` expands sweep jobs into multiple run folders
-    and writes a `dataset_index.json`
-- Launcher hub:
-  - `DaisyHost Hub.exe` selects board, app, and activity
-  - `Play / Test` dispatches to the standalone host
-  - `Render` dispatches to `DaisyHostRender.exe`
-  - `Train` dispatches to `training/render_dataset.py`
-
-## 0.2.0 Control Model
-
-The active refresh target changes the Patch interaction model to:
-
-- `CTRL 1` = dry/wet mix
-- `CTRL 2` = primary delay control
-- `CTRL 3` = secondary delay control
-- `CTRL 4` = feedback
-- `CV 1` = tertiary delay control
-- `ENC 1` rotate + push = menu navigation and edit/confirm
-
-For the current `MultiDelayCore`, that delay priority order is:
-
-- primary = old delay 1 target
-- secondary = old delay 2 target
-- tertiary = old delay 3 target
-
-Implemented `0.2.0` additions:
-
-- every DSP parameter editable from the OLED menu
-- `last touch wins` arbitration between knob, CV, and menu edits
-- shared top-level menu pages: `Params`, `Input`, `MIDI`, `Tracker`, `About`
-- Patch-faithful vector panel layout
-- version/build identity and recent changelog bullets surfaced through the app
-  mirror/About flow
-- `Saw` added as a test input
-- standalone default test input restored to `Host In`
-- WS8 rack UX polish for the existing two-node rack: clearer role labels,
-  selected-node feedback, topology direction copy, and Patch/Field copy that
-  makes live control targeting explicit
-- multi-app host plumbing with `multidelay` as the default app and `torus` as
-  app #2
-- `cloudseed` promoted to a first-class supported hosted app with:
-  - a portable `DaisyCloudSeedCore` shared wrapper
-  - `Space` and `Motion` performance pages that remap the four Patch knobs
-  - named `Blend`, `Space`, `Motion`, and `Tone` MetaControllers surfaced
-    through the shared menu/drawer path
-  - a compact `Arp` menu that rhythmically steps selected performance
-    parameters through effective-state modulation without adding MIDI-note
-    synthesis
-  - utility actions for `Bypass`, `Clear Tails`, `Randomize Seeds`, and
-    `Interpolation`
-  - checked-in `cloudseed_smoke.json` render coverage, including the arp path
-- `braids` promoted to a first-class supported hosted app with:
-  - a portable `DaisyBraidsCore` shared wrapper
-  - a six-model percussion-first subset:
-    `Kick`, `Snare`, `Cymbal`, `Drum`, `Bell`, `Filtered Noise`
-  - `Drum` and `Finish` pages that remap the four Patch knobs
-  - MIDI-first triggering plus `gate_in_1` rising-edge strike aliasing
-  - utility actions for `Audition`, `Randomize Model`, and `Panic`
-  - checked-in `braids_smoke.json` render coverage
-- `harmoniqs` promoted to a first-class supported hosted app with:
-  - a portable `DaisyHarmoniqsCore` shared wrapper
-  - an additive MIDI/gate instrument voice with eight stateful harmonic lanes
-  - `Spectrum` and `Envelope` pages that remap the four Patch knobs
-  - utility actions for `Audition`, `Init Spectrum`, `Randomize Spectrum`, and
-    `Panic`
-  - checked-in `harmoniqs_smoke.json` render coverage
-- `vasynth` promoted to a first-class supported hosted app with:
-  - a portable `DaisyVASynthCore` shared wrapper
-  - fixed seven-voice polyphony with MIDI-first note handling and gate alias
-  - `Osc`, `Filter`, and `Motion` pages in the shared canonical model, with
-    the current DaisyHost menu surfacing `Osc` / `Filter` page switching
-  - utility actions for `Audition`, `Init Patch`, `Stereo Sim`, and `Panic`
-  - checked-in `vasynth_smoke.json` render coverage
-- `polyosc` promoted to a first-class supported hosted app with:
-  - a portable `DaisyPolyOscCore` shared wrapper for `patch/PolyOsc`
-  - Patch K1-K3 oscillator frequency controls, K4 global frequency offset,
-    encoder waveform selection, outputs 1-3 as individual oscillators, and
-    output 4 as the host stereo mix source
-  - Field K1-K4 mirroring the Patch controls and Field K5 mapped to `waveform`
-    through the existing board-control mapping path
-  - checked-in `polyosc_smoke.json` and
-    `field_polyosc_surface_smoke.json` render coverage
-- `subharmoniq` promoted to a first-class supported hosted app and Field
-  firmware target with:
-  - a portable `DaisySubharmoniqCore` shared wrapper
-  - six oscillator sources, two four-step sequencers, four integer rhythm
-    dividers, quantize modes, and Round 1 SVF-style low-pass filtering
-  - Field K1-K8 page controls, A/B key sequencer/rhythm/transport actions,
-    SW1/SW2 pseudo-encoder menu navigation, CV/Gate/MIDI mappings, OLED, LEDs,
-    and CV OUT sequencer monitors in `field/SubharmoniqField`
-  - `field/DaisyHostController` firmware that sends standard USB MIDI for
-    DaisyHost control: K1-K8 as CC 20-27, CV1-CV4 as CC 28-31, A1-B8 as notes
-    60-75, and SW1/SW2 as momentary CC 80/81
-  - DaisyHost Field UI refinements for SW1/SW2 navigation, X/C keyboard
-    shortcuts, parameter labels under K1-K8, octave-aligned keyboard display,
-    CV/Gate trace cues, and top-grouped audio/gate/MIDI artwork
-  - playable-default tuning for the internal-clock path plus pickup-style
-    Field knob startup so K1-K8 do not overwrite safe defaults until moved
-  - host tests, Field firmware `make`, QAE validation, and ST-Link flashing
-    passing on 2026-04-26; manual hardware validation remains pending
-- `multidelay` now also exposes named `Blend`, `Space`, and `Regen`
-  MetaControllers through the shared menu/drawer path
-- app-aware top-panel control labels and persisted app selection
-- fixed five-slot DAW automation bridge with stable ids
-  `daisyhost.slot1` .. `daisyhost.slot5`
-- processor-side effective-state snapshot/readback for canonical parameters,
-  mapped automation slots, selected-node identity, node count,
-  board/topology fields, active-node MetaControllers, node summaries, routes,
-  CV, gate, and audio-input state
-- app-generic headless render runtime with:
-  - scenario JSON loading
-  - deterministic offline rendering
-  - `WAV + JSON manifest` output
-  - timeline support for parameter, CV, gate, MIDI, audio-input, impulse, and
-    compatibility menu events
-  - node/route-aware render contracts with optional per-node summaries,
-    rack-level board/selection/topology fields, and `targetNodeId` for
-    multi-node non-ID-scoped events
-  - forward and reverse two-node audio-chain proofs for internal rack
-    validation
-- `HostSessionState` v5 with board choice, selected node, rack entry/output
-  topology fields, node metadata, and routes while keeping legacy single-node
-  sessions backward-compatible
-- Daisy Field host-side board support through the board factory seam:
-  - `daisy_patch` remains the default board and fully supported Patch behavior
-  - `daisy_field` is accepted by the Hub, session, standalone startup, and
-    render paths as board metadata
-  - Field K1-K4 mirror the selected node's current Patch page bindings
-  - Field K5-K8 map to the next four automatable selected-node parameters by
-    `importanceRank`, excluding explicit K1-K4 parameter targets where the
-    hosted app exposes them, with unavailable controls left disabled
-  - Field CV1-CV4 and Gate In reuse the existing host CV/gate input paths
-  - Field A1-B8 emit 16 chromatic MIDI notes from the selected node's current
-    keyboard octave
-  - Field extended host surface support is now implemented for host-side Field
-    outputs/switches/LEDs:
-    - CV OUT 1-2 are derived monitor outputs that mirror the K5/K6 mapped
-      parameters as `0..5V` evidence in snapshots and render manifests
-    - SW1/SW2 are host-side momentary utility triggers selected from the first
-      two selected-app utility menu actions
-    - key LEDs, switch LEDs, Gate In LED, and Gate Out LED are derived
-      non-persisted indicators
-  - the Field panel renders K1-K8 as interactive controls and A1-B8 as
-    momentary key buttons, SW1/SW2 buttons, CV OUT indicators, and Field LEDs
-    when `boardId` is `daisy_field`
-  - Field editor layout and interactivity now use board-profile target metadata
-    for knobs, keys, and switches instead of relying on Field-only surface-id
-    construction
-- `DaisyHostRender` CLI target and Python dataset sweep orchestration under
-  `training/`
-- Adapter-pipeline v0 tooling:
-  - `tools/generate_field_adapter.py` generates a Daisy Field firmware adapter
-    from a checked-in shared-core spec
-  - `tools/adapter_specs/field_multidelay.json` is the first golden spec
-  - `tools/audit_firmware_portability.py` classifies existing firmware as
-    `portable-core-ready`, `needs-core-extraction`, or `not-supported-by-v0`
-
-Non-goals for v1:
-
-- full STM32/libDaisy emulation
-- arbitrary libDaisy firmware source translation into DaisyHost
-- Patch SM / Pod / custom board runtime support
-- freeform or arbitrary multi-node rack graph editing inside one plugin
-- mixed-board racks
-- general Field firmware parity beyond the first `field/MultiDelay` adapter,
-  full real hardware voltage validation, `field/DaisyHostController` USB MIDI
-  hardware validation, Field-specific app ergonomics, and DAW/VST3 manual
-  validation
-
-The abstractions are node-scoped so future work can compose multiple boards in a
-single host without redesigning IDs or state formats.
-
-## Build
-
-The host uses CMake with `FetchContent` for JUCE and GoogleTest.
-
-From `DaisyHost/`, prefer the checked-in wrapper:
-
-```sh
+```bat
 .\build_host.cmd
 ```
 
-It runs the full host gate from the local workspace root, normalizes the
-problematic `Path` / `PATH` split for MSBuild-backed commands in this Codex
-shell, injects a fresh `DAISYHOST_UNIT_TEST_RUN_TAG` for the current
-Release-unit-test payload path, and bypasses local PowerShell execution-policy
-friction by launching `build_host.ps1` through `build_host.cmd`.
+It configures CMake, builds the Release host targets, normalizes the known Windows
+`Path` / `PATH` issue, and runs CTest.
 
-The underlying raw commands are still:
+The build produces the DaisyHost CLI, launcher Hub, offline renderer, VST3, standalone host,
+and unit-test payload. Start with the generated **DaisyHost Hub** and choose:
 
-```sh
+1. a board surface: **Daisy Patch** or **Daisy Field**;
+2. an app;
+3. an activity: **Play / Test**, **Render**, or **Train**.
+
+For a machine-readable sanity check after a Release build:
+
+```bat
+build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json
+build\Release\DaisyHostCLI.exe list-apps --json
+build\Release\DaisyHostCLI.exe describe-board daisy_field --json
+```
+
+`doctor` is a readiness report. It does not replace the full build/test gate.
+
+## The interface in one minute
+
+DaisyHost has **two rack nodes**, `node0` and `node1`. Each node hosts one app instance.
+The most important UI rule is simple:
+
+> **Selected node = where your live controls go. Rack topology = where the audio goes.**
+
+Those are intentionally separate. You can edit `node1` while audio is flowing
+`node0 → node1`.
+
+### Daisy Patch
+
+The Patch surface gives the selected app:
+
+- four main performance controls (`CTRL 1` ... `CTRL 4`);
+- one rotary encoder plus push action for menu/edit work;
+- a 128 × 64 OLED model;
+- typed virtual audio, CV, gate, and MIDI ports;
+- host tools for MIDI, test input, modulation, and rack state.
+
+Labels are **app-dependent**. Do not assume `CTRL 2` always means the same DSP parameter.
+The active app provides the binding and engineering metadata.
+
+### Daisy Field
+
+The Field surface expands the same selected-node model to:
+
+- `K1` ... `K8`;
+- `A1` ... `A8` and `B1` ... `B8` keys;
+- `SW1` / `SW2`;
+- four CV inputs;
+- two derived CV-output monitor values;
+- gate and host-side LED/indicator state.
+
+Field controls fail unavailable when an app does not expose a valid target. They are not
+silently reassigned to something convenient and mysterious.
+
+**Detailed control-by-control instructions:**
+[docs/interface-guide.md](docs/interface-guide.md)
+
+## Interface previews
+
+The current source tree contains DaisyHost icon assets, but **no checked-in Patch or Field
+screenshots**. This README therefore does not use an old mockup, a generated illustration, or a
+random screenshot as current UI evidence.
+
+The interface guide records the required capture set for future screenshots: Patch, Field,
+`pedal_multidelay`, rack header, Host Tools, and visible version/build identity.
+
+## Two-node rack
+
+The live host intentionally supports four bounded audio topologies:
+
+| Topology | Audio path |
+|---|---|
+| `node0_only` | Host → `node0` → output |
+| `node1_only` | Host → `node1` → output |
+| `node0_to_node1` | Host → `node0` → `node1` → output |
+| `node1_to_node0` | Host → `node1` → `node0` → output |
+
+There is no freeform multi-node graph editor in v1. The bounded rack keeps routing, session
+state, automation, offline rendering, and regression testing understandable.
+
+## System map
+
+```mermaid
+flowchart TD
+    accTitle: DaisyHost System Map
+    accDescr: Shows how Patch and Field surfaces, JUCE live hosting, two rack nodes, hosted app contracts, CLI and offline rendering relate to separate Daisy firmware evidence.
+
+    %% Styling definitions
+    classDef userStyle fill:#334155,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef surfaceStyle fill:#2563EB,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef hostStyle fill:#7C3AED,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef appStyle fill:#0F766E,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef offlineStyle fill:#D97706,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef firmwareStyle fill:#166534,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+    classDef guardStyle fill:#B91C1C,stroke:#ffffff,stroke-width:2px,color:#ffffff;
+
+    subgraph layer_operator["1. Operator / DAW / Automation"]
+        operator["Mouse / computer keyboard<br/>external MIDI / DAW"]:::userStyle
+        hub["DaisyHost Hub<br/>board + app + activity"]:::userStyle
+        scenario["Scenario JSON<br/>deterministic events"]:::userStyle
+    end
+
+    subgraph layer_surfaces["2. Board Surfaces"]
+        patch["Daisy Patch<br/>CTRL1-4 · ENC · OLED · typed ports"]:::surfaceStyle
+        field["Daisy Field<br/>K1-8 · A/B keys · SW1/2 · CV/Gate · indicators"]:::surfaceStyle
+        boardContract["BoardProfile + BoardControlMapping<br/>geometry · target metadata · availability"]:::surfaceStyle
+    end
+
+    subgraph layer_live["3. Live JUCE Host"]
+        editor["JUCE Editor<br/>surface + rack header + Host Tools"]:::hostStyle
+        processor["JUCE Processor<br/>audio/MIDI + selected-node state"]:::hostStyle
+        topology["LiveRackTopology<br/>node0 only · node1 only · 0→1 · 1→0"]:::hostStyle
+        session["Session / automation / modulation<br/>canonical host state"]:::hostStyle
+    end
+
+    subgraph layer_apps["4. Hosted Apps"]
+        registry["AppRegistry<br/>app id → factory"]:::appStyle
+        contract["HostedAppCore<br/>DSP · parameters · menu · display · ports · state"]:::appStyle
+        node0["node0<br/>hosted app instance"]:::appStyle
+        node1["node1<br/>hosted app instance"]:::appStyle
+    end
+
+    subgraph layer_offline["5. Offline / CI Surfaces"]
+        cli["DaisyHostCLI<br/>describe · validate · render · snapshot · doctor · gate"]:::offlineStyle
+        render["RenderRuntime<br/>WAV + manifest + debugState"]:::offlineStyle
+        training["training/<br/>scenario sweeps + datasets"]:::offlineStyle
+    end
+
+    subgraph layer_target["6. Separate Daisy Target Evidence"]
+        firmware["Patch / Field firmware adapters<br/>build / flash / hardware tests"]:::firmwareStyle
+        evidence["Evidence boundary<br/>host pass ≠ ARM timing or analog/hardware pass"]:::guardStyle
+    end
+
+    operator --> editor
+    hub --> editor
+    boardContract --> patch
+    boardContract --> field
+    patch --> editor
+    field --> editor
+    editor <--> processor
+    processor <--> topology
+    processor <--> session
+    processor --> registry
+    registry --> contract
+    contract --> node0
+    contract --> node1
+    node0 --> topology
+    node1 --> topology
+
+    scenario --> render
+    registry --> render
+    topology --> render
+    render --> cli
+    render --> training
+
+    contract -. shared app/core contracts where implemented .-> firmware
+    processor --> evidence
+    firmware --> evidence
+```
+
+For the implementation-level version of this map, including class/file ownership and evidence
+boundaries, see [docs/technical-architecture.md](docs/technical-architecture.md).
+
+## Common workflows
+
+### Play an app with live audio
+
+1. Launch the Hub and choose a board/app.
+2. Start **Play / Test**.
+3. Confirm the selected rack node.
+4. Leave test input on `Host In`.
+5. Use the board surface and app menu.
+
+If the app works with a generated test tone but not `Host In`, the hosted DSP path is probably
+alive; check the standalone audio device/input configuration next.
+
+### Exercise an app without external audio
+
+The live processor currently offers:
+
+`Host In` · `Sine` · `Saw` · `Noise` · `Impulse` · `Triangle` · `Square`
+
+Use a simple generated source first when separating app behavior from Windows audio-device
+problems.
+
+### Use MIDI
+
+- Play from the on-screen keyboard or computer keyboard.
+- In standalone, enable external MIDI devices in JUCE **Settings...**.
+- MIDI learn is **CC-based**: use controller knobs/sliders, not note keys.
+- Host Tools shows current MIDI input status and recent note/CC/program activity.
+
+### Modulate a parameter
+
+DaisyHost currently exposes four host modulation lanes. Each can use `CV1` ... `CV4` or
+`LFO1` ... `LFO4` as a source and targets an eligible parameter in its native engineering
+range. Effective state is available to the host snapshot/debug surfaces.
+
+### Render a deterministic scenario
+
+```bat
+build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json
+build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\multidelay --expect-non-silent --json
+```
+
+The render path writes audio plus machine-readable evidence and is suitable for regression and
+training/dataset workflows. It is not a substitute for live DAW or hardware testing.
+
+## Featured hosted app: Pedal Multi-Delay
+
+`pedal_multidelay` is the desktop host implementation of the compact delay-pedal concept.
+It exposes five modes:
+
+`DIGI` · `TAPE` · `MOD` · `REV` · `FREEZE`
+
+and five performance slots:
+
+`TIME` · `FEEDBACK` · `MIX` · `COLOR` · `MOTION`
+
+On **Field**, the five performance slots are available on `K1` ... `K5`. On **Patch**, the
+first four are on the main knobs and `MOTION` is reached through the encoder/menu surface.
+
+Inspect the live machine-readable control contract:
+
+```bat
+build\Release\DaisyHostCLI.exe describe-app pedal_multidelay --json
+```
+
+For fractional-read policy, transition behavior, reverse overlap-add, freeze state machine,
+host timing evidence, and explicit target non-claims, read
+[docs/pedal-multidelay.md](docs/pedal-multidelay.md).
+
+## What is actually shared with hardware?
+
+DaisyHost is useful because supported app logic can be separated from board/runtime plumbing.
+The repository currently includes firmware adapter references such as:
+
+- [Patch MultiDelay](../patch/MultiDelay/README.md)
+- [Field MultiDelay](../field/MultiDelay/README.md)
+- [Generated Field MultiDelay](../field/MultiDelayGenerated/README.md)
+
+But every firmware target still needs its own build, target timing, flash, physical I/O, and
+audio/control verification. See the architecture guide for the evidence matrix.
+
+## Documentation map
+
+| Need | Read this |
+|---|---|
+| Use Patch, Field, MIDI, CV/gate, rack, test inputs, modulation | [Interface Guide](docs/interface-guide.md) |
+| Understand architecture, contracts, state, render/CLI, firmware boundary | [Technical Architecture](docs/technical-architecture.md) |
+| Understand `pedal_multidelay` DSP/control behavior and host evidence | [Pedal Multi-Delay](docs/pedal-multidelay.md) |
+| Generate offline datasets | [Training README](training/README.md) |
+| Current verified state / open issues | [CHECKPOINT](CHECKPOINT.md) |
+| Work order and exact test ledger | [PROJECT_TRACKER](PROJECT_TRACKER.md) |
+| Forward workstreams | [WORKSTREAM_TRACKER](WORKSTREAM_TRACKER.md) |
+| Recent behavior and release notes | [CHANGELOG](CHANGELOG.md) |
+| Local agent rules | [AGENTS](AGENTS.md) |
+| Skill selection / usefulness evidence | [SKILL_PLAYBOOK](SKILL_PLAYBOOK.md) |
+
+## Build and verification
+
+Preferred full host gate from `DaisyHost/`:
+
+```bat
+.\build_host.cmd
+```
+
+Equivalent raw commands:
+
+```bat
 cmake -S . -B build
 cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-`ctest` now includes the normal host unit coverage plus the direct-entrypoint
-smoke tests:
+For current pass/fail evidence, use [PROJECT_TRACKER.md](PROJECT_TRACKER.md) and
+[CHECKPOINT.md](CHECKPOINT.md). This landing page intentionally does not freeze a test count
+that will become stale after the next useful commit.
 
-- `DaisyHostStandaloneSmoke`
-- `DaisyHostRenderSmoke`
-- `DaisyHostCliListApps`
-- `DaisyHostCliDescribeApp`
-- `DaisyHostCliDescribeBoard`
-- `DaisyHostCliValidateScenario`
-- `DaisyHostCliDoctor`
-- `DaisyHostCliRender`
+## Architecture at a glance
 
-The smoke harness lives at `tests/run_smoke.py`. If you run the raw
-MSBuild-backed commands directly instead of the wrapper, sanitize `Path` /
-`PATH` first.
+| Layer | Primary location |
+|---|---|
+| Board/profile contracts | `include/daisyhost/BoardProfile.h`, `src/BoardProfile.cpp` |
+| Field control mapping | `include/daisyhost/BoardControlMapping.h`, `src/BoardControlMapping.cpp` |
+| Hosted app abstraction | `include/daisyhost/HostedAppCore.h` |
+| App registry and app cores | `src/AppRegistry.cpp`, `src/apps/` |
+| Live two-node rack/session | `src/LiveRackTopology.cpp`, `src/HostSessionState.cpp` |
+| JUCE processor/editor | `src/juce/` |
+| Headless render | `src/RenderRuntime.cpp` |
+| CLI | `src/CliPayloads.cpp`, `tools/cli_app.cpp` |
+| Launcher | `src/hub/` |
+| Scenarios/datasets | `training/` |
+| Tests | `tests/` |
 
-Checked-in render smoke scenarios now include:
+## Non-goals
 
-- `training/examples/multidelay_smoke.json`
-- `training/examples/torus_smoke.json`
-- `training/examples/cloudseed_smoke.json`
-- `training/examples/braids_smoke.json`
-- `training/examples/harmoniqs_smoke.json`
-- `training/examples/vasynth_smoke.json`
-- `training/examples/polyosc_smoke.json`
-- `training/examples/field_cloudseed_shell_smoke.json`
-- `training/examples/field_vasynth_native_controls_smoke.json`
-- `training/examples/field_extended_surface_smoke.json`
-- `training/examples/field_node_target_surface_smoke.json`
-- `training/examples/field_polyosc_surface_smoke.json`
-- `training/examples/field_delay_multifx_pedal_smoke.json`
-- `training/examples/field_delay_reverb_playground_smoke.json`
-- `training/examples/field_delay_funbox_smoke.json`
-- `training/examples/field_delay_sdram_delaylines_smoke.json`
-- `training/examples/field_delay_bundle_smoke.json`
+The current v1 architecture does not claim:
 
-Outputs:
+- full STM32/libDaisy emulation;
+- arbitrary libDaisy firmware source translation;
+- a freeform multi-node graph editor;
+- mixed-board racks;
+- Patch SM / Pod / custom-board runtime parity;
+- Daisy target timing from desktop timing;
+- analog input/output, CV-voltage, noise, headroom, EMI/EMC, or mechanical behavior from a
+  desktop board drawing.
 
-- `DaisyHostCLI.exe`
-- `DaisyHost Hub.exe`
-- `DaisyHostRender.exe`
-- `DaisyHost Patch.vst3`
-- `DaisyHost Patch.exe`
-- `unit_tests` target, currently emitted as a payload under
-  `build/unit_test_bin/<run-tag>/<config>/DaisyHostTestPayload.bin`
-  and launched through `tests/run_unit_test_payload.py`
-- `tools/suggest_next_wp.py` reads `WORKSTREAM_TRACKER.md` and prints the next
-  recommended work package, runner-up, overlap risk, explicit waits, and first
-  safe implementation slice for WP closeouts
-
-Current local verification note:
-
-- the latest full host gate recorded in these docs is the 2026-08-13
-  `pedal_multidelay` publication pass: the canonical wrapper configured and
-  built all six Release targets, and the resumed direct Release `ctest` passed
-  `337/337`, including the new `PedalDelay*` coverage and pedal CLI checks,
-  the existing `DaisyDelayFxCoreTest` / `DelayFxAdaptationCoreTest` coverage,
-  `DaisyHostNextWpSuggester`, standalone, render, `DaisyHostCliDoctor`,
-  `DaisyHostCliRenderAssertions`, `DaisyHostCliRenderAssertionsPass`, and the
-  other CLI smoke tests. Older
-  `168/168`, `196/196`, `197/197`, `202/202`, `211/211`, `216/216`,
-  `232/232`, `233/233`, `243/243`, `244/244`, `269/269`, `278/278`, and
-  `284/284` results are
-  retained only as dated historical evidence.
-- `tests/run_smoke.py` now uses a wider process-query timeout for standalone
-  smoke so slower Windows process-path discovery does not produce a false
-  timeout on an otherwise healthy launch
-- Daisy Field is now implemented and automatically tested as a host-side board
-  surface in this checkout: shell selection, native controls, derived CV OUT
-  monitor values, SW1/SW2 utility triggers, LED evidence, startup-request
-  launch planning, and selected-node Field render evidence are covered. Sprint
-  F3 also adds `field/MultiDelay` as the first Daisy Field firmware adapter;
-  it builds and flashes through ST-Link, but the hands-on audio/control/CV
-  checklist is still pending. Adapter-pipeline v0 now generates
-  `field/MultiDelayGenerated` from a JSON spec and proves it with build plus
-  QAE validation; generated-adapter flashing was not run in that pass.
-  Mixed-board racks, DAW-side manual validation, arbitrary firmware import, and
-  broader Field firmware/hardware parity remain follow-on work.
-
-Agent/CI CLI adoption sequence from `DaisyHost/` after a Release build:
-
-```bat
-build\Release\DaisyHostCLI.exe doctor --build-dir build --source-dir . --config Release --json
-build\Release\DaisyHostCLI.exe gate --source-dir . --build-dir build --config Release --json
-build\Release\DaisyHostCLI.exe list-apps --json
-build\Release\DaisyHostCLI.exe describe-app cloudseed --json
-build\Release\DaisyHostCLI.exe describe-board daisy_field --json
-build\Release\DaisyHostCLI.exe validate-scenario training\examples\multidelay_smoke.json --json
-build\Release\DaisyHostCLI.exe render training\examples\multidelay_smoke.json --output-dir build\cli_smoke\tf16_multidelay --expect-non-silent --expect-timeline-target-node node0 --json
-build\Release\DaisyHostCLI.exe smoke --mode render --build-dir build --source-dir . --config Release --json
-```
-
-`doctor --json` is a readiness/preflight report, not a gate runner. It does not
-execute the host gate, launch GUI/live-plugin flows, validate a DAW, flash
-firmware, or provide generic shell control.
-
-WS13 treats this sequence as a growing adoption path, not a 100% complete
-standard. Recent 2026-04-29 WPs proved normalized `doctor`, discovery, scenario
-validation, render assertions, render smoke, CLI CTest, `gate --json`, and
-direct `build_host.cmd` evidence. If `gate --json` ever reports a Windows
-`locked-artifact` while rebuilding `DaisyHostCLI.exe`, record the structured
-blocker and rerun the direct wrapper after the CLI exits; do not claim a fresh
-green full gate unless the direct wrapper actually completes.
-
-The `snapshot --json` and `render --json` payloads include `debugState` for
-compact external rack diagnostics without adding a separate command. For render
-payloads, `debugState.timeline.events[]` reports event `scope`, `resolution`,
-target node when available, and the relevant parameter/port/control/menu/MIDI
-evidence; `eventsByTargetNode` and `nodes[].eventCount` summarize node impact.
-`render --json` also accepts optional assertion flags
-`--expect-checksum`, `--expect-non-silent`, `--expect-route-count`,
-`--expect-node-id`, and `--expect-timeline-target-node`; when supplied, the
-payload adds an `assertions` report and returns validation exit code `2` if the
-expected render evidence does not match.
-
-Add new CLI commands only after a real agent or CI workflow proves a missing
-offline operation.
-
-After completing a WP/workstream, run the repo-local next-WP recommender and
-copy its decision into the `PROJECT_TRACKER.md` handoff:
-
-```bat
-py -3 tools\suggest_next_wp.py --tracker WORKSTREAM_TRACKER.md
-```
-
-## Architecture
-
-- `include/daisyhost/`: stable host-side abstractions
-- `src/apps/MultiDelayCore.cpp`: portable extracted app core
-- `src/apps/TorusCore.cpp`: DaisyHost-native Torus pilot app core
-- `include/daisyhost/DaisyCloudSeedCore.h` / `src/DaisyCloudSeedCore.cpp`:
-  portable CloudSeed wrapper and canonical state mapper
-- `include/daisyhost/DaisyBraidsCore.h` / `src/DaisyBraidsCore.cpp`:
-  portable Braids wrapper and canonical percussion-state mapper
-- `include/daisyhost/DaisyHarmoniqsCore.h` / `src/DaisyHarmoniqsCore.cpp`:
-  portable Harmoniqs wrapper and canonical additive-state mapper
-- `include/daisyhost/DaisyVASynthCore.h` / `src/DaisyVASynthCore.cpp`:
-  portable VA synth wrapper and canonical polyphonic-state mapper
-- `include/daisyhost/DaisyDelayFxCore.h` / `src/DaisyDelayFxCore.cpp`:
-  portable Field delay/Fx source-adaptation core and bundle algorithm metadata
-- `src/apps/CloudSeedCore.cpp`: DaisyHost-native CloudSeed supported app core
-- `src/apps/BraidsCore.cpp`: DaisyHost-native Braids supported app core
-- `src/apps/HarmoniqsCore.cpp`: DaisyHost-native Harmoniqs supported app core
-- `src/apps/VASynthCore.cpp`: DaisyHost-native VA Synth supported app core
-- `src/PedalDelayEngine.cpp`: portable five-mode compact pedal delay engine
-- `src/apps/PedalDelayCore.cpp`: DaisyHost adapter for `pedal_multidelay`
-- `src/apps/DelayFxAdaptationCore.cpp`: DaisyHost-native Field delay/Fx
-  adapter core
-- `src/AppRegistry.cpp`: app registry and factory layer
-- `src/HubSupport.cpp`: launcher hub registries, profiles, launch planning, and startup requests
-- `src/HostAutomationBridge.cpp`: stable five-slot DAW automation mapping
-- `src/BoardControlMapping.cpp`: host-side Field control mapping for K1-K8,
-  CV1-CV4, Gate In, and A1-B8 MIDI keys
-- `src/HostSessionState.cpp`: backward-compatible session serialization with
-  rack globals plus node and route records
-- `src/LiveRackTopology.cpp`: visible rack topology preset expansion,
-  validation, and reverse inference
-- `src/EffectiveHostStateSnapshot.cpp`: processor-side live-state snapshot model
-  with selected-node, board/topology fields, route summaries, and
-  MetaController readback
-- `src/RenderRuntime.cpp`: headless render runtime, scenario loading, manifest
-  emission, node/route validation, node-targeted event routing, and WAV writing
-- `tools/write_vst3_manifest.ps1`: PowerShell-backed VST3 manifest helper shim
-  used by the Windows CMake build
-- `src/hub/`: JUCE launcher hub
-- `src/juce/`: JUCE plugin and standalone wrapper
-- `tools/render_app.cpp`: command-line render entrypoint
-- `training/`: dataset orchestration, schema notes, and example scenarios
-- `tests/`: unit tests for the abstractions and the extracted core
-- `AGENTS.md`, `PROJECT_TRACKER.md`, `SKILL_PLAYBOOK.md`, `CHECKPOINT.md`,
-  `CHANGELOG.md`: local project guidance, roadmap/order tracking, skill
-  validation, and verification history
-
-Firmware adapters currently include the Patch reference in
-[patch/MultiDelay/MultiDelay.cpp](../patch/MultiDelay/MultiDelay.cpp), the
-first Field adapter in
-[field/MultiDelay/MultiDelay.cpp](../field/MultiDelay/MultiDelay.cpp), and the
-generated Field adapter proof in
-[field/MultiDelayGenerated/MultiDelay.cpp](../field/MultiDelayGenerated/MultiDelay.cpp).
+Those boundaries are features, not missing marketing adjectives. They keep DaisyHost testable
+and make it clearer which evidence still belongs on the real target.
