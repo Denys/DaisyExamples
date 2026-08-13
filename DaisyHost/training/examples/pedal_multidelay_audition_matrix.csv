@@ -12,5 +12,5 @@ pedal_multidelay_audition_rev_reference,REV,reference,transient_train,4.5,0.25,0
 pedal_multidelay_audition_rev_character,REV,character,pluck_train,5.0,0.65,0.55,0.80,1.00,0.90,,0
 pedal_multidelay_audition_rev_stress,REV,stress,transient_train,4.5,0.05,1.00,1.00,1.00,0.00,1.500:SLOT:TIME:0.90|3.000:SLOT:TIME:0.08,0
 pedal_multidelay_audition_freeze_reference,FREEZE,reference,single_pluck,4.5,0.38,0.96,0.75,0.18,0.05,0.050:FREEZE:CAPTURE,1
-pedal_multidelay_audition_freeze_character,FREEZE,character,single_pluck,5.0,0.45,0.98,0.85,0.65,0.70,0.050:FREEZE:CAPTURE|1.500:FREEZE:HOLD,1
+pedal_multidelay_audition_freeze_character,FREEZE,character,single_pluck,4.0,0.45,1.00,0.85,0.38,0.70,0.050:FREEZE:CAPTURE|1.500:FREEZE:HOLD,1
 pedal_multidelay_audition_freeze_stress,FREEZE,stress,pluck_train,5.5,0.25,1.00,0.90,0.85,1.00,0.050:FREEZE:CAPTURE|1.200:FREEZE:ACCUMULATE|2.400:FREEZE:REPLACE|3.800:FREEZE:CLEAR,0
