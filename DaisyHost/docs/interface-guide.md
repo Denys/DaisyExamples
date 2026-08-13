@@ -335,9 +335,11 @@ non-claims, read [`pedal-multidelay.md`](pedal-multidelay.md).
 
 ## 11. Screenshot status
 
-At the source revision used for this guide, `DaisyHost/assets/` contains the DaisyHost icon
-assets but no checked-in Patch or Field screenshots. No screenshot is embedded here rather
-than passing an old or invented picture off as current UI evidence.
+At the source revision used for this guide, `DaisyHost/assets/` contains the publication icon
+assets only. The repository also tracks PNG captures under `DaisyHost/.tmp/`, including
+`daisyhost-window-printwindow.png` and `daisyhost-subharmoniq-field-gui.png`. This pass did not
+validate those `.tmp` captures as current or publication-ready, so none is embedded here as
+current UI evidence.
 
 When screenshots are added later, capture at least:
 

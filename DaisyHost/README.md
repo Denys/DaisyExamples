@@ -101,9 +101,11 @@ silently reassigned to something convenient and mysterious.
 
 ## Interface previews
 
-The current source tree contains DaisyHost icon assets, but **no checked-in Patch or Field
-screenshots**. This README therefore does not use an old mockup, a generated illustration, or a
-random screenshot as current UI evidence.
+`DaisyHost/assets/` contains the publication icon assets only. The repository also tracks PNG
+captures under `DaisyHost/.tmp/`, including Field host captures; this documentation pass did not
+validate those `.tmp` images as current or publication-ready UI evidence. This README therefore
+does not promote a temporary/debug capture, generated illustration, or unverified screenshot as
+current UI evidence.
 
 The interface guide records the required capture set for future screenshots: Patch, Field,
 `pedal_multidelay`, rack header, Host Tools, and visible version/build identity.
