@@ -1,0 +1,33 @@
+name: Temporary Format Pedal Audition Runner
+
+on:
+  push:
+    branches:
+      - "codex/pedal-multidelay-audition-profiler-2026-08-13"
+    paths:
+      - ".github/workflows/temporary-format-pedal-audition.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply repository clang-format 10
+        uses: DoozyX/clang-format-lint-action@v0.20
+        with:
+          source: DaisyHost/tools/pedal_multidelay_audition/main.cpp
+          extensions: h,cpp
+          clangFormatVersion: 10
+          inplace: true
+          style: file
+      - name: Upload formatted source
+        uses: actions/upload-artifact@v4
+        with:
+          name: pedal-audition-main-cpp-clang-format-10
+          path: DaisyHost/tools/pedal_multidelay_audition/main.cpp
+          if-no-files-found: error
+          retention-days: 1
