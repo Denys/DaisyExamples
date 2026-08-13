@@ -183,17 +183,18 @@ second persistence system.
 
 ### Field drawer pages
 
-The Field host drawer has three page classes in the current contract:
+The Field host drawer presents three visible pages. Use the labels shown in the current UI:
 
-1. `KeyboardMidiCv`
-2. `PublicParameters`
-3. `RackAudio`
+1. **Play** (`DaisyFieldDrawerPage::kKeyboardMidiCv`): on-screen/computer-keyboard MIDI,
+   MIDI activity, CV generators and manual CV, gate, octave, and live performance input.
+2. **Mod** (`DaisyFieldDrawerPage::kPublicParameters`): eligible modulation destinations
+   plus the four modulation lanes, including source, amount, enable, and clear controls.
+3. **Rack** (`DaisyFieldDrawerPage::kRackAudio`): rack nodes, app assignment, topology,
+   test-input source, and audio-routing work.
 
-Use them as follows:
-
-- **Keyboard / MIDI / CV**: playing, octave, MIDI activity, CV source/target work;
-- **Public Parameters**: direct access to app parameters that are intentionally exposed;
-- **Rack / Audio**: node/app/topology and audio/test-input work.
+The enum names are implementation identifiers; **Play / Mod / Rack** are the operator-facing
+names. In particular, the middle page is a modulation surface in the current UI rather than
+a generic direct-parameter page.
 
 ## 5. Computer keyboard and MIDI
 
