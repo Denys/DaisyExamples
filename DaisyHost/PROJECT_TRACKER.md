@@ -1,6 +1,6 @@
 # DaisyHost Project Tracker
 
-Last updated: 2026-06-08
+Last updated: 2026-08-13
 
 Use this file as the running DaisyHost status ledger. Update it after each
 meaningful implementation or verification iteration so the active work order,
@@ -18,11 +18,14 @@ next safe starting point.
 
 Latest fully green host gate from this checkout:
 
-- `cmd /c build_host.cmd`: passed on 2026-06-03
+- `cmd /c build_host.cmd`: configured and built the complete Release target set
+  on 2026-08-13; its first CTest leg was interrupted only by the command
+  timeout after 155 passing tests, then the same generated build was resumed
+  directly with CTest
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
-  - `ctest --test-dir build -C Release --output-on-failure`: passed, `295/295`
+  - `ctest --test-dir build -C Release --output-on-failure`: passed, `337/337`
 - smoke tests included:
   - `DaisyHostNextWpSuggester`
   - `DaisyHostStandaloneSmoke`
@@ -31,12 +34,52 @@ Latest fully green host gate from this checkout:
   - `DaisyHostCliDescribeApp`
   - `DaisyHostCliDescribeBoard`
   - `DaisyHostCliValidateScenario`
+  - `DaisyHostCliRenderPedalMultiDelay`
+  - `DaisyHostCliDescribePedalMultiDelay`
   - `DaisyHostCliDoctor`
   - `DaisyHostCliRender`
   - `DaisyHostCliRenderAssertions`
   - `DaisyHostCliRenderAssertionsPass`
 
 Latest automated gate attempt:
+
+- Date: 2026-08-13
+- Request: publish the compact multi-delay guitar pedal as a DaisyHost-only
+  update without sweeping unrelated DaisyExamples workspace state into Git.
+- Result: `pedal_multidelay` is registered as a hosted app with five selectable
+  algorithms (`DIGI`, `TAPE`, `MOD`, `REV`, `FREEZE`), five performance slots,
+  explicit freeze operations, bypass/trails, tap tempo, CLI description, and a
+  non-silent five-mode render scenario. The publication boundary is a stacked
+  DaisyHost-only branch based on draft PR #9's remote head; dirty submodules,
+  Vault state, caches, experiments, agent worktrees, and the unrelated local
+  developed-programs-catalog commit remain excluded.
+- Evidence:
+  - Release `unit_tests` build passed.
+  - Focused Release CTest `-R "PedalDelay"` passed `37/37`.
+  - Release `DaisyHostCLI` build passed.
+  - `DaisyHostCliRenderPedalMultiDelay` and
+    `DaisyHostCliDescribePedalMultiDelay` passed `2/2`.
+  - The canonical wrapper configured and built `unit_tests`, `DaisyHostCLI`,
+    `DaisyHostHub`, `DaisyHostRender`, `DaisyHostPatch_VST3`, and
+    `DaisyHostPatch_Standalone`; direct resumed Release CTest passed `337/337`.
+  - Scoped `git diff --check -- DaisyHost` passed with line-ending warnings
+    only before the tracking-doc synchronization.
+- Interpretation:
+  - The host implementation is build-, unit-, CLI-, render-, standalone-smoke-,
+    and full-gate-verified in this checkout.
+  - ARM compilation, Cortex-M7 timing, SDRAM/cache behavior, pedal hardware
+    audio, DAW/VST3 loading, and manual GUI interaction were not performed and
+    remain explicitly unclaimed.
+  - Skills materially used: `github:github` for repository/publication routing
+    and `fable-instruction-critique` for the deployed scope-contract audit.
+- Next safe starting point:
+  - Recommender: `WS10 - External state / debug surface`; runner-up `TF8 -
+    Daisy Field board support`; explicitly wait on `WS9`, `WS11`, `WS12`,
+    `WS13`, `TF17`, and `TF18`.
+  - First safe slice: continue WS10 only for a concrete external-debug consumer
+    that needs more than the existing additive CLI `debugState` payload.
+
+Previous automated gate attempt:
 
 - Date: 2026-06-08
 - Request: extend `field_delay_bundle` beyond the original four source-backed

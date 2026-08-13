@@ -2,14 +2,15 @@
 
 ## Snapshot
 
-- Date: 2026-04-28
+- Date: 2026-08-13
 - Workspace: `DaisyHost/`
 - Current CMake version in source: `0.2.0`
 - Active refresh target: `0.2.0`
 - Scope: host-side Daisy Patch plugin and standalone app with a multi-app host
   layer, `MultiDelay` as the default regression fixture, `Torus` as the first
   second app, first-class `CloudSeed`, `Braids`, `Harmoniqs`, `VA Synth`,
-  `PolyOsc`, and `Subharmoniq` support, named MetaControllers for
+  `PolyOsc`, `Subharmoniq`, and the compact `pedal_multidelay` five-mode delay
+  support, named MetaControllers for
   `multidelay` and `cloudseed`, plus a
   visible two-node live rack, WS8 rack UX productionization, board factory
   seam, Field board-support shell, host-side Field native controls, Field
@@ -34,6 +35,21 @@ and per-iteration testing ledger for DaisyHost.
   `Observed UF`, evidence, and validation log
 - `CHANGELOG.md`: canonical durable release and workflow policy history
 - `README.md`: workspace overview and local-doc entrypoint
+
+## Latest Publication Verification
+
+- Date: 2026-08-13
+- Scope: DaisyHost-only `pedal_multidelay` publication slice inside the parent
+  `DaisyExamples` repository.
+- Verified: all six Release build targets completed; focused pedal CTest passed
+  `37/37`; the two pedal CLI tests passed `2/2`; full Release CTest passed
+  `337/337`, including standalone and render smoke.
+- Publication boundary: stacked branch based on draft PR #9's remote head so
+  the review diff remains DaisyHost-only. Unrelated dirty submodules, Vault
+  state, caches, experiments, agent worktrees, and the local catalog-planning
+  commit are excluded.
+- Not claimed: ARM/Cortex-M7 performance, SDRAM/cache behavior, physical pedal
+  audio, DAW/VST3 load, or manual GUI validation.
 
 ## Manager-Language Rule
 
@@ -110,6 +126,8 @@ ctest --test-dir build -C Release --output-on-failure
 - `DaisyHostCliDescribeApp`
 - `DaisyHostCliDescribeBoard`
 - `DaisyHostCliValidateScenario`
+- `DaisyHostCliRenderPedalMultiDelay`
+- `DaisyHostCliDescribePedalMultiDelay`
 - `DaisyHostCliRender`
 - `DaisyHostCliRenderAssertions`
 - `DaisyHostCliRenderAssertionsPass`
@@ -246,7 +264,7 @@ from `patch/Torus/`.
 ## Last Recorded Runtime Verification
 
 - Last fully green DaisyHost host build/test verification rerun from this
-  checkout: 2026-04-29
+  checkout: 2026-08-13 (`337/337` Release CTest)
 - Verified commands/results in the current 2026-04-29 WS10/TF11 closeout:
   - manager-readable result: TF11 is complete for the current two-node
     render-event readback contract, and WS10 now has a stronger additive CLI

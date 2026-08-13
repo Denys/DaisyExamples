@@ -7,6 +7,7 @@
 #include "daisyhost/apps/DelayFxAdaptationCore.h"
 #include "daisyhost/apps/HarmoniqsCore.h"
 #include "daisyhost/apps/MultiDelayCore.h"
+#include "daisyhost/apps/PedalDelayCore.h"
 #include "daisyhost/apps/PolyOscCore.h"
 #include "daisyhost/apps/SubharmoniqCore.h"
 #include "daisyhost/apps/TorusCore.h"
@@ -21,6 +22,11 @@ const std::vector<HostedAppRegistration> kRegistrations = {
      "Multi Delay",
      [](const std::string& nodeId) {
          return std::make_unique<apps::MultiDelayCore>(nodeId);
+     }},
+    {"pedal_multidelay",
+     "Pedal Multi-Delay",
+     [](const std::string& nodeId) {
+         return std::make_unique<apps::PedalDelayCore>(nodeId);
      }},
     {"torus",
      "Torus",
