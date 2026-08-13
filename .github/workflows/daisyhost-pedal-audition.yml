@@ -1,0 +1,81 @@
+name: DaisyHost Pedal Multi-Delay Audition
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "codex/pedal-multidelay-audition-*"
+    paths:
+      - ".github/workflows/daisyhost-pedal-audition.yml"
+      - "DaisyHost/include/daisyhost/PedalDelayEngine.h"
+      - "DaisyHost/src/PedalDelayEngine.cpp"
+      - "DaisyHost/tools/pedal_multidelay_audition/**"
+      - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
+      - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
+  pull_request:
+    paths:
+      - ".github/workflows/daisyhost-pedal-audition.yml"
+      - "DaisyHost/include/daisyhost/PedalDelayEngine.h"
+      - "DaisyHost/src/PedalDelayEngine.cpp"
+      - "DaisyHost/tools/pedal_multidelay_audition/**"
+      - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
+      - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
+
+permissions:
+  contents: read
+
+jobs:
+  host-audition:
+    name: Host audition package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+
+      - name: Configure bounded runner
+        run: >-
+          cmake
+          -S DaisyHost/tools/pedal_multidelay_audition
+          -B DaisyHost/build-audition
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build bounded runner
+        run: cmake --build DaisyHost/build-audition --config Release --parallel 2
+
+      - name: Execute audition and host profiling
+        run: >-
+          ctest
+          --test-dir DaisyHost/build-audition
+          -C Release
+          --output-on-failure
+          --verbose
+
+      - name: Verify evidence inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="DaisyHost/build-audition/audition_artifacts"
+          test -f "$root/audition_manifest.csv"
+          test -f "$root/host_profile.csv"
+          test -f "$root/host_profile_environment.json"
+
+          wav_count="$(find "$root" -maxdepth 1 -type f -name 'pedal_multidelay_audition_*.wav' | wc -l)"
+          json_count="$(find "$root" -maxdepth 1 -type f -name 'pedal_multidelay_audition_*.json' | wc -l)"
+          pass_count="$(awk -F, 'NR > 1 && $NF == "PASS" { count++ } END { print count + 0 }' "$root/audition_manifest.csv")"
+
+          test "$wav_count" -eq 15
+          test "$json_count" -eq 15
+          test "$pass_count" -eq 15
+
+          grep -q 'p99_9_us' "$root/host_profile.csv"
+          grep -q 'target_timing_claim.*NOT_RUN' "$root/host_profile_environment.json"
+
+      - name: Upload host audition evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pedal-multidelay-host-audition
+          path: DaisyHost/build-audition/audition_artifacts/
+          if-no-files-found: error
+          retention-days: 14
