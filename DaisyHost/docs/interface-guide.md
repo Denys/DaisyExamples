@@ -254,12 +254,15 @@ Generated sources have level/frequency controls where applicable. Impulse has an
 trigger. These sources exist to exercise hosted apps when live input is unavailable or
 undesirable; they do not validate analog input hardware.
 
-A useful debugging sequence is:
+In a serial rack, host or generated test input is injected at the topology's **entry node**.
+A downstream node receives the routed output of the upstream node rather than its own test
+source. A useful debugging sequence is therefore:
 
-1. keep the target node selected;
-2. choose a simple generated input such as Sine or Triangle;
+1. identify the current topology and select its entry node; if the app under test is the
+   downstream node, temporarily switch the topology to that node alone;
+2. choose a simple generated input such as Sine or Triangle for the entry/soloed node;
 3. verify app output/activity;
-4. return to `Host In`;
+4. restore the intended topology and selected node, then return to `Host In`;
 5. only then investigate the OS audio device or physical source.
 
 That separates app-path problems from Windows/driver/input problems with considerably less
