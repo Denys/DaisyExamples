@@ -1,0 +1,41 @@
+name: DaisyHost fix interface restore order once
+
+on:
+  push:
+    branches:
+      - docs/daisyhost-readme-interface-guides-2026-08-13
+    paths:
+      - .github/workflows/daisyhost_fix_interface_restore_once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: docs/daisyhost-readme-interface-guides-2026-08-13
+          fetch-depth: 0
+      - name: Patch guide and remove helper
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("DaisyHost/docs/interface-guide.md")
+          text = path.read_text(encoding="utf-8")
+          old = "4. restore the intended topology and selected node, then return to `Host In`;"
+          new = "4. while the entry/soloed node is still selected, return its source to `Host In`, then restore the intended topology and original selected node;"
+          if old not in text:
+              raise SystemExit("expected interface-guide line not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          rm .github/workflows/daisyhost_fix_interface_restore_once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add DaisyHost/docs/interface-guide.md .github/workflows/daisyhost_fix_interface_restore_once.yml
+          git diff --cached --check
+          git commit -m "docs(daisyhost): restore entry input before node selection"
+          git push origin HEAD:docs/daisyhost-readme-interface-guides-2026-08-13
