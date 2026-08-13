@@ -31,24 +31,25 @@ permissions:
   contents: read
 
 jobs:
-  host-audition:
-    name: Host audition package
-    runs-on: ubuntu-24.04
+  focused-pedal-tests:
+    name: Focused PedalDelay tests
+    runs-on: windows-2022
     timeout-minutes: 20
 
     steps:
       - name: Checkout exact revision
         uses: actions/checkout@v4
 
-      - name: Configure focused DaisyHost tests
+      - name: Configure DaisyHost test build
+        shell: pwsh
         run: >-
           cmake
           -S DaisyHost
           -B DaisyHost/build-algorithms
-          -DCMAKE_BUILD_TYPE=Release
           -DDAISYHOST_UNIT_TEST_RUN_TAG=pedal-audition-ci
 
       - name: Build DaisyHost unit tests
+        shell: pwsh
         run: >-
           cmake
           --build DaisyHost/build-algorithms
@@ -57,12 +58,23 @@ jobs:
           --parallel 2
 
       - name: Run focused PedalDelay tests
+        shell: pwsh
         run: >-
           ctest
           --test-dir DaisyHost/build-algorithms
           -C Release
           --output-on-failure
           -R PedalDelay
+
+  host-audition:
+    name: Host audition package
+    needs: focused-pedal-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
 
       - name: Configure bounded runner
         run: >-
