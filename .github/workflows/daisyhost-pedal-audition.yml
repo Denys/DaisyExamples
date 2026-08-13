@@ -15,6 +15,7 @@ on:
       - "DaisyHost/tools/pedal_multidelay_audition/**"
       - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
       - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
+      - "DaisyHost/docs/real-time-dsp-profiling-spec-v1.1.md"
   pull_request:
     paths:
       - ".github/workflows/daisyhost-pedal-audition.yml"
@@ -26,6 +27,7 @@ on:
       - "DaisyHost/tools/pedal_multidelay_audition/**"
       - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
       - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
+      - "DaisyHost/docs/real-time-dsp-profiling-spec-v1.1.md"
 
 permissions:
   contents: read
