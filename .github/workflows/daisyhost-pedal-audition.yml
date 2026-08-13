@@ -9,6 +9,9 @@ on:
       - ".github/workflows/daisyhost-pedal-audition.yml"
       - "DaisyHost/include/daisyhost/PedalDelayEngine.h"
       - "DaisyHost/src/PedalDelayEngine.cpp"
+      - "DaisyHost/include/daisyhost/apps/PedalDelayCore.h"
+      - "DaisyHost/src/apps/PedalDelayCore.cpp"
+      - "DaisyHost/tests/test_pedal_delay_core.cpp"
       - "DaisyHost/tools/pedal_multidelay_audition/**"
       - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
       - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
@@ -17,6 +20,9 @@ on:
       - ".github/workflows/daisyhost-pedal-audition.yml"
       - "DaisyHost/include/daisyhost/PedalDelayEngine.h"
       - "DaisyHost/src/PedalDelayEngine.cpp"
+      - "DaisyHost/include/daisyhost/apps/PedalDelayCore.h"
+      - "DaisyHost/src/apps/PedalDelayCore.cpp"
+      - "DaisyHost/tests/test_pedal_delay_core.cpp"
       - "DaisyHost/tools/pedal_multidelay_audition/**"
       - "DaisyHost/training/examples/pedal_multidelay_audition_matrix.csv"
       - "DaisyHost/docs/pedal-multidelay-audition-work-package-v0.2.md"
@@ -28,11 +34,35 @@ jobs:
   host-audition:
     name: Host audition package
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
 
     steps:
       - name: Checkout exact revision
         uses: actions/checkout@v4
+
+      - name: Configure focused DaisyHost tests
+        run: >-
+          cmake
+          -S DaisyHost
+          -B DaisyHost/build-algorithms
+          -DCMAKE_BUILD_TYPE=Release
+          -DDAISYHOST_UNIT_TEST_RUN_TAG=pedal-audition-ci
+
+      - name: Build DaisyHost unit tests
+        run: >-
+          cmake
+          --build DaisyHost/build-algorithms
+          --config Release
+          --target unit_tests
+          --parallel 2
+
+      - name: Run focused PedalDelay tests
+        run: >-
+          ctest
+          --test-dir DaisyHost/build-algorithms
+          -C Release
+          --output-on-failure
+          -R PedalDelay
 
       - name: Configure bounded runner
         run: >-
