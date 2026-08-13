@@ -266,12 +266,15 @@ In a serial rack, host or generated test input is injected at the topology's **e
 A downstream node receives the routed output of the upstream node rather than its own test
 source. A useful debugging sequence is therefore:
 
-1. identify the current topology and select its entry node; if the app under test is the
-   downstream node, temporarily switch the topology to that node alone;
+1. record the current topology and selected node; select the current topology entry node;
+   if the app under test is downstream, temporarily switch the topology to that node alone
+   and select that now-soloed node;
 2. choose a simple generated input such as Sine or Triangle for the entry/soloed node;
 3. verify app output/activity;
-4. restore the intended topology and selected node, then return to `Host In`;
-5. only then investigate the OS audio device or physical source.
+4. **while that entry/soloed node is still selected**, return its test-input source to
+   `Host In`;
+5. restore the intended topology and the original selected node;
+6. only then investigate the OS audio device or physical source.
 
 That separates app-path problems from Windows/driver/input problems with considerably less
 ritual sacrifice.
