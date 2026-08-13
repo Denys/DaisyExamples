@@ -96,6 +96,24 @@ struct ParameterDescriptor
     float         nativeMaximum   = 1.0f;
     float         nativeDefault   = 0.0f;
     int           nativePrecision = 2;
+
+    // Pedal control contract. Appended after the legacy fields so existing
+    // positional aggregate initialisers keep compiling.
+    //
+    // slotId: musician-facing panel slot ("TIME", "FEEDBACK", ...). Empty when
+    //   the parameter is not one of the five pedal performance slots.
+    // engineeringLabel: physically/DSP meaningful name for `label`. Empty
+    //   means "not declared"; pedal-style apps fill it for every control.
+    // curve: linear | log | bipolar | custom.
+    // dspTargets: exact internal parameters this control writes. A macro
+    //   enumerates every one of them.
+    std::string              slotId;
+    std::string              engineeringLabel;
+    std::string              curve;
+    std::vector<std::string> dspTargets;
+    float                    smoothingMs = 0.0f;
+    bool                     isMacro     = false;
+    bool                     provisional = false;
 };
 
 struct MetaControllerDescriptor

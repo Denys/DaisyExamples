@@ -236,6 +236,21 @@ juce::var ParameterVar(const ParameterDescriptor& parameter)
     auto object = std::make_unique<juce::DynamicObject>();
     object->setProperty("id", StringVar(parameter.id));
     object->setProperty("label", StringVar(parameter.label));
+    object->setProperty("slotId", StringVar(parameter.slotId));
+    object->setProperty("engineeringLabel",
+                        StringVar(parameter.engineeringLabel));
+    object->setProperty("curve", StringVar(parameter.curve));
+    object->setProperty("smoothingMs", parameter.smoothingMs);
+    object->setProperty("isMacro", parameter.isMacro);
+    object->setProperty("provisional", parameter.provisional);
+    {
+        juce::Array<juce::var> targets;
+        for(const auto& target : parameter.dspTargets)
+        {
+            targets.add(StringVar(target));
+        }
+        object->setProperty("dspTargets", juce::var(targets));
+    }
     object->setProperty("normalizedValue", parameter.normalizedValue);
     object->setProperty("defaultNormalizedValue",
                         parameter.defaultNormalizedValue);

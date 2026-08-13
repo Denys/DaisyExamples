@@ -1,0 +1,96 @@
+{
+  "appId": "pedal_multidelay",
+  "renderConfig": {
+    "sampleRate": 48000,
+    "blockSize": 48,
+    "durationSeconds": 5.0,
+    "outputChannelCount": 2
+  },
+  "seed": 17,
+  "initialParameterValues": {
+    "node0/param/time": 0.45,
+    "node0/param/feedback": 0.5,
+    "node0/param/mix": 0.7,
+    "node0/param/color": 0.8,
+    "node0/param/motion": 0.1
+  },
+  "audioInput": {
+    "mode": "sine",
+    "level": 6.0,
+    "frequencyHz": 220.0
+  },
+  "timeline": [
+    {
+      "timeSeconds": 0.4,
+      "type": "parameter_set",
+      "parameterId": "node0/param/time",
+      "normalizedValue": 0.2
+    },
+    {
+      "timeSeconds": 0.8,
+      "type": "parameter_set",
+      "parameterId": "node0/param/mode",
+      "normalizedValue": 0.25
+    },
+    {
+      "timeSeconds": 1.2,
+      "type": "parameter_set",
+      "parameterId": "node0/param/color",
+      "normalizedValue": 0.9
+    },
+    {
+      "timeSeconds": 1.6,
+      "type": "parameter_set",
+      "parameterId": "node0/param/motion",
+      "normalizedValue": 0.75
+    },
+    {
+      "timeSeconds": 2.0,
+      "type": "parameter_set",
+      "parameterId": "node0/param/mode",
+      "normalizedValue": 0.5
+    },
+    {
+      "timeSeconds": 2.2,
+      "type": "audio_input_config",
+      "mode": "triangle",
+      "frequencyHz": 165.0
+    },
+    {
+      "timeSeconds": 2.8,
+      "type": "parameter_set",
+      "parameterId": "node0/param/mode",
+      "normalizedValue": 0.75
+    },
+    {
+      "timeSeconds": 3.2,
+      "type": "parameter_set",
+      "parameterId": "node0/param/feedback",
+      "normalizedValue": 0.35
+    },
+    {
+      "timeSeconds": 3.6,
+      "type": "parameter_set",
+      "parameterId": "node0/param/mode",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 3.7,
+      "type": "parameter_set",
+      "parameterId": "node0/param/freeze_state",
+      "normalizedValue": 0.25
+    },
+    {
+      "timeSeconds": 4.4,
+      "type": "parameter_set",
+      "parameterId": "node0/param/bypass",
+      "normalizedValue": 1.0
+    },
+    {
+      "timeSeconds": 4.7,
+      "type": "parameter_set",
+      "parameterId": "node0/param/bypass",
+      "normalizedValue": 0.0
+    }
+  ]
+}
