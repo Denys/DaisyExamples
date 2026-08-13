@@ -69,8 +69,8 @@ namespace apps
         PedalDelayEngine&       GetEngine() { return engine_; }
         const PedalDelayEngine& GetEngine() const { return engine_; }
         // Parameter ids of exactly the five performance slots, in slot order.
-        std::array<std::string, kPedalSlotCount> GetPerformanceSlotParameterIds()
-            const;
+        std::array<std::string, kPedalSlotCount>
+                    GetPerformanceSlotParameterIds() const;
         std::string FormatSlotValue(PedalSlot slot) const;
 
         static std::string MakeParameterId(const std::string& nodeId,
@@ -95,28 +95,28 @@ namespace apps
         static const char* SlotSuffix(PedalSlot slot);
         static const char* ModeSuffix(PedalDelayMode mode);
 
-        void  ApplySlot(PedalSlot slot, float normalizedValue, bool updateBase);
-        void  SelectMode(PedalDelayMode mode);
-        void  RefreshSnapshots();
-        void  RefreshParameters();
-        void  BuildMenuModel();
-        void  BuildDisplay();
-        void  MoveSelection(int delta);
-        void  PressSelectedItem();
-        void  ConsumeGateInput();
+        void ApplySlot(PedalSlot slot, float normalizedValue, bool updateBase);
+        void SelectMode(PedalDelayMode mode);
+        void RefreshSnapshots();
+        void RefreshParameters();
+        void BuildMenuModel();
+        void BuildDisplay();
+        void MoveSelection(int delta);
+        void PressSelectedItem();
+        void ConsumeGateInput();
         std::string StripPrefix(const std::string& value,
                                 const std::string& prefix) const;
         std::string StripMenuItemPrefix(const std::string& itemId,
                                         const char*        section) const;
-        const ParameterDescriptor* FindParameter(
-            const std::string& parameterId) const;
+        const ParameterDescriptor*
+        FindParameter(const std::string& parameterId) const;
 
-        std::string      nodeId_;
+        std::string nodeId_;
         // Cached so Process() never constructs a port-id string.
-        std::string      gateInputPortId_;
-        std::string      audioOutputPortId1_;
-        std::string      audioOutputPortId2_;
-        PedalDelayEngine engine_;
+        std::string        gateInputPortId_;
+        std::string        audioOutputPortId1_;
+        std::string        audioOutputPortId2_;
+        PedalDelayEngine   engine_;
         std::vector<float> historyStorage_;
         std::vector<float> freezeStorage_;
         std::vector<float> scratchLeft_;
@@ -133,10 +133,10 @@ namespace apps
         std::unordered_map<std::string, PortValue> portInputs_;
         std::unordered_map<std::string, PortValue> portOutputs_;
 
-        PedalSlot   lastTouchedSlot_ = PedalSlot::kTime;
-        double      uiClockMs_       = 0.0;
-        bool        encoderPressed_  = false;
-        bool        gateHigh_        = false;
+        PedalSlot lastTouchedSlot_ = PedalSlot::kTime;
+        double    uiClockMs_       = 0.0;
+        bool      encoderPressed_  = false;
+        bool      gateHigh_        = false;
     };
 } // namespace apps
 } // namespace daisyhost

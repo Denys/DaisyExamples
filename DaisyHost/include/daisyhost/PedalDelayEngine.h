@@ -57,31 +57,31 @@ static constexpr std::size_t kPedalDelayModeCount
     = static_cast<std::size_t>(PedalDelayMode::kCount);
 static constexpr std::size_t kPedalSlotCount
     = static_cast<std::size_t>(PedalSlot::kCount);
-static constexpr std::size_t kPedalChannelCount   = 2;
-static constexpr std::size_t kPedalMaxDspTargets  = 4;
+static constexpr std::size_t kPedalChannelCount  = 2;
+static constexpr std::size_t kPedalMaxDspTargets = 4;
 
 // One row of the product/UI contract: musician label plus the engineering
 // meaning it actually writes.
 struct PedalSlotDescriptor
 {
-    const char* slotId           = "";
-    const char* musicianLabel    = "";
-    const char* engineeringLabel = "";
-    const char* unit             = "";
-    const char* curve            = "linear";
-    float       minimum          = 0.0f;
-    float       maximum          = 1.0f;
-    float       defaultValue     = 0.0f;
-    float       smoothingMs      = 0.0f;
-    const char* clockwiseMeaning = "";
-    const char* audibleEffect    = "";
-    bool        isMacro          = false;
-    bool        provisional      = true;
+    const char*                                  slotId           = "";
+    const char*                                  musicianLabel    = "";
+    const char*                                  engineeringLabel = "";
+    const char*                                  unit             = "";
+    const char*                                  curve            = "linear";
+    float                                        minimum          = 0.0f;
+    float                                        maximum          = 1.0f;
+    float                                        defaultValue     = 0.0f;
+    float                                        smoothingMs      = 0.0f;
+    const char*                                  clockwiseMeaning = "";
+    const char*                                  audibleEffect    = "";
+    bool                                         isMacro          = false;
+    bool                                         provisional      = true;
     std::array<const char*, kPedalMaxDspTargets> dspTargets{};
 };
 
-const char* PedalDelayModeName(PedalDelayMode mode);
-const char* PedalFreezeStateName(PedalFreezeState state);
+const char*                PedalDelayModeName(PedalDelayMode mode);
+const char*                PedalFreezeStateName(PedalFreezeState state);
 const PedalSlotDescriptor& GetPedalSlotDescriptor(PedalDelayMode mode,
                                                   PedalSlot      slot);
 
@@ -203,11 +203,11 @@ class PedalDelayEngine
     void  SnapSmoothingToTargets();
     float LowpassCoefficient(float cutoffHz) const;
 
-    float*      history_              = nullptr;
-    std::size_t historySamples_       = 0;
-    float*      freezeLoop_           = nullptr;
-    std::size_t freezeSamples_        = 0;
-    std::size_t writeIndex_           = 0;
+    float*      history_        = nullptr;
+    std::size_t historySamples_ = 0;
+    float*      freezeLoop_     = nullptr;
+    std::size_t freezeSamples_  = 0;
+    std::size_t writeIndex_     = 0;
 
     double      sampleRate_   = 48000.0;
     std::size_t maxBlockSize_ = 48;
@@ -224,22 +224,22 @@ class PedalDelayEngine
     std::array<float, kPedalSlotCount> smoothingCoefficient_{};
 
     std::array<ChannelState, kPedalChannelCount> channels_{};
-    Lfo   modLfo_;
-    Lfo   driftLfo_;
-    Lfo   wowLfo_;
-    Lfo   flutterLfo_;
-    Lfo   evolveLfo_;
-    float revGrainPhase_ = 0.0f;
+    Lfo                                          modLfo_;
+    Lfo                                          driftLfo_;
+    Lfo                                          wowLfo_;
+    Lfo                                          flutterLfo_;
+    Lfo                                          evolveLfo_;
+    float                                        revGrainPhase_ = 0.0f;
 
     PedalFreezeState freezeState_        = PedalFreezeState::kIdle;
     std::size_t      freezeLoopLength_   = 0;
     std::size_t      freezeCaptureCount_ = 0;
     float            freezeReadIndex_    = 0.0f;
 
-    bool   bypassed_    = false;
-    bool   trails_      = true;
-    double lastTapMs_   = -1.0;
-    float  tapTempoMs_  = 0.0f;
-    bool   prepared_    = false;
+    bool   bypassed_   = false;
+    bool   trails_     = true;
+    double lastTapMs_  = -1.0;
+    float  tapTempoMs_ = 0.0f;
+    bool   prepared_   = false;
 };
 } // namespace daisyhost

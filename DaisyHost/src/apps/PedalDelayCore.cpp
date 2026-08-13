@@ -42,11 +42,10 @@ namespace apps
 
         std::string FormatValue(float value, const char* unit)
         {
-            char buffer[48];
+            char        buffer[48];
             const float magnitude = std::abs(value);
-            const int   precision = magnitude >= 100.0f ? 0
-                                    : magnitude >= 10.0f ? 1
-                                                         : 2;
+            const int   precision
+                = magnitude >= 100.0f ? 0 : magnitude >= 10.0f ? 1 : 2;
             std::snprintf(buffer,
                           sizeof(buffer),
                           "%.*f %s",
@@ -76,7 +75,7 @@ namespace apps
 
         constexpr std::size_t kModeKeyBase   = 3; // A4..A8
         constexpr std::size_t kFreezeKeyBase = 8; // B1..B5
-    } // namespace
+    }                                             // namespace
 
     PedalDelayCore::PedalDelayCore(const std::string& nodeId)
     : nodeId_(nodeId),
@@ -104,10 +103,7 @@ namespace apps
         ResetToDefaultState(0);
     }
 
-    std::string PedalDelayCore::GetAppId() const
-    {
-        return "pedal_multidelay";
-    }
+    std::string PedalDelayCore::GetAppId() const { return "pedal_multidelay"; }
 
     std::string PedalDelayCore::GetAppDisplayName() const
     {
@@ -126,16 +122,15 @@ namespace apps
     HostedAppPatchBindings PedalDelayCore::GetPatchBindings() const
     {
         HostedAppPatchBindings bindings;
-        const auto slotIds = GetPerformanceSlotParameterIds();
+        const auto             slotIds = GetPerformanceSlotParameterIds();
 
         // Patch exposes four knobs; the fifth slot lives on the encoder menu.
         for(std::size_t slot = 0; slot < 4; ++slot)
         {
             const auto& descriptor = GetPedalSlotDescriptor(
                 engine_.GetMode(), static_cast<PedalSlot>(slot));
-            bindings.knobControlIds[slot]
-                = MakeControlId(nodeId_,
-                                SlotSuffix(static_cast<PedalSlot>(slot)));
+            bindings.knobControlIds[slot] = MakeControlId(
+                nodeId_, SlotSuffix(static_cast<PedalSlot>(slot)));
             bindings.knobParameterIds[slot] = slotIds[slot];
             bindings.knobDetailLabels[slot]
                 = std::string(descriptor.musicianLabel) + " - "
@@ -147,16 +142,15 @@ namespace apps
         {
             const auto& descriptor = GetPedalSlotDescriptor(
                 engine_.GetMode(), static_cast<PedalSlot>(slot));
-            bindings.fieldKnobControlIds[slot]
-                = MakeControlId(nodeId_,
-                                SlotSuffix(static_cast<PedalSlot>(slot)));
+            bindings.fieldKnobControlIds[slot] = MakeControlId(
+                nodeId_, SlotSuffix(static_cast<PedalSlot>(slot)));
             bindings.fieldKnobParameterIds[slot] = slotIds[slot];
             bindings.fieldKnobDetailLabels[slot]
                 = std::string(descriptor.musicianLabel) + " - "
                   + descriptor.engineeringLabel;
         }
 
-        static const std::array<const char*, 16> kKeyItems = {{
+        static const std::array<const char*, 16> kKeyItems  = {{
             "bypass",
             "tap",
             "trails",
@@ -303,8 +297,7 @@ namespace apps
     void PedalDelayCore::SetControl(const std::string& controlId,
                                     float              normalizedValue)
     {
-        const auto suffix
-            = StripPrefix(controlId, nodeId_ + "/control/");
+        const auto suffix = StripPrefix(controlId, nodeId_ + "/control/");
         if(suffix.empty())
         {
             return;
@@ -322,10 +315,7 @@ namespace apps
         SetParameterValue(MakeParameterId(nodeId_, suffix), normalizedValue);
     }
 
-    void PedalDelayCore::SetEncoderDelta(int delta)
-    {
-        MenuRotate(delta);
-    }
+    void PedalDelayCore::SetEncoderDelta(int delta) { MenuRotate(delta); }
 
     void PedalDelayCore::SetEncoderPress(bool pressed)
     {
@@ -403,9 +393,8 @@ namespace apps
         {
             const std::size_t stateCount
                 = static_cast<std::size_t>(PedalFreezeState::kCount);
-            const std::size_t index = static_cast<std::size_t>(
-                std::lround(Clamp01(normalizedValue)
-                            * static_cast<float>(stateCount - 1)));
+            const std::size_t index = static_cast<std::size_t>(std::lround(
+                Clamp01(normalizedValue) * static_cast<float>(stateCount - 1)));
             engine_.SetFreezeState(static_cast<PedalFreezeState>(index));
             RefreshSnapshots();
             return true;
@@ -422,9 +411,9 @@ namespace apps
         return false;
     }
 
-    bool PedalDelayCore::SetEffectiveParameterValue(
-        const std::string& parameterId,
-        float              normalizedValue)
+    bool
+    PedalDelayCore::SetEffectiveParameterValue(const std::string& parameterId,
+                                               float normalizedValue)
     {
         const auto suffix = StripPrefix(parameterId, nodeId_ + "/param/");
         if(suffix.empty() || !std::isfinite(normalizedValue))
@@ -555,8 +544,7 @@ namespace apps
                         nodeId_,
                         std::string(
                             ModeSuffix(static_cast<PedalDelayMode>(mode)))
-                            + "."
-                            + SlotSuffix(static_cast<PedalSlot>(slot))),
+                            + "." + SlotSuffix(static_cast<PedalSlot>(slot))),
                     baseNormalized_[mode][slot]);
             }
         }
@@ -593,8 +581,8 @@ namespace apps
             engine_.SetTrails(trailsIt->second >= 0.5f);
         }
 
-        auto              requested = engine_.GetMode();
-        const auto        modeIt    = values.find(MakeParameterId(nodeId_, "mode"));
+        auto       requested = engine_.GetMode();
+        const auto modeIt    = values.find(MakeParameterId(nodeId_, "mode"));
         if(modeIt != values.end())
         {
             const std::size_t index = static_cast<std::size_t>(
@@ -605,15 +593,13 @@ namespace apps
         SelectMode(requested);
     }
 
-    const std::vector<ParameterDescriptor>& PedalDelayCore::GetParameters() const
+    const std::vector<ParameterDescriptor>&
+    PedalDelayCore::GetParameters() const
     {
         return parameters_;
     }
 
-    const MenuModel& PedalDelayCore::GetMenuModel() const
-    {
-        return menu_;
-    }
+    const MenuModel& PedalDelayCore::GetMenuModel() const { return menu_; }
 
     void PedalDelayCore::MenuRotate(int delta)
     {
@@ -890,24 +876,23 @@ namespace apps
         parameters_.clear();
 
         ParameterDescriptor modeParameter;
-        modeParameter.id              = MakeParameterId(nodeId_, "mode");
-        modeParameter.label           = "MODE";
+        modeParameter.id               = MakeParameterId(nodeId_, "mode");
+        modeParameter.label            = "MODE";
         modeParameter.engineeringLabel = "Active delay algorithm selection";
-        modeParameter.curve           = "linear";
-        modeParameter.dspTargets      = {"algorithm_registry.active_mode"};
+        modeParameter.curve            = "linear";
+        modeParameter.dspTargets       = {"algorithm_registry.active_mode"};
         modeParameter.normalizedValue
             = static_cast<float>(engine_.GetMode())
               / static_cast<float>(kPedalDelayModeCount - 1);
         modeParameter.defaultNormalizedValue   = 0.0f;
         modeParameter.effectiveNormalizedValue = modeParameter.normalizedValue;
         modeParameter.unitLabel                = "state";
-        modeParameter.stepCount  = static_cast<int>(kPedalDelayModeCount);
-        modeParameter.role       = ParameterRole::kGeneric;
-        modeParameter.automatable = false;
-        modeParameter.stateful    = true;
-        modeParameter.menuEditable = true;
-        modeParameter.nativeMinimum
-            = 0.0f;
+        modeParameter.stepCount     = static_cast<int>(kPedalDelayModeCount);
+        modeParameter.role          = ParameterRole::kGeneric;
+        modeParameter.automatable   = false;
+        modeParameter.stateful      = true;
+        modeParameter.menuEditable  = true;
+        modeParameter.nativeMinimum = 0.0f;
         modeParameter.nativeMaximum
             = static_cast<float>(kPedalDelayModeCount - 1);
         modeParameter.nativePrecision = 0;
@@ -916,9 +901,9 @@ namespace apps
         const auto modeIndex = static_cast<std::size_t>(engine_.GetMode());
         for(std::size_t slot = 0; slot < kPedalSlotCount; ++slot)
         {
-            const auto  pedalSlot  = static_cast<PedalSlot>(slot);
-            const auto& source     = GetPedalSlotDescriptor(engine_.GetMode(),
-                                                        pedalSlot);
+            const auto  pedalSlot = static_cast<PedalSlot>(slot);
+            const auto& source
+                = GetPedalSlotDescriptor(engine_.GetMode(), pedalSlot);
             ParameterDescriptor descriptor;
             descriptor.id     = MakeParameterId(nodeId_, SlotSuffix(pedalSlot));
             descriptor.label  = source.musicianLabel;
@@ -932,26 +917,24 @@ namespace apps
                     descriptor.dspTargets.emplace_back(target);
                 }
             }
-            descriptor.smoothingMs = source.smoothingMs;
-            descriptor.isMacro     = source.isMacro;
-            descriptor.provisional = source.provisional;
+            descriptor.smoothingMs     = source.smoothingMs;
+            descriptor.isMacro         = source.isMacro;
+            descriptor.provisional     = source.provisional;
             descriptor.normalizedValue = baseNormalized_[modeIndex][slot];
-            descriptor.defaultNormalizedValue
-                = engine_.NativeToNormalized(engine_.GetMode(),
-                                             pedalSlot,
-                                             source.defaultValue);
+            descriptor.defaultNormalizedValue = engine_.NativeToNormalized(
+                engine_.GetMode(), pedalSlot, source.defaultValue);
             descriptor.effectiveNormalizedValue
                 = engine_.GetSlotNormalized(pedalSlot);
-            descriptor.unitLabel      = source.unit;
-            descriptor.stepCount      = 0;
-            descriptor.role           = RoleForSlot(pedalSlot);
-            descriptor.importanceRank = static_cast<int>(slot) + 1;
-            descriptor.automatable    = true;
-            descriptor.stateful       = true;
-            descriptor.menuEditable   = true;
-            descriptor.nativeMinimum  = source.minimum;
-            descriptor.nativeMaximum  = source.maximum;
-            descriptor.nativeDefault  = source.defaultValue;
+            descriptor.unitLabel       = source.unit;
+            descriptor.stepCount       = 0;
+            descriptor.role            = RoleForSlot(pedalSlot);
+            descriptor.importanceRank  = static_cast<int>(slot) + 1;
+            descriptor.automatable     = true;
+            descriptor.stateful        = true;
+            descriptor.menuEditable    = true;
+            descriptor.nativeMinimum   = source.minimum;
+            descriptor.nativeMaximum   = source.maximum;
+            descriptor.nativeDefault   = source.defaultValue;
             descriptor.nativePrecision = 2;
             parameters_.push_back(descriptor);
         }
@@ -962,20 +945,20 @@ namespace apps
                                       const char* target,
                                       float       value) {
             ParameterDescriptor descriptor;
-            descriptor.id                = MakeParameterId(nodeId_, suffix);
-            descriptor.label             = label;
-            descriptor.engineeringLabel  = engineering;
-            descriptor.curve             = "linear";
-            descriptor.dspTargets        = {target};
-            descriptor.normalizedValue   = value;
+            descriptor.id               = MakeParameterId(nodeId_, suffix);
+            descriptor.label            = label;
+            descriptor.engineeringLabel = engineering;
+            descriptor.curve            = "linear";
+            descriptor.dspTargets       = {target};
+            descriptor.normalizedValue  = value;
             descriptor.effectiveNormalizedValue = value;
-            descriptor.unitLabel         = "state";
-            descriptor.stepCount         = 2;
-            descriptor.automatable       = false;
-            descriptor.stateful          = true;
-            descriptor.menuEditable      = true;
-            descriptor.nativeMaximum     = 1.0f;
-            descriptor.nativePrecision   = 0;
+            descriptor.unitLabel                = "state";
+            descriptor.stepCount                = 2;
+            descriptor.automatable              = false;
+            descriptor.stateful                 = true;
+            descriptor.menuEditable             = true;
+            descriptor.nativeMaximum            = 1.0f;
+            descriptor.nativePrecision          = 0;
             parameters_.push_back(descriptor);
         };
         addSwitch("bypass",
@@ -998,7 +981,8 @@ namespace apps
         freezeState.id    = MakeParameterId(nodeId_, "freeze_state");
         freezeState.label = "FREEZE STATE";
         freezeState.engineeringLabel
-            = "Freeze loop state machine (idle/capture/hold/accumulate/replace)";
+            = "Freeze loop state machine "
+              "(idle/capture/hold/accumulate/replace)";
         freezeState.curve      = "linear";
         freezeState.dspTargets = {"freeze_loop.state"};
         freezeState.normalizedValue
@@ -1009,10 +993,10 @@ namespace apps
         freezeState.unitLabel                = "state";
         freezeState.stepCount                = static_cast<int>(
             static_cast<std::size_t>(PedalFreezeState::kCount));
-        freezeState.automatable    = false;
-        freezeState.stateful       = false;
-        freezeState.menuEditable   = true;
-        freezeState.nativeMaximum  = static_cast<float>(
+        freezeState.automatable   = false;
+        freezeState.stateful      = false;
+        freezeState.menuEditable  = true;
+        freezeState.nativeMaximum = static_cast<float>(
             static_cast<std::size_t>(PedalFreezeState::kCount) - 1);
         freezeState.nativePrecision = 0;
         parameters_.push_back(freezeState);
@@ -1024,8 +1008,8 @@ namespace apps
         const bool wasEditing = menu_.isEditing;
         const auto stack      = menu_.sectionStack;
         const auto sectionId  = menu_.currentSectionId.empty()
-                                    ? MakeMenuSectionId(nodeId_, "root")
-                                    : menu_.currentSectionId;
+                                   ? MakeMenuSectionId(nodeId_, "root")
+                                   : menu_.currentSectionId;
         std::unordered_map<std::string, int> selections;
         for(const auto& section : menu_.sections)
         {
@@ -1144,10 +1128,10 @@ namespace apps
         menu_.sections.push_back(engineering);
 
         MenuSection switches;
-        switches.id    = MakeMenuSectionId(nodeId_, "switches");
-        switches.title = "Switches";
-        const auto addSwitchItem = [this, &switches](const char* id,
-                                                     const char* label,
+        switches.id              = MakeMenuSectionId(nodeId_, "switches");
+        switches.title           = "Switches";
+        const auto addSwitchItem = [this, &switches](const char*        id,
+                                                     const char*        label,
                                                      const std::string& value) {
             switches.items.push_back({MakeMenuItemId(nodeId_, "switches", id),
                                       label,
@@ -1176,10 +1160,8 @@ namespace apps
             const auto it = selections.find(section.id);
             if(it != selections.end() && !section.items.empty())
             {
-                section.selectedIndex
-                    = std::clamp(it->second,
-                                 0,
-                                 static_cast<int>(section.items.size()) - 1);
+                section.selectedIndex = std::clamp(
+                    it->second, 0, static_cast<int>(section.items.size()) - 1);
             }
             if(section.id == menu_.currentSectionId)
             {
@@ -1195,7 +1177,8 @@ namespace apps
 
         display_       = {};
         display_.title = GetAppDisplayName();
-        display_.mode  = menu_.isOpen ? DisplayMode::kMenu : DisplayMode::kStatus;
+        display_.mode
+            = menu_.isOpen ? DisplayMode::kMenu : DisplayMode::kStatus;
         display_.texts.push_back(
             {0,
              0,
@@ -1211,14 +1194,15 @@ namespace apps
              std::string(source.slotId) + " - " + source.musicianLabel,
              false});
         display_.texts.push_back({0, 22, source.engineeringLabel, false});
+        display_.texts.push_back({0,
+                                  32,
+                                  FormatSlotValue(lastTouchedSlot_) + "  ["
+                                      + FormatValue(source.minimum, "") + ".."
+                                      + FormatValue(source.maximum, source.unit)
+                                      + "]",
+                                  false});
         display_.texts.push_back(
-            {0,
-             32,
-             FormatSlotValue(lastTouchedSlot_) + "  ["
-                 + FormatValue(source.minimum, "") + ".."
-                 + FormatValue(source.maximum, source.unit) + "]",
-             false});
-        display_.texts.push_back({0, 42, "Target: " + JoinTargets(source), false});
+            {0, 42, "Target: " + JoinTargets(source), false});
         display_.bars.push_back(
             {0, 56, 128, 6, engine_.GetSlotNormalized(lastTouchedSlot_)});
         display_.revision += 1;
@@ -1336,23 +1320,21 @@ namespace apps
         return value.substr(prefix.size());
     }
 
-    std::string
-    PedalDelayCore::StripMenuItemPrefix(const std::string& itemId,
-                                        const char*        section) const
+    std::string PedalDelayCore::StripMenuItemPrefix(const std::string& itemId,
+                                                    const char* section) const
     {
-        return StripPrefix(itemId,
-                           nodeId_ + "/menu/" + section + "/");
+        return StripPrefix(itemId, nodeId_ + "/menu/" + section + "/");
     }
 
     const ParameterDescriptor*
     PedalDelayCore::FindParameter(const std::string& parameterId) const
     {
-        const auto it
-            = std::find_if(parameters_.begin(),
-                           parameters_.end(),
-                           [&parameterId](const ParameterDescriptor& parameter) {
-                               return parameter.id == parameterId;
-                           });
+        const auto it = std::find_if(
+            parameters_.begin(),
+            parameters_.end(),
+            [&parameterId](const ParameterDescriptor& parameter) {
+                return parameter.id == parameterId;
+            });
         return it != parameters_.end() ? &(*it) : nullptr;
     }
 } // namespace apps

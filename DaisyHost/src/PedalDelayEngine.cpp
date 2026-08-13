@@ -17,10 +17,7 @@ namespace
         return a + (b - a) * std::clamp(amount, 0.0f, 1.0f);
     }
 
-    float Sanitize(float value)
-    {
-        return std::isfinite(value) ? value : 0.0f;
-    }
+    float Sanitize(float value) { return std::isfinite(value) ? value : 0.0f; }
 
     float FlushDenormal(float value)
     {
@@ -69,20 +66,19 @@ namespace
         }
         if(u > 1.0f - t)
         {
-            return 0.5f
-                   - 0.5f * std::cos(3.14159265358979f * (1.0f - u) / t);
+            return 0.5f - 0.5f * std::cos(3.14159265358979f * (1.0f - u) / t);
         }
         return 1.0f;
     }
 
     // Internal, documented constants. They are not user controls.
-    constexpr float kDigiDriftRateHz    = 0.31f;
-    constexpr float kTapeDriftRateHz    = 0.09f;
-    constexpr float kTapeWowRateHz      = 1.10f;
-    constexpr float kTapeFlutterRateHz  = 11.30f;
-    constexpr float kTapeDriftDepthMs   = 8.0f;
-    constexpr float kTapeWowDepthMs     = 3.0f;
-    constexpr float kTapeFlutterDepthMs = 0.6f;
+    constexpr float kDigiDriftRateHz     = 0.31f;
+    constexpr float kTapeDriftRateHz     = 0.09f;
+    constexpr float kTapeWowRateHz       = 1.10f;
+    constexpr float kTapeFlutterRateHz   = 11.30f;
+    constexpr float kTapeDriftDepthMs    = 8.0f;
+    constexpr float kTapeWowDepthMs      = 3.0f;
+    constexpr float kTapeFlutterDepthMs  = 0.6f;
     constexpr float kFreezeInjectionGain = 0.5f;
     constexpr float kMinTapMs            = 100.0f;
     constexpr float kMaxTapMs            = 2000.0f;
@@ -97,134 +93,372 @@ namespace
         static const std::array<Slots, kPedalDelayModeCount> kTable = {{
             // DIGI
             Slots{{
-                {"TIME", "TIME", "Fractional forward-read delay time", "ms",
-                 "log", 20.0f, 2000.0f, 400.0f, 60.0f, "longer delay",
-                 "repeats move further apart", false, true,
+                {"TIME",
+                 "TIME",
+                 "Fractional forward-read delay time",
+                 "ms",
+                 "log",
+                 20.0f,
+                 2000.0f,
+                 400.0f,
+                 60.0f,
+                 "longer delay",
+                 "repeats move further apart",
+                 false,
+                 true,
                  {"history.read_delay_ms"}},
-                {"FEEDBACK", "REPEATS", "Feedback-loop gain coefficient",
-                 "ratio", "linear", 0.0f, 0.95f, 0.35f, 20.0f, "more repeats",
-                 "repeats last longer", false, true,
+                {"FEEDBACK",
+                 "REPEATS",
+                 "Feedback-loop gain coefficient",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 0.95f,
+                 0.35f,
+                 20.0f,
+                 "more repeats",
+                 "repeats last longer",
+                 false,
+                 true,
                  {"feedback_conditioner.loop_gain"}},
-                {"MIX", "MIX", "Wet/dry linear crossfade gain", "ratio",
-                 "linear", 0.0f, 1.0f, 0.35f, 20.0f, "more wet",
-                 "delay louder against the dry signal", false, true,
+                {"MIX",
+                 "MIX",
+                 "Wet/dry linear crossfade gain",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.35f,
+                 20.0f,
+                 "more wet",
+                 "delay louder against the dry signal",
+                 false,
+                 true,
                  {"output.wet_dry_crossfade"}},
-                {"COLOR", "BRIGHT", "Feedback-path high-cut LPF cutoff", "Hz",
-                 "log", 500.0f, 12000.0f, 6000.0f, 30.0f, "brighter repeats",
-                 "repeats keep more high frequency content", false, true,
+                {"COLOR",
+                 "BRIGHT",
+                 "Feedback-path high-cut LPF cutoff",
+                 "Hz",
+                 "log",
+                 500.0f,
+                 12000.0f,
+                 6000.0f,
+                 30.0f,
+                 "brighter repeats",
+                 "repeats keep more high frequency content",
+                 false,
+                 true,
                  {"feedback_conditioner.lpf_fc_hz"}},
-                {"MOTION", "DRIFT", "Fractional delay-read modulation depth",
-                 "ms", "linear", 0.0f, 5.0f, 0.0f, 50.0f, "more drift",
+                {"MOTION",
+                 "DRIFT",
+                 "Fractional delay-read modulation depth",
+                 "ms",
+                 "linear",
+                 0.0f,
+                 5.0f,
+                 0.0f,
+                 50.0f,
+                 "more drift",
                  "repeats detune slowly; zero is a clean digital baseline",
-                 false, true, {"history.read_modulation_depth_ms"}},
+                 false,
+                 true,
+                 {"history.read_modulation_depth_ms"}},
             }},
             // TAPE
             Slots{{
-                {"TIME", "TIME", "Nominal transport read delay time", "ms",
-                 "log", 40.0f, 1200.0f, 380.0f, 220.0f, "longer delay",
+                {"TIME",
+                 "TIME",
+                 "Nominal transport read delay time",
+                 "ms",
+                 "log",
+                 40.0f,
+                 1200.0f,
+                 380.0f,
+                 220.0f,
+                 "longer delay",
                  "transport slides to the new time, warping pitch on the way",
-                 false, true, {"transport.nominal_delay_ms"}},
-                {"FEEDBACK", "REPEATS",
-                 "Feedback-loop gain after tape/replay conditioning", "ratio",
-                 "linear", 0.0f, 0.95f, 0.45f, 20.0f, "more repeats",
-                 "repeats last longer and age further", false, true,
+                 false,
+                 true,
+                 {"transport.nominal_delay_ms"}},
+                {"FEEDBACK",
+                 "REPEATS",
+                 "Feedback-loop gain after tape/replay conditioning",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 0.95f,
+                 0.45f,
+                 20.0f,
+                 "more repeats",
+                 "repeats last longer and age further",
+                 false,
+                 true,
                  {"feedback_conditioner.loop_gain_post_tape"}},
-                {"MIX", "MIX", "Wet/dry linear crossfade gain", "ratio",
-                 "linear", 0.0f, 1.0f, 0.40f, 20.0f, "more wet",
-                 "delay louder against the dry signal", false, true,
+                {"MIX",
+                 "MIX",
+                 "Wet/dry linear crossfade gain",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.40f,
+                 20.0f,
+                 "more wet",
+                 "delay louder against the dry signal",
+                 false,
+                 true,
                  {"output.wet_dry_crossfade"}},
-                {"COLOR", "AGE",
+                {"COLOR",
+                 "AGE",
                  "Repeat bandwidth loss and replay nonlinearity macro",
-                 "normalized", "linear", 0.0f, 1.0f, 0.35f, 40.0f,
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.35f,
+                 40.0f,
                  "older, darker, more saturated repeats",
-                 "repeats lose treble and bass and soft-compress", true, true,
+                 "repeats lose treble and bass and soft-compress",
+                 true,
+                 true,
                  {"feedback_conditioner.lpf_fc_hz",
                   "feedback_conditioner.hpf_fc_hz",
                   "feedback_conditioner.saturation_drive"}},
-                {"MOTION", "WARBLE",
+                {"MOTION",
+                 "WARBLE",
                  "Transport read-position drift/wow/flutter macro",
-                 "normalized", "linear", 0.0f, 1.0f, 0.25f, 60.0f,
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.25f,
+                 60.0f,
                  "more transport instability",
-                 "pitch wobbles slowly and quickly at once", true, true,
-                 {"transport.drift_depth_ms", "transport.wow_depth_ms",
+                 "pitch wobbles slowly and quickly at once",
+                 true,
+                 true,
+                 {"transport.drift_depth_ms",
+                  "transport.wow_depth_ms",
                   "transport.flutter_depth_ms"}},
             }},
             // MOD
             Slots{{
-                {"TIME", "BASE TIME", "Base fractional comb delay time", "ms",
-                 "log", 0.5f, 50.0f, 8.0f, 40.0f, "longer base delay",
-                 "moves from flanger through chorus to slapback", false, true,
+                {"TIME",
+                 "BASE TIME",
+                 "Base fractional comb delay time",
+                 "ms",
+                 "log",
+                 0.5f,
+                 50.0f,
+                 8.0f,
+                 40.0f,
+                 "longer base delay",
+                 "moves from flanger through chorus to slapback",
+                 false,
+                 true,
                  {"universal_comb.base_delay_ms"}},
-                {"FEEDBACK", "RESONANCE",
-                 "Signed universal-comb feedback coefficient", "ratio",
-                 "bipolar", -0.95f, 0.95f, 0.0f, 20.0f,
+                {"FEEDBACK",
+                 "RESONANCE",
+                 "Signed universal-comb feedback coefficient",
+                 "ratio",
+                 "bipolar",
+                 -0.95f,
+                 0.95f,
+                 0.0f,
+                 20.0f,
                  "positive resonance; counter-clockwise is inverted",
-                 "comb peaks get sharper, sign flips the notch pattern", false,
-                 true, {"universal_comb.feedback_coefficient"}},
-                {"MIX", "MIX", "Comb blend/feedforward gain pair", "ratio",
-                 "linear", 0.0f, 1.0f, 0.50f, 20.0f, "more delayed path",
-                 "moves from dry through comb notches to full vibrato", true,
+                 "comb peaks get sharper, sign flips the notch pattern",
+                 false,
+                 true,
+                 {"universal_comb.feedback_coefficient"}},
+                {"MIX",
+                 "MIX",
+                 "Comb blend/feedforward gain pair",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.50f,
+                 20.0f,
+                 "more delayed path",
+                 "moves from dry through comb notches to full vibrato",
+                 true,
                  true,
                  {"universal_comb.blend_gain",
                   "universal_comb.feedforward_gain"}},
-                {"COLOR", "DEPTH", "Delay-read modulation depth", "ms",
-                 "linear", 0.0f, 10.0f, 2.0f, 30.0f, "deeper sweep",
-                 "wider pitch and comb-frequency sweep", false, true,
+                {"COLOR",
+                 "DEPTH",
+                 "Delay-read modulation depth",
+                 "ms",
+                 "linear",
+                 0.0f,
+                 10.0f,
+                 2.0f,
+                 30.0f,
+                 "deeper sweep",
+                 "wider pitch and comb-frequency sweep",
+                 false,
+                 true,
                  {"universal_comb.delay_modulation_depth_ms"}},
-                {"MOTION", "RATE", "Modulation oscillator rate", "Hz", "log",
-                 0.02f, 8.0f, 0.6f, 30.0f, "faster sweep",
-                 "modulation speeds up from drift to vibrato", false, true,
+                {"MOTION",
+                 "RATE",
+                 "Modulation oscillator rate",
+                 "Hz",
+                 "log",
+                 0.02f,
+                 8.0f,
+                 0.6f,
+                 30.0f,
+                 "faster sweep",
+                 "modulation speeds up from drift to vibrato",
+                 false,
+                 true,
                  {"mod_source.lfo_rate_hz"}},
             }},
             // REV
             Slots{{
-                {"TIME", "SLICE", "Reverse grain/segment duration", "ms", "log",
-                 50.0f, 1200.0f, 300.0f, 120.0f, "longer reversed slice",
-                 "longer phrases are reversed at once", false, true,
+                {"TIME",
+                 "SLICE",
+                 "Reverse grain/segment duration",
+                 "ms",
+                 "log",
+                 50.0f,
+                 1200.0f,
+                 300.0f,
+                 120.0f,
+                 "longer reversed slice",
+                 "longer phrases are reversed at once",
+                 false,
+                 true,
                  {"reverse_reader.grain_duration_ms"}},
-                {"FEEDBACK", "REPEATS",
-                 "Post-overlap-add re-injection gain", "ratio", "linear", 0.0f,
-                 0.85f, 0.25f, 20.0f, "more reversed repeats",
-                 "reversed material re-enters the history and stacks", false,
-                 true, {"reverse_reader.post_ola_reinjection_gain"}},
-                {"MIX", "MIX", "Wet/dry linear crossfade gain", "ratio",
-                 "linear", 0.0f, 1.0f, 0.50f, 20.0f, "more wet",
-                 "reversed layer louder against the dry signal", false, true,
+                {"FEEDBACK",
+                 "REPEATS",
+                 "Post-overlap-add re-injection gain",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 0.85f,
+                 0.25f,
+                 20.0f,
+                 "more reversed repeats",
+                 "reversed material re-enters the history and stacks",
+                 false,
+                 true,
+                 {"reverse_reader.post_ola_reinjection_gain"}},
+                {"MIX",
+                 "MIX",
+                 "Wet/dry linear crossfade gain",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.50f,
+                 20.0f,
+                 "more wet",
+                 "reversed layer louder against the dry signal",
+                 false,
+                 true,
                  {"output.wet_dry_crossfade"}},
-                {"COLOR", "REVERSE", "Forward/reverse branch crossfade",
-                 "normalized", "linear", 0.0f, 1.0f, 1.0f, 30.0f,
-                 "fully reversed", "blends a plain forward delay into reverse",
-                 false, true, {"reverse_reader.forward_reverse_crossfade"}},
-                {"MOTION", "GRAIN", "Reverse-grain window taper fraction",
-                 "normalized", "linear", 0.0f, 1.0f, 0.5f, 40.0f,
+                {"COLOR",
+                 "REVERSE",
+                 "Forward/reverse branch crossfade",
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 1.0f,
+                 30.0f,
+                 "fully reversed",
+                 "blends a plain forward delay into reverse",
+                 false,
+                 true,
+                 {"reverse_reader.forward_reverse_crossfade"}},
+                {"MOTION",
+                 "GRAIN",
+                 "Reverse-grain window taper fraction",
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.5f,
+                 40.0f,
                  "longer seam crossfade",
-                 "grain seams go from abrupt to fully smoothed", false, true,
+                 "grain seams go from abrupt to fully smoothed",
+                 false,
+                 true,
                  {"reverse_reader.window_taper_fraction"}},
             }},
             // FREEZE
             Slots{{
-                {"TIME", "LOOP", "Capture/recirculating loop length", "ms",
-                 "log", 50.0f, 2000.0f, 600.0f, 0.0f, "longer captured loop",
-                 "the held texture repeats over a longer window", false, true,
+                {"TIME",
+                 "LOOP",
+                 "Capture/recirculating loop length",
+                 "ms",
+                 "log",
+                 50.0f,
+                 2000.0f,
+                 600.0f,
+                 0.0f,
+                 "longer captured loop",
+                 "the held texture repeats over a longer window",
+                 false,
+                 true,
                  {"freeze_loop.length_ms"}},
-                {"FEEDBACK", "DECAY", "Loop recirculation gain", "ratio",
-                 "linear", 0.50f, 0.999f, 0.97f, 30.0f, "longer hold",
-                 "the frozen layer decays more slowly", false, true,
+                {"FEEDBACK",
+                 "DECAY",
+                 "Loop recirculation gain",
+                 "ratio",
+                 "linear",
+                 0.50f,
+                 0.999f,
+                 0.97f,
+                 30.0f,
+                 "longer hold",
+                 "the frozen layer decays more slowly",
+                 false,
+                 true,
                  {"freeze_loop.recirculation_gain"}},
-                {"MIX", "LEVEL", "Freeze-layer wet crossfade gain", "ratio",
-                 "linear", 0.0f, 1.0f, 0.60f, 20.0f, "louder freeze layer",
-                 "frozen layer louder against the dry signal", false, true,
+                {"MIX",
+                 "LEVEL",
+                 "Freeze-layer wet crossfade gain",
+                 "ratio",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.60f,
+                 20.0f,
+                 "louder freeze layer",
+                 "frozen layer louder against the dry signal",
+                 false,
+                 true,
                  {"freeze_loop.output_gain"}},
-                {"COLOR", "DAMPING", "Loop LPF/HPF damping macro",
-                 "normalized", "linear", 0.0f, 1.0f, 0.30f, 40.0f,
+                {"COLOR",
+                 "DAMPING",
+                 "Loop LPF/HPF damping macro",
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.30f,
+                 40.0f,
                  "more damping",
                  "the held texture loses treble and bass as it recirculates",
-                 true, true,
+                 true,
+                 true,
                  {"freeze_loop.lpf_fc_hz", "freeze_loop.hpf_fc_hz"}},
-                {"MOTION", "EVOLVE",
-                 "Ultra-slow fractional-read drift macro", "normalized",
-                 "linear", 0.0f, 1.0f, 0.10f, 60.0f, "more evolution",
-                 "the loop slowly detunes and never sits still", true, true,
+                {"MOTION",
+                 "EVOLVE",
+                 "Ultra-slow fractional-read drift macro",
+                 "normalized",
+                 "linear",
+                 0.0f,
+                 1.0f,
+                 0.10f,
+                 60.0f,
+                 "more evolution",
+                 "the loop slowly detunes and never sits still",
+                 true,
+                 true,
                  {"freeze_loop.drift_depth_ms", "freeze_loop.drift_rate_hz"}},
             }},
         }};
@@ -261,8 +495,8 @@ const char* PedalFreezeStateName(PedalFreezeState state)
 const PedalSlotDescriptor& GetPedalSlotDescriptor(PedalDelayMode mode,
                                                   PedalSlot      slot)
 {
-    const std::size_t modeIndex = std::min(static_cast<std::size_t>(mode),
-                                           kPedalDelayModeCount - 1);
+    const std::size_t modeIndex
+        = std::min(static_cast<std::size_t>(mode), kPedalDelayModeCount - 1);
     const std::size_t slotIndex
         = std::min(static_cast<std::size_t>(slot), kPedalSlotCount - 1);
     return SlotTable()[modeIndex][slotIndex];
@@ -339,9 +573,8 @@ void PedalDelayEngine::Reset()
 {
     if(history_ != nullptr)
     {
-        std::fill(history_,
-                  history_ + historySamples_ * kPedalChannelCount,
-                  0.0f);
+        std::fill(
+            history_, history_ + historySamples_ * kPedalChannelCount, 0.0f);
     }
     if(freezeLoop_ != nullptr)
     {
@@ -488,10 +721,9 @@ float PedalDelayEngine::NativeToNormalized(PedalDelayMode mode,
             std::clamp(std::log(ratio) / std::log(span), 0.0, 1.0));
     }
     const float span = descriptor.maximum - descriptor.minimum;
-    return span != 0.0f ? std::clamp((value - descriptor.minimum) / span,
-                                     0.0f,
-                                     1.0f)
-                        : 0.0f;
+    return span != 0.0f
+               ? std::clamp((value - descriptor.minimum) / span, 0.0f, 1.0f)
+               : 0.0f;
 }
 
 void PedalDelayEngine::SetBypass(bool bypassed)
@@ -512,9 +744,8 @@ void PedalDelayEngine::Tap(double nowMs)
         return;
     }
     tapTempoMs_ = static_cast<float>(intervalMs);
-    SetSlotNormalized(
-        PedalSlot::kTime,
-        NativeToNormalized(mode_, PedalSlot::kTime, tapTempoMs_));
+    SetSlotNormalized(PedalSlot::kTime,
+                      NativeToNormalized(mode_, PedalSlot::kTime, tapTempoMs_));
 }
 
 void PedalDelayEngine::SetFreezeState(PedalFreezeState state)
@@ -540,7 +771,8 @@ void PedalDelayEngine::SetFreezeState(PedalFreezeState state)
             channel.freezeHpf.Clear();
         }
     }
-    if(state == PedalFreezeState::kCapture || state == PedalFreezeState::kReplace)
+    if(state == PedalFreezeState::kCapture
+       || state == PedalFreezeState::kReplace)
     {
         freezeCaptureCount_ = 0;
         freezeReadIndex_    = 0.0f;
@@ -589,13 +821,11 @@ float PedalDelayEngine::GetAlgorithmicLatencySamples() const
 
 float PedalDelayEngine::LowpassCoefficient(float cutoffHz) const
 {
-    const float clamped = std::clamp(cutoffHz,
-                                     1.0f,
-                                     static_cast<float>(sampleRate_) * 0.45f);
-    const float coefficient
-        = 1.0f
-          - std::exp(-6.28318530717959f * clamped
-                     / static_cast<float>(sampleRate_));
+    const float clamped
+        = std::clamp(cutoffHz, 1.0f, static_cast<float>(sampleRate_) * 0.45f);
+    const float coefficient = 1.0f
+                              - std::exp(-6.28318530717959f * clamped
+                                         / static_cast<float>(sampleRate_));
     return std::clamp(coefficient, 0.0f, 1.0f);
 }
 
@@ -624,10 +854,10 @@ void PedalDelayEngine::SnapSmoothingToTargets()
 {
     for(std::size_t slot = 0; slot < kPedalSlotCount; ++slot)
     {
-        nativeTarget_[slot]
-            = NormalizedToNative(mode_,
-                                 static_cast<PedalSlot>(slot),
-                                 GetSlotNormalized(static_cast<PedalSlot>(slot)));
+        nativeTarget_[slot] = NormalizedToNative(
+            mode_,
+            static_cast<PedalSlot>(slot),
+            GetSlotNormalized(static_cast<PedalSlot>(slot)));
         nativeSmoothed_[slot] = nativeTarget_[slot];
         nativeError_[slot]    = 0.0f;
     }
@@ -675,8 +905,8 @@ float PedalDelayEngine::FreezeRead(std::size_t channel, float readIndex) const
     {
         wrapped += length;
     }
-    const std::size_t whole = static_cast<std::size_t>(wrapped)
-                              % freezeLoopLength_;
+    const std::size_t whole
+        = static_cast<std::size_t>(wrapped) % freezeLoopLength_;
     const float       frac = wrapped - std::floor(wrapped);
     const std::size_t next = (whole + 1) % freezeLoopLength_;
     const float*      base = freezeLoop_ + channel * freezeSamples_;
@@ -698,10 +928,10 @@ void PedalDelayEngine::Process(const float* inputLeft,
     // reads nativeTarget_/nativeSmoothed_, never the UI-facing values.
     for(std::size_t slot = 0; slot < kPedalSlotCount; ++slot)
     {
-        const float target
-            = NormalizedToNative(mode_,
-                                 static_cast<PedalSlot>(slot),
-                                 GetSlotNormalized(static_cast<PedalSlot>(slot)));
+        const float target = NormalizedToNative(
+            mode_,
+            static_cast<PedalSlot>(slot),
+            GetSlotNormalized(static_cast<PedalSlot>(slot)));
         if(target != nativeTarget_[slot])
         {
             // Re-aim the smoother from wherever it currently is.
@@ -716,10 +946,10 @@ void PedalDelayEngine::Process(const float* inputLeft,
     {
         const float dryLeft
             = Sanitize(inputLeft != nullptr ? inputLeft[frame] : 0.0f);
-        const float dryRight = Sanitize(
-            inputRight != nullptr
-                ? inputRight[frame]
-                : (inputLeft != nullptr ? inputLeft[frame] : 0.0f));
+        const float dryRight
+            = Sanitize(inputRight != nullptr
+                           ? inputRight[frame]
+                           : (inputLeft != nullptr ? inputLeft[frame] : 0.0f));
 
         float wetLeft  = 0.0f;
         float wetRight = 0.0f;
@@ -767,10 +997,9 @@ void PedalDelayEngine::Process(const float* inputLeft,
 
         // MOD already carries its own blend/feedforward relationship, so the
         // output crossfade is bypassed for it.
-        const float mixAmount
-            = mode_ == PedalDelayMode::kMod
-                  ? 1.0f
-                  : SmoothedNative(PedalSlot::kMix);
+        const float mixAmount = mode_ == PedalDelayMode::kMod
+                                    ? 1.0f
+                                    : SmoothedNative(PedalSlot::kMix);
         float outLeft  = Mix(dryLeft, wetLeft, mixAmount);
         float outRight = Mix(dryRight, wetRight, mixAmount);
         if(muteWet)
@@ -810,9 +1039,8 @@ void PedalDelayEngine::ProcessDigiOrTape(float  inputLeft,
 
     if(tape)
     {
-        const float warble = std::clamp(SmoothedNative(PedalSlot::kMotion),
-                                        0.0f,
-                                        1.0f);
+        const float warble
+            = std::clamp(SmoothedNative(PedalSlot::kMotion), 0.0f, 1.0f);
         const float age
             = std::clamp(SmoothedNative(PedalSlot::kColor), 0.0f, 1.0f);
         const float milliseconds
@@ -827,8 +1055,9 @@ void PedalDelayEngine::ProcessDigiOrTape(float  inputLeft,
                                        static_cast<float>(sampleRate_));
         modulationSamples
             = milliseconds * 0.001f * static_cast<float>(sampleRate_);
-        lpfCoefficient  = LowpassCoefficient(ExponentialMap(9000.0f, 1600.0f, age));
-        hpfCoefficient  = LowpassCoefficient(ExponentialMap(40.0f, 120.0f, age));
+        lpfCoefficient
+            = LowpassCoefficient(ExponentialMap(9000.0f, 1600.0f, age));
+        hpfCoefficient = LowpassCoefficient(ExponentialMap(40.0f, 120.0f, age));
         saturationDrive = 0.05f + 0.75f * age;
     }
     else
@@ -877,11 +1106,10 @@ void PedalDelayEngine::ProcessMod(float  inputLeft,
                                * 0.001f * static_cast<float>(sampleRate_);
     const float feedbackCoefficient
         = std::clamp(SmoothedNative(PedalSlot::kFeedback), -0.95f, 0.95f);
-    const float blend
-        = std::clamp(SmoothedNative(PedalSlot::kMix), 0.0f, 1.0f);
-    const float lfo = modLfo_.Sine(
-        std::max(SmoothedNative(PedalSlot::kMotion), 0.0f),
-        static_cast<float>(sampleRate_));
+    const float blend = std::clamp(SmoothedNative(PedalSlot::kMix), 0.0f, 1.0f);
+    const float lfo
+        = modLfo_.Sine(std::max(SmoothedNative(PedalSlot::kMotion), 0.0f),
+                       static_cast<float>(sampleRate_));
 
     // Every read position stays inside the attached history.
     const float delaySamples
@@ -923,9 +1151,8 @@ void PedalDelayEngine::ProcessRev(float  inputLeft,
                      32.0f,
                      maxGrain);
     const float taper
-        = 0.05f + 0.45f * std::clamp(SmoothedNative(PedalSlot::kMotion),
-                                     0.0f,
-                                     1.0f);
+        = 0.05f
+          + 0.45f * std::clamp(SmoothedNative(PedalSlot::kMotion), 0.0f, 1.0f);
     const float reverseAmount
         = std::clamp(SmoothedNative(PedalSlot::kColor), 0.0f, 1.0f);
     const float reinjectionGain
@@ -933,10 +1160,9 @@ void PedalDelayEngine::ProcessRev(float  inputLeft,
 
     revGrainPhase_ = Fract(revGrainPhase_ + 1.0f / grainSamples);
 
-    const float phases[2]
-        = {revGrainPhase_, Fract(revGrainPhase_ + 0.5f)};
-    float windows[2] = {TukeyWindow(phases[0], taper),
-                        TukeyWindow(phases[1], taper)};
+    const float phases[2] = {revGrainPhase_, Fract(revGrainPhase_ + 0.5f)};
+    float       windows[2]
+        = {TukeyWindow(phases[0], taper), TukeyWindow(phases[1], taper)};
     const float windowSum = std::max(windows[0] + windows[1], 1.0e-6f);
 
     const float inputs[kPedalChannelCount]  = {inputLeft, inputRight};
@@ -952,8 +1178,8 @@ void PedalDelayEngine::ProcessRev(float  inputLeft,
         }
         reversed /= windowSum;
 
-        const float forward  = HistoryRead(channel, grainSamples);
-        const float branch   = Mix(forward, reversed, reverseAmount);
+        const float forward = HistoryRead(channel, grainSamples);
+        const float branch  = Mix(forward, reversed, reverseAmount);
         HistoryWrite(channel, inputs[channel] + branch * reinjectionGain);
         if(outputs[channel] != nullptr)
         {
@@ -967,11 +1193,11 @@ void PedalDelayEngine::ProcessFreeze(float  inputLeft,
                                      float* outputLeft,
                                      float* outputRight)
 {
-    const std::size_t requestedLength = static_cast<std::size_t>(std::clamp(
-        SmoothedNative(PedalSlot::kTime) * 0.001f
-            * static_cast<float>(sampleRate_),
-        64.0f,
-        static_cast<float>(freezeSamples_ - 4)));
+    const std::size_t requestedLength = static_cast<std::size_t>(
+        std::clamp(SmoothedNative(PedalSlot::kTime) * 0.001f
+                       * static_cast<float>(sampleRate_),
+                   64.0f,
+                   static_cast<float>(freezeSamples_ - 4)));
     const float decay
         = std::clamp(SmoothedNative(PedalSlot::kFeedback), 0.0f, 0.999f);
     const float damping
@@ -1032,17 +1258,16 @@ void PedalDelayEngine::ProcessFreeze(float  inputLeft,
         freezeLoopLength_ = requestedLength;
     }
 
-    const std::size_t writeSlot = static_cast<std::size_t>(freezeReadIndex_)
-                                  % freezeLoopLength_;
+    const std::size_t writeSlot
+        = static_cast<std::size_t>(freezeReadIndex_) % freezeLoopLength_;
     const bool admitsInput = freezeState_ == PedalFreezeState::kAccumulate;
 
     for(std::size_t channel = 0; channel < kPedalChannelCount; ++channel)
     {
         auto&       state = channels_[channel];
-        const float read
-            = FreezeRead(channel, freezeReadIndex_ + driftSamples);
-        float damped = state.freezeLpf.Lowpass(read, lpfCoefficient);
-        damped       = state.freezeHpf.Highpass(damped, hpfCoefficient);
+        const float read = FreezeRead(channel, freezeReadIndex_ + driftSamples);
+        float       damped = state.freezeLpf.Lowpass(read, lpfCoefficient);
+        damped             = state.freezeHpf.Highpass(damped, hpfCoefficient);
 
         const float injected
             = admitsInput ? inputs[channel] * kFreezeInjectionGain : 0.0f;
