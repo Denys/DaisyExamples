@@ -34,7 +34,7 @@ flowchart TD
     subgraph layer_live["2. Live JUCE Host"]
         processor["DaisyHostPluginProcessor<br/>2 rack nodes, audio/MIDI, selected-node state"]:::juceStyle
         topology["LiveRackTopology<br/>node0 only / node1 only / serial 0→1 / 1→0"]:::stateStyle
-        session["HostSessionState v5<br/>board, selected node, node app state, routes"]:::stateStyle
+        session["HostSessionState v6<br/>board, selected node, node app state, routes, modulation lanes"]:::stateStyle
         automation["HostAutomationBridge<br/>5 stable DAW slots"]:::stateStyle
         modulation["HostModulation<br/>4 lanes from CV1-4 or LFO1-4"]:::stateStyle
         snapshot["EffectiveHostStateSnapshot<br/>operator / agent readback"]:::stateStyle
@@ -243,9 +243,9 @@ currently selected edit target. This is intentional.
 ## 6. Session state
 
 [`HostSessionState`](../include/daisyhost/HostSessionState.h) is the durable desktop-host
-session contract. The current README/tracker identifies the live schema as v5, carrying
-rack-global state plus node and route records while retaining backward compatibility with
-legacy single-node sessions.
+session contract. The current serializer writes schema **v6**, carrying rack-global state,
+node and route records, and persisted modulation-lane (`modlane`) records. The deserializer
+retains compatibility with the older v1-v5 session forms.
 
 Treat session serialization as a host contract. It is not a firmware preset format unless a
 firmware path explicitly adopts the same schema.
