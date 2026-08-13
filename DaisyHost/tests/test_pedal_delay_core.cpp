@@ -14,18 +14,18 @@
 
 namespace
 {
+using daisyhost::GetPedalSlotDescriptor;
 using daisyhost::kPedalChannelCount;
 using daisyhost::kPedalDelayModeCount;
 using daisyhost::kPedalSlotCount;
-using daisyhost::GetPedalSlotDescriptor;
 using daisyhost::PedalDelayEngine;
 using daisyhost::PedalDelayMode;
 using daisyhost::PedalFreezeState;
 using daisyhost::PedalSlot;
 using daisyhost::apps::PedalDelayCore;
 
-constexpr double kSampleRate = 48000.0;
-constexpr std::size_t kBlockSize = 64;
+constexpr double      kSampleRate = 48000.0;
+constexpr std::size_t kBlockSize  = 64;
 
 PedalDelayMode ModeAt(std::size_t index)
 {
@@ -51,10 +51,8 @@ struct EngineFixture
             = PedalDelayEngine::FreezeSamplesForRate(sampleRate);
         history.assign(historySamples * kPedalChannelCount, 0.0f);
         freeze.assign(freezeSamples * kPedalChannelCount, 0.0f);
-        engine.AttachStorage(history.data(),
-                             historySamples,
-                             freeze.data(),
-                             freezeSamples);
+        engine.AttachStorage(
+            history.data(), historySamples, freeze.data(), freezeSamples);
         engine.Prepare(sampleRate, kBlockSize);
     }
 
@@ -66,9 +64,8 @@ struct EngineFixture
                 = GetPedalSlotDescriptor(engine.GetMode(), SlotAt(slot));
             engine.SetSlotNormalized(
                 SlotAt(slot),
-                engine.NativeToNormalized(engine.GetMode(),
-                                          SlotAt(slot),
-                                          descriptor.defaultValue));
+                engine.NativeToNormalized(
+                    engine.GetMode(), SlotAt(slot), descriptor.defaultValue));
         }
     }
 
@@ -109,15 +106,16 @@ std::vector<float> Silence(std::size_t frameCount)
     return std::vector<float>(frameCount, 0.0f);
 }
 
-std::vector<float> Sine(std::size_t frameCount, float frequencyHz, float amplitude = 0.5f)
+std::vector<float>
+Sine(std::size_t frameCount, float frequencyHz, float amplitude = 0.5f)
 {
     std::vector<float> buffer(frameCount, 0.0f);
     for(std::size_t i = 0; i < frameCount; ++i)
     {
-        buffer[i] = amplitude
-                    * std::sin(6.28318530717959f * frequencyHz
-                               * static_cast<float>(i)
-                               / static_cast<float>(kSampleRate));
+        buffer[i]
+            = amplitude
+              * std::sin(6.28318530717959f * frequencyHz * static_cast<float>(i)
+                         / static_cast<float>(kSampleRate));
     }
     return buffer;
 }
@@ -162,7 +160,8 @@ float Rms(const std::vector<float>& buffer, std::size_t begin = 0)
 }
 
 // Normalized first-difference energy: a proxy for high-frequency content.
-float HighFrequencyRatio(const std::vector<float>& buffer, std::size_t begin = 1)
+float HighFrequencyRatio(const std::vector<float>& buffer,
+                         std::size_t               begin = 1)
 {
     double difference = 0.0;
     double magnitude  = 0.0;
@@ -188,8 +187,8 @@ float MaxStep(const std::vector<float>& buffer, std::size_t begin = 1)
 // broadband spike; a slewed (pitch-warped) read head does not, because it only
 // changes the instantaneous frequency, never the level.
 float EnvelopeMaxStep(const std::vector<float>& buffer,
-                      std::size_t              window = 128,
-                      std::size_t              begin  = 0)
+                      std::size_t               window = 128,
+                      std::size_t               begin  = 0)
 {
     float previous = -1.0f;
     float maximum  = 0.0f;
@@ -201,8 +200,8 @@ float EnvelopeMaxStep(const std::vector<float>& buffer,
         {
             sum += static_cast<double>(buffer[i]) * buffer[i];
         }
-        const float rms = static_cast<float>(
-            std::sqrt(sum / static_cast<double>(window)));
+        const float rms
+            = static_cast<float>(std::sqrt(sum / static_cast<double>(window)));
         if(previous >= 0.0f)
         {
             maximum = std::max(maximum, std::abs(rms - previous));
@@ -214,7 +213,7 @@ float EnvelopeMaxStep(const std::vector<float>& buffer,
 
 float MaxDifference(const std::vector<float>& a, const std::vector<float>& b)
 {
-    const std::size_t count = std::min(a.size(), b.size());
+    const std::size_t count   = std::min(a.size(), b.size());
     float             maximum = 0.0f;
     for(std::size_t i = 0; i < count; ++i)
     {
@@ -225,9 +224,8 @@ float MaxDifference(const std::vector<float>& a, const std::vector<float>& b)
 
 // Runs the given mode with one slot forced to `normalizedValue` and returns
 // the wet-heavy output, so two runs can be compared for real DSP effect.
-std::vector<float> RunWithSlot(PedalDelayMode mode,
-                               PedalSlot      slot,
-                               float          normalizedValue)
+std::vector<float>
+RunWithSlot(PedalDelayMode mode, PedalSlot slot, float normalizedValue)
 {
     EngineFixture fixture;
     fixture.engine.SetMode(mode);
@@ -238,8 +236,8 @@ std::vector<float> RunWithSlot(PedalDelayMode mode,
     }
     fixture.engine.SetSlotNormalized(slot, normalizedValue);
 
-    std::vector<float> input = Sine(static_cast<std::size_t>(kSampleRate / 2),
-                                    220.0f);
+    std::vector<float> input
+        = Sine(static_cast<std::size_t>(kSampleRate / 2), 220.0f);
     input.resize(static_cast<std::size_t>(kSampleRate), 0.0f);
     return fixture.Run(input);
 }
@@ -289,8 +287,8 @@ TEST(PedalDelayDescriptorTest, EveryModeDeclaresFiveCompleteSlots)
             EXPECT_GE(descriptor.smoothingMs, 0.0f) << context;
 
             const std::string curve = descriptor.curve;
-            EXPECT_TRUE(curve == "linear" || curve == "log" || curve == "bipolar"
-                        || curve == "custom")
+            EXPECT_TRUE(curve == "linear" || curve == "log"
+                        || curve == "bipolar" || curve == "custom")
                 << context << " curve=" << curve;
 
             std::size_t targetCount = 0;
@@ -319,9 +317,9 @@ TEST(PedalDelayDescriptorTest, SlotOrderMatchesTheProductContract)
     {
         for(std::size_t slot = 0; slot < kPedalSlotCount; ++slot)
         {
-            EXPECT_STREQ(kExpected[slot],
-                         GetPedalSlotDescriptor(ModeAt(mode), SlotAt(slot))
-                             .slotId);
+            EXPECT_STREQ(
+                kExpected[slot],
+                GetPedalSlotDescriptor(ModeAt(mode), SlotAt(slot)).slotId);
         }
     }
 }
@@ -359,13 +357,16 @@ TEST(PedalDelayDescriptorTest, RejectsNonFiniteAndClampsOutOfRangeInput)
         PedalSlot::kFeedback, std::numeric_limits<float>::quiet_NaN()));
     EXPECT_FALSE(fixture.engine.SetSlotNormalized(
         PedalSlot::kFeedback, std::numeric_limits<float>::infinity()));
-    EXPECT_FLOAT_EQ(0.4f, fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
+    EXPECT_FLOAT_EQ(0.4f,
+                    fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
 
     // Documented policy for finite out-of-range input: clamp, never reject.
     EXPECT_TRUE(fixture.engine.SetSlotNormalized(PedalSlot::kFeedback, 12.0f));
-    EXPECT_FLOAT_EQ(1.0f, fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
+    EXPECT_FLOAT_EQ(1.0f,
+                    fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
     EXPECT_TRUE(fixture.engine.SetSlotNormalized(PedalSlot::kFeedback, -3.0f));
-    EXPECT_FLOAT_EQ(0.0f, fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
+    EXPECT_FLOAT_EQ(0.0f,
+                    fixture.engine.GetSlotNormalized(PedalSlot::kFeedback));
 }
 
 // ---------------------------------------------------------------------------
@@ -375,7 +376,8 @@ TEST(PedalDelayDescriptorTest, RejectsNonFiniteAndClampsOutOfRangeInput)
 TEST(PedalDelayCoreTest, IsRegisteredAndSelectableByAppId)
 {
     std::string resolved;
-    auto app = daisyhost::CreateHostedAppCore("pedal_multidelay", "node0", &resolved);
+    auto        app = daisyhost::CreateHostedAppCore(
+        "pedal_multidelay", "node0", &resolved);
     ASSERT_NE(nullptr, app);
     EXPECT_EQ("pedal_multidelay", resolved);
     EXPECT_EQ("pedal_multidelay", app->GetAppId());
@@ -423,7 +425,7 @@ TEST(PedalDelayCoreTest, ExposesExactlyFivePerformanceSlotsPerMode)
 
 TEST(PedalDelayCoreTest, ModeChangeRelabelsControlsWithoutRestart)
 {
-    auto core = MakeCore();
+    auto       core    = MakeCore();
     const auto slotIds = core->GetPerformanceSlotParameterIds();
 
     const auto labelFor = [&core](const std::string& parameterId) {
@@ -461,7 +463,8 @@ TEST(PedalDelayCoreTest, DisplayShowsMusicianAndEngineeringLabelsWithTarget)
         joined += text.text + "\n";
     }
     EXPECT_NE(std::string::npos, joined.find("COLOR - BRIGHT"));
-    EXPECT_NE(std::string::npos, joined.find("Feedback-path high-cut LPF cutoff"));
+    EXPECT_NE(std::string::npos,
+              joined.find("Feedback-path high-cut LPF cutoff"));
     EXPECT_NE(std::string::npos, joined.find("Hz"));
     EXPECT_NE(std::string::npos,
               joined.find("Target: feedback_conditioner.lpf_fc_hz"));
@@ -493,9 +496,8 @@ TEST(PedalDelayCoreTest, StatefulValuesSurviveCaptureAndRestore)
 
     core->RestoreStatefulParameterValues(captured);
     EXPECT_EQ(PedalDelayMode::kMod, core->GetEngine().GetMode());
-    EXPECT_NEAR(0.82f,
-                core->GetParameterValue("node0/param/color").value,
-                1e-4f);
+    EXPECT_NEAR(
+        0.82f, core->GetParameterValue("node0/param/color").value, 1e-4f);
 }
 
 TEST(PedalDelayCoreTest, PassesAudioThroughTheSelectedMode)
@@ -503,12 +505,12 @@ TEST(PedalDelayCoreTest, PassesAudioThroughTheSelectedMode)
     auto core = MakeCore();
     core->SetParameterValue("node0/param/mix", 1.0f);
 
-    const std::size_t frames = kBlockSize;
-    std::vector<float> input = Sine(frames, 440.0f);
+    const std::size_t  frames = kBlockSize;
+    std::vector<float> input  = Sine(frames, 440.0f);
     std::vector<float> left(frames, 0.0f);
     std::vector<float> right(frames, 0.0f);
-    const float* inputChannels[2]  = {input.data(), input.data()};
-    float*       outputChannels[2] = {left.data(), right.data()};
+    const float*       inputChannels[2]  = {input.data(), input.data()};
+    float*             outputChannels[2] = {left.data(), right.data()};
 
     daisyhost::AudioBufferView      view{inputChannels, 2};
     daisyhost::AudioBufferWriteView writeView{outputChannels, 2};
@@ -562,8 +564,9 @@ TEST(PedalDelayEngineTest, SilenceInProducesSilenceOutForEveryMode)
 
 TEST(PedalDelayEngineTest, StaysFiniteUnderParameterExtremesAndModeChanges)
 {
-    EngineFixture fixture;
-    std::vector<float> input = Sine(static_cast<std::size_t>(kSampleRate), 330.0f, 0.9f);
+    EngineFixture      fixture;
+    std::vector<float> input
+        = Sine(static_cast<std::size_t>(kSampleRate), 330.0f, 0.9f);
 
     for(std::size_t mode = 0; mode < kPedalDelayModeCount; ++mode)
     {
@@ -587,18 +590,15 @@ TEST(PedalDelayEngineTest, ModeChangesWhileRunningStayFinite)
 {
     EngineFixture fixture;
     fixture.SetAllSlotsToDefault();
-    const auto input = Sine(kBlockSize, 440.0f, 0.8f);
+    const auto         input = Sine(kBlockSize, 440.0f, 0.8f);
     std::vector<float> left(kBlockSize, 0.0f);
     std::vector<float> right(kBlockSize, 0.0f);
 
     for(std::size_t block = 0; block < 200; ++block)
     {
         fixture.engine.SetMode(ModeAt(block % kPedalDelayModeCount));
-        fixture.engine.Process(input.data(),
-                               input.data(),
-                               left.data(),
-                               right.data(),
-                               kBlockSize);
+        fixture.engine.Process(
+            input.data(), input.data(), left.data(), right.data(), kBlockSize);
         ASSERT_TRUE(AllFinite(left)) << "block " << block;
         ASSERT_LT(Peak(left), 20.0f) << "block " << block;
     }
@@ -616,8 +616,9 @@ TEST(PedalDelayEngineTest, ImpulseWrapsAroundTheCircularHistory)
 
     // Six seconds is longer than the 2.5 s history: the write pointer wraps
     // more than twice while the feedback loop keeps recirculating.
-    std::vector<float> input = Impulse(static_cast<std::size_t>(kSampleRate * 6));
-    const auto         output = fixture.Run(input);
+    std::vector<float> input
+        = Impulse(static_cast<std::size_t>(kSampleRate * 6));
+    const auto output = fixture.Run(input);
     EXPECT_TRUE(AllFinite(output));
     EXPECT_LT(Peak(output), 2.0f);
     EXPECT_GT(Rms(output, static_cast<std::size_t>(kSampleRate * 4)), 0.0f);
@@ -639,9 +640,9 @@ TEST(PedalDelayDigiTest, FractionalReadPlacesEnergyOnBothNeighbouringSamples)
         fixture.engine.SetSlotNormalized(PedalSlot::kFeedback, 0.0f);
         fixture.engine.SetSlotNormalized(PedalSlot::kMotion, 0.0f);
         fixture.engine.SetSlotNormalized(PedalSlot::kColor, 1.0f);
-        fixture.SetSlotNative(
-            PedalSlot::kTime,
-            targetSamples * 1000.0f / static_cast<float>(kSampleRate));
+        fixture.SetSlotNative(PedalSlot::kTime,
+                              targetSamples * 1000.0f
+                                  / static_cast<float>(kSampleRate));
         fixture.RunSilence(static_cast<std::size_t>(kSampleRate));
 
         const float requestedSamples
@@ -661,9 +662,9 @@ TEST(PedalDelayDigiTest, FractionalReadPlacesEnergyOnBothNeighbouringSamples)
             }
         }
 
-        double energy   = 0.0;
-        double centroid = 0.0;
-        std::size_t nonZero = 0;
+        double      energy   = 0.0;
+        double      centroid = 0.0;
+        std::size_t nonZero  = 0;
         for(std::size_t i = peakIndex - 4; i <= peakIndex + 4; ++i)
         {
             const double magnitude = std::abs(output[i]);
@@ -676,12 +677,13 @@ TEST(PedalDelayDigiTest, FractionalReadPlacesEnergyOnBothNeighbouringSamples)
         }
         centroid /= std::max(energy, 1e-12);
 
-        std::printf("[digi-frac] requested=%.4f measured=%.4f energy=%.5f "
-                    "taps=%zu\n",
-                    requestedSamples,
-                    centroid,
-                    energy,
-                    nonZero);
+        std::printf(
+            "[digi-frac] requested=%.4f measured=%.4f energy=%.5f "
+            "taps=%zu\n",
+            requestedSamples,
+            centroid,
+            energy,
+            nonZero);
 
         // Linear interpolation spreads the impulse over exactly two taps.
         EXPECT_EQ(2u, nonZero) << "requested " << requestedSamples;
@@ -694,7 +696,8 @@ TEST(PedalDelayDigiTest, FractionalReadPlacesEnergyOnBothNeighbouringSamples)
     }
 }
 
-TEST(PedalDelayDigiTest, BrightControlChangesRepeatBandwidthInTheStatedDirection)
+TEST(PedalDelayDigiTest,
+     BrightControlChangesRepeatBandwidthInTheStatedDirection)
 {
     const auto measure = [](float colorNormalized) {
         EngineFixture fixture;
@@ -706,8 +709,9 @@ TEST(PedalDelayDigiTest, BrightControlChangesRepeatBandwidthInTheStatedDirection
         fixture.engine.SetSlotNormalized(PedalSlot::kColor, colorNormalized);
         fixture.RunSilence(static_cast<std::size_t>(kSampleRate));
 
-        std::vector<float> input = Impulse(static_cast<std::size_t>(kSampleRate * 2));
-        const auto         output = fixture.Run(input);
+        std::vector<float> input
+            = Impulse(static_cast<std::size_t>(kSampleRate * 2));
+        const auto output = fixture.Run(input);
         // Measure well after the first repeat so the loop filter has acted
         // several times.
         return HighFrequencyRatio(output,
@@ -729,7 +733,8 @@ TEST(PedalDelayDigiTest, StaysStableAtMaximumFeedback)
     fixture.engine.SetSlotNormalized(PedalSlot::kColor, 1.0f);
     fixture.SetSlotNative(PedalSlot::kTime, 100.0f);
 
-    std::vector<float> input = Sine(static_cast<std::size_t>(kSampleRate), 440.0f, 0.9f);
+    std::vector<float> input
+        = Sine(static_cast<std::size_t>(kSampleRate), 440.0f, 0.9f);
     input.resize(static_cast<std::size_t>(kSampleRate * 20), 0.0f);
     const auto output = fixture.Run(input);
 
@@ -751,7 +756,7 @@ TEST(PedalDelayDigiTest, LargeTimeChangeDoesNotClick)
     fixture.SetSlotNative(PedalSlot::kTime, 120.0f);
 
     const auto tone = Sine(static_cast<std::size_t>(kSampleRate), 440.0f, 0.7f);
-    const auto steady = fixture.Run(tone);
+    const auto steady                = fixture.Run(tone);
     const float baselineEnvelopeStep = EnvelopeMaxStep(steady, 128, kBlockSize);
 
     fixture.SetSlotNative(PedalSlot::kTime, 900.0f);
@@ -783,13 +788,14 @@ TEST(PedalDelayModTest, MovingHeadStaysInsideTheBufferAtEveryExtreme)
                     EngineFixture fixture;
                     fixture.engine.SetMode(PedalDelayMode::kMod);
                     fixture.SetAllSlotsToDefault();
-                    fixture.engine.SetSlotNormalized(PedalSlot::kTime, baseTime);
+                    fixture.engine.SetSlotNormalized(PedalSlot::kTime,
+                                                     baseTime);
                     fixture.engine.SetSlotNormalized(PedalSlot::kColor, depth);
                     fixture.engine.SetSlotNormalized(PedalSlot::kMotion, rate);
                     fixture.engine.SetSlotNormalized(PedalSlot::kFeedback,
                                                      resonance);
-                    const auto output = fixture.Run(
-                        Sine(static_cast<std::size_t>(kSampleRate), 220.0f, 0.9f));
+                    const auto output = fixture.Run(Sine(
+                        static_cast<std::size_t>(kSampleRate), 220.0f, 0.9f));
                     ASSERT_TRUE(AllFinite(output));
                     ASSERT_LT(Peak(output), 20.0f);
                 }
@@ -800,8 +806,10 @@ TEST(PedalDelayModTest, MovingHeadStaysInsideTheBufferAtEveryExtreme)
 
 TEST(PedalDelayModTest, SignedResonanceProducesDifferentCombPatterns)
 {
-    const auto positive = RunWithSlot(PedalDelayMode::kMod, PedalSlot::kFeedback, 0.95f);
-    const auto negative = RunWithSlot(PedalDelayMode::kMod, PedalSlot::kFeedback, 0.05f);
+    const auto positive
+        = RunWithSlot(PedalDelayMode::kMod, PedalSlot::kFeedback, 0.95f);
+    const auto negative
+        = RunWithSlot(PedalDelayMode::kMod, PedalSlot::kFeedback, 0.05f);
     EXPECT_TRUE(AllFinite(positive));
     EXPECT_TRUE(AllFinite(negative));
     EXPECT_GT(MaxDifference(positive, negative), 1e-3f);
@@ -816,7 +824,7 @@ TEST(PedalDelayModTest, ControlRateUpdatesDoNotZipper)
     // 750 Hz is exactly one period per 64-frame block, so replaying the same
     // buffer produces a phase-continuous tone: any step found on a block
     // boundary comes from the control update, not from the test signal.
-    const auto input = Sine(kBlockSize, 750.0f, 0.6f);
+    const auto         input = Sine(kBlockSize, 750.0f, 0.6f);
     std::vector<float> left(kBlockSize, 0.0f);
     std::vector<float> right(kBlockSize, 0.0f);
     std::vector<float> collected;
@@ -828,13 +836,11 @@ TEST(PedalDelayModTest, ControlRateUpdatesDoNotZipper)
     for(std::size_t block = 0; block < kBlocks; ++block)
     {
         const float ramp = static_cast<float>(block) / (kBlocks - 1);
-        fixture.engine.SetSlotNormalized(
-            PedalSlot::kColor, ramp < 0.5f ? ramp * 2.0f : (1.0f - ramp) * 2.0f);
-        fixture.engine.Process(input.data(),
-                               input.data(),
-                               left.data(),
-                               right.data(),
-                               kBlockSize);
+        fixture.engine.SetSlotNormalized(PedalSlot::kColor,
+                                         ramp < 0.5f ? ramp * 2.0f
+                                                     : (1.0f - ramp) * 2.0f);
+        fixture.engine.Process(
+            input.data(), input.data(), left.data(), right.data(), kBlockSize);
         collected.insert(collected.end(), left.begin(), left.end());
     }
 
@@ -882,7 +888,8 @@ TEST(PedalDelayTapeTest, AgeReducesRepeatBandwidth)
         fixture.RunSilence(static_cast<std::size_t>(kSampleRate));
         const auto output
             = fixture.Run(Impulse(static_cast<std::size_t>(kSampleRate * 2)));
-        return HighFrequencyRatio(output, static_cast<std::size_t>(kSampleRate));
+        return HighFrequencyRatio(output,
+                                  static_cast<std::size_t>(kSampleRate));
     };
 
     EXPECT_LT(measure(1.0f), measure(0.0f))
@@ -925,7 +932,8 @@ TEST(PedalDelayTapeTest, StaysFiniteAtHighFeedbackAndFullAge)
     fixture.engine.SetSlotNormalized(PedalSlot::kColor, 1.0f);
     fixture.engine.SetSlotNormalized(PedalSlot::kMotion, 1.0f);
 
-    std::vector<float> input = Sine(static_cast<std::size_t>(kSampleRate), 220.0f, 0.9f);
+    std::vector<float> input
+        = Sine(static_cast<std::size_t>(kSampleRate), 220.0f, 0.9f);
     input.resize(static_cast<std::size_t>(kSampleRate * 15), 0.0f);
     const auto output = fixture.Run(input);
 
@@ -945,18 +953,20 @@ TEST(PedalDelayRevTest, OverlapAddGainStaysBoundedForEveryGrainSetting)
         fixture.engine.SetMode(PedalDelayMode::kRev);
         fixture.SetAllSlotsToDefault();
         fixture.engine.SetSlotNormalized(PedalSlot::kMix, 1.0f);
-        fixture.engine.SetSlotNormalized(PedalSlot::kColor, 1.0f); // full reverse
+        fixture.engine.SetSlotNormalized(PedalSlot::kColor,
+                                         1.0f); // full reverse
         fixture.engine.SetSlotNormalized(PedalSlot::kFeedback, 0.0f);
         fixture.engine.SetSlotNormalized(PedalSlot::kMotion, grain);
         fixture.SetSlotNative(PedalSlot::kTime, 200.0f);
 
         // Constant input: a correctly normalized overlap-add returns the same
         // constant, whatever the window taper is.
-        const std::vector<float> dc(static_cast<std::size_t>(kSampleRate * 3), 1.0f);
+        const std::vector<float> dc(static_cast<std::size_t>(kSampleRate * 3),
+                                    1.0f);
         const auto               output = fixture.Run(dc);
         ASSERT_TRUE(AllFinite(output));
 
-        const auto begin = static_cast<std::size_t>(kSampleRate * 2);
+        const auto begin   = static_cast<std::size_t>(kSampleRate * 2);
         float      minimum = 2.0f;
         float      maximum = -2.0f;
         for(std::size_t i = begin; i < output.size(); ++i)
@@ -981,7 +991,8 @@ TEST(PedalDelayRevTest, ReportsAlgorithmicLatencyOnlyForReverse)
     fixture.RunSilence(static_cast<std::size_t>(kSampleRate));
 
     const float expected = 0.300f * static_cast<float>(kSampleRate);
-    EXPECT_NEAR(expected, fixture.engine.GetAlgorithmicLatencySamples(), 200.0f);
+    EXPECT_NEAR(
+        expected, fixture.engine.GetAlgorithmicLatencySamples(), 200.0f);
 }
 
 TEST(PedalDelayRevTest, SeamsAndReinjectionStayBoundedOnTransients)
@@ -992,7 +1003,8 @@ TEST(PedalDelayRevTest, SeamsAndReinjectionStayBoundedOnTransients)
     fixture.engine.SetSlotNormalized(PedalSlot::kMix, 1.0f);
     fixture.engine.SetSlotNormalized(PedalSlot::kColor, 1.0f);
     fixture.engine.SetSlotNormalized(PedalSlot::kFeedback, 1.0f);
-    fixture.engine.SetSlotNormalized(PedalSlot::kMotion, 0.0f); // shortest taper
+    fixture.engine.SetSlotNormalized(PedalSlot::kMotion,
+                                     0.0f); // shortest taper
     fixture.SetSlotNative(PedalSlot::kTime, 80.0f);
 
     // Repeated hard transients, the worst case for grain seams.
@@ -1026,7 +1038,8 @@ TEST(PedalDelayFreezeTest, CaptureTransitionsToHoldAndRejectsFreshInput)
     EXPECT_EQ(PedalFreezeState::kHold, fixture.engine.GetFreezeState());
 
     const auto heldWithSilence = fixture.Run(Silence(kBlockSize * 16));
-    EXPECT_GT(Rms(heldWithSilence), 1e-4f) << "the captured loop keeps sounding";
+    EXPECT_GT(Rms(heldWithSilence), 1e-4f)
+        << "the captured loop keeps sounding";
 
     // Same engine state reached twice: hold must ignore whatever arrives.
     EngineFixture quiet;
@@ -1042,8 +1055,8 @@ TEST(PedalDelayFreezeTest, CaptureTransitionsToHoldAndRejectsFreshInput)
         fx->Run(Sine(static_cast<std::size_t>(kSampleRate / 2), 220.0f, 0.7f));
         ASSERT_EQ(PedalFreezeState::kHold, fx->engine.GetFreezeState());
     }
-    const std::size_t frames = static_cast<std::size_t>(kSampleRate);
-    const auto        tone   = Sine(frames, 900.0f, 0.9f);
+    const std::size_t frames      = static_cast<std::size_t>(kSampleRate);
+    const auto        tone        = Sine(frames, 900.0f, 0.9f);
     const auto        withSilence = quiet.Run(Silence(frames));
     const auto        withInput   = loud.Run(tone);
     // The residual is the wet/dry crossfade arithmetic, not a state leak: any
@@ -1062,7 +1075,8 @@ TEST(PedalDelayFreezeTest, AccumulateAdmitsFreshInputAndReplaceDiscardsCapture)
         fixture->engine.SetSlotNormalized(PedalSlot::kMotion, 0.0f);
         fixture->SetSlotNative(PedalSlot::kTime, 200.0f);
         fixture->engine.SetFreezeState(PedalFreezeState::kCapture);
-        fixture->Run(Sine(static_cast<std::size_t>(kSampleRate / 2), 220.0f, 0.7f));
+        fixture->Run(
+            Sine(static_cast<std::size_t>(kSampleRate / 2), 220.0f, 0.7f));
         fixture->engine.SetFreezeState(after);
         return fixture;
     };
@@ -1071,7 +1085,7 @@ TEST(PedalDelayFreezeTest, AccumulateAdmitsFreshInputAndReplaceDiscardsCapture)
     auto accumulated = capture(PedalFreezeState::kAccumulate);
     // Injected material only reappears after one full loop (200 ms), so the
     // comparison window has to be longer than the loop.
-    const auto tone       = Sine(static_cast<std::size_t>(kSampleRate), 900.0f, 0.8f);
+    const auto tone = Sine(static_cast<std::size_t>(kSampleRate), 900.0f, 0.8f);
     const auto heldOutput = held->Run(tone);
     const auto accOutput  = accumulated->Run(tone);
     EXPECT_GT(MaxDifference(heldOutput, accOutput), 1e-3f)
@@ -1143,9 +1157,8 @@ TEST(PedalDelayFreezeTest, HostExposesEveryStateTransitionExplicitly)
     }};
     for(const auto& testCase : kCases)
     {
-        core->SetMenuItemValue(std::string("node0/menu/switches/")
-                                   + testCase.item,
-                               1.0f);
+        core->SetMenuItemValue(
+            std::string("node0/menu/switches/") + testCase.item, 1.0f);
         EXPECT_EQ(testCase.expected, core->GetEngine().GetFreezeState())
             << testCase.item;
     }
@@ -1183,7 +1196,8 @@ TEST(PedalDelayBypassTest, BypassWithoutTrailsPassesTheDrySignalUntouched)
     fixture.engine.SetBypass(true);
     fixture.engine.SetSlotNormalized(PedalSlot::kMix, 1.0f);
 
-    const auto input  = Sine(static_cast<std::size_t>(kSampleRate / 4), 440.0f, 0.6f);
+    const auto input
+        = Sine(static_cast<std::size_t>(kSampleRate / 4), 440.0f, 0.6f);
     const auto output = fixture.Run(input);
     EXPECT_FLOAT_EQ(0.0f, MaxDifference(input, output));
 }
@@ -1194,7 +1208,7 @@ TEST(PedalDelayBypassTest, BypassWithoutTrailsPassesTheDrySignalUntouched)
 
 TEST(PedalDelayHostPerformanceTest, RecordsBlockProcessTiming)
 {
-    const auto input = Sine(kBlockSize, 440.0f, 0.7f);
+    const auto         input = Sine(kBlockSize, 440.0f, 0.7f);
     std::vector<float> left(kBlockSize, 0.0f);
     std::vector<float> right(kBlockSize, 0.0f);
 
@@ -1209,8 +1223,8 @@ TEST(PedalDelayHostPerformanceTest, RecordsBlockProcessTiming)
         }
 
         // 10 s of audio at 64 frames per block.
-        const std::size_t blocks = static_cast<std::size_t>(kSampleRate * 10)
-                                   / kBlockSize;
+        const std::size_t blocks
+            = static_cast<std::size_t>(kSampleRate * 10) / kBlockSize;
         double totalMicroseconds = 0.0;
         double worstMicroseconds = 0.0;
         for(std::size_t block = 0; block < blocks; ++block)

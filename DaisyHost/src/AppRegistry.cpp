@@ -17,83 +17,83 @@ namespace daisyhost
 {
 namespace
 {
-const std::vector<HostedAppRegistration> kRegistrations = {
-    {"multidelay",
-     "Multi Delay",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::MultiDelayCore>(nodeId);
-     }},
-    {"pedal_multidelay",
-     "Pedal Multi-Delay",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::PedalDelayCore>(nodeId);
-     }},
-    {"torus",
-     "Torus",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::TorusCore>(nodeId);
-     }},
-    {"cloudseed",
-     "CloudSeed",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::CloudSeedCore>(nodeId);
-     }},
-    {"braids",
-     "Braids",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::BraidsCore>(nodeId);
-     }},
-    {"harmoniqs",
-     "Harmoniqs",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::HarmoniqsCore>(nodeId);
-     }},
-    {"vasynth",
-     "VA Synth",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::VASynthCore>(nodeId);
-     }},
-    {"polyosc",
-     "PolyOsc",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::PolyOscCore>(nodeId);
-     }},
-    {"subharmoniq",
-     "Subharmoniq",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::SubharmoniqCore>(nodeId);
-     }},
-    {"field_delay_multifx_pedal",
-     "Field Delay MultiFX Pedal",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::DelayFxAdaptationCore>(
-             DaisyDelayFxSource::kMultiFxPedal, nodeId);
-     }},
-    {"field_delay_reverb_playground",
-     "Field Delay Reverb Playground",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::DelayFxAdaptationCore>(
-             DaisyDelayFxSource::kReverbPlayground, nodeId);
-     }},
-    {"field_delay_funbox",
-     "Field Delay FunBox",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::DelayFxAdaptationCore>(
-             DaisyDelayFxSource::kFunBox, nodeId);
-     }},
-    {"field_delay_sdram_delaylines",
-     "Field Delay SDRAM Delaylines",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::DelayFxAdaptationCore>(
-             DaisyDelayFxSource::kSdramDelaylines, nodeId);
-     }},
-    {"field_delay_bundle",
-     "Field Delay Bundle",
-     [](const std::string& nodeId) {
-         return std::make_unique<apps::DelayFxAdaptationCore>(
-             DaisyDelayFxSource::kMultiFxPedal, nodeId, true);
-     }},
-};
+    const std::vector<HostedAppRegistration> kRegistrations = {
+        {"multidelay",
+         "Multi Delay",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::MultiDelayCore>(nodeId);
+         }},
+        {"pedal_multidelay",
+         "Pedal Multi-Delay",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::PedalDelayCore>(nodeId);
+         }},
+        {"torus",
+         "Torus",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::TorusCore>(nodeId);
+         }},
+        {"cloudseed",
+         "CloudSeed",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::CloudSeedCore>(nodeId);
+         }},
+        {"braids",
+         "Braids",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::BraidsCore>(nodeId);
+         }},
+        {"harmoniqs",
+         "Harmoniqs",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::HarmoniqsCore>(nodeId);
+         }},
+        {"vasynth",
+         "VA Synth",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::VASynthCore>(nodeId);
+         }},
+        {"polyosc",
+         "PolyOsc",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::PolyOscCore>(nodeId);
+         }},
+        {"subharmoniq",
+         "Subharmoniq",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::SubharmoniqCore>(nodeId);
+         }},
+        {"field_delay_multifx_pedal",
+         "Field Delay MultiFX Pedal",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::DelayFxAdaptationCore>(
+                 DaisyDelayFxSource::kMultiFxPedal, nodeId);
+         }},
+        {"field_delay_reverb_playground",
+         "Field Delay Reverb Playground",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::DelayFxAdaptationCore>(
+                 DaisyDelayFxSource::kReverbPlayground, nodeId);
+         }},
+        {"field_delay_funbox",
+         "Field Delay FunBox",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::DelayFxAdaptationCore>(
+                 DaisyDelayFxSource::kFunBox, nodeId);
+         }},
+        {"field_delay_sdram_delaylines",
+         "Field Delay SDRAM Delaylines",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::DelayFxAdaptationCore>(
+                 DaisyDelayFxSource::kSdramDelaylines, nodeId);
+         }},
+        {"field_delay_bundle",
+         "Field Delay Bundle",
+         [](const std::string& nodeId) {
+             return std::make_unique<apps::DelayFxAdaptationCore>(
+                 DaisyDelayFxSource::kMultiFxPedal, nodeId, true);
+         }},
+    };
 } // namespace
 
 const std::vector<HostedAppRegistration>& GetHostedAppRegistrations()
@@ -106,22 +106,22 @@ std::string GetDefaultHostedAppId()
     return "multidelay";
 }
 
-std::unique_ptr<HostedAppCore> CreateHostedAppCore(const std::string& requestedAppId,
-                                                   const std::string& nodeId,
-                                                   std::string*       resolvedAppId)
+std::unique_ptr<HostedAppCore>
+CreateHostedAppCore(const std::string& requestedAppId,
+                    const std::string& nodeId,
+                    std::string*       resolvedAppId)
 {
-    const auto& registrations = GetHostedAppRegistrations();
-    const auto  registrationIt
-        = std::find_if(registrations.begin(),
-                       registrations.end(),
-                       [&requestedAppId](const HostedAppRegistration& registration) {
-                           return registration.appId == requestedAppId;
-                       });
+    const auto& registrations  = GetHostedAppRegistrations();
+    const auto  registrationIt = std::find_if(
+        registrations.begin(),
+        registrations.end(),
+        [&requestedAppId](const HostedAppRegistration& registration) {
+            return registration.appId == requestedAppId;
+        });
 
-    const auto& registration
-        = registrationIt != registrations.end()
-              ? *registrationIt
-              : registrations.front();
+    const auto& registration = registrationIt != registrations.end()
+                                   ? *registrationIt
+                                   : registrations.front();
 
     if(resolvedAppId != nullptr)
     {

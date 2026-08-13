@@ -18,10 +18,9 @@ next safe starting point.
 
 Latest fully green host gate from this checkout:
 
-- `cmd /c build_host.cmd`: configured and built the complete Release target set
-  on 2026-08-13; its first CTest leg was interrupted only by the command
-  timeout after 155 passing tests, then the same generated build was resumed
-  directly with CTest
+- `build_host.cmd -Configuration Release -SkipConfigure -SkipTests`: built the
+  complete Release target set on 2026-08-13 after the publication formatter
+  repair
 - underlying aggregate:
   - `cmake -S . -B build`: passed
   - `cmake --build build --config Release --target unit_tests DaisyHostCLI DaisyHostHub DaisyHostRender DaisyHostPatch_VST3 DaisyHostPatch_Standalone`: passed
@@ -72,6 +71,19 @@ Latest automated gate attempt:
     remain explicitly unclaimed.
   - Skills materially used: `github:github` for repository/publication routing
     and `fable-instruction-critique` for the deployed scope-contract audit.
+- Publication CI repair:
+  - Stacked PR #10 merged into draft PR #9, after which GitHub `Fix Style`
+    failed because the eight newly changed C++ files were not compliant with
+    the repository's pinned clang-format 10 whole-file check.
+  - `clang-format 10.0.0 -i` was applied only to those eight DaisyHost C++
+    paths; the matching `--dry-run --Werror` check then passed.
+  - Raw MSBuild reproduced the known duplicate `Path` / `PATH` environment
+    launcher failure. The repository wrapper normalized the environment and
+    built `unit_tests`, `DaisyHostCLI`, `DaisyHostHub`, `DaisyHostRender`,
+    `DaisyHostPatch_VST3`, and `DaisyHostPatch_Standalone`; fresh Release CTest
+    passed `337/337` in `192.70 s`.
+  - No behavior, algorithm, control, or scenario semantics changed in the CI
+    repair; manual DAW, GUI, firmware, and hardware claims remain out of scope.
 - Next safe starting point:
   - Recommender: `WS10 - External state / debug surface`; runner-up `TF8 -
     Daisy Field board support`; explicitly wait on `WS9`, `WS11`, `WS12`,
