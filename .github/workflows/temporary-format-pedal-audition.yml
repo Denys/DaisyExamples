@@ -8,7 +8,7 @@ on:
       - ".github/workflows/temporary-format-pedal-audition.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: codex/pedal-multidelay-audition-profiler-2026-08-13
       - name: Apply repository clang-format 10
         uses: DoozyX/clang-format-lint-action@v0.20
         with:
@@ -24,10 +26,16 @@ jobs:
           clangFormatVersion: 10
           inplace: true
           style: file
-      - name: Upload formatted source
-        uses: actions/upload-artifact@v4
-        with:
-          name: pedal-audition-main-cpp-clang-format-10
-          path: DaisyHost/tools/pedal_multidelay_audition/main.cpp
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit formatted source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add DaisyHost/tools/pedal_multidelay_audition/main.cpp
+          if git diff --cached --quiet; then
+            echo "No formatting change required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style: apply clang-format 10 to audition runner"
+          git push origin HEAD:codex/pedal-multidelay-audition-profiler-2026-08-13
