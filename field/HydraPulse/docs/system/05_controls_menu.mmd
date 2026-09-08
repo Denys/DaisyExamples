@@ -1,0 +1,20 @@
+flowchart TD
+    Input["1 kHz stable controls"] --> Panic{"Both switches held 500 ms?"}
+    Panic -->|"yes"| Latch["Panic once / suppress until both released"]
+    Panic -->|"no"| Normal["Normal gesture processing"]
+    Normal --> Display{"SW2 held?"}
+    Display -->|"yes"| Shift["Show momentary Shift palette"]
+    Display -->|"no"| Home["Show Home / release actions"]
+    Shift --> Direct["1-4 voice / 5-7 banks / 8 held Fill / 9-12 mute"]
+    Shift --> Clear["13 held 1 s / clear only while stopped"]
+    Shift --> Select["14-15 / stopped-only tutorial preview"]
+    Select --> Preview["Pending preset flag / five-second timeout"]
+    Preview --> Confirm{"16 with Shift / stopped?"}
+    Confirm -->|"yes"| Loading["Engine fades / applies preset at zero gain"]
+    Confirm -->|"no or timeout"| Retain["No preset change"]
+    Loading --> Revision["Next control tick sees revision / re-arm pickups"]
+    Home --> Step["Tap-release toggles / 400 ms hold accents"]
+    Normal --> Knobs["Eight fixed-meaning pickup knobs"]
+    Preview -. "name visible on either display" .-> Shift
+    Preview -. "name visible on either display" .-> Home
+    Revision -. "does not latch a menu" .-> Display

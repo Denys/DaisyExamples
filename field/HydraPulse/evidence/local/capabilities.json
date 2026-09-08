@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-07",
+  "tools": {
+    "git": true,
+    "cmake": true,
+    "g++": true,
+    "clang++": true,
+    "arm-none-eabi-g++": false,
+    "mmdc": false,
+    "clang-format": false
+  },
+  "github_write": "UNAVAILABLE",
+  "hardware": "UNAVAILABLE",
+  "mermaid_renderer": "NOT_RUN",
+  "target_fork_inspection": "HOLD public retrieval unsuccessful"
+}

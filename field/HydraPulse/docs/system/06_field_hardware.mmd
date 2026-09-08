@@ -1,0 +1,17 @@
+flowchart LR
+    CodecIn["Stereo codec input"] --> Truth["Truth passthrough"]
+    Beat["Beat stereo renderer"] --> CodecOut["Stereo codec output"]
+    Truth --> CodecOut
+    Pots["8 pots / mux"] --> ADC["DaisyField analog controls"]
+    CV["CV1..4"] --> ADC
+    ADC --> Snap["Diagnostic snapshot"]
+    SR["16-key shift register"] --> HID["DaisyField keyboard scan"]
+    Switches["SW1 / SW2"] --> HID
+    HID --> UI["Pure Controller"]
+    GateIn["Gate In / BSP State"] --> GC["1 kHz sampled edge counter"]
+    SW1["Release-to-arm SW1 hold"] --> Safe["OutputTestArm"]
+    Safe --> DAC["DAC1 / DAC2 codes"]
+    Safe --> GateOut["Gate Out boolean"]
+    TP["Seed testpoint API"] --> Scope["Scope callback pulse"]
+    UART["BSP MIDI UART"] --> MIDI["Foreground MIDI event policy"]
+    Snap --> Foreground["OLED / LED / telemetry"]

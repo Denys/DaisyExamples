@@ -1,0 +1,2 @@
+retrigger first-sample deviation 1.42942; parameter first-sample deviation 0.210695
+/mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse/tests/native/test_transitions.cpp:32 CHECK failed: max_retrigger_error<.05f

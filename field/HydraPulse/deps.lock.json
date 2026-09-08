@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "date": "2026-09-08",
+  "strategy": "use the existing DaisyExamples root libDaisy gitlink; no global repin",
+  "dependencies": [
+    {
+      "name": "libDaisy",
+      "repository": "https://github.com/electro-smith/libDaisy",
+      "ref": "85172e2b5c9abea1bf56dcd5d2c7b3f5717eb66b",
+      "license_file": "LICENSE",
+      "license_blob_sha1": "1c3a251694f1d1842c3f114508d36ca63cddf275",
+      "pin_evidence": "gitlink inspected at Denys/DaisyExamples master 041bfcbb7975316606ece8f1ccbacbab9c0e1482; exact clean tree and LICENSE inspected locally on 2026-09-08.",
+      "current_run_status": "Exact checkout inspected; tools/build_target.py verifies it before and after each qualification build.",
+      "role": "only direct firmware dependency; no DaisySP required by these original algorithms"
+    }
+  ]
+}

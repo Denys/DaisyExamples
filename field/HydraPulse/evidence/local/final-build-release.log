@@ -1,0 +1,25 @@
+$ cmake --build /mnt/data/hpf_build_release --parallel 2
+[  2%] [32mBuilding CXX object CMakeFiles/contract_FieldTruth.dir/firmware/FieldTruth.cpp.o[0m
+[ 13%] Built target hydrapulse_engine
+[ 16%] [32mBuilding CXX object CMakeFiles/contract_HydraPulse.dir/firmware/HydraPulse.cpp.o[0m
+[ 16%] Built target contract_FieldTruth
+[ 22%] Built target render_scenarios
+[ 27%] Built target test_pattern16
+[ 27%] Built target contract_HydraPulse
+[ 38%] Built target test_sample_clock
+[ 38%] Built target test_step_sequencer
+[ 50%] Built target test_control_pickup
+[ 50%] Built target test_regressions
+[ 55%] Built target test_groove_clock
+[ 61%] Built target test_spsc
+[ 72%] Built target test_engine
+[ 72%] Built target test_controller
+[ 77%] Built target test_dsp
+[ 83%] Built target test_no_allocation
+[ 88%] Built target test_near_rejects_nan
+[ 94%] Built target test_transitions
+[ 97%] [32mBuilding CXX object tests/native/CMakeFiles/test_adapter_midi.dir/test_adapter_midi.cpp.o[0m
+[100%] [32m[1mLinking CXX executable test_adapter_midi[0m
+[100%] Built target test_adapter_midi
+
+exit=0

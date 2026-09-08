@@ -1,0 +1,6 @@
+$ cmake -S /mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse -B /mnt/data/hpf_build_release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/hpf_build_release
+
+exit=0

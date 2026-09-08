@@ -1,0 +1,107 @@
+name: HydraPulse qualification
+on:
+  push:
+    paths:
+      - 'field/HydraPulse/**'
+      - '.github/workflows/hydrapulse.yml'
+  pull_request:
+    paths:
+      - 'field/HydraPulse/**'
+      - '.github/workflows/hydrapulse.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hydrapulse-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [release, ubsan, asan-ubsan]
+    defaults:
+      run:
+        working-directory: field/HydraPulse
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Repository and Python checks
+        run: |
+          python3 -S tools/generate_presets.py --check
+          python3 -S tools/validate_repo.py
+          python3 -S ../../DAISY_QAE/validate_daisy_code.py .
+          python3 -S -m unittest discover -s tests/python -v
+      - name: Configure
+        env:
+          HPF_MODE: ${{ matrix.mode }}
+          CXX: clang++
+        run: |
+          case "$HPF_MODE" in
+            release) flags="-DCMAKE_BUILD_TYPE=Release" ;;
+            ubsan) flags="-DCMAKE_BUILD_TYPE=Debug -DHPF_UBSAN_ONLY=ON" ;;
+            asan-ubsan) flags="-DCMAKE_BUILD_TYPE=Debug -DHPF_ENABLE_SANITIZERS=ON" ;;
+            *) exit 1 ;;
+          esac
+          cmake -S . -B build-ci -DBUILD_TESTING=ON $flags
+      - name: Build and test
+        run: |
+          cmake --build build-ci --parallel 2
+          ctest --test-dir build-ci --output-on-failure
+      - name: Sonic replay
+        if: matrix.mode == 'release'
+        run: |
+          ./build-ci/render_scenarios renders-a
+          ./build-ci/render_scenarios renders-b
+          python3 -S tools/validate_audio.py renders-a --repeat renders-b
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hydrapulse-host-${{ matrix.mode }}
+          path: |
+            field/HydraPulse/build-ci/Testing/Temporary/LastTest.log
+            field/HydraPulse/renders-a/
+          if-no-files-found: error
+          retention-days: 14
+  arm:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: field/HydraPulse
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: electro-smith/libDaisy
+          ref: 85172e2b5c9abea1bf56dcd5d2c7b3f5717eb66b
+          path: libDaisy
+          submodules: recursive
+          persist-credentials: false
+      - name: Provision ARM compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+          arm-none-eabi-g++ --version
+          dpkg-query -W gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+      - name: Verify dependency and build both images
+        run: |
+          python3 -S tools/verify_dependencies.py ../../libDaisy
+          python3 -S tools/build_target.py --libdaisy ../../libDaisy --app-type BOOT_NONE --jobs 2
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: hydrapulse-arm-BOOT_NONE
+          path: field/HydraPulse/artifacts/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: hydrapulse-arm-failure-logs
+          path: field/HydraPulse/artifacts/**/build.log
+          if-no-files-found: warn
+          retention-days: 14

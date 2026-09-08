@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "generated_utc_date": "2026-08-16",
+  "dependencies": [
+    {
+      "name": "libDaisy",
+      "repository": "https://github.com/electro-smith/libDaisy",
+      "ref": "cc146d5065dd8286078a662e2830bf820c37a612",
+      "role": "P0 Daisy Field BSP / hardware dependency",
+      "state": "planned_not_vendored"
+    },
+    {
+      "name": "DaisySP",
+      "repository": "https://github.com/electro-smith/DaisySP",
+      "ref": "599511b740f8f3a9b8db72a0642aa45b8a23c3a3",
+      "role": "P1 temporary synthesis/DSP implementation source",
+      "state": "deferred_not_vendored"
+    }
+  ]
+}

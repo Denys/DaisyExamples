@@ -1,0 +1,3 @@
+$ /mnt/data/hpf_build_release/render_scenarios /mnt/data/HydraPulse_host_demos
+
+exit=0

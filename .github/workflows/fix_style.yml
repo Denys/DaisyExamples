@@ -31,6 +31,8 @@ jobs:
             "cube/",
             "utils/",
             "resources/",
+            # Immutable candidate reference archive; validated by its original hashes.
+            "field/HydraPulse/references/r0/",
         )
         output = subprocess.check_output(
             [

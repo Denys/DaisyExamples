@@ -1,0 +1,598 @@
+{
+  "schema": 1,
+  "origin": "Original HydraPulse tutorial patterns; no manual pattern transcription.",
+  "presets": [
+    {
+      "id": 0,
+      "name": "Blank Canvas",
+      "bpm": 110,
+      "swing": 0,
+      "drive": 0,
+      "voices": [
+        {
+          "tune": 0.36,
+          "decay": 0.32,
+          "character": 0.28,
+          "level": 0.8
+        },
+        {
+          "tune": 0.45,
+          "decay": 0.28,
+          "character": 0.5,
+          "level": 0.72
+        },
+        {
+          "tune": 0.45,
+          "decay": 0.25,
+          "character": 0.4,
+          "level": 0.55
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.4,
+          "character": 0.3,
+          "level": 0.65
+        }
+      ],
+      "notes": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "accents": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "lesson": "Build a rhythm from silence."
+    },
+    {
+      "id": 1,
+      "name": "First Pulse",
+      "bpm": 110,
+      "swing": 0,
+      "drive": 0.05,
+      "voices": [
+        {
+          "tune": 0.32,
+          "decay": 0.35,
+          "character": 0.35,
+          "level": 0.85
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.28,
+          "character": 0.5,
+          "level": 0.7
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.2,
+          "character": 0.4,
+          "level": 0.55
+        },
+        {
+          "tune": 0.35,
+          "decay": 0.4,
+          "character": 0.25,
+          "level": 0.6
+        }
+      ],
+      "notes": [
+        [
+          4369,
+          0,
+          0,
+          0
+        ],
+        [
+          4497,
+          0,
+          0,
+          0
+        ],
+        [
+          4369,
+          59392,
+          65280,
+          0
+        ]
+      ],
+      "accents": [
+        [
+          4369,
+          0,
+          0,
+          0
+        ],
+        [
+          4369,
+          0,
+          0,
+          0
+        ],
+        [
+          4369,
+          0,
+          4352,
+          0
+        ]
+      ],
+      "lesson": "Hear pitch sweep and decay separately."
+    },
+    {
+      "id": 2,
+      "name": "Backbeat",
+      "bpm": 120,
+      "swing": 0,
+      "drive": 0.1,
+      "voices": [
+        {
+          "tune": 0.4,
+          "decay": 0.28,
+          "character": 0.25,
+          "level": 0.8
+        },
+        {
+          "tune": 0.35,
+          "decay": 0.28,
+          "character": 0.55,
+          "level": 0.74
+        },
+        {
+          "tune": 0.48,
+          "decay": 0.2,
+          "character": 0.35,
+          "level": 0.55
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.3,
+          "character": 0.35,
+          "level": 0.65
+        }
+      ],
+      "notes": [
+        [
+          257,
+          4112,
+          17476,
+          0
+        ],
+        [
+          16705,
+          4112,
+          17476,
+          0
+        ],
+        [
+          257,
+          63504,
+          65348,
+          0
+        ]
+      ],
+      "accents": [
+        [
+          257,
+          4112,
+          0,
+          0
+        ],
+        [
+          257,
+          4112,
+          0,
+          0
+        ],
+        [
+          257,
+          4112,
+          4352,
+          0
+        ]
+      ],
+      "lesson": "Balance kick, snare and offbeat hats."
+    },
+    {
+      "id": 3,
+      "name": "Broken Grid",
+      "bpm": 126,
+      "swing": 0,
+      "drive": 0.16,
+      "voices": [
+        {
+          "tune": 0.45,
+          "decay": 0.24,
+          "character": 0.48,
+          "level": 0.82
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.24,
+          "character": 0.65,
+          "level": 0.75
+        },
+        {
+          "tune": 0.58,
+          "decay": 0.18,
+          "character": 0.6,
+          "level": 0.5
+        },
+        {
+          "tune": 0.45,
+          "decay": 0.25,
+          "character": 0.35,
+          "level": 0.62
+        }
+      ],
+      "notes": [
+        [
+          2369,
+          4112,
+          25957,
+          2056
+        ],
+        [
+          18689,
+          4112,
+          25957,
+          34952
+        ],
+        [
+          2369,
+          63504,
+          65381,
+          2056
+        ]
+      ],
+      "accents": [
+        [
+          257,
+          4112,
+          257,
+          0
+        ],
+        [
+          257,
+          4112,
+          257,
+          0
+        ],
+        [
+          257,
+          4112,
+          4353,
+          0
+        ]
+      ],
+      "lesson": "Hear syncopation without probability."
+    },
+    {
+      "id": 4,
+      "name": "Alloy Swing",
+      "bpm": 124,
+      "swing": 0.55,
+      "drive": 0.18,
+      "voices": [
+        {
+          "tune": 0.3,
+          "decay": 0.35,
+          "character": 0.38,
+          "level": 0.82
+        },
+        {
+          "tune": 0.46,
+          "decay": 0.34,
+          "character": 0.7,
+          "level": 0.72
+        },
+        {
+          "tune": 0.55,
+          "decay": 0.42,
+          "character": 0.55,
+          "level": 0.56
+        },
+        {
+          "tune": 0.55,
+          "decay": 0.35,
+          "character": 0.45,
+          "level": 0.6
+        }
+      ],
+      "notes": [
+        [
+          385,
+          4112,
+          21845,
+          33288
+        ],
+        [
+          16833,
+          4112,
+          21845,
+          33416
+        ],
+        [
+          385,
+          63504,
+          65365,
+          33288
+        ]
+      ],
+      "accents": [
+        [
+          257,
+          4112,
+          4369,
+          0
+        ],
+        [
+          257,
+          4112,
+          4369,
+          0
+        ],
+        [
+          257,
+          4112,
+          4369,
+          0
+        ]
+      ],
+      "lesson": "Compare straight and delayed offbeats."
+    },
+    {
+      "id": 5,
+      "name": "Arc Study",
+      "bpm": 105,
+      "swing": 0,
+      "drive": 0.12,
+      "voices": [
+        {
+          "tune": 0.4,
+          "decay": 0.28,
+          "character": 0.35,
+          "level": 0.8
+        },
+        {
+          "tune": 0.5,
+          "decay": 0.3,
+          "character": 0.45,
+          "level": 0.7
+        },
+        {
+          "tune": 0.4,
+          "decay": 0.2,
+          "character": 0.4,
+          "level": 0.5
+        },
+        {
+          "tune": 0.62,
+          "decay": 0.55,
+          "character": 0.6,
+          "level": 0.62
+        }
+      ],
+      "notes": [
+        [
+          257,
+          4096,
+          17476,
+          19017
+        ],
+        [
+          16705,
+          4096,
+          17476,
+          51913
+        ],
+        [
+          257,
+          63488,
+          65348,
+          59977
+        ]
+      ],
+      "accents": [
+        [
+          257,
+          4096,
+          0,
+          1
+        ],
+        [
+          257,
+          4096,
+          0,
+          1
+        ],
+        [
+          257,
+          4096,
+          4352,
+          1
+        ]
+      ],
+      "lesson": "Explore phase modulation, tune and decay."
+    },
+    {
+      "id": 6,
+      "name": "Night Shift",
+      "bpm": 132,
+      "swing": 0.2,
+      "drive": 0.38,
+      "voices": [
+        {
+          "tune": 0.25,
+          "decay": 0.5,
+          "character": 0.7,
+          "level": 0.86
+        },
+        {
+          "tune": 0.3,
+          "decay": 0.4,
+          "character": 0.8,
+          "level": 0.74
+        },
+        {
+          "tune": 0.5,
+          "decay": 0.5,
+          "character": 0.6,
+          "level": 0.52
+        },
+        {
+          "tune": 0.3,
+          "decay": 0.6,
+          "character": 0.68,
+          "level": 0.6
+        }
+      ],
+      "notes": [
+        [
+          4497,
+          6160,
+          21845,
+          33928
+        ],
+        [
+          20945,
+          6160,
+          21845,
+          33928
+        ],
+        [
+          4497,
+          63504,
+          65365,
+          44680
+        ]
+      ],
+      "accents": [
+        [
+          4369,
+          4112,
+          4369,
+          0
+        ],
+        [
+          4369,
+          4112,
+          4369,
+          0
+        ],
+        [
+          4369,
+          4112,
+          4369,
+          0
+        ]
+      ],
+      "lesson": "Perform A/B, mutes and momentary Fill."
+    },
+    {
+      "id": 7,
+      "name": "Fracture Lab",
+      "bpm": 144,
+      "swing": 0.35,
+      "drive": 0.52,
+      "voices": [
+        {
+          "tune": 0.45,
+          "decay": 0.4,
+          "character": 0.9,
+          "level": 0.84
+        },
+        {
+          "tune": 0.65,
+          "decay": 0.38,
+          "character": 0.9,
+          "level": 0.68
+        },
+        {
+          "tune": 0.68,
+          "decay": 0.5,
+          "character": 0.7,
+          "level": 0.46
+        },
+        {
+          "tune": 0.72,
+          "decay": 0.55,
+          "character": 0.85,
+          "level": 0.56
+        }
+      ],
+      "notes": [
+        [
+          18761,
+          37008,
+          65535,
+          10786
+        ],
+        [
+          2313,
+          37008,
+          65535,
+          43682
+        ],
+        [
+          18761,
+          63632,
+          65535,
+          43554
+        ]
+      ],
+      "accents": [
+        [
+          257,
+          4112,
+          4369,
+          0
+        ],
+        [
+          257,
+          4112,
+          4369,
+          0
+        ],
+        [
+          257,
+          4112,
+          4369,
+          0
+        ]
+      ],
+      "lesson": "Dense stress lesson: arrange with subtraction."
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+$ cmake -S /mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse -B /mnt/data/hpf_build_clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/hpf_build_clang
+
+exit=0

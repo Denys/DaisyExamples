@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant FG as Foreground
+    participant MIDI as MIDI driver
+    participant Q as Command queue
+    participant IRQ as Audio callback
+    participant UI as Controller
+    participant E as Engine
+    participant S as Snapshot queue
+    participant OLED as OLED and LED drivers
+    FG->>MIDI: Listen / pop at most 32 events per iteration
+    FG->>Q: Push supported command or count drop
+    IRQ->>IRQ: Testpoint high / meter begin
+    IRQ->>UI: Scan controls and Tick once
+    IRQ->>Q: Drain at most 8 normal commands
+    Note over IRQ,E: Urgent stop instead flushes at most 32 stale commands
+    IRQ->>E: Process each of 48 samples
+    E-->>IRQ: StereoFrame
+    IRQ->>S: Every 40 blocks: copy UiSnapshot
+    IRQ->>IRQ: Meter end / testpoint low
+    FG->>S: Drain at most 8 snapshots
+    FG->>OLED: Draw most recent snapshot
+    FG->>FG: Rate-limited serial telemetry
