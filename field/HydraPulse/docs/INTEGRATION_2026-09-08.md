@@ -34,7 +34,7 @@ Status: host and ARM qualification PASS. FieldTruth flash VERIFIED. Physical dia
 
 14. Add Git attributes preserving archived R0 and raw acquisition log bytes across platform checkouts. Raw logs are binary-diff entries so recorded trailing whitespace remains intact.
 
-15. Use the root workflows' `actions/checkout@v7` in the added CI. The original v4 failed during credential cleanup on the repository's pre-existing orphan `.tmp/ai-book-sparse` gitlink, before tests ran. No unrelated submodule metadata was changed.
+15. Match the root workflows' `actions/checkout@v7` and default credential persistence for the parent checkout. Early cleanup with `persist-credentials: false` fails on the repository's pre-existing orphan `.tmp/ai-book-sparse` gitlink, under both v4 and v7, before tests run. The ephemeral CI token has only contents-read permission; independent libDaisy checkout still removes credentials immediately. No unrelated submodule metadata was changed.
 
 ## Current software evidence
 

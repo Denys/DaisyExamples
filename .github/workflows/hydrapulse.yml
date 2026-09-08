@@ -25,9 +25,8 @@ jobs:
       run:
         working-directory: field/HydraPulse
     steps:
+      # Match root checkout behavior: early auth cleanup traverses orphan legacy gitlinks.
       - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
       - name: Repository and Python checks
         run: |
           python3 -S tools/generate_presets.py --check
@@ -71,9 +70,8 @@ jobs:
       run:
         working-directory: field/HydraPulse
     steps:
+      # Match root checkout behavior: early auth cleanup traverses orphan legacy gitlinks.
       - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
       - uses: actions/checkout@v7
         with:
           repository: electro-smith/libDaisy
