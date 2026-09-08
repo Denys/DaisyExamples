@@ -20,6 +20,9 @@ One Home screen and a momentary Shift palette replace a nested menu tree. All st
 changes that affect sound are owned by the audio callback. Display and telemetry are
 foreground-only. The DSP uses original bounded algorithms and no DaisySP runtime dependency.
 
+Key and switch LEDs provide feedback in the instrument. Knob LEDs are not implemented
+and remain dark in both images; this does not indicate a knob input fault.
+
 Current integration evidence is recorded in [the integration log](docs/INTEGRATION_2026-09-08.md).
 The supplied package's historical results remain in [candidate validation](docs/VALIDATION.md).
 A software or flash verification result does not qualify physical controls or audio.

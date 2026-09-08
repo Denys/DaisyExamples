@@ -1,6 +1,6 @@
 # DaisyExamples integration - 2026-09-08
 
-Status: host and ARM qualification PASS locally and on branch CI. Both firmware flashes VERIFIED on two different Seed processors. Diagnostic listening FAILED/INCONCLUSIVE on the first Seed; instrument listening on the replacement Seed pending.
+Status: host and ARM qualification PASS locally and on branch CI. Both firmware flashes VERIFIED on two different Seed processors. Diagnostic listening FAILED/INCONCLUSIVE on the first Seed; operator reports working instrument output, sequencer, some sounds and controls on the replacement Seed. Full musical and stereo qualification remains incomplete.
 
 ## Inspected inputs and preservation
 
@@ -59,7 +59,7 @@ Status: host and ARM qualification PASS locally and on branch CI. Both firmware 
 - Linker emits enum attribute warnings from GNU runtime objects. Actual application and libDaisy translation units use int-width enums and application static assertions enforce the public BSP MIDI enum width. The warning is retained in logs. Newlib nosys stubs also warn about unsupported POSIX I/O; no such I/O is performed in audio callbacks.
 - Diagnostic ELF matched current runtime sources and successful manifest immediately before flashing.
 - Native Windows OpenOCD 0.12.0 with ST-Link serial `0020000A5553500920393256`: **Programming Finished / Verified OK / Resetting Target**, exit 0. The native tool executes the same inspected APP-specific ELF recipe because USB/SWD is attached to Windows, while compilation runs in WSL.
-- Instrument flash: VERIFIED on the replacement Seed after the operator explicitly requested loading HydraPulse despite the unresolved diagnostic audio result. This is an operator-authorized diagnostic continuation, not a passed P0 promotion. No musical audio or full P0 acceptance claim.
+- Instrument flash: VERIFIED on the replacement Seed after the operator explicitly requested loading HydraPulse despite the unresolved diagnostic audio result. This is an operator-authorized diagnostic continuation, not a passed P0 promotion. Basic musical output is now operator-reported on the replacement Seed; full P0 and all-gesture audio acceptance remain incomplete.
 
 ## Initial hardware runtime capture
 
@@ -87,7 +87,17 @@ The operator heard either no audio or a whistle with FieldTruth, then replaced t
 
 The operator explicitly requested loading HydraPulse on the replacement. SWD confirmed a different processor UID (`002e0044 33305110 39383339`, versus the original `001c003b 3330510f 39383339`), still STM32H74x/75x with 128 KiB flash. A separate full internal-flash backup was retained locally before writing: 131072 bytes, SHA-256 `59a8481b89a5f621eb6f8a14318227e1fccdee24824bb562b9ed1e2f7d1735a7`. Neither recovery image is published.
 
-HydraPulseBeat's local qualified ELF was programmed, verified and reset through ST-Link, exit zero. The replacement enumerated on COM7 and emitted `app=beat build=24e035a726a1`, 48 kHz / 48 samples, CPU 400 MHz. A 55-second capture had no malformed records, max reported load 123 per mille, zero faults/overruns/late starts and zero MIDI/snapshot queue drops. These counters do not establish audible behavior or physical gesture coverage. The operator has been asked to test First Pulse Play/Stop, decay to silence, K1-K4 and L/R listening.
+HydraPulseBeat's local qualified ELF was programmed, verified and reset through ST-Link, exit zero. The replacement enumerated on COM7 and emitted `app=beat build=24e035a726a1`, 48 kHz / 48 samples, CPU 400 MHz. A 55-second capture had no malformed records, max reported load 123 per mille, zero faults/overruns/late starts and zero MIDI/snapshot queue drops. These counters do not establish audible behavior or physical gesture coverage. The subsequent operator listening report is recorded below; the capture itself does not verify listening results.
+
+## Subsequent operator smoke result
+
+After the replacement-Seed HydraPulse flash, the operator reported that output now works correctly, the sequencer works, and at least some sounds work. SW1/SW2, keys, key LEDs, knobs and volume were reported working. This is a positive basic instrument smoke result reported by the operator, not a recorded or independently measured audio test.
+
+The operator suspects the previous processor was faulty. That is plausible but unproven: the earlier listening test used FieldTruth passthrough and the successful later test uses HydraPulse synthesis on a different Seed. A controlled comparison or electrical measurement is still needed to identify the cause of the original whistle.
+
+Knob LEDs are not implemented in either firmware image. Both display routines first clear all LED channels, then populate only key LEDs; the instrument additionally sets the two switch LEDs. No knob LED brightness is written. Their dark state is therefore expected firmware behavior, not evidence that the knobs or their LEDs are defective.
+
+Still unverified: all four voices individually; repeated Play/Stop and decay-to-silence; detailed click/DC/clipping checks; each musical gesture (accent, voice select, A/B, Fill, mute and Panic); measured stereo channel/routing behavior; all sixteen raw key mappings and all eight knob endpoints; full CV/Gate/MIDI P0 measurements. Do not infer these from the general positive smoke report.
 
 ## Remote software evidence and source identity
 
