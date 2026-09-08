@@ -25,7 +25,7 @@ jobs:
       run:
         working-directory: field/HydraPulse
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Repository and Python checks
@@ -71,10 +71,10 @@ jobs:
       run:
         working-directory: field/HydraPulse
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: electro-smith/libDaisy
           ref: 85172e2b5c9abea1bf56dcd5d2c7b3f5717eb66b
