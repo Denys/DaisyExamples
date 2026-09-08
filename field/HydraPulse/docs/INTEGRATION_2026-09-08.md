@@ -1,6 +1,6 @@
 # DaisyExamples integration - 2026-09-08
 
-Status: host and ARM qualification PASS. FieldTruth flash VERIFIED. Physical diagnostic smoke PARTIAL; instrument qualification pending.
+Status: host and ARM qualification PASS locally and on branch CI. Both firmware flashes VERIFIED on two different Seed processors. Diagnostic listening FAILED/INCONCLUSIVE on the first Seed; instrument listening on the replacement Seed pending.
 
 ## Inspected inputs and preservation
 
@@ -59,7 +59,7 @@ Status: host and ARM qualification PASS. FieldTruth flash VERIFIED. Physical dia
 - Linker emits enum attribute warnings from GNU runtime objects. Actual application and libDaisy translation units use int-width enums and application static assertions enforce the public BSP MIDI enum width. The warning is retained in logs. Newlib nosys stubs also warn about unsupported POSIX I/O; no such I/O is performed in audio callbacks.
 - Diagnostic ELF matched current runtime sources and successful manifest immediately before flashing.
 - Native Windows OpenOCD 0.12.0 with ST-Link serial `0020000A5553500920393256`: **Programming Finished / Verified OK / Resetting Target**, exit 0. The native tool executes the same inspected APP-specific ELF recipe because USB/SWD is attached to Windows, while compilation runs in WSL.
-- Instrument flash: NOT_RUN, pending real diagnostic smoke observations. No musical, analog audio, physical key mapping, CV/Gate or full P0 acceptance claim.
+- Instrument flash: VERIFIED on the replacement Seed after the operator explicitly requested loading HydraPulse despite the unresolved diagnostic audio result. This is an operator-authorized diagnostic continuation, not a passed P0 promotion. No musical audio or full P0 acceptance claim.
 
 ## Initial hardware runtime capture
 
@@ -72,12 +72,28 @@ in both channels. Input telemetry alone does not prove analog output or passthro
 The initial serial backlog contains one malformed record and a cumulative drop count of
 857. Preserve this capture; do not classify it as clean complete hardware validation.
 No intentional MIDI stimulus, knob endpoint sweep, all-key mapping or operator listening
-result has been recorded. Instrument flashing remains gated on diagnostic smoke.
+result was recorded during the initial captures. The later operator report and replacement-Seed flash are recorded below.
 
 A second 30-second acquisition discarded the connection backlog before capture.
 It contains 0 malformed records, with callback delta 29560 and drop delta 0.
 Overrun and late-start counters remained zero. The cumulative drop counter was 3058 at capture start and 3058 at its end; disconnected time is not a measured clean interval.
 Raw logs and derived summaries for both acquisitions are retained without byte normalization.
+
+## Operator report and replacement Seed
+
+The operator reported a responsive OLED, key LEDs responding on press, and both switches affecting the display. Knob LEDs did not change brightness; inspection confirms FieldTruth drives only key LEDs, so knob-dependent LED brightness is not implemented. This does not prove all eight analog knob endpoints.
+
+The operator heard either no audio or a whistle with FieldTruth, then replaced the Seed processor. An older synth on the replacement reportedly did not whistle. The cause is unresolved; input passthrough routing, the first processor and the firmware have not been discriminated by measurement. Do not mark diagnostic audio PASS.
+
+The operator explicitly requested loading HydraPulse on the replacement. SWD confirmed a different processor UID (`002e0044 33305110 39383339`, versus the original `001c003b 3330510f 39383339`), still STM32H74x/75x with 128 KiB flash. A separate full internal-flash backup was retained locally before writing: 131072 bytes, SHA-256 `59a8481b89a5f621eb6f8a14318227e1fccdee24824bb562b9ed1e2f7d1735a7`. Neither recovery image is published.
+
+HydraPulseBeat's local qualified ELF was programmed, verified and reset through ST-Link, exit zero. The replacement enumerated on COM7 and emitted `app=beat build=24e035a726a1`, 48 kHz / 48 samples, CPU 400 MHz. A 55-second capture had no malformed records, max reported load 123 per mille, zero faults/overruns/late starts and zero MIDI/snapshot queue drops. These counters do not establish audible behavior or physical gesture coverage. The operator has been asked to test First Pulse Play/Stop, decay to silence, K1-K4 and L/R listening.
+
+## Remote software evidence and source identity
+
+At source commit `fdd22f363b04447ceb92c2a2774ae9d96edc54df`, the [branch qualification run](https://github.com/Denys/DaisyExamples/actions/runs/34232758870) passed all three host modes and both ARM builds. [Build All](https://github.com/Denys/DaisyExamples/actions/runs/34232764124) and [Fix Style](https://github.com/Denys/DaisyExamples/actions/runs/34232764041) passed on the PR. Subsequent changes to this evidence report do not change runtime source.
+
+All six downloaded CI ELF/BIN/MAP artifacts matched their manifest sizes and SHA-256 values. See `evidence/ci-arm-build-2026-09-08.json`. Local and CI manifests differ in the raw line endings of `src/app/Presets.generated.h`: CRLF locally and LF in Git. All 22 build inputs are identical after newline normalization; `evidence/commit-source-bridge-2026-09-08.json` records that comparison. This changes the embedded source ID (`24e035a726a1` local, `41e814118b1e` CI). For each application, the two BIN files are byte-identical after replacing only that embedded ID; ELF/MAP also carry build-directory/debug paths. Keep the local manifest for the images actually flashed; do not substitute CI hashes for them.
 
 ## Earlier attempts retained for traceability
 
