@@ -1,0 +1,13 @@
+/build/
+/build-*/
+/.cache/
+/.vscode/
+/.idea/
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+__pycache__/
+*.pyc
+.DS_Store

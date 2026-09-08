@@ -1,0 +1,18 @@
+flowchart TD
+    Src["Candidate source + original presets"] --> Host["Native CMake / CTest"]
+    Src --> Python["Schema / source / preservation validators"]
+    Host --> San["ASan + UBSan / negative tests"]
+    Host --> WAV["Deterministic host WAV scenarios"]
+    Src --> Contract["Host adapter stub syntax check"]
+    Contract -. "does not imply ARM success" .-> ARM["Real ARM + libDaisy link"]
+    Pins["Exact dependency checkout and toolchain"] --> ARM
+    ARM --> Binary["ELF + BIN + MAP + hashes + size gate"]
+    Binary --> Flash["Explicit manual flash"]
+    Flash --> P0["Measured Field Truth fixture"]
+    P0 --> P1["Measured Beat and tutorial acceptance"]
+    WAV --> Compare["Host / target numerical and audio comparison"]
+    P1 --> Compare
+    Compare --> Release["Candidate acceptance decision"]
+    Remote["Authenticated target repo inspection"] --> Merge["Additive integration / no sibling changes"]
+    Merge --> CI["CI on exact commit"]
+    CI --> Release

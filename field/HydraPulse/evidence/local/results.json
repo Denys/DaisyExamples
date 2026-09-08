@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-07",
+  "candidate": "HydraPulse Field 0.2.0",
+  "runtime_source_sha256": "7aa39d796ad68faea522189185c2f451230aa92a77b5996aa73af942c78d41f8",
+  "source_fingerprint_basis": "Makefile, dependency lock, build helper and all src/firmware .cpp/.h",
+  "checks": [
+    {
+      "id": "gcc-release",
+      "classification": "VERIFIED",
+      "result": "PASS",
+      "tests": 14,
+      "log": "final-ctest-release.log"
+    },
+    {
+      "id": "gcc-ubsan",
+      "classification": "VERIFIED",
+      "result": "PASS",
+      "tests": 14,
+      "log": "final-ctest-ubsan.log"
+    },
+    {
+      "id": "clang-release",
+      "classification": "VERIFIED",
+      "result": "PASS",
+      "tests": 14,
+      "log": "final-ctest-clang.log"
+    },
+    {
+      "id": "clang-asan-ubsan",
+      "classification": "VERIFIED",
+      "result": "PASS",
+      "tests": 14,
+      "log": "final-ctest-clang-asan.log"
+    },
+    {
+      "id": "python",
+      "classification": "VERIFIED",
+      "result": "PASS",
+      "tests": 38,
+      "log": "final-python-tests.log"
+    },
+    {
+      "id": "gcc-asan-earlier-route",
+      "classification": "HOLD",
+      "result": "runtime library startup conflict",
+      "log": "asan-ubsan.log"
+    },
+    {
+      "id": "host-audio",
+      "classification": "VERIFIED",
+      "result": "8 scenarios repeat identically; PCM gates pass",
+      "log": "final-render-validation.log"
+    },
+    {
+      "id": "actual-arm",
+      "classification": "NOT_RUN",
+      "result": "preflight rejected absent ARM tools and libDaisy checkout",
+      "log": "final-target-preflight.log"
+    },
+    {
+      "id": "hardware-p0-p1",
+      "classification": "NOT_RUN",
+      "result": "no physical Field fixture"
+    },
+    {
+      "id": "github-push-ci",
+      "classification": "NOT_RUN",
+      "result": "no GitHub write capability"
+    },
+    {
+      "id": "mermaid-render",
+      "classification": "NOT_RUN",
+      "result": "no actual Mermaid CLI; source/fence consistency only"
+    },
+    {
+      "id": "manual-pdf",
+      "classification": "VERIFIED",
+      "result": "18 pages; rendered visual QA and text bounds",
+      "log": "manual-pdf-qa.log"
+    }
+  ],
+  "runtime_files": {
+    "Makefile": "b1a647c995c3359d4c100f3a715ac1ec050c04ad42eb774b26eb69e523deee4e",
+    "deps.lock.json": "c59db8c327b09cfe2cee78d0d32fb5f8af68218c282c13ede085c0e401b4f61d",
+    "firmware/FieldAdapter.h": "856bcc26f00812622b09ece8c87129bc38c40c835c2448a764b69555ff0c444b",
+    "firmware/FieldTruth.cpp": "20ef270a84a44c7dac0d5691b65467230278f6426c095425809488f4f0684a6b",
+    "firmware/HydraPulse.cpp": "17311d8cac722674c1d6f3fa9c5211808c1d7a8b868ff050ccf1822c7c70dbdf",
+    "src/app/Controller.cpp": "9feb520976e966e5453745a68774d3684b028f6d0c9824368aa53a0e57bf3987",
+    "src/app/Controller.h": "bc0f96e53567fdc6ef3ecd5a1582a2fffdcaf1406ce60fbe347dbb2d2fdb7407",
+    "src/app/Engine.cpp": "e35bbb8cbf94b7298509d321938d507f98d934dc0a5e14da39e1bbbfdbb07987",
+    "src/app/Engine.h": "560547d9a02df26a4bdb042982ef8d96a3bc5c71a81dbb99520157ddea599170",
+    "src/app/Presets.generated.h": "1bf775a4de76128d88ab42fc095a44b62de60070115b8d9c3a5a2ded8815ac43",
+    "src/app/Types.h": "2668c6c1aa27955f8471a81e26c939aa1f94c1bd4c22930e79d6e3167035bd8d",
+    "src/core/ControlPickup.h": "ee550a1ee797376b78d0ab5a7fc108add3699fc2d7dad928f1e550afcea8f87a",
+    "src/core/GrooveClock.h": "5e37b5c3b08eba016f2bc382f81fdb802a37d67731e6422d7e291c37ef7e5a90",
+    "src/core/OutputTestArm.h": "dd9dda4f7d7769cf9c7df7254c899b12c4b3c278574c1292cebbeb3ce8891063",
+    "src/core/Pattern16.h": "1e18985219ba1ea6c5b4d66eaf223098483b7457af945217b3a07145c8ea70a6",
+    "src/core/SampleAccurateStepClock.h": "3dd3293680f014081d94dd8c4d158e3e13653353870f6bf766a6ea50ddd589b1",
+    "src/core/SpscQueue.h": "b99421411f208fe69e4a100bb5a3615b48c39d17a99407c13f4ef8f54f13d42a",
+    "src/core/StepSequencer.h": "ee6dd997505023870b534f3320df8b50a2fbc3770c28d4b1758a6942bd81b55f",
+    "src/dsp/Primitives.h": "3e9aa5e019094be38aa5c96b2babe35934cc6d44ceadede3db094012110f9fac",
+    "src/dsp/Voices.cpp": "183ced39a1bdcea96baee2cf7d1bc42b8a8b5ccbb033e1df1690e078dedae6e8",
+    "src/dsp/Voices.h": "644c98395f04d5add62ae352cb1a9d1e7e39b38ea42c92b24d5a235f00a3ed6b",
+    "tools/build_target.py": "880efef9d9daffc542a47ee2c76ca3dc71d1e436494a4ecbfb0a7ae51a40fcfc"
+  },
+  "remote_commit": null
+}

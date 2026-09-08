@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "target": "stock Daisy Field",
+  "classification": "PROPOSED",
+  "physical_verified": false,
+  "mapping_source": "firmware/FieldAdapter.h; raw BSP indices logged by Field Truth",
+  "keys": [
+    {
+      "logical": 1,
+      "bsp_index": 0,
+      "led": "LED_KEY_A1",
+      "physical_label": null
+    },
+    {
+      "logical": 2,
+      "bsp_index": 1,
+      "led": "LED_KEY_A2",
+      "physical_label": null
+    },
+    {
+      "logical": 3,
+      "bsp_index": 2,
+      "led": "LED_KEY_A3",
+      "physical_label": null
+    },
+    {
+      "logical": 4,
+      "bsp_index": 3,
+      "led": "LED_KEY_A4",
+      "physical_label": null
+    },
+    {
+      "logical": 5,
+      "bsp_index": 4,
+      "led": "LED_KEY_A5",
+      "physical_label": null
+    },
+    {
+      "logical": 6,
+      "bsp_index": 5,
+      "led": "LED_KEY_A6",
+      "physical_label": null
+    },
+    {
+      "logical": 7,
+      "bsp_index": 6,
+      "led": "LED_KEY_A7",
+      "physical_label": null
+    },
+    {
+      "logical": 8,
+      "bsp_index": 7,
+      "led": "LED_KEY_A8",
+      "physical_label": null
+    },
+    {
+      "logical": 9,
+      "bsp_index": 8,
+      "led": "LED_KEY_B1",
+      "physical_label": null
+    },
+    {
+      "logical": 10,
+      "bsp_index": 9,
+      "led": "LED_KEY_B2",
+      "physical_label": null
+    },
+    {
+      "logical": 11,
+      "bsp_index": 10,
+      "led": "LED_KEY_B3",
+      "physical_label": null
+    },
+    {
+      "logical": 12,
+      "bsp_index": 11,
+      "led": "LED_KEY_B4",
+      "physical_label": null
+    },
+    {
+      "logical": 13,
+      "bsp_index": 12,
+      "led": "LED_KEY_B5",
+      "physical_label": null
+    },
+    {
+      "logical": 14,
+      "bsp_index": 13,
+      "led": "LED_KEY_B6",
+      "physical_label": null
+    },
+    {
+      "logical": 15,
+      "bsp_index": 14,
+      "led": "LED_KEY_B7",
+      "physical_label": null
+    },
+    {
+      "logical": 16,
+      "bsp_index": 15,
+      "led": "LED_KEY_B8",
+      "physical_label": null
+    }
+  ],
+  "knobs": [
+    "Tune",
+    "Decay",
+    "Character",
+    "Level",
+    "Tempo",
+    "Swing",
+    "Drive",
+    "Master"
+  ],
+  "switches": {
+    "SW_1": "Play/Stop on release; held diagnostic output enable in Truth",
+    "SW_2": "momentary Shift; VegasMode in Truth",
+    "BOTH": "500 ms Panic in Beat"
+  },
+  "warning": "Confirm physical key/LED ordering and electrical behavior on the actual assembled Field."
+}

@@ -1,0 +1,741 @@
+[HPF] beat cb=93119 load_pm=123 faults=0
+[HPF] timing cb=93119 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=93399 load_pm=123 faults=0
+[HPF] timing cb=93399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=93639 load_pm=123 faults=0
+[HPF] timing cb=93639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=93879 load_pm=123 faults=0
+[HPF] timing cb=93879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=94119 load_pm=123 faults=0
+[HPF] timing cb=94119 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=94399 load_pm=123 faults=0
+[HPF] timing cb=94399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=94639 load_pm=123 faults=0
+[HPF] timing cb=94639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=94879 load_pm=123 faults=0
+[HPF] timing cb=94879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=95119 load_pm=123 faults=0
+[HPF] timing cb=95119 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=95399 load_pm=123 faults=0
+[HPF] timing cb=95399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=95639 load_pm=123 faults=0
+[HPF] timing cb=95639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=95879 load_pm=123 faults=0
+[HPF] timing cb=95879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=96119 load_pm=123 faults=0
+[HPF] timing cb=96119 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=96399 load_pm=123 faults=0
+[HPF] timing cb=96399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=96639 load_pm=123 faults=0
+[HPF] timing cb=96639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=96879 load_pm=123 faults=0
+[HPF] timing cb=96879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=97159 load_pm=123 faults=0
+[HPF] timing cb=97159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=97399 load_pm=123 faults=0
+[HPF] timing cb=97399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=97639 load_pm=123 faults=0
+[HPF] timing cb=97639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=97879 load_pm=123 faults=0
+[HPF] timing cb=97879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=98159 load_pm=123 faults=0
+[HPF] timing cb=98159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=98399 load_pm=123 faults=0
+[HPF] timing cb=98399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=98639 load_pm=123 faults=0
+[HPF] timing cb=98639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=98879 load_pm=123 faults=0
+[HPF] timing cb=98879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=99159 load_pm=123 faults=0
+[HPF] timing cb=99159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=99399 load_pm=123 faults=0
+[HPF] timing cb=99399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=99639 load_pm=123 faults=0
+[HPF] timing cb=99639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=99879 load_pm=123 faults=0
+[HPF] timing cb=99879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=100159 load_pm=123 faults=0
+[HPF] timing cb=100159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=100399 load_pm=123 faults=0
+[HPF] timing cb=100399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=100639 load_pm=123 faults=0
+[HPF] timing cb=100639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=100879 load_pm=123 faults=0
+[HPF] timing cb=100879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=101159 load_pm=123 faults=0
+[HPF] timing cb=101159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=101399 load_pm=123 faults=0
+[HPF] timing cb=101399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=101639 load_pm=123 faults=0
+[HPF] timing cb=101639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=101879 load_pm=123 faults=0
+[HPF] timing cb=101879 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=102159 load_pm=123 faults=0
+[HPF] timing cb=102159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=102399 load_pm=123 faults=0
+[HPF] timing cb=102399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=102639 load_pm=123 faults=0
+[HPF] timing cb=102639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=102919 load_pm=123 faults=0
+[HPF] timing cb=102919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=103159 load_pm=123 faults=0
+[HPF] timing cb=103159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=103399 load_pm=123 faults=0
+[HPF] timing cb=103399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=103639 load_pm=123 faults=0
+[HPF] timing cb=103639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=103919 load_pm=123 faults=0
+[HPF] timing cb=103919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=104159 load_pm=123 faults=0
+[HPF] timing cb=104159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=104399 load_pm=123 faults=0
+[HPF] timing cb=104399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=104639 load_pm=123 faults=0
+[HPF] timing cb=104639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=104919 load_pm=123 faults=0
+[HPF] timing cb=104919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=105159 load_pm=123 faults=0
+[HPF] timing cb=105159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=105399 load_pm=123 faults=0
+[HPF] timing cb=105399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=105639 load_pm=123 faults=0
+[HPF] timing cb=105639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=105919 load_pm=123 faults=0
+[HPF] timing cb=105919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=106159 load_pm=123 faults=0
+[HPF] timing cb=106159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=106399 load_pm=123 faults=0
+[HPF] timing cb=106399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=106639 load_pm=123 faults=0
+[HPF] timing cb=106639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=106919 load_pm=123 faults=0
+[HPF] timing cb=106919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=107159 load_pm=123 faults=0
+[HPF] timing cb=107159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=107399 load_pm=123 faults=0
+[HPF] timing cb=107399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=107639 load_pm=123 faults=0
+[HPF] timing cb=107639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=107919 load_pm=123 faults=0
+[HPF] timing cb=107919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=108159 load_pm=123 faults=0
+[HPF] timing cb=108159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=108399 load_pm=123 faults=0
+[HPF] timing cb=108399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=108639 load_pm=123 faults=0
+[HPF] timing cb=108639 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=108919 load_pm=123 faults=0
+[HPF] timing cb=108919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=109159 load_pm=123 faults=0
+[HPF] timing cb=109159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=109399 load_pm=123 faults=0
+[HPF] timing cb=109399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=109679 load_pm=123 faults=0
+[HPF] timing cb=109679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=109919 load_pm=123 faults=0
+[HPF] timing cb=109919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=110159 load_pm=123 faults=0
+[HPF] timing cb=110159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=110399 load_pm=123 faults=0
+[HPF] timing cb=110399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=110679 load_pm=123 faults=0
+[HPF] timing cb=110679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=110919 load_pm=123 faults=0
+[HPF] timing cb=110919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=111159 load_pm=123 faults=0
+[HPF] timing cb=111159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=111399 load_pm=123 faults=0
+[HPF] timing cb=111399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=111679 load_pm=123 faults=0
+[HPF] timing cb=111679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=111919 load_pm=123 faults=0
+[HPF] timing cb=111919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=112159 load_pm=123 faults=0
+[HPF] timing cb=112159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=112399 load_pm=123 faults=0
+[HPF] timing cb=112399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=112679 load_pm=123 faults=0
+[HPF] timing cb=112679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=112919 load_pm=123 faults=0
+[HPF] timing cb=112919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=113159 load_pm=123 faults=0
+[HPF] timing cb=113159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=113399 load_pm=123 faults=0
+[HPF] timing cb=113399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=113679 load_pm=123 faults=0
+[HPF] timing cb=113679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=113919 load_pm=123 faults=0
+[HPF] timing cb=113919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=114159 load_pm=123 faults=0
+[HPF] timing cb=114159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=114399 load_pm=123 faults=0
+[HPF] timing cb=114399 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=114679 load_pm=123 faults=0
+[HPF] timing cb=114679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=114919 load_pm=123 faults=0
+[HPF] timing cb=114919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=115159 load_pm=123 faults=0
+[HPF] timing cb=115159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=115439 load_pm=123 faults=0
+[HPF] timing cb=115439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=115679 load_pm=123 faults=0
+[HPF] timing cb=115679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=115919 load_pm=123 faults=0
+[HPF] timing cb=115919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=116159 load_pm=123 faults=0
+[HPF] timing cb=116159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=116439 load_pm=123 faults=0
+[HPF] timing cb=116439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=116679 load_pm=123 faults=0
+[HPF] timing cb=116679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=116919 load_pm=123 faults=0
+[HPF] timing cb=116919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=117159 load_pm=123 faults=0
+[HPF] timing cb=117159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=117439 load_pm=123 faults=0
+[HPF] timing cb=117439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=117679 load_pm=123 faults=0
+[HPF] timing cb=117679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=117919 load_pm=123 faults=0
+[HPF] timing cb=117919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=118159 load_pm=123 faults=0
+[HPF] timing cb=118159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=118439 load_pm=123 faults=0
+[HPF] timing cb=118439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=118679 load_pm=123 faults=0
+[HPF] timing cb=118679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=118919 load_pm=123 faults=0
+[HPF] timing cb=118919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=119159 load_pm=123 faults=0
+[HPF] timing cb=119159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=119439 load_pm=123 faults=0
+[HPF] timing cb=119439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=119679 load_pm=123 faults=0
+[HPF] timing cb=119679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=119919 load_pm=123 faults=0
+[HPF] timing cb=119919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=120159 load_pm=123 faults=0
+[HPF] timing cb=120159 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=120439 load_pm=123 faults=0
+[HPF] timing cb=120439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=120679 load_pm=123 faults=0
+[HPF] timing cb=120679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=120919 load_pm=123 faults=0
+[HPF] timing cb=120919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=121199 load_pm=123 faults=0
+[HPF] timing cb=121199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=121439 load_pm=123 faults=0
+[HPF] timing cb=121439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=121679 load_pm=123 faults=0
+[HPF] timing cb=121679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=121919 load_pm=123 faults=0
+[HPF] timing cb=121919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=122199 load_pm=123 faults=0
+[HPF] timing cb=122199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=122439 load_pm=123 faults=0
+[HPF] timing cb=122439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=122679 load_pm=123 faults=0
+[HPF] timing cb=122679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=122919 load_pm=123 faults=0
+[HPF] timing cb=122919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=123199 load_pm=123 faults=0
+[HPF] timing cb=123199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=123439 load_pm=123 faults=0
+[HPF] timing cb=123439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=123679 load_pm=123 faults=0
+[HPF] timing cb=123679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=123919 load_pm=123 faults=0
+[HPF] timing cb=123919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=124199 load_pm=123 faults=0
+[HPF] timing cb=124199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=124439 load_pm=123 faults=0
+[HPF] timing cb=124439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=124679 load_pm=123 faults=0
+[HPF] timing cb=124679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=124919 load_pm=123 faults=0
+[HPF] timing cb=124919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=125199 load_pm=123 faults=0
+[HPF] timing cb=125199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=125439 load_pm=123 faults=0
+[HPF] timing cb=125439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=125679 load_pm=123 faults=0
+[HPF] timing cb=125679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=125919 load_pm=123 faults=0
+[HPF] timing cb=125919 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=126199 load_pm=123 faults=0
+[HPF] timing cb=126199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=126439 load_pm=123 faults=0
+[HPF] timing cb=126439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=126679 load_pm=123 faults=0
+[HPF] timing cb=126679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=126959 load_pm=123 faults=0
+[HPF] timing cb=126959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=127199 load_pm=123 faults=0
+[HPF] timing cb=127199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=127439 load_pm=123 faults=0
+[HPF] timing cb=127439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=127679 load_pm=123 faults=0
+[HPF] timing cb=127679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=127959 load_pm=123 faults=0
+[HPF] timing cb=127959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=128199 load_pm=123 faults=0
+[HPF] timing cb=128199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=128439 load_pm=123 faults=0
+[HPF] timing cb=128439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=128679 load_pm=123 faults=0
+[HPF] timing cb=128679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=128959 load_pm=123 faults=0
+[HPF] timing cb=128959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=129199 load_pm=123 faults=0
+[HPF] timing cb=129199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=129439 load_pm=123 faults=0
+[HPF] timing cb=129439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=129679 load_pm=123 faults=0
+[HPF] timing cb=129679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=129959 load_pm=123 faults=0
+[HPF] timing cb=129959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=130199 load_pm=123 faults=0
+[HPF] timing cb=130199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=130439 load_pm=123 faults=0
+[HPF] timing cb=130439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=130679 load_pm=123 faults=0
+[HPF] timing cb=130679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=130959 load_pm=123 faults=0
+[HPF] timing cb=130959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=131199 load_pm=123 faults=0
+[HPF] timing cb=131199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=131439 load_pm=123 faults=0
+[HPF] timing cb=131439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=131679 load_pm=123 faults=0
+[HPF] timing cb=131679 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=131959 load_pm=123 faults=0
+[HPF] timing cb=131959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=132199 load_pm=123 faults=0
+[HPF] timing cb=132199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=132439 load_pm=123 faults=0
+[HPF] timing cb=132439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=132719 load_pm=123 faults=0
+[HPF] timing cb=132719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=132959 load_pm=123 faults=0
+[HPF] timing cb=132959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=133199 load_pm=123 faults=0
+[HPF] timing cb=133199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=133439 load_pm=123 faults=0
+[HPF] timing cb=133439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=133719 load_pm=123 faults=0
+[HPF] timing cb=133719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=133959 load_pm=123 faults=0
+[HPF] timing cb=133959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=134199 load_pm=123 faults=0
+[HPF] timing cb=134199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=134439 load_pm=123 faults=0
+[HPF] timing cb=134439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=134719 load_pm=123 faults=0
+[HPF] timing cb=134719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=134959 load_pm=123 faults=0
+[HPF] timing cb=134959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=135199 load_pm=123 faults=0
+[HPF] timing cb=135199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=135439 load_pm=123 faults=0
+[HPF] timing cb=135439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=135719 load_pm=123 faults=0
+[HPF] timing cb=135719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=135959 load_pm=123 faults=0
+[HPF] timing cb=135959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=136199 load_pm=123 faults=0
+[HPF] timing cb=136199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=136439 load_pm=123 faults=0
+[HPF] timing cb=136439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=136719 load_pm=123 faults=0
+[HPF] timing cb=136719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=136959 load_pm=123 faults=0
+[HPF] timing cb=136959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=137199 load_pm=123 faults=0
+[HPF] timing cb=137199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=137439 load_pm=123 faults=0
+[HPF] timing cb=137439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=137719 load_pm=123 faults=0
+[HPF] timing cb=137719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=137959 load_pm=123 faults=0
+[HPF] timing cb=137959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=138199 load_pm=123 faults=0
+[HPF] timing cb=138199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=138439 load_pm=123 faults=0
+[HPF] timing cb=138439 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=138719 load_pm=123 faults=0
+[HPF] timing cb=138719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=138959 load_pm=123 faults=0
+[HPF] timing cb=138959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=139199 load_pm=123 faults=0
+[HPF] timing cb=139199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=139479 load_pm=123 faults=0
+[HPF] timing cb=139479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=139719 load_pm=123 faults=0
+[HPF] timing cb=139719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=139959 load_pm=123 faults=0
+[HPF] timing cb=139959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=140199 load_pm=123 faults=0
+[HPF] timing cb=140199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=140479 load_pm=123 faults=0
+[HPF] timing cb=140479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=140719 load_pm=123 faults=0
+[HPF] timing cb=140719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=140959 load_pm=123 faults=0
+[HPF] timing cb=140959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=141199 load_pm=123 faults=0
+[HPF] timing cb=141199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=141479 load_pm=123 faults=0
+[HPF] timing cb=141479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=141719 load_pm=123 faults=0
+[HPF] timing cb=141719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=141959 load_pm=123 faults=0
+[HPF] timing cb=141959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=142199 load_pm=123 faults=0
+[HPF] timing cb=142199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=142479 load_pm=123 faults=0
+[HPF] timing cb=142479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=142719 load_pm=123 faults=0
+[HPF] timing cb=142719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=142959 load_pm=123 faults=0
+[HPF] timing cb=142959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=143199 load_pm=123 faults=0
+[HPF] timing cb=143199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=143479 load_pm=123 faults=0
+[HPF] timing cb=143479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=143719 load_pm=123 faults=0
+[HPF] timing cb=143719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=143959 load_pm=123 faults=0
+[HPF] timing cb=143959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=144199 load_pm=123 faults=0
+[HPF] timing cb=144199 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=144479 load_pm=123 faults=0
+[HPF] timing cb=144479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=144719 load_pm=123 faults=0
+[HPF] timing cb=144719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=144959 load_pm=123 faults=0
+[HPF] timing cb=144959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=145239 load_pm=123 faults=0
+[HPF] timing cb=145239 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=145479 load_pm=123 faults=0
+[HPF] timing cb=145479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=145719 load_pm=123 faults=0
+[HPF] timing cb=145719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=145959 load_pm=123 faults=0
+[HPF] timing cb=145959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=146239 load_pm=123 faults=0
+[HPF] timing cb=146239 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=146479 load_pm=123 faults=0
+[HPF] timing cb=146479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=146719 load_pm=123 faults=0
+[HPF] timing cb=146719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=146959 load_pm=123 faults=0
+[HPF] timing cb=146959 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=147239 load_pm=123 faults=0
+[HPF] timing cb=147239 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] beat cb=147479 load_pm=123 faults=0
+[HPF] timing cb=147479 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0
+[HPF] boot app=beat build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] beat cb=147719 load_pm=123 faults=0
+[HPF] timing cb=147719 over=0 late=0
+[HPF] queues mdrops=0 sdrops=0

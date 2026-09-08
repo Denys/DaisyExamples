@@ -1,0 +1,14 @@
+/build/
+/build-*/
+/.deps/
+/artifacts/
+/renders/
+__pycache__/
+*.pyc
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+.DS_Store

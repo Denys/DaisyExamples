@@ -1,0 +1,4 @@
+$ /opt/pyvenv/bin/python -S tools/validate_audio.py /mnt/data/HydraPulse_host_demos --repeat /mnt/data/HydraPulse_host_demos_repeat
+host sonic scenarios: PASS; listening, aliasing and hardware audio remain separate gates
+
+exit=0

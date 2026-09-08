@@ -1,0 +1,3 @@
+# Preserve archived source and raw acquisition bytes across checkouts.
+/references/r0/** -text
+/evidence/**/*.log -text -diff

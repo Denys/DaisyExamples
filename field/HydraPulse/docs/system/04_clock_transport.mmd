@@ -1,0 +1,10 @@
+flowchart LR
+    S["Stopped"] -->|"Start, no preset transaction"| P["Start pending"]
+    P -->|"Next sample: emit step zero"| L["Long step"]
+    L -->|"Long threshold crossed"| H["Short step"]
+    H -->|"Short threshold crossed, latch swing"| L
+    P -->|"Stop before first sample"| S
+    L -->|"Stop / Panic"| S
+    H -->|"Stop / Panic"| S
+    S -->|"Audition voice"| S
+    N["Tempo preserves phase.<br/>A/B commits at step zero.<br/>Fill selects the next emitted step bank."] -.-> L

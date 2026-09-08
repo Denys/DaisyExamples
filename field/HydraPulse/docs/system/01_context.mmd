@@ -1,0 +1,20 @@
+flowchart LR
+    Keys["Field: 16 keys + SW1/SW2"] --> Scan["ReadControls / 1 kHz"]
+    Knobs["Field: 8 knobs"] --> Scan
+    Scan --> Controller["Controller::Tick"]
+    Controller --> Engine["Engine / single audio owner"]
+    Midi["Field MIDI UART receiver"] --> Foreground["Foreground MIDI policy"]
+    Foreground --> Queue["SpscQueue: 31 commands"]
+    Queue --> Engine
+    Foreground --> Urgent["Atomic urgent stop flag"]
+    Urgent --> Engine
+    Engine --> Voices["Hammer / Crack / Steel / Arc"]
+    Voices --> Out["DC block / saturation / master ramp"]
+    Out --> Codec["Field stereo output"]
+    Engine --> Snap["SpscQueue: 7 snapshots"]
+    Snap --> Display["Foreground OLED + LEDs + serial"]
+    CV["CV and Gate ports"] -. "diagnostic target only" .-> Truth["FieldTruth"]
+    AudioIn["Stereo audio input"] --> Truth
+    Truth --> Passthrough["Unprocessed stereo passthrough"]
+    Passthrough --> Codec
+    Hydra["Hydrasynth-specific integration"] -. "deferred; no path in Beat" .-> Later["Later milestone"]
