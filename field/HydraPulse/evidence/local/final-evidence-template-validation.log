@@ -1,0 +1,4 @@
+$ /opt/pyvenv/bin/python -S tools/validate_evidence.py hardware/p0_record.template.json
+evidence structure: PASS (not an independent measurement audit)
+
+exit=0

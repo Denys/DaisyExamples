@@ -1,0 +1,4 @@
+$ /opt/pyvenv/bin/python -S tools/generate_presets.py --check
+presets: PASS
+
+exit=0

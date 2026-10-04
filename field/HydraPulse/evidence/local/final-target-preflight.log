@@ -1,0 +1,4 @@
+$ /opt/pyvenv/bin/python -S tools/build_target.py --libdaisy .deps/libDaisy
+ARM build: FAIL: missing tools: arm-none-eabi-gcc, arm-none-eabi-g++, arm-none-eabi-objcopy, arm-none-eabi-size, arm-none-eabi-readelf; use the documented ARM environment, not the adapter stub
+
+exit=1

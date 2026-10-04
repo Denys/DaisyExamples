@@ -1,0 +1,878 @@
+[HPF] truth cb=263959 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=263959 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-124 c3=-147 c4=-130 peakL=6979 peakR=6974
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=264239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=264239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-122 c3=-148 c4=-131 peakL=7008 peakR=7002
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=264479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=264479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-122 c3=-148 c4=-130 peakL=7024 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=264719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=264719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4808 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-147 c4=-131 peakL=6996 peakR=6990
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=264959 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=264959 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8395 k8=3641
+[HPF] cv c1=-137 c2=-123 c3=-147 c4=-130 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=265239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=265239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-122 c3=-146 c4=-130 peakL=7022 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=265479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=265479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5531
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-124 c3=-147 c4=-131 peakL=7011 peakR=7004
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=265719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=265719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-130 peakL=7017 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=265959 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=265959 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-131 peakL=7020 peakR=7014
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=266239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=266239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-131 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=266479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=266479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-124 c3=-148 c4=-132 peakL=7001 peakR=6995
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=266719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=266719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7332 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-130 peakL=7022 peakR=7017
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=266959 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=266959 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-147 c4=-131 peakL=7015 peakR=7008
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=267239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=267239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-135 c2=-124 c3=-147 c4=-131 peakL=6990 peakR=6984
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=267479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=267479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7332 k4=5529
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-123 c3=-148 c4=-130 peakL=7024 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=267719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=267719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-134 c2=-122 c3=-148 c4=-130 peakL=7002 peakR=6997
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=267959 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=267959 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5526
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-123 c3=-147 c4=-131 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=268239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=268239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-122 c3=-148 c4=-131 peakL=7020 peakR=7014
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=268479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=268479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7332 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-134 c2=-122 c3=-147 c4=-131 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=268719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=268719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-121 c3=-147 c4=-130 peakL=6978 peakR=6974
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=268999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=268999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7332 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-122 c3=-147 c4=-131 peakL=7018 peakR=7012
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=269239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=269239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-134 c2=-123 c3=-148 c4=-130 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=269479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=269479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-147 c4=-132 peakL=7008 peakR=7002
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=269719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=269719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-132 peakL=7027 peakR=7021
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=269999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=269999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8395 k8=3641
+[HPF] cv c1=-137 c2=-122 c3=-147 c4=-131 peakL=7024 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=270239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=270239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-123 c3=-147 c4=-130 peakL=7008 peakR=7003
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=270479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=270479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-124 c3=-147 c4=-132 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=270719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=270719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-122 c3=-147 c4=-131 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=270999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=270999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-131 peakL=7021 peakR=7015
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=271239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=271239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-131 peakL=7013 peakR=7008
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=271479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=271479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-137 c2=-122 c3=-148 c4=-131 peakL=7022 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=271719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=271719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-147 c4=-130 peakL=7017 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=271999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=271999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7332 k4=5530
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-131 peakL=7011 peakR=7005
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=272239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=272239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-124 c3=-149 c4=-131 peakL=7025 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=272479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=272479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-134 c2=-124 c3=-147 c4=-132 peakL=7006 peakR=7000
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=272719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=272719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-149 c4=-130 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=272999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=272999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-123 c3=-147 c4=-130 peakL=7019 peakR=7014
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=273239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=273239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-122 c3=-148 c4=-132 peakL=7028 peakR=7022
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=273479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=273479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-131 peakL=6976 peakR=6972
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=273719 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=273719 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-123 c3=-147 c4=-132 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=273999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=273999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-125 c3=-148 c4=-130 peakL=7021 peakR=7015
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=274239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=274239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-122 c3=-148 c4=-131 peakL=7008 peakR=7002
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=274479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=274479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6739 k2=4806 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-130 peakL=7018 peakR=7012
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=274759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=274759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-122 c3=-147 c4=-130 peakL=7027 peakR=7021
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=274999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=274999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-130 peakL=7012 peakR=7006
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=275239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=275239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-122 c3=-148 c4=-131 peakL=7017 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=275479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=275479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-124 c3=-149 c4=-131 peakL=7015 peakR=7009
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=275759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=275759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-147 c4=-130 peakL=7023 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=275999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=275999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-134 c2=-124 c3=-148 c4=-131 peakL=7005 peakR=7000
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=276239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=276239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-149 c4=-131 peakL=7016 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=276479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=276479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-132 peakL=7009 peakR=7003
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=276759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=276759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-148 c4=-133 peakL=7001 peakR=6995
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=276999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=276999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5532
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-132 peakL=7024 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=277239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=277239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-130 peakL=7003 peakR=6997
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=277479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=277479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-147 c4=-130 peakL=7025 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=277759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=277759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-124 c3=-147 c4=-131 peakL=7023 peakR=7017
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=277999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=277999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7332 k4=5531
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-122 c3=-149 c4=-131 peakL=7023 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=278239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=278239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-122 c3=-147 c4=-130 peakL=6975 peakR=6970
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=278479 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=278479 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-130 peakL=7023 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=278759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=278759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-149 c4=-132 peakL=7016 peakR=7010
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=278999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=278999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-134 c2=-122 c3=-147 c4=-132 peakL=7004 peakR=6997
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=279239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=279239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-148 c4=-133 peakL=7026 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=279519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=279519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-150 c4=-132 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=279759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=279759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-149 c4=-131 peakL=7012 peakR=7006
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=279999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=279999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-124 c3=-148 c4=-132 peakL=7017 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=280239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=280239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-149 c4=-131 peakL=7023 peakR=7017
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=280519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=280519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-149 c4=-132 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=280759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=280759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-124 c3=-147 c4=-130 peakL=7016 peakR=7009
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=280999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=280999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-124 c3=-148 c4=-131 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=281239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=281239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-132 peakL=7003 peakR=6998
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=281519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=281519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-123 c3=-147 c4=-131 peakL=7006 peakR=7000
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=281759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=281759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-125 c3=-148 c4=-131 peakL=7028 peakR=7022
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=281999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=281999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-132 peakL=7000 peakR=6995
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=282239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=282239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-132 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=282519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=282519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-134 c2=-124 c3=-149 c4=-131 peakL=7019 peakR=7014
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=282759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=282759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-132 peakL=7018 peakR=7012
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=282999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=282999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-130 peakL=6979 peakR=6975
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=283239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=283239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-131 peakL=7021 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=283519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=283519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-131 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=283759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=283759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-123 c3=-148 c4=-130 peakL=7010 peakR=7004
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=283999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=283999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-134 c2=-124 c3=-148 c4=-130 peakL=7021 peakR=7015
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=284239 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=284239 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-124 c3=-149 c4=-132 peakL=7011 peakR=7005
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=284519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=284519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6739 k2=4808 k3=7332 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-123 c3=-147 c4=-130 peakL=7007 peakR=7001
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=284759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=284759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8395 k8=3642
+[HPF] cv c1=-137 c2=-123 c3=-150 c4=-132 peakL=7022 peakR=7015
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=284999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=284999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8395 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-149 c4=-130 peakL=7022 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=285279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=285279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-124 c3=-148 c4=-131 peakL=7023 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=285519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=285519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-146 c4=-131 peakL=7006 peakR=7000
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=285759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=285759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-123 c3=-148 c4=-132 peakL=7022 peakR=7016
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=285999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=285999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-124 c3=-148 c4=-132 peakL=7010 peakR=7004
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=286279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=286279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-125 c3=-148 c4=-131 peakL=7013 peakR=7007
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=286519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=286519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-124 c3=-148 c4=-131 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=286759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=286759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-125 c3=-151 c4=-132 peakL=7012 peakR=7006
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=286999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=286999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-124 c3=-149 c4=-130 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=287279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=287279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-131 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=287519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=287519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4960 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-130 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=287759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=287759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8395 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-147 c4=-131 peakL=6978 peakR=6974
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=287999 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=287999 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-130 peakL=7027 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=288279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=288279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-149 c4=-131 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=288519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=288519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-125 c3=-148 c4=-132 peakL=7001 peakR=6996
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=288759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=288759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-138 c2=-123 c3=-148 c4=-132 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=289039 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=289039 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-125 c3=-149 c4=-131 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=289279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=289279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-149 c4=-130 peakL=7006 peakR=7001
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=289519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=289519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-124 c3=-147 c4=-132 peakL=7023 peakR=7017
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=289759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=289759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-132 peakL=7024 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=290039 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=290039 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4808 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-132 peakL=7020 peakR=7014
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=290279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=290279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-137 c2=-124 c3=-148 c4=-131 peakL=7008 peakR=7002
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=290519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=290519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-146 c4=-131 peakL=7025 peakR=7018
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=290759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=290759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5530
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-122 c3=-147 c4=-130 peakL=7017 peakR=7011
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=291039 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=291039 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4962 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-135 c2=-124 c3=-148 c4=-132 peakL=7012 peakR=7006
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=291279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=291279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-138 c2=-124 c3=-149 c4=-132 peakL=7028 peakR=7021
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=291519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=291519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-125 c3=-148 c4=-132 peakL=7005 peakR=6999
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=291759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=291759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-132 peakL=7026 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=292039 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=292039 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-124 c3=-147 c4=-132 peakL=7019 peakR=7013
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=292279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=292279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5531
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-124 c3=-148 c4=-132 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=292519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=292519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4806 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4962 k6=4668 k7=8394 k8=3642
+[HPF] cv c1=-137 c2=-122 c3=-148 c4=-130 peakL=6979 peakR=6974
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=292759 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=292759 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3641
+[HPF] cv c1=-135 c2=-122 c3=-148 c4=-131 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=293039 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=293039 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5529
+[HPF] knobs first=5 k5=4961 k6=4668 k7=8395 k8=3641
+[HPF] cv c1=-135 c2=-123 c3=-148 c4=-131 peakL=7025 peakR=7019
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] truth cb=293279 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=293279 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6738 k2=4807 k3=7333 k4=5527
+[HPF] knobs first=5 k5=4960 k6=4669 k7=8395 k8=3641
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-131 peakL=7012 peakR=7006
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0
+[HPF] boot app=truth build=24e035a726a1 sr=48000 block=48 reset=unknown
+[HPF] system board=1 memory=0 loader=1
+[HPF] timing cpu=400000000 tick=200000000
+[HPF] truth cb=293519 seen=903 gate=0 edges=0
+[HPF] outputs dac1=0 dac2=0 enabled=0
+[HPF] timing cb=293519 load_pm=28 over=0 late=0 drops=3058
+[HPF] knobs first=1 k1=6737 k2=4807 k3=7333 k4=5528
+[HPF] knobs first=5 k5=4961 k6=4669 k7=8394 k8=3642
+[HPF] cv c1=-136 c2=-123 c3=-148 c4=-130 peakL=7027 peakR=7020
+[HPF] midi count=128 type=0 channel0=0 d0=0 d1=0

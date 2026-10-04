@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "generated_utc_date": "2026-08-16",
+  "license_gate": "disabled_for_this_bootstrap_turn_by_user_instruction",
+  "sources": [
+    {
+      "name": "Denys/embedded-audio-mine",
+      "repository": "https://github.com/Denys/embedded-audio-mine",
+      "ref": "1113f0c6255c24a6655be968fb5aa115b8d5f7e9",
+      "role": "discovery/provenance source",
+      "verified_assets": [
+        "README discovery model",
+        "digests/2026-05-26-chat-backfill.md",
+        "digests/2026-07-16.md"
+      ],
+      "reuse": "research only"
+    },
+    {
+      "name": "electro-smith/libDaisy",
+      "repository": "https://github.com/electro-smith/libDaisy",
+      "ref": "cc146d5065dd8286078a662e2830bf820c37a612",
+      "role": "planned direct P0 dependency",
+      "verified_assets": [
+        "src/daisy_field.h",
+        "src/daisy_seed.h",
+        "src/hid/gatein.h",
+        "examples/SerialPrint/SerialPrint.cpp"
+      ],
+      "reuse": "P0 dependency after target integration"
+    },
+    {
+      "name": "electro-smith/DaisySP",
+      "repository": "https://github.com/electro-smith/DaisySP",
+      "ref": "599511b740f8f3a9b8db72a0642aa45b8a23c3a3",
+      "role": "planned P1 DSP dependency",
+      "verified_assets": [
+        "repository head and license file"
+      ],
+      "reuse": "deferred until P1"
+    },
+    {
+      "name": "electro-smith/DaisyExamples",
+      "repository": "https://github.com/electro-smith/DaisyExamples",
+      "ref": "259ed82c7d4c0d7699f695945e6e111b7dc7cb27",
+      "role": "official Field implementation reference",
+      "verified_assets": [
+        "field/KeyboardTest/KeyboardTest.cpp",
+        "field/KeyboardTest/Makefile",
+        "field/Midi/Midi.cpp"
+      ],
+      "reuse": "reference/scaffolding"
+    },
+    {
+      "name": "bkshepherd/DaisySeedProjects",
+      "repository": "https://github.com/bkshepherd/DaisySeedProjects",
+      "ref": "80feee11f26a401ae324de75d9266e63ed82deb2",
+      "role": "hardware abstraction architecture reference",
+      "verified_assets": [
+        "Software/GuitarPedal/Hardware-Modules/base_hardware_module.h",
+        "Software/GuitarPedal/Hardware-Modules/guitar_pedal_125b.h"
+      ],
+      "reuse": "concept: isolate hardware-facing layer behind stable interface"
+    },
+    {
+      "name": "hasanalpdoyduk/Teensy_Drum_Machine",
+      "repository": "https://github.com/hasanalpdoyduk/Teensy_Drum_Machine",
+      "ref": "187393d087a406134deee944edcd400aad7c7367",
+      "role": "drum-machine architecture reference",
+      "verified_assets": [
+        "Firmware/Sequencer.h",
+        "Firmware/ClockEngine.h",
+        "Firmware/InstrumentManager.h",
+        "Firmware/StorageManager.h"
+      ],
+      "reuse": "concept: manager boundaries and direct 16-step sequencing"
+    },
+    {
+      "name": "kencul/STM32F4-AudioSynthesis",
+      "repository": "https://github.com/kencul/STM32F4-AudioSynthesis",
+      "ref": "b1de88d6a3967327cc8a0eeccba1ebad524ccbd2",
+      "role": "test/benchmark architecture reference",
+      "verified_assets": [
+        ".github/workflows/tests.yml",
+        "tests/CMakeLists.txt",
+        "App/Src/app.cpp"
+      ],
+      "reuse": "concept: compile hardware-independent DSP under host CMake/CTest and keep target timing instrumentation separate"
+    }
+  ]
+}

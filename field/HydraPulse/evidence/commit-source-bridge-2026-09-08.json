@@ -1,0 +1,12 @@
+{
+  "source_commit": "fdd22f363b04447ceb92c2a2774ae9d96edc54df",
+  "all_22_inputs_equal_after_line_ending_normalization": true,
+  "byte_differences": [
+    {
+      "file": "src/app/Presets.generated.h",
+      "build_input_sha256": "da25b2f2bee999d3294a30fba1381ef70fc7cf30240263537b4feb60b6b08ab1",
+      "git_blob_content_sha256": "011fc5677bdf00d2d666693a188f6c5fee19c97be09dd7dccd892bd934a2dbb3",
+      "difference": "CRLF in local generated header; LF in Git blob"
+    }
+  ]
+}

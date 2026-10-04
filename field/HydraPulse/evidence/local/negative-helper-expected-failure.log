@@ -1,0 +1,4 @@
+$ /mnt/data/hpf_build_clang_asan/tests/native/test_near_rejects_nan
+/mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse/tests/native/test_near_rejects_nan.cpp:5 CHECK_NEAR failed: std::numeric_limits<float>::quiet_NaN() vs 0.0f (nan vs 0, tol=0.1)
+
+exit=1

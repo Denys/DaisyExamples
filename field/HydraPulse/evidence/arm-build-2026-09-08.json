@@ -1,0 +1,87 @@
+{
+  "status": "VERIFIED",
+  "claim": "ARM build, NOT hardware qualification",
+  "source_sha256": "24e035a726a12d2ad72f8b69d1491a3ad17267acbbcf1a38135e8937bd8250cc",
+  "source_files": {
+    "Makefile": "79e4b92a8706c3f991bc0ce6e66c65aa393b857278864fa7792ea082bcf9bea9",
+    "deps.lock.json": "1021250590eff35545367ba51e81359955fa780bb53dc375156aaa04e508893a",
+    "firmware/FieldAdapter.h": "e2c6eeda2e539ae1b8cdbb13e50fa59de196955640c9ad294002e696692914cc",
+    "firmware/FieldTruth.cpp": "73b013705424e6f3b7256e360948a1ded0202512eaaf49efe7a36843947bf5e2",
+    "firmware/HydraPulse.cpp": "9848ce3dfdb12c79b1c7f3e53dae7caff80852ed3c0d46a2c714fc477f992e56",
+    "src/app/Controller.cpp": "eea781db05042b6a826ef260b2a1e423966841f0c61459acefbcda5defb045a3",
+    "src/app/Controller.h": "140bdd623fa25e3825f680237800f8fff3878349ae18b98dfecbd9b22143c02a",
+    "src/app/Engine.cpp": "24d6d6a5ba9609811ff6175a2eed70a7e1d158b3363d3d81b7027cfca52644fc",
+    "src/app/Engine.h": "80a96be8a476422b30cb1834e5f6df7eec883ea10875887b939eaf9dfc02840e",
+    "src/app/Presets.generated.h": "da25b2f2bee999d3294a30fba1381ef70fc7cf30240263537b4feb60b6b08ab1",
+    "src/app/Types.h": "1d03a79172459ff9cc73c22f257aa9d21f2b36000f3863503314328e37787d4c",
+    "src/core/ControlPickup.h": "1c4552ec20eabfd3dc2eed2e75d698866222ddf539233958c66e39bb8cbf5d4c",
+    "src/core/GrooveClock.h": "5eaec598fba97e468c663e3be504180c16412b5c592a7b5a7ff2c12f3422afbd",
+    "src/core/OutputTestArm.h": "5592b955b51dee2b11f0abf1836393163bebbd5e86ac5c1f4b7af25aaa6b6e5f",
+    "src/core/Pattern16.h": "04177efe8a6587e3b1f68821e02791c89bacb2d200fc38ad41c1f487d4a8f7b5",
+    "src/core/SampleAccurateStepClock.h": "87de93e196fa7c109aa8e7819da0cf7547022303367d697d2013c11a78e4ff6b",
+    "src/core/SpscQueue.h": "f8092a95d08ab54ff657c0b052753d7e75a452a7444bcea4da9d758cc1f8c8c0",
+    "src/core/StepSequencer.h": "be87f9d0a2c1cc87cecb174df6e8627c62198e1b261d016ee80de6d5f0d84097",
+    "src/dsp/Primitives.h": "188afd8c0ca84f7f2f5c0d31751065d515ade676598276247efd96e56d0b044a",
+    "src/dsp/Voices.cpp": "903a53e2e3ccb0c3dd3542b93851333398ce31789f108bce7078f11914a37877",
+    "src/dsp/Voices.h": "ccb3f082a2b168046dcfa64622feffd7162c0bc6f0272e02f1e799f79272d803",
+    "tools/build_target.py": "33fb1b6957ab667995bd53a55a151eeb945db1e1ab1a573f663d83511b3154ff"
+  },
+  "compiler": "arm-none-eabi-g++ (15:13.2.rel1-2) 13.2.1 20231009\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "tools": {
+    "git": "/usr/bin/git",
+    "make": "/usr/bin/make",
+    "arm-none-eabi-gcc": "/usr/bin/arm-none-eabi-gcc",
+    "arm-none-eabi-g++": "/usr/bin/arm-none-eabi-g++",
+    "arm-none-eabi-objcopy": "/usr/bin/arm-none-eabi-objcopy",
+    "arm-none-eabi-size": "/usr/bin/arm-none-eabi-size",
+    "arm-none-eabi-readelf": "/usr/bin/arm-none-eabi-readelf"
+  },
+  "dependency": {
+    "head": "85172e2b5c9abea1bf56dcd5d2c7b3f5717eb66b",
+    "license_blob_sha1": "1c3a251694f1d1842c3f114508d36ca63cddf275",
+    "recursive_gitlinks": [
+      "f5e592d8ee5ffb1d9af5be7f715ce3576b8bf9c4 tests/googletest (release-1.8.0-2713-gf5e592d8)"
+    ],
+    "tracked_clean": true
+  },
+  "app_type": "BOOT_NONE",
+  "abi": "default-width enums in application and library",
+  "parent_commit": "041bfcbb7975316606ece8f1ccbacbab9c0e1482",
+  "workspace_status": "?? field/HydraPulse/",
+  "images": {
+    "truth": {
+      ".bin": {
+        "file": "HydraPulseTruth.bin",
+        "bytes": 107280,
+        "sha256": "72a21e32621174f5d66cbcade3711b21d5810711813b27fc405c696e48bdab60"
+      },
+      ".elf": {
+        "file": "HydraPulseTruth.elf",
+        "bytes": 1916336,
+        "sha256": "5f8c9535b894f07a9bc230081659078bc3c48b5e0d436733901004d7873712b6"
+      },
+      ".map": {
+        "file": "HydraPulseTruth.map",
+        "bytes": 1443445,
+        "sha256": "1ea6e5fe1c4e92ea6a7076875f06ffa32410173b06ac0b556265856f873ec3cf"
+      }
+    },
+    "beat": {
+      ".bin": {
+        "file": "HydraPulseBeat.bin",
+        "bytes": 122320,
+        "sha256": "6b0d5b518b20ad57720755ee6330b684b2e905704ebaa35d906225a9173dc458"
+      },
+      ".elf": {
+        "file": "HydraPulseBeat.elf",
+        "bytes": 2113276,
+        "sha256": "a020a03a42968e0e7e0112c604c065f4357240730baa0d2dfb1100d82a925160"
+      },
+      ".map": {
+        "file": "HydraPulseBeat.map",
+        "bytes": 1482185,
+        "sha256": "a9d6809d48f46562ba2dc403b83fdd5c179345a379775ff8a6750c0c65244e81"
+      }
+    }
+  }
+}

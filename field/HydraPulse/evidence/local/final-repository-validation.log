@@ -1,0 +1,5 @@
+$ /opt/pyvenv/bin/python -S tools/validate_repo.py
+repository/provenance format, R0 preservation and Mermaid pair consistency: PASS
+upstream checkout verification and Mermaid rendering are separate checks
+
+exit=0

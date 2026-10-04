@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure native tests
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+      - name: Build native tests
+        run: cmake --build build --parallel
+      - name: Run native tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Validate repository
+        run: python tools/validate_repo.py
+      - name: Validate provenance
+        run: python tools/validate_provenance.py
+      - name: Run Python tests
+        run: python -m unittest discover -s tests/python -v
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure ASan + UBSan
+        run: >-
+          cmake -S . -B build-sanitize
+          -DBUILD_TESTING=ON
+          -DHPF_ENABLE_SANITIZERS=ON
+          -DCMAKE_BUILD_TYPE=Debug
+      - name: Build ASan + UBSan
+        run: cmake --build build-sanitize --parallel
+      - name: Run ASan + UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build-sanitize --output-on-failure

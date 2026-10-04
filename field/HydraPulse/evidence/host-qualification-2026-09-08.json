@@ -1,0 +1,165 @@
+[
+  {
+    "command": [
+      "/usr/bin/python3",
+      "-S",
+      "tools/validate_repo.py"
+    ],
+    "exit": 0,
+    "log": "host-qualification-00.log"
+  },
+  {
+    "command": [
+      "/usr/bin/python3",
+      "-S",
+      "tools/generate_presets.py",
+      "--check"
+    ],
+    "exit": 0,
+    "log": "host-qualification-01.log"
+  },
+  {
+    "command": [
+      "/usr/bin/python3",
+      "-S",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests/python",
+      "-v"
+    ],
+    "exit": 0,
+    "log": "host-qualification-02.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "-S",
+      ".",
+      "-B",
+      "build-host",
+      "-DCMAKE_BUILD_TYPE=Release"
+    ],
+    "exit": 0,
+    "log": "host-qualification-03.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "--build",
+      "build-host",
+      "--parallel",
+      "2"
+    ],
+    "exit": 0,
+    "log": "host-qualification-04.log"
+  },
+  {
+    "command": [
+      "ctest",
+      "--test-dir",
+      "build-host",
+      "--output-on-failure"
+    ],
+    "exit": 0,
+    "log": "host-qualification-05.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "-S",
+      ".",
+      "-B",
+      "build-ubsan",
+      "-DCMAKE_BUILD_TYPE=Debug",
+      "-DHPF_UBSAN_ONLY=ON"
+    ],
+    "exit": 0,
+    "log": "host-qualification-06.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "--build",
+      "build-ubsan",
+      "--parallel",
+      "2"
+    ],
+    "exit": 0,
+    "log": "host-qualification-07.log"
+  },
+  {
+    "command": [
+      "ctest",
+      "--test-dir",
+      "build-ubsan",
+      "--output-on-failure"
+    ],
+    "exit": 0,
+    "log": "host-qualification-08.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "-S",
+      ".",
+      "-B",
+      "build-sanitize",
+      "-DCMAKE_BUILD_TYPE=Debug",
+      "-DHPF_ENABLE_SANITIZERS=ON",
+      "-DCMAKE_CXX_COMPILER=clang++"
+    ],
+    "exit": 0,
+    "log": "host-qualification-09.log"
+  },
+  {
+    "command": [
+      "cmake",
+      "--build",
+      "build-sanitize",
+      "--parallel",
+      "2"
+    ],
+    "exit": 0,
+    "log": "host-qualification-10.log"
+  },
+  {
+    "command": [
+      "ctest",
+      "--test-dir",
+      "build-sanitize",
+      "--output-on-failure"
+    ],
+    "exit": 0,
+    "log": "host-qualification-11.log"
+  },
+  {
+    "command": [
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/build-host/render_scenarios",
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/artifacts/integration/renders-a"
+    ],
+    "exit": 0,
+    "log": "host-qualification-12.log"
+  },
+  {
+    "command": [
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/build-host/render_scenarios",
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/artifacts/integration/renders-b"
+    ],
+    "exit": 0,
+    "log": "host-qualification-13.log"
+  },
+  {
+    "command": [
+      "/usr/bin/python3",
+      "-S",
+      "tools/validate_audio.py",
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/artifacts/integration/renders-a",
+      "--repeat",
+      "/mnt/c/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/.worktrees/hydrapulse-integration-20260908/field/HydraPulse/artifacts/integration/renders-b"
+    ],
+    "exit": 0,
+    "log": "host-qualification-14.log"
+  }
+]

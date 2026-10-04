@@ -1,0 +1,135 @@
+$ cmake -S /mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse -B /mnt/data/hpf_build_asan-ubsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DHPF_ENABLE_SANITIZERS=ON
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/hpf_build_asan-ubsan
+
+exit=0
+$ cmake --build /mnt/data/hpf_build_asan-ubsan --parallel 4
+[  3%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/dsp/Voices.cpp.o[0m
+[  6%] [32mBuilding CXX object CMakeFiles/contract_FieldTruth.dir/firmware/FieldTruth.cpp.o[0m
+[  9%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/app/Engine.cpp.o[0m
+[ 12%] [32mBuilding CXX object CMakeFiles/contract_HydraPulse.dir/firmware/HydraPulse.cpp.o[0m
+[ 12%] Built target contract_FieldTruth
+[ 15%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/app/Controller.cpp.o[0m
+[ 15%] Built target contract_HydraPulse
+[ 18%] [32m[1mLinking CXX static library libhydrapulse_engine.a[0m
+[ 18%] Built target hydrapulse_engine
+[ 25%] [32mBuilding CXX object tests/native/CMakeFiles/test_pattern16.dir/test_pattern16.cpp.o[0m
+[ 25%] [32mBuilding CXX object tests/native/CMakeFiles/test_step_sequencer.dir/test_step_sequencer.cpp.o[0m
+[ 28%] [32mBuilding CXX object tests/native/CMakeFiles/test_sample_clock.dir/test_sample_clock.cpp.o[0m
+[ 31%] [32mBuilding CXX object CMakeFiles/render_scenarios.dir/tools/render_scenarios.cpp.o[0m
+[ 34%] [32m[1mLinking CXX executable test_sample_clock[0m
+[ 34%] Built target test_sample_clock
+[ 37%] [32mBuilding CXX object tests/native/CMakeFiles/test_control_pickup.dir/test_control_pickup.cpp.o[0m
+[ 40%] [32m[1mLinking CXX executable test_step_sequencer[0m
+[ 40%] Built target test_step_sequencer
+[ 43%] [32m[1mLinking CXX executable test_pattern16[0m
+[ 46%] [32mBuilding CXX object tests/native/CMakeFiles/test_regressions.dir/test_regressions.cpp.o[0m
+[ 46%] Built target test_pattern16
+[ 50%] [32mBuilding CXX object tests/native/CMakeFiles/test_groove_clock.dir/test_groove_clock.cpp.o[0m
+[ 53%] [32m[1mLinking CXX executable test_control_pickup[0m
+[ 53%] Built target test_control_pickup
+[ 56%] [32mBuilding CXX object tests/native/CMakeFiles/test_spsc.dir/test_spsc.cpp.o[0m
+[ 59%] [32m[1mLinking CXX executable test_groove_clock[0m
+[ 59%] Built target test_groove_clock
+[ 62%] [32m[1mLinking CXX executable test_regressions[0m
+[ 65%] [32mBuilding CXX object tests/native/CMakeFiles/test_engine.dir/test_engine.cpp.o[0m
+[ 65%] Built target test_regressions
+[ 68%] [32mBuilding CXX object tests/native/CMakeFiles/test_controller.dir/test_controller.cpp.o[0m
+[ 71%] [32m[1mLinking CXX executable render_scenarios[0m
+[ 71%] Built target render_scenarios
+[ 75%] [32m[1mLinking CXX executable test_spsc[0m
+[ 78%] [32mBuilding CXX object tests/native/CMakeFiles/test_dsp.dir/test_dsp.cpp.o[0m
+[ 78%] Built target test_spsc
+[ 81%] [32mBuilding CXX object tests/native/CMakeFiles/test_no_allocation.dir/test_no_allocation.cpp.o[0m
+[ 84%] [32m[1mLinking CXX executable test_engine[0m
+[ 84%] Built target test_engine
+[ 87%] [32mBuilding CXX object tests/native/CMakeFiles/test_near_rejects_nan.dir/test_near_rejects_nan.cpp.o[0m
+[ 90%] [32m[1mLinking CXX executable test_controller[0m
+[ 90%] Built target test_controller
+[ 93%] [32m[1mLinking CXX executable test_no_allocation[0m
+[ 96%] [32m[1mLinking CXX executable test_near_rejects_nan[0m
+[ 96%] Built target test_no_allocation
+[ 96%] Built target test_near_rejects_nan
+[100%] [32m[1mLinking CXX executable test_dsp[0m
+[100%] Built target test_dsp
+
+exit=0
+$ ctest --test-dir /mnt/data/hpf_build_asan-ubsan --output-on-failure
+Internal ctest changing into directory: /mnt/data/hpf_build_asan-ubsan
+Test project /mnt/data/hpf_build_asan-ubsan
+      Start  1: test_pattern16
+ 1/12 Test  #1: test_pattern16 ...................***Failed    0.00 sec
+==2835==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  2: test_step_sequencer
+ 2/12 Test  #2: test_step_sequencer ..............***Failed    0.00 sec
+==2836==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  3: test_sample_clock
+ 3/12 Test  #3: test_sample_clock ................***Failed    0.00 sec
+==2837==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  4: test_control_pickup
+ 4/12 Test  #4: test_control_pickup ..............***Failed    0.00 sec
+==2838==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  5: test_regressions
+ 5/12 Test  #5: test_regressions .................***Failed    0.00 sec
+==2839==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  6: test_groove_clock
+ 6/12 Test  #6: test_groove_clock ................***Failed    0.00 sec
+==2840==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  7: test_spsc
+ 7/12 Test  #7: test_spsc ........................***Failed    0.00 sec
+==2841==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  8: test_engine
+ 8/12 Test  #8: test_engine ......................***Failed    0.00 sec
+==2842==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start  9: test_controller
+ 9/12 Test  #9: test_controller ..................***Failed    0.00 sec
+==2843==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start 10: test_dsp
+10/12 Test #10: test_dsp .........................***Failed    0.00 sec
+==2844==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start 11: test_no_allocation
+11/12 Test #11: test_no_allocation ...............***Failed    0.00 sec
+==2845==ASan runtime does not come first in initial library list; you should either link runtime to your application or manually preload it with LD_PRELOAD.
+
+      Start 12: test_near_rejects_nan
+12/12 Test #12: test_near_rejects_nan ............   Passed    0.00 sec
+
+8% tests passed[0;0m, [0;31m11 tests failed[0;0m out of 12
+
+Total Test time (real) =   0.03 sec
+
+The following tests FAILED:
+	[0;31m  1 - test_pattern16 (Failed)[0;0m
+	[0;31m  2 - test_step_sequencer (Failed)[0;0m
+	[0;31m  3 - test_sample_clock (Failed)[0;0m
+	[0;31m  4 - test_control_pickup (Failed)[0;0m
+	[0;31m  5 - test_regressions (Failed)[0;0m
+	[0;31m  6 - test_groove_clock (Failed)[0;0m
+	[0;31m  7 - test_spsc (Failed)[0;0m
+	[0;31m  8 - test_engine (Failed)[0;0m
+	[0;31m  9 - test_controller (Failed)[0;0m
+	[0;31m 10 - test_dsp (Failed)[0;0m
+	[0;31m 11 - test_no_allocation (Failed)[0;0m
+Errors while running CTest
+
+exit=8

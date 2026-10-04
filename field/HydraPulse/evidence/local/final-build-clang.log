@@ -1,0 +1,57 @@
+$ cmake --build /mnt/data/hpf_build_clang --parallel 2
+[  5%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/dsp/Voices.cpp.o[0m
+[  5%] [32mBuilding CXX object CMakeFiles/contract_FieldTruth.dir/firmware/FieldTruth.cpp.o[0m
+[  5%] Built target contract_FieldTruth
+[  8%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/app/Engine.cpp.o[0m
+[ 11%] [32mBuilding CXX object CMakeFiles/contract_HydraPulse.dir/firmware/HydraPulse.cpp.o[0m
+[ 13%] [32mBuilding CXX object CMakeFiles/hydrapulse_engine.dir/src/app/Controller.cpp.o[0m
+[ 13%] Built target contract_HydraPulse
+[ 16%] [32m[1mLinking CXX static library libhydrapulse_engine.a[0m
+[ 16%] Built target hydrapulse_engine
+[ 22%] [32mBuilding CXX object CMakeFiles/render_scenarios.dir/tools/render_scenarios.cpp.o[0m
+[ 22%] [32mBuilding CXX object tests/native/CMakeFiles/test_pattern16.dir/test_pattern16.cpp.o[0m
+[ 25%] [32m[1mLinking CXX executable test_pattern16[0m
+[ 25%] Built target test_pattern16
+[ 27%] [32mBuilding CXX object tests/native/CMakeFiles/test_step_sequencer.dir/test_step_sequencer.cpp.o[0m
+[ 30%] [32m[1mLinking CXX executable render_scenarios[0m
+[ 30%] Built target render_scenarios
+[ 33%] [32mBuilding CXX object tests/native/CMakeFiles/test_sample_clock.dir/test_sample_clock.cpp.o[0m
+[ 36%] [32m[1mLinking CXX executable test_step_sequencer[0m
+[ 36%] Built target test_step_sequencer
+[ 38%] [32mBuilding CXX object tests/native/CMakeFiles/test_control_pickup.dir/test_control_pickup.cpp.o[0m
+[ 41%] [32m[1mLinking CXX executable test_sample_clock[0m
+[ 41%] Built target test_sample_clock
+[ 44%] [32mBuilding CXX object tests/native/CMakeFiles/test_regressions.dir/test_regressions.cpp.o[0m
+[ 47%] [32m[1mLinking CXX executable test_control_pickup[0m
+[ 47%] Built target test_control_pickup
+[ 50%] [32mBuilding CXX object tests/native/CMakeFiles/test_groove_clock.dir/test_groove_clock.cpp.o[0m
+[ 52%] [32m[1mLinking CXX executable test_regressions[0m
+[ 52%] Built target test_regressions
+[ 55%] [32mBuilding CXX object tests/native/CMakeFiles/test_spsc.dir/test_spsc.cpp.o[0m
+[ 58%] [32m[1mLinking CXX executable test_groove_clock[0m
+[ 58%] Built target test_groove_clock
+[ 61%] [32mBuilding CXX object tests/native/CMakeFiles/test_engine.dir/test_engine.cpp.o[0m
+[ 63%] [32m[1mLinking CXX executable test_spsc[0m
+[ 63%] Built target test_spsc
+[ 66%] [32mBuilding CXX object tests/native/CMakeFiles/test_controller.dir/test_controller.cpp.o[0m
+[ 69%] [32m[1mLinking CXX executable test_engine[0m
+[ 69%] Built target test_engine
+[ 72%] [32mBuilding CXX object tests/native/CMakeFiles/test_dsp.dir/test_dsp.cpp.o[0m
+[ 75%] [32m[1mLinking CXX executable test_controller[0m
+[ 75%] Built target test_controller
+[ 77%] [32mBuilding CXX object tests/native/CMakeFiles/test_no_allocation.dir/test_no_allocation.cpp.o[0m
+[ 80%] [32m[1mLinking CXX executable test_dsp[0m
+[ 80%] Built target test_dsp
+[ 83%] [32mBuilding CXX object tests/native/CMakeFiles/test_near_rejects_nan.dir/test_near_rejects_nan.cpp.o[0m
+[ 86%] [32m[1mLinking CXX executable test_no_allocation[0m
+[ 86%] Built target test_no_allocation
+[ 88%] [32mBuilding CXX object tests/native/CMakeFiles/test_transitions.dir/test_transitions.cpp.o[0m
+[ 91%] [32m[1mLinking CXX executable test_near_rejects_nan[0m
+[ 91%] Built target test_near_rejects_nan
+[ 94%] [32mBuilding CXX object tests/native/CMakeFiles/test_adapter_midi.dir/test_adapter_midi.cpp.o[0m
+[ 97%] [32m[1mLinking CXX executable test_transitions[0m
+[ 97%] Built target test_transitions
+[100%] [32m[1mLinking CXX executable test_adapter_midi[0m
+[100%] Built target test_adapter_midi
+
+exit=0

@@ -1,0 +1,4 @@
+PASS: final 18-page PDF generated from active USER_MANUAL/QUICK_REFERENCE/PRESETS.
+All-page layout contact sheet inspected; final panel/tutorial pages rendered and inspected with pdftoppm.
+Page text bounding boxes and required chapter/preset names checked. No outside-page text found.
+PDF is a separate delivery artifact, not a redistributed commercial reference manual.

@@ -1,0 +1,178 @@
+{
+  "schema": 1,
+  "date": "2026-09-07",
+  "new_source_origin": "Original candidate C++ and original tutorial patterns",
+  "third_party_code_vendored": false,
+  "root_license": "UNSELECTED",
+  "commercial_manuals_redistributed": false,
+  "sources": [
+    {
+      "id": "R0",
+      "route": "user-supplied ZIP",
+      "location": "HydraPulse-Field_R0_bootstrap_2026-08-16.zip",
+      "scope": "Byte-identical preservation under references/r0, 29 files",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-EXAMPLES",
+      "route": "web",
+      "location": "https://github.com/electro-smith/DaisyExamples",
+      "scope": "Root README and tools documented; public upstream, not the user's fork",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-HELPER",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/DaisyExamples/master/helper.py",
+      "scope": "Actual create/copy/update code inspected; update removes existing debug files, so do not run it blindly",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-MAKE",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/core/Makefile",
+      "scope": "CPP_STANDARD, APP_TYPE, relative layout and build/program separation",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-FIELD",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/daisy_field.cpp",
+      "scope": "BSP initialization, pot mux order, keyboard processing, DAC and Gate APIs",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-SEED",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/daisy_seed.cpp",
+      "scope": "Testpoint PG14, default sample rate and board initialization",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-SYSTEM",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/sys/system.h",
+      "scope": "GetTick/GetTickFreq and boot memory/version metadata, not reset-cause evidence",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-LOAD",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/util/CpuLoadMeter.h",
+      "scope": "OnBlockStart/End and extrema; timer ticks are not CPU cycles",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-MIDI",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/hid/MidiEvent.h",
+      "scope": "MidiEvent type, channel, data, srt_type and channel modes",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-MIDI-HANDLER",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/hid/midi.h",
+      "scope": "Listen/HasEvents/PopEvent and bounded application consumption",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-TESTS",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/tests/CMakeLists.txt",
+      "scope": "Selected UNIT_TEST sources and GoogleTest, not full hardware emulation",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DENYS-TARGET",
+      "route": "live Git checkout and authenticated GitHub metadata, 2026-09-08",
+      "location": "https://github.com/Denys/DaisyExamples",
+      "scope": "master 041bfcbb7975316606ece8f1ccbacbab9c0e1482 inspected before additive installation; root and Field conventions verified",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "HYDRAPULSE-REMOTE",
+      "route": "authenticated GitHub connector, 2026-09-08",
+      "location": "https://github.com/Denys/HydraPulse-Field",
+      "scope": "main 184db5473aea258f660604d791d305f7061671fc inspected: standalone FieldTruth, software validation and research ledger preserved in place; supplied references/r0 is not its current mirror",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DVPE",
+      "route": "web",
+      "location": "https://github.com/Denys/DVPE_Daisy-Visual-Programming-Environment",
+      "scope": "README describes serialization/export and package metadata was accessible; full graph schema/registry/generator round trip not qualified.",
+      "evidence_class": "HOLD"
+    },
+    {
+      "id": "DVPE-SECOND",
+      "route": "web-attempt",
+      "location": "https://github.com/Denys/DVPE",
+      "scope": "No readable repository content obtained",
+      "evidence_class": "HOLD"
+    },
+    {
+      "id": "HYDRA-MANUAL",
+      "route": "attached PDF",
+      "location": "Hydrasynth_Explorer_Owners_Manual_2.2.0.pdf",
+      "scope": "Document cover says Version 2.0 despite filename. pp14-18,24,66-70 inspire home/macros/direct access, not copied firmware or preset data",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DFAM-MANUAL",
+      "route": "attached PDF",
+      "location": "DFAM_Manual.pdf",
+      "scope": "pp7-12,20-23 inspire signal-flow-first teaching, comparative listening and separation of trigger/transport. No patch-sheet transcription",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-LIBRARY-MAKE",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/Makefile",
+      "scope": "Library compiler flags inspected; default-width enum policy reconciled with application Makefile.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-MIDI-PARSER",
+      "route": "web",
+      "location": "https://raw.githubusercontent.com/electro-smith/libDaisy/master/src/hid/midi_parser.cpp",
+      "scope": "Parsed channel-mode events retain original data[0]; velocity-zero NoteOn becomes NoteOff. Router tests use explicit fake transport.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "DAISY-LOGGER",
+      "route": "web",
+      "location": "https://electro-smith.github.io/libDaisy/logger_8h_source.html",
+      "scope": "Documented LOGGER_BUFFER=128; foreground telemetry split and bounded format widths tested.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "CODEX-INSTRUCTIONS",
+      "route": "web",
+      "location": "https://developers.openai.com/codex/guides/agents-md/",
+      "scope": "Official applicable AGENTS instruction discovery; no assumed model/access privileges.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "MERMAID-CLI",
+      "route": "web",
+      "location": "https://github.com/mermaid-js/mermaid-cli",
+      "scope": "Official CLI input/output interface; renderer not available or run in this sandbox.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "ACTIONS-CHECKOUT",
+      "route": "web",
+      "location": "https://github.com/actions/checkout/blob/v4/action.yml",
+      "scope": "Actual repository/ref/path/submodules/persist-credentials inputs inspected.",
+      "evidence_class": "VERIFIED"
+    },
+    {
+      "id": "ACTIONS-UPLOAD",
+      "route": "web",
+      "location": "https://github.com/actions/upload-artifact/blob/v4/action.yml",
+      "scope": "Actual artifact path/name/retention/if-no-files-found inputs inspected.",
+      "evidence_class": "VERIFIED"
+    }
+  ]
+}

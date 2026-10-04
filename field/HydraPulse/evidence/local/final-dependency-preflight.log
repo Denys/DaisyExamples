@@ -1,0 +1,4 @@
+$ /opt/pyvenv/bin/python -S tools/verify_dependencies.py .deps/libDaisy
+dependency verification: FAIL: libDaisy checkout missing: /mnt/data/HydraPulse_DaisyExamples_candidate/field/HydraPulse/.deps/libDaisy
+
+exit=1

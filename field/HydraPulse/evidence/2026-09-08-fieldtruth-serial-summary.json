@@ -1,0 +1,36 @@
+{
+  "classification": "DERIVED",
+  "basis": "captured firmware telemetry only",
+  "records": {
+    "outputs": 181,
+    "timing": 205,
+    "key": 20,
+    "truth": 180,
+    "knobs": 360,
+    "cv": 180,
+    "midi": 180,
+    "boot": 23,
+    "system": 23
+  },
+  "invalid_records": 1,
+  "pressed_raw_indices": [
+    0,
+    1,
+    2,
+    8,
+    9
+  ],
+  "maximum_reported_counters": {
+    "over": 0,
+    "late": 0,
+    "drops": 857,
+    "load_pm": 28
+  },
+  "not_proven": [
+    "cold boot",
+    "voltage",
+    "audio quality",
+    "absolute CPU timing",
+    "P0 completion"
+  ]
+}

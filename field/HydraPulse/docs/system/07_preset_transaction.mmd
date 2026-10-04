@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant User
+    participant UI as Controller
+    participant E as Engine
+    participant DSP as Voice and mix state
+    User->>UI: Shift + previous/next while stopped
+    UI->>UI: Preview only / five-second timeout
+    User->>UI: Shift + load
+    UI->>E: RequestPreset(id)
+    E->>E: Reject when running, busy or id invalid
+    E->>DSP: Ramp load gain to zero over 5 ms
+    E->>DSP: At zero: reset voices and DC state
+    E->>E: Copy A/B/Fill and parameter table
+    E->>DSP: Ramp load gain back to one
+    E-->>UI: PresetRevision increments
+    UI->>UI: Re-arm pickups against current physical knobs
+    Note over E,DSP: Master is retained, transport remains stopped

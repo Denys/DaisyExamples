@@ -1,0 +1,37 @@
+$ ctest --test-dir /mnt/data/hpf_build_clang --output-on-failure
+Internal ctest changing into directory: /mnt/data/hpf_build_clang
+Test project /mnt/data/hpf_build_clang
+      Start  1: test_pattern16
+ 1/14 Test  #1: test_pattern16 ...................   Passed    0.00 sec
+      Start  2: test_step_sequencer
+ 2/14 Test  #2: test_step_sequencer ..............   Passed    0.00 sec
+      Start  3: test_sample_clock
+ 3/14 Test  #3: test_sample_clock ................   Passed    0.01 sec
+      Start  4: test_control_pickup
+ 4/14 Test  #4: test_control_pickup ..............   Passed    0.00 sec
+      Start  5: test_regressions
+ 5/14 Test  #5: test_regressions .................   Passed    0.00 sec
+      Start  6: test_groove_clock
+ 6/14 Test  #6: test_groove_clock ................   Passed    0.14 sec
+      Start  7: test_spsc
+ 7/14 Test  #7: test_spsc ........................   Passed    0.00 sec
+      Start  8: test_engine
+ 8/14 Test  #8: test_engine ......................   Passed    0.01 sec
+      Start  9: test_controller
+ 9/14 Test  #9: test_controller ..................   Passed    0.00 sec
+      Start 10: test_dsp
+10/14 Test #10: test_dsp .........................   Passed    0.37 sec
+      Start 11: test_no_allocation
+11/14 Test #11: test_no_allocation ...............   Passed    0.01 sec
+      Start 12: test_near_rejects_nan
+12/14 Test #12: test_near_rejects_nan ............   Passed    0.00 sec
+      Start 13: test_transitions
+13/14 Test #13: test_transitions .................   Passed    0.00 sec
+      Start 14: test_adapter_midi
+14/14 Test #14: test_adapter_midi ................   Passed    0.00 sec
+
+[0;32m100% tests passed[0;0m, 0 tests failed[0;0m out of 14
+
+Total Test time (real) =   0.57 sec
+
+exit=0

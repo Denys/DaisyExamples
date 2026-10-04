@@ -1,0 +1,10 @@
+function(add_hpf_test test_name source_file)
+    add_executable(${test_name} ${source_file})
+    target_link_libraries(${test_name} PRIVATE hydrapulse_core)
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endfunction()
+
+add_hpf_test(test_pattern16 test_pattern16.cpp)
+add_hpf_test(test_step_sequencer test_step_sequencer.cpp)
+add_hpf_test(test_sample_clock test_sample_clock.cpp)
+add_hpf_test(test_control_pickup test_control_pickup.cpp)
