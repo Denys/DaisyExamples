@@ -1,0 +1,25 @@
+{
+  "artifact": "Daisy repository documentation reference workbook",
+  "axes": {
+    "intent": "documentation reference",
+    "audience": "developer",
+    "density": "high"
+  },
+  "chapter_count": 24,
+  "projected_pages": 450,
+  "audience": "Denys, consultazione completa del repository",
+  "purpose": "Trovare ogni programma Daisy locale, comprenderne le fonti e consultare il codice originale offline.",
+  "outputs": [
+    "multipage HTML",
+    "canonical JSON",
+    "source snapshots",
+    "search",
+    "print HTML",
+    "PDF",
+    "coverage audit",
+    "render evidence"
+  ],
+  "evidence": "Source inspection VERIFIED; extracted semantic interpretation DERIVED; firmware/host/hardware execution NOT_RUN.",
+  "visual_audit": "Distribution bars show source-backed inventory counts; repository hierarchy diagram explains source scope. No decorative/audio diagrams: topology needs per-project semantic analysis beyond this inventory.",
+  "done": "Coverage reconciles with selected roots; source hashes, links, search, desktop/mobile/offline and PDF checks pass; deterministic rebuild and add/update/remove checks pass."
+}
