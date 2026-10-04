@@ -1,0 +1,138 @@
+{
+  "render": {
+    "schema_version": "1.0",
+    "status": "PASS",
+    "failures": [],
+    "pages": [
+      {
+        "page": "site/index.html",
+        "viewport": "desktop",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/custom.html",
+        "viewport": "desktop",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/host.html",
+        "viewport": "desktop",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/daisysp.html",
+        "viewport": "desktop",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/sources.html",
+        "viewport": "desktop",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/index.html",
+        "viewport": "mobile",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/custom.html",
+        "viewport": "mobile",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/host.html",
+        "viewport": "mobile",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/chapters/daisysp.html",
+        "viewport": "mobile",
+        "overflow": false,
+        "images_loaded": true
+      },
+      {
+        "page": "site/sources.html",
+        "viewport": "mobile",
+        "overflow": false,
+        "images_loaded": true
+      }
+    ],
+    "interactions": {
+      "desktop_search_project": true,
+      "desktop_search_empty": true,
+      "desktop_search_code": true,
+      "desktop_filter_count": {
+        "observed": 71,
+        "expected": 71
+      },
+      "keyboard_search_focus": true,
+      "desktop_source_reader": true,
+      "mobile_search_project": true,
+      "mobile_search_empty": true,
+      "mobile_search_code": true,
+      "mobile_filter_count": {
+        "observed": 71,
+        "expected": 71
+      },
+      "mobile_menu_open_close": true,
+      "mobile_table_pan": true,
+      "mobile_source_reader": true
+    },
+    "checks": {
+      "desktop_console_errors": [],
+      "desktop_external_requests": [],
+      "mobile_console_errors": [],
+      "mobile_external_requests": [],
+      "print_chapters": 24,
+      "print_project_sections": 502,
+      "pdf_pages": 423,
+      "pdf_outline_entries": 1779,
+      "pdf_first_page_text": "Daisy Workbook\n502 voci · 2,829 sorgenti e documenti · 24 capitoli\nSnapshot 2026-10-04 · 659677e61c7f + snapshot locale con SHA-256 per file\nEdizione di consultazione stampabile. I sorgenti completi sono nell’edizione HTML offline;\ni documenti origin"
+    },
+    "viewports": {
+      "desktop": {
+        "width": 1440,
+        "height": 1000
+      },
+      "mobile": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    "browser": "145.0.7632.6"
+  },
+  "structural": {
+    "status": "PASS",
+    "failures": [],
+    "checks": {
+      "manifest_file_count": 5695,
+      "chapter_count": 24,
+      "source_count": 2830,
+      "visual_count": 1,
+      "search_entry_count": 3355,
+      "html_page_count": 2856,
+      "broken_internal_links": 0,
+      "external_runtime_resources": 0,
+      "render_file_count": 23,
+      "entries": 502,
+      "original_byte_hash_checks": 2829,
+      "coverage_unowned_files": 0
+    }
+  },
+  "regeneration": {
+    "status": "PASS",
+    "byte_identical_fixture": true,
+    "add_update_remove": true,
+    "removed_code_and_chapter_no_orphans": true,
+    "user_file_preserved": true,
+    "evidence": "Executed in this session before the final CSS containment fix; generator removal logic unchanged."
+  }
+}
