@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {"name": "Pod MultiDelay", "version": "0.1.0", "targetHardware": "pod", "sampleRate": 48000, "blockSize": 48, "description": "Local demonstrator integration plan; see CONTRACT.md. Editor import not verified."},
+    "hardwareConfig": {"platform": "pod", "peripherals": {"useSdram": true, "audioBlockSize": 48, "sampleRate": 48000}},
+    "blocks": [
+      {"id":"input", "definitionId":"audio_input", "position":{"x":0,"y":0}, "label":"L mono input; R ignored"},
+      {"id":"dsp", "definitionId":"custom_dsp", "position":{"x":300,"y":0}, "parameterValues":{"modes":["DIGI","TAPE","MOD","REV","FREEZE"],"digiConfigs":["SINGLE","SERIES","PARALLEL"],"slots":["TIME","FEEDBACK","MIX","COLOR","MOTION"],"digiRanges":{"timeMs":[20,2000],"feedback":[0,0.9],"mix":[0,1],"colorHz":[500,12000],"motionMs":[0,5]},"digiDefaults":[400,0.35,0.35,6000,0],"sourceParameterAuthority":"PedalDelayEngine descriptors for the other four modes", "historyFloats":240016,"freezeFloats":192016}, "label":"Two mono DIGI histories or referenced five-mode engine"},
+      {"id":"controls", "definitionId":"pod_controls", "position":{"x":0,"y":200}, "parameterValues":{"encoder":"mode; click page", "K1/K2":"TIME/FEEDBACK; MIX/COLOR; MOTION/D2 RATIO", "B1":"bypass", "B2":"tap or capture; hold SHIFT", "shiftEncoder":"DIGI config or FREEZE state", "shiftClick":"trails", "shiftB1":"FREEZE clear", "pickupThreshold":0.012}, "label":"Main-loop controls and coherent snapshot"},
+      {"id":"transition", "definitionId":"custom_control", "position":{"x":300,"y":200}, "parameterValues":{"fadeSamples":240,"policy":"audio fade to dry, pause acknowledgement, main reconfigure, audio fade in"}},
+      {"id":"output", "definitionId":"audio_output", "position":{"x":600,"y":0}, "label":"Same mono output on L and R"}
+    ],
+    "connections":[{"from":"input","to":"dsp","type":"audio"},{"from":"dsp","to":"output","type":"audio"},{"from":"controls","to":"dsp","type":"control"},{"from":"controls","to":"transition","type":"control"},{"from":"transition","to":"dsp","type":"control"}]
+  }
+}
