@@ -120,6 +120,39 @@ int main() {
         demo.Service(s);
     }
     check(std::isfinite(left[47]), "malformed snapshot remains finite");
+    // DIGI contract v1 in the demo shell: Dry = 1, and a config change keeps running and keeps tails.
+    {
+        std::vector<float> h(2 * kHistory), fz(2 * kFreeze);
+        Demo dg;
+        Snapshot t;
+        t.slots[0] = DigiTimeSlot(100); // 4800 samples
+        t.slots[1] = 0.5f / 0.95f;       // k = 0.5
+        t.slots[2] = 1;                  // Wet = 1
+        t.slots[3] = 0;                  // COLOR off
+        dg.Init(h.data(), fz.data(), t);
+        float x[48]{}, l[48], r[48];
+        for (int b = 0; b < 20; ++b) // fade-in done, mix settled to Wet = 1
+            dg.Process(x, l, r, 48, t);
+        for (int b = 0; b < 2000; ++b)
+            dg.Process(x, l, r, 48, t); // let the smoothed mix settle
+        x[0] = 0.5f;
+        dg.Process(x, l, r, 48, t);
+        x[0] = 0;
+        check(std::abs(l[0] - 0.5f) < 1e-6f, "DIGI dry stays at unity with Wet = 1");
+        float peak = 0;
+        for (int b = 1; b < 300; ++b) {
+            if (b == 50)
+                t.config = 2; // PARALLEL, between the first and second echo
+            dg.Process(x, l, r, 48, t);
+            if (b == 51)
+                check(!dg.Paused(), "config change does not pause audio");
+            if (b > 100 && b <= 200)
+                for (float v : l)
+                    peak = std::max(peak, std::abs(v));
+        }
+        // E1 second echo at 9600 samples (block 200) = 0.5 * 0.5 * g1 0.5, HP 40 Hz slightly lower.
+        check(peak > 0.1f && peak < 0.13f, "E1 tail survives SINGLE -> PARALLEL");
+    }
     std::printf("DEMO: %d named checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

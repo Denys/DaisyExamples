@@ -1,6 +1,10 @@
-# POD MultiDelay demonstrator v0.1
+# POD MultiDelay demonstrator v0.3
 
-Status: **HOST_TEST_PASS / ARM_BUILD_PASS / POD_DIGITAL_SCREEN_PASS / NORMAL_IMAGE_FLASH_VERIFIED**.
+Status (v0.3, 2026-10-07): **DIGI_CONTRACT_V1_HOST_PASS / DAFX_NODE_PARITY_BIT_EXACT / ARM_BUILD_PASS / POD_FLASH_READBACK_VERIFIED / LISTENING_NOT_RUN**.
+v0.3 changes only DIGI, to the accepted DIGI contract v1; see CONTRACT.md. The v0.1
+status below (2026-09-09) still describes TAPE, MOD, REV, FREEZE and the shell.
+
+v0.1 status: **HOST_TEST_PASS / ARM_BUILD_PASS / POD_DIGITAL_SCREEN_PASS / NORMAL_IMAGE_FLASH_VERIFIED**.
 Primary lane: Delay. Prepared 2026-09-09 for the explicitly selected Daisy Pod.
 This is a local integration candidate, with original mono DIGI and a source-linked
 DaisyExamples reference engine for TAPE, MOD, REV and FREEZE. It does not replace
@@ -43,10 +47,12 @@ Wait at least 100 ms for control acquisition after audio starts.
 | Encoder click | Cycle pages 1, 2, 3 |
 | Page 1: K1 / K2 | TIME / FEEDBACK |
 | Page 2: K1 / K2 | MIX / COLOR |
-| Page 3: K1 / K2 | MOTION / D2 time ratio (ratio only in DIGI) |
+| Page 3: K1 / K2 | MOTION / unused (MOTION has no effect in DIGI) |
+| Hold B2 + K1 / K2 (DIGI) | D2 ratio / D2 feedback (unlinks) |
+| Hold B2 + B1 (DIGI) | Relink D2 feedback |
 | B1 | Toggle bypass |
 | B2 short press/release | Tap time; in FREEZE, capture when idle or release when active |
-| Hold B2 + encoder turn | DIGI: Single / Series / Parallel; FREEZE: Capture / Hold / Accumulate / Replace |
+| Hold B2 + encoder turn | DIGI: Single / Series / Parallel (no pause, tails kept); FREEZE: Capture / Hold / Accumulate / Replace |
 | Hold B2 + encoder click | Toggle trails |
 | Hold B2 + B1 | Clear FREEZE, without toggling bypass |
 
@@ -54,11 +60,11 @@ Short means under 500 ms. A shifted gesture consumes the B2 release. Knobs retai
 stored per-mode values until moved at least 0.012 after startup/page/mode entry;
 this is an until-moved gate, not value-matching soft pickup. No preset persistence.
 Tap is clamped to the selected mode's TIME range (MOD tops out at 50 ms).
-D2 ratio steps: 0.5, 2/3, 0.75, 1, 4/3, 1.5, 2; resulting D2 time is 20..2000 ms.
+D2 ratio steps: 1/4, 1/3, 3/8, 1/2, 2/3, 3/4, 1 (D2 = round(r x D1)).
 
 | Mode | TIME | FEEDBACK | COLOR | MOTION |
 |---|---|---|---|---|
-| DIGI | 20..2000 ms | 0..0.90 | 500..12000 Hz high-cut | 0..5 ms drift |
+| DIGI | 20..2500 ms | k 0..0.95 | high-cut off..2 kHz | unassigned |
 | TAPE | Transport time | Repeats | Age | Instability |
 | MOD | 0.5..50 ms base | Signed resonance | Modulation depth | LFO rate |
 | REV | Slice length | Reinjection | Reverse amount | Grain taper |

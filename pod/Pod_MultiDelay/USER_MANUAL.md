@@ -1,8 +1,8 @@
-# POD MultiDelay v0.1 — User manual
+# POD MultiDelay v0.3 — User manual
 
-**Five-mode mono delay demonstrator · Manual revision 3 · 9 September 2026**
+**Five-mode mono delay demonstrator · Manual revision 4 · 7 October 2026**
 
-This guide describes the current v0.1 normal firmware: DIGI, TAPE, MOD, REV and
+This guide describes the current v0.3 normal firmware: DIGI, TAPE, MOD, REV and
 FREEZE, operated by two pots, two buttons and the push encoder. It covers one
 selected effect at a time; only DIGI offers two delay lines in Series or Parallel.
 The firmware processes mono audio at 48 kHz, in blocks of 48 samples.
@@ -21,7 +21,7 @@ it cannot establish what is running after any later reprogramming.
    this demonstrator does not use it to control the delay.
 2. After firmware startup, wait at least 100 ms before operating the controls.
 3. Leave the pots still initially. The stored startup sound is **DIGI / SINGLE**:
-   400 ms delay, 0.35 feedback, 35% mix, 6000 Hz feedback high-cut and zero drift.
+   400 ms delay, 0.35 feedback, 35% wet over full dry, 6000 Hz feedback high-cut.
 4. Play a short note, then stop. The intended result is a dry note followed by repeats.
 5. **LED1 green** identifies DIGI. **LED2 green**, when B2 is released, identifies
    page 1: K1 controls TIME and K2 controls FEEDBACK.
@@ -38,7 +38,7 @@ it cannot establish what is running after any later reprogramming.
 | **MIDI IN** | MIDI data input; unused by this firmware |
 
 **L and R refer to channels within the audio connection, not separate POD sockets.**
-The v0.1 firmware processes only the left channel of LINE IN; it does not sum the
+The v0.3 firmware processes only the left channel of LINE IN; it does not sum the
 left and right channels. Ensure your source/cable sends audio to that channel.
 Material present only on the right channel will not be heard. The processed mono
 signal is duplicated to the left and right output channels, so this version does
@@ -55,7 +55,10 @@ push encoder. RESET and BOOT are programming controls, not musical functions in 
 | Click encoder, B2 released | Select parameter page: 1 → 2 → 3 → 1 |
 | Press B1, B2 released | Toggle effect bypass |
 | Short B2 press and release | Tap tempo outside FREEZE; capture/release in FREEZE |
-| Hold B2 and turn encoder in DIGI | Select SINGLE, SERIES or PARALLEL |
+| Hold B2 and turn encoder in DIGI | Select SINGLE, SERIES or PARALLEL (no pause, tails kept) |
+| Hold B2 and move K1 in DIGI | D2 time ratio |
+| Hold B2 and move K2 in DIGI | D2 feedback, unlinked from FEEDBACK |
+| Hold B2 and press B1 in DIGI | Relink D2 feedback to FEEDBACK |
 | Hold B2 and turn encoder in FREEZE | Step through Capture, Hold, Accumulate and Replace |
 | Hold B2 and click encoder | Toggle trails in every mode |
 | Hold B2 and press B1 in FREEZE | Clear the captured loop; bypass remains unchanged |
@@ -67,7 +70,7 @@ not also send a tap or Freeze command. Holding B2 alone for at least 500 ms and
 releasing it sends no short action; this is useful when inspecting the status LED.
 
 Shift-turn has no assigned action in TAPE, MOD or REV. Shift-B1 has no assigned
-action outside FREEZE. Those shifted gestures still consume the B2 release, so
+action in TAPE, MOD or REV. Those shifted gestures still consume the B2 release, so
 they do not produce a tap when B2 is released. Ordinary mode selection always
 returns to page 1. Bypass and trails remain in their current states when changing mode.
 
@@ -77,7 +80,7 @@ returns to page 1. Bypass and trails remain in their current states when changin
 |---|---|---|---|
 | 1 | Green | TIME | FEEDBACK |
 | 2 | Red | MIX | COLOR |
-| 3 | Blue | MOTION | D2 time ratio, DIGI only |
+| 3 | Blue | MOTION (no effect in DIGI) | — |
 
 **Move a knob to take control.** After startup, any encoder turn/click, or an accepted
 tap interval, both pots must be moved again before they can change a value. This
@@ -89,9 +92,11 @@ stored value, and the first movement can cause a noticeable parameter jump.
 If a knob is already at an endpoint, move it away slightly and return to reach
 that endpoint deliberately.
 
-**B2 does not select an alternate pot bank.** While holding B2, K1 and K2 still
-control the current parameter page. LED2 is showing status at that moment; release
-B2 to see which page is selected. Holding B2 alone does not disarm an already active pot.
+**In DIGI, B2 selects the D2 pots.** While holding B2, K1 sets the D2 ratio and K2
+the D2 feedback, on every page. Pressing or releasing B2 rearms both pots, so neither
+owner jumps to the other's knob position. In the other modes B2 does not change the
+pots: K1 and K2 still control the current parameter page. LED2 shows status while B2
+is held; release B2 to see which page is selected.
 
 Each mode remembers its five parameter values during the current session.
 Returning to a mode recalls those values. Power/restart loses edits and captured
@@ -128,7 +133,7 @@ When B2 is held, LED2 changes from the page display to a status display:
 Capture and Replace automatically become Hold when capture finishes, so their
 colors can be brief. A brief red indication takes priority during DSP reconfiguration;
 red with B2 released also normally means page 2. Trails has **no dedicated on/off
-indicator** in v0.1. In TAPE/MOD/REV, shifted LED2 is not a useful mode-status indicator;
+indicator** in v0.3. In TAPE/MOD/REV, shifted LED2 is not a useful mode-status indicator;
 use LED1 for mode and release B2 for the page display.
 
 These are software color assignments; actual brightness and color appearance
@@ -138,35 +143,40 @@ remain dependent on the physical POD and its validation.
 
 | Parameter | Range | Initial value |
 |---|---|---|
-| TIME | 20–2000 ms | 400 ms |
-| FEEDBACK | 0–0.90 | 0.35 |
-| MIX | 0–100% | 35% |
-| COLOR | 500–12000 Hz feedback high-cut | 6000 Hz |
-| MOTION | 0–5 ms slow delay modulation | 0 ms |
+| TIME | 20–2500 ms | 400 ms |
+| FEEDBACK | 0–0.95 | 0.35 |
+| MIX | wet 0–100% over full dry | 35% |
+| COLOR | feedback high-cut, off (fully counter-clockwise) to 2 kHz | 6000 Hz |
+| MOTION | no effect in DIGI | — |
 
-TIME has a logarithmic control law: halfway along the normalized control range
-is about 200 ms, not 1000 ms. Increasing COLOR keeps subsequent repeats brighter.
-MOTION introduces slow pitch drift; leave it at minimum for the neutral baseline.
-FEEDBACK reaches its 0.90 cap before the last small portion of pot travel.
+DIGI follows the mono-first DIGI contract v1 (custom-pedals, accepted 2026-09-25).
+TIME has a logarithmic control law: halfway is about 224 ms. It moves the delay in
+whole samples, so turning TIME while repeats sound makes small jumps instead of a
+pitch bend; very small knob movements are ignored to keep the time steady.
+Turning COLOR clockwise darkens the repeats. A fixed 40 Hz high-pass in the feedback
+stops low rumble from building up. The dry signal is always at full level; MIX
+adds the wet signal on top.
 
 Hold B2 and turn the encoder to select:
 
-- **SINGLE:** one mono delay. D2 ratio has no audible role.
-- **SERIES:** D1 feeds D2. Each has its own feedback loop, controlled by the shared
-  FEEDBACK setting. The processed output comes from D2.
-- **PARALLEL:** both delays receive the input independently. Their processed outputs
-  are averaged equally into one mono output.
+- **SINGLE:** one mono delay. D2 keeps running silently and decays, so switching
+  back to a dual configuration keeps its tail.
+- **SERIES:** D2 repeats D1's echoes ("echo of the echo"). Both D1 and D2 are heard.
+  Feedback is compensated (f = 1 − √(1 − k) per delay), so a given FEEDBACK position
+  builds up no more than in SINGLE.
+- **PARALLEL:** both delays receive the input. Each is heard at half level, so two
+  echoes that coincide sum to the level of one.
 
-Page 3, K2 selects seven D2/D1 time ratios, in clockwise order:
-**1/2, 2/3, 3/4, 1, 4/3, 3/2, 2**. D2 time is limited to 20–2000 ms.
-Startup ratio is 3/4. Both the configuration and ratio are retained during the session.
+Hold B2 and move K1 to select seven D2/D1 time ratios, clockwise:
+**1/4, 1/3, 3/8, 1/2, 2/3, 3/4, 1**. Startup ratio is 3/4. Hold B2 and move K2 to
+give D2 its own feedback; hold B2 and press B1 to link it to FEEDBACK again.
 
-For D1 = 400 ms and ratio = 3/4, D2 = 300 ms. With feedback and motion at zero,
-Single's first processed echo is around 400 ms; Series' is around 700 ms;
-Parallel produces processed echoes around 300 and 400 ms. These are timing examples,
-not a measured physical latency specification. Dry sound depends on MIX.
-Changing configuration discards the previous tails after a brief fade to dry.
-Changing TIME or the D2 ratio slews the read position and can bend pitch.
+For D1 = 400 ms and ratio = 3/4, D2 = 300 ms. With feedback at zero, Single's first
+echo is at 400 ms; Series gives echoes at 400 and 700 ms; Parallel gives echoes at
+300 and 400 ms. These are timing examples, not a measured physical latency.
+Changing configuration happens at once, with no fade and no loss of tails; a click
+is possible when switching with loud tails (accepted cost in contract v1).
+At very high FEEDBACK with COLOR fully counter-clockwise, loud input can clip.
 
 ## 5. TAPE — darkening and transport movement
 
@@ -323,8 +333,8 @@ These are proposed user checks, not a record of tests already performed on hardw
 | Exercise | Action | What to listen or look for |
 |---|---|---|
 | Basic delay | Start in DIGI with the initial sound | Repeats after a short input note |
-| Page ownership | Click through all three pages and move K1 | TIME, MIX, then MOTION change; LED2 changes page color |
-| Dual comparison | DIGI, feedback/motion minimum; compare configs at one tapped time | Single echo, cascaded timing, then two parallel arrivals |
+| Page ownership | Click through all three pages and move K1 | TIME, MIX, then MOTION change (MOTION has no audible effect in DIGI); LED2 changes page color |
+| Dual comparison | DIGI, feedback minimum; compare configs at one tapped time | Single echo; Series echoes at D1 and D1+D2; Parallel two arrivals at half level |
 | Tape movement | TAPE; vary WARBLE and slowly change TIME | Movement of repeat pitch/texture |
 | Modulation | MOD; resonance near zero; vary depth and rate separately | Depth and speed have different effects |
 | Reverse | REV; play a phrase followed by silence | Reversed fragments in the processed output |
@@ -340,10 +350,10 @@ knob positions. Listening alone does not quantify timing margin, distortion or n
 |---|---|
 | No sound | Connect the source to LINE IN and listen through PHONES or LINE OUT. Confirm matching firmware and check that the source/cable feeds the left channel of LINE IN. MIDI IN does not carry audio. In FREEZE, capture first or lower MIX. |
 | Sound changes when a pot first moves | Expected until-moved behavior: the pot takes its absolute position. Approach changes gradually. |
-| Knob appears inactive | Release B2 to see the LED2 page. Encoder gestures and accepted taps rearm both pots; move by more than the entry threshold. If at an endpoint, move away and back. Page 3 K2 is DIGI-only. |
+| Knob appears inactive | Release B2 to see the LED2 page. Encoder gestures and accepted taps rearm both pots; move by more than the entry threshold. If at an endpoint, move away and back. In DIGI, holding B2 hands K1/K2 to the D2 ratio and D2 feedback. |
 | Short B2 seems to do nothing | Keep it under 500 ms and release; shifted gestures consume release. A tap needs two valid release intervals. |
 | Selecting Hold produces silence | No completed capture may exist. Use short B2 from Idle to record new material. |
-| Delay bends pitch when changing TIME | Expected read-time slew. Configuration changes instead use a brief dry transition and discard tails. |
+| Small jumps when turning TIME in DIGI | Expected: DIGI moves its delay in whole samples (contract v1). TAPE and the other modes still slew and can bend pitch. |
 | Loop remains after bypass | Trails may be on. Use minimum MIX for a known dry path, or toggle trails off from a known state. |
 | Old sound returns when MIX is raised | MIX at zero hid the effect while its memory kept running. Bypass stops new input; SHIFT + B1 clears FREEZE. |
 | FREEZE is quiet after Clear | Clear leaves the mode idle and keeps the current MIX. Lower MIX for full dry level, or capture a new loop. |
@@ -353,7 +363,9 @@ knob positions. Listening alone does not quantify timing margin, distortion or n
 
 ## 12. Version and source scope
 
-This manual describes the v0.1 files `Controls.h`, `Demo.h`, `DigiMono.h` and
+v0.3 (2026-10-07) changes only DIGI, to DIGI contract v1. TAPE, MOD, REV and FREEZE are unchanged from v0.1.
+
+This manual describes the v0.3 files `Controls.h`, `Demo.h`, `DigiMono.h` and
 `Pod_MultiDelay.cpp`, together with the referenced `PedalDelayEngine.cpp` descriptors
 and Freeze implementation. It documents software behavior, not a later instrumented
 build or the eventual custom pedal panel. MIDI, expression, USB-audio operation,

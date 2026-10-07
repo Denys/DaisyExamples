@@ -36,8 +36,9 @@ class Controls {
                 bank_[m][i] = mapper_.NativeToNormalized(
                     mode, slot, daisyhost::GetPedalSlotDescriptor(mode, slot).defaultValue);
             }
+        // DIGI uses the contract v1 control law, not the reference engine's descriptors.
         for (int i = 0; i < 5; ++i)
-            s.slots[i] = bank_[0][i];
+            s.slots[i] = bank_[0][i] = Snapshot{}.slots[i];
     }
     void Step(const Events &e) {
         if (!armed_)
@@ -46,12 +47,15 @@ class Controls {
             pressedAt_ = e.now;
             consumed_ = false;
         }
+        // Pots change owner when SHIFT changes, so neither owner jumps to the other's position.
+        if (e.b2Rise || e.b2Fall)
+            Arm(e);
         if (e.turn) {
             if (e.b2) {
                 consumed_ = true;
                 if (s.mode == 0) {
+                    // Applied at the next block boundary without a pause (contract 7).
                     s.config = Wrap(s.config + e.turn, 3);
-                    Command(0);
                 } else if (s.mode == 4) {
                     const int current = std::clamp(static_cast<int>(e.freezeState), 1, 4);
                     Command(1 + Wrap(current - 1 + e.turn, 4));
@@ -80,6 +84,10 @@ class Controls {
                 consumed_ = true;
                 if (s.mode == 4)
                     Command(5);
+                else if (s.mode == 0) {
+                    s.feedbackE2 = -1; // relink E2 feedback to FEEDBACK
+                    Arm(e);            // a still-held SHIFT+K2 must move again to unlink
+                }
             } else
                 s.bypass = !s.bypass;
         }
@@ -89,9 +97,11 @@ class Controls {
             else {
                 const uint32_t dt = e.now - lastTap_;
                 if (haveTap_ && dt >= 100 && dt <= 2000) {
-                    s.slots[0] = mapper_.NativeToNormalized(
-                        static_cast<daisyhost::PedalDelayMode>(s.mode), daisyhost::PedalSlot::kTime,
-                        static_cast<float>(dt));
+                    s.slots[0] = s.mode == 0
+                                     ? DigiTimeSlot(static_cast<float>(dt))
+                                     : mapper_.NativeToNormalized(
+                                           static_cast<daisyhost::PedalDelayMode>(s.mode),
+                                           daisyhost::PedalSlot::kTime, static_cast<float>(dt));
                     bank_[s.mode][0] = s.slots[0];
                     Arm(e);
                 }
@@ -107,12 +117,24 @@ class Controls {
                 touched_[k] = true;
             if (!touched_[k])
                 continue;
+            if (e.b2 && s.mode == 0) {
+                // Contract 5/8: SHIFT+TIME = E2 ratio, SHIFT+FEEDBACK = E2 feedback (unlinks).
+                consumed_ = true;
+                if (k == 0)
+                    s.ratio = std::min(6, static_cast<int>(value * 7));
+                else
+                    s.feedbackE2 = value;
+                continue;
+            }
             const int slot = page * 2 + k;
-            if (slot < 5) {
-                s.slots[slot] = value;
-                bank_[s.mode][slot] = value;
-            } else if (s.mode == 0)
-                s.ratio = std::min(6, static_cast<int>(value * 7));
+            if (slot >= 5)
+                continue;
+            // ponytail: fixed deadband so ADC noise cannot step the integer-sample DIGI delay
+            // (each step is an audible jump); replace with a measured threshold after listening.
+            if (s.mode == 0 && slot == 0 && std::abs(value - s.slots[0]) < 0.004f)
+                continue;
+            s.slots[slot] = value;
+            bank_[s.mode][slot] = value;
         }
     }
 };

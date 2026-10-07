@@ -9,8 +9,10 @@ constexpr std::size_t kHistory = 120008, kFreeze = 96008, kBlock = 48;
 struct Snapshot {
     int mode = 0;
     uint32_t epoch = 0;
-    float slots[5] = {0.650515f, 0.368421f, 0.35f, 0.7815f, 0};
-    int config = 0, ratio = 2, command = 0;
+    // DIGI startup: 400 ms, k 0.35, mix 0.35, feedback high-cut 6000 Hz (contract 5 mapping).
+    float slots[5] = {0.620432f, 0.368421f, 0.35f, 0.554264f, 0};
+    float feedbackE2 = -1; // < 0: linked to FEEDBACK (contract 5 SHIFT+FEEDBACK)
+    int config = 0, ratio = kDigiDefaultRatio, command = 0;
     bool bypass = false, trails = true;
 };
 class Demo {
@@ -18,10 +20,9 @@ class Demo {
     std::atomic<uint32_t> phase_{PausedState};
     daisyhost::PedalDelayEngine engine_;
     DigiMono digi_;
-    int mode_ = -1, config_ = -1;
+    int mode_ = -1;
     uint32_t epoch_ = 0;
     float fade_ = 0, mix_ = 0.35f, active_ = 1;
-    bool snapDigi_ = true;
     float send_[kBlock]{}, wet_[kBlock]{}, unused_[kBlock]{};
 
   public:
@@ -38,15 +39,15 @@ class Demo {
     bool Service(const Snapshot &s) {
         if (!Paused())
             return false;
-        const int mode = std::clamp(s.mode, 0, 4), config = std::clamp(s.config, 0, 2);
-        if (mode != mode_ || config != config_) {
+        const int mode = std::clamp(s.mode, 0, 4);
+        // Only a mode change clears storage; a DIGI config change keeps tails (contract 7).
+        if (mode != mode_) {
             engine_.SetMode(static_cast<daisyhost::PedalDelayMode>(mode));
             for (int i = 0; i < 5; ++i)
                 engine_.SetSlotNormalized(static_cast<daisyhost::PedalSlot>(i),
                                           i == 2 ? 1 : std::clamp(Finite(s.slots[i]), 0.0f, 1.0f));
             engine_.Reset();
             digi_.Reset();
-            snapDigi_ = true;
         }
         if (mode == 4) {
             if (s.command >= 1 && s.command <= 4)
@@ -59,7 +60,6 @@ class Demo {
         freezeStatus.store(static_cast<uint32_t>(engine_.GetFreezeState()),
                            std::memory_order_relaxed);
         mode_ = mode;
-        config_ = config;
         epoch_ = s.epoch;
         phase_.store(FadingIn, std::memory_order_release);
         return true;
@@ -83,16 +83,10 @@ class Demo {
             for (int i = 0; i < 5; ++i)
                 engine_.SetSlotNormalized(static_cast<daisyhost::PedalSlot>(i),
                                           i == 2 ? 1 : slots[i]);
-            if (mode_ == 0) {
-                constexpr float ratios[] = {0.5f, 2.0f / 3, 0.75f, 1, 4.0f / 3, 1.5f, 2};
-                const float t1 = 20 * std::pow(100.0f, slots[0]);
-                const float t2 = std::clamp(t1 * ratios[std::clamp(s.ratio, 0, 6)], 20.0f, 2000.0f);
-                const float alpha =
-                    1 - std::exp(-6.2831853f * (500 * std::pow(24.0f, slots[3])) / 48000);
-                digi_.Set(t1 * 48, t2 * 48, std::min(slots[1] * 0.95f, 0.90f), alpha,
-                          slots[4] * 240, static_cast<Config>(config_), snapDigi_);
-                snapDigi_ = false;
-            }
+            // DIGI: one coherent parameter set per block; MOTION is unassigned (contract 5).
+            if (mode_ == 0)
+                digi_.Set(DigiMap(slots[0], slots[1], s.feedbackE2, slots[3], s.ratio,
+                                  static_cast<Config>(std::clamp(s.config, 0, 2))));
         }
         // Smooth send/bypass and mix. Read the coherent snapshot once per block.
         float mixes[kBlock], actives[kBlock];
@@ -117,7 +111,9 @@ class Demo {
                 fade_ = std::min(1.0f, fade_ + 1.0f / 240);
             const float dry = std::clamp(Finite(input[i]), -1.0f, 1.0f);
             const float wetGain = mixes[i] * (s.trails ? 1 : actives[i]);
-            const float effect = dry * (1 - actives[i] * mixes[i]) + Finite(wet_[i]) * wetGain;
+            // DIGI keeps Dry = 1, Wet = MIX (contract 5); the other modes keep the v0.1 blend.
+            const float dryGain = mode_ == 0 ? 1.0f : 1 - actives[i] * mixes[i];
+            const float effect = dry * dryGain + Finite(wet_[i]) * wetGain;
             left[i] = right[i] = std::clamp(Finite(dry + fade_ * (effect - dry)), -1.0f, 1.0f);
         }
         if (phase == FadingOut && fade_ <= 0)

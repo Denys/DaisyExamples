@@ -1,6 +1,6 @@
 # POD five-mode demonstrator contract
 
-Primary lane: Delay. Version 0.1, 2026-09-09. Local integration candidate;
+Primary lane: Delay. Version 0.3, 2026-10-07 (DIGI contract v1; v0.1 2026-09-09). Local integration candidate;
 product DSP authority remains DAFX. User selected DIGI/TAPE/MOD/REV/FREEZE.
 POD is explicitly selected for this demonstration under ADR-0018; Field remains
 the default development target. ADR-0019 supersedes the historical stereo router.
@@ -11,31 +11,33 @@ the default development target. ADR-0019 supersedes the historical stereo router
 R input is ignored. No input summing, no stereo or Ping-Pong claim.
 TAPE/MOD/REV/FREEZE use the existing DaisyExamples PedalDelayEngine through
 a reference to its source files, without copying its implementation.
-DIGI uses two original mono circular histories with fractional linear reads.
-
-Let d1[n] and d2[n] be delayed history reads, g in [0,0.90].
-SINGLE: w1=x+g*LP1(d1); wet=d1; D2 idle.
-SERIES: w1=x+g*LP1(d1); w2=d1+g*LP2(d2); wet=d2.
-PARALLEL: w1=x+g*LP1(d1); w2=x+g*LP2(d2); wet=(d1+d2)/2.
-The two self-feedback loops are independent; SERIES is a cascade, not the
-historical round-trip stereo feedback matrix. Each linear low-pass has gain
-at most one, so g<1 is the fixed-delay loop stability condition. Output limiting
-is an emergency bound, not proof of clean audio or nonlinear loop stability.
-D2 time = clamp(D1 time * ratio, 20, 2000) ms; ratio 0.5/0.667/0.75/1/1.333/1.5/2.
-TIME is slewed (intentional pitch change); COLOR controls feedback high-cut;
-MOTION adds up to 5 ms slow read modulation. Startup DIGI SINGLE, 400 ms,
-feedback 0.35, mix 0.35, color 6000 Hz, motion zero; D2 ratio 0.75.
+DIGI (v0.3) implements the mono-first DIGI contract v1 exactly: custom-pedals
+`delay/runs/2026-09-24_mono_first_digi_contract_v1.md`, accepted by Denys 2026-09-25.
+Per engine (DAFX DigitalDelayNode @ 73976da, mono): tap = h[D] read before write,
+integer D rounded half up; cond = LP(HP(tap)); h <- in + f*cond.
+SINGLE: in2 = 0 (E2 decays), wet = tap1. SERIES: in2 = tap1, wet = tap1 + tap2.
+PARALLEL: in2 = x, wet = 0.5*(tap1 + tap2). Output y = x + MIX*wet (Dry = 1).
+Controls: TIME 20 ms..2.5 s log; SHIFT+K1 ratio 1/4,1/3,3/8,1/2,2/3,3/4,1 with
+D2 = round(r*D1); k = 0.95*FEEDBACK, linked, SHIFT+K2 sets E2 alone, SHIFT+B1 relinks;
+SERIES uses f = 1 - sqrt(1 - k), SINGLE/PARALLEL f = k; COLOR = feedback LP from off
+(0.49 fs) to 2 kHz log; HP fixed 40 Hz; MOTION unassigned in DIGI. A config change
+is applied at the next block, never clears histories, and is a hard switch (contract
+7 accepted click cost). Pod adaptation (PROPOSED): a 0.004 deadband on the TIME pot,
+so ADC noise does not step the integer delay. Startup DIGI SINGLE, 400 ms, k 0.35,
+mix 0.35, high-cut 6000 Hz, ratio 3/4, E2 linked. Output limiting to +/-1 remains.
+Evidence: test_digi (contract 10 markers, section 6 build-up, soaks), test_parity
+(bit-exact against the pinned DAFX node), test_controls, test_demo.
 
 ## Runtime ownership
 
 Audio consumes one coherent control snapshot per block. Main scans controls and
 publishes a short snapshot with interrupts masked only for that copy.
-Audio fades to dry over 240 samples before acknowledging a requested mode,
-configuration or destructive Freeze operation. While paused, audio only passes
+Audio fades to dry over 240 samples before acknowledging a requested mode
+change or destructive Freeze operation (a DIGI config change needs no pause). While paused, audio only passes
 sanitized dry input; main may then reset storage/reconfigure and release audio.
 Audio fades back over 240 samples. No buffer clear, allocation, peripheral I/O,
 logging, spin wait or blocking synchronization is allowed in the audio callback.
-Mode/config changes deliberately discard tails. Freeze Hold/Accumulate preserve
+Mode changes deliberately discard tails; DIGI config changes keep them. Freeze Hold/Accumulate preserve
 the captured loop. No pop-free or target timing claim follows from this policy.
 
 ## Controls
