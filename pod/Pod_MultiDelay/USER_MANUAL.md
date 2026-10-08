@@ -1,8 +1,8 @@
-# POD MultiDelay v0.3 — User manual
+# POD MultiDelay v0.4 — User manual
 
-**Five-mode mono delay demonstrator · Manual revision 4 · 7 October 2026**
+**Five-mode mono delay demonstrator · Manual revision 5 · 8 October 2026**
 
-This guide describes the current v0.3 normal firmware: DIGI, TAPE, MOD, REV and
+This guide describes the current v0.4 normal firmware: DIGI, TAPE, MOD, REV and
 FREEZE, operated by two pots, two buttons and the push encoder. It covers one
 selected effect at a time; only DIGI offers two delay lines in Series or Parallel.
 The firmware processes mono audio at 48 kHz, in blocks of 48 samples.
@@ -38,7 +38,7 @@ it cannot establish what is running after any later reprogramming.
 | **MIDI IN** | MIDI data input; unused by this firmware |
 
 **L and R refer to channels within the audio connection, not separate POD sockets.**
-The v0.3 firmware processes only the left channel of LINE IN; it does not sum the
+The v0.4 firmware processes only the left channel of LINE IN; it does not sum the
 left and right channels. Ensure your source/cable sends audio to that channel.
 Material present only on the right channel will not be heard. The processed mono
 signal is duplicated to the left and right output channels, so this version does
@@ -52,8 +52,9 @@ push encoder. RESET and BOOT are programming controls, not musical functions in 
 | Gesture | Result |
 |---|---|
 | Turn encoder, B2 released | Select mode: DIGI → TAPE → MOD → REV → FREEZE; rotation wraps |
-| Click encoder, B2 released | Select parameter page: 1 → 2 → 3 → 1 |
-| Press B1, B2 released | Toggle effect bypass |
+| Click encoder, B2 released | Select parameter page: 1 → 2 → 3 → DIST → 1 |
+| Press B1, B2 released, on DIST | Toggle distortion ON/OFF |
+| Press B1, B2 released, on pages 1–3 | Toggle delay bypass |
 | Short B2 press and release | Tap tempo outside FREEZE; capture/release in FREEZE |
 | Hold B2 and turn encoder in DIGI | Select SINGLE, SERIES or PARALLEL (no pause, tails kept) |
 | Hold B2 and move K1 in DIGI | D2 time ratio |
@@ -74,13 +75,37 @@ action in TAPE, MOD or REV. Those shifted gestures still consume the B2 release,
 they do not produce a tap when B2 is released. Ordinary mode selection always
 returns to page 1. Bypass and trails remain in their current states when changing mode.
 
-### The three parameter pages
+### The parameter pages
 
 | Page | LED2 with B2 released | K1 | K2 |
 |---|---|---|---|
 | 1 | Green | TIME | FEEDBACK |
 | 2 | Red | MIX | COLOR |
 | 3 | Blue | MOTION (no effect in DIGI) | — |
+| DIST | Yellow: dim OFF / bright ON | DRIVE | TONE |
+
+### Distortion menu and independent ON/OFF
+
+Click the encoder three times from page 1 to open DIST. It edits a separate
+PRE distortion stage before both the dry signal and delay input. Press B1
+without B2 to enable or disable it. Menu selection, pot movement, leaving DIST
+and delay-mode selection never enable or disable distortion.
+
+K1 adjusts Drive (0–100%, default 40%). K2 adjusts Tone (0–100%, default 50%),
+from a dark 1 kHz low-pass to a brighter 12 kHz low-pass. Begin at low monitor
+volume: increasing Drive can substantially raise signal level. This cubic
+soft clip is not a model of a particular pedal and has no oversampling.
+ON/OFF uses a 5 ms ramp; physically pop-free switching has not been measured.
+
+Distortion starts OFF at boot and retains its settings and ON/OFF across menu
+and delay changes for the session. B1 on a delay page bypasses only the delay;
+distortion can remain audible in that bypass. To switch distortion off, return
+to DIST and press B1. It also remains active during a delay-mode pause.
+Opening DIST or pressing its B1 toggle does not clear stored repeats.
+The existing pot movement rule applies when entering/leaving DIST.
+
+While B2 is held, DIST pots still edit Drive and Tone. Shift+B1 retains its
+DIGI feedback-relink or FREEZE-clear gesture; it does not toggle distortion.
 
 **Move a knob to take control.** After startup, any encoder turn/click, or an accepted
 tap interval, both pots must be moved again before they can change a value. This
@@ -92,8 +117,8 @@ stored value, and the first movement can cause a noticeable parameter jump.
 If a knob is already at an endpoint, move it away slightly and return to reach
 that endpoint deliberately.
 
-**In DIGI, B2 selects the D2 pots.** While holding B2, K1 sets the D2 ratio and K2
-the D2 feedback, on every page. Pressing or releasing B2 rearms both pots, so neither
+**In DIGI, B2 selects the D2 pots on delay pages.** While holding B2, K1 sets the D2 ratio and K2
+the D2 feedback, on pages 1–3. DIST retains Drive/Tone. Pressing or releasing B2 rearms both pots, so neither
 owner jumps to the other's knob position. In the other modes B2 does not change the
 pots: K1 and K2 still control the current parameter page. LED2 shows status while B2
 is held; release B2 to see which page is selected.
@@ -115,9 +140,11 @@ with each mode's five parameter values.
 | Purple | REV |
 | Cyan | FREEZE |
 
-LED1 becomes dimmer when bypassed. Its color still identifies the selected mode.
+LED1 becomes dimmer when delay bypass is on. Its color still identifies the
+mode; it pulses when distortion is ON, including outside DIST.
 
-When B2 is held, LED2 changes from the page display to a status display:
+When B2 is held on pages 1–3, LED2 changes from the page display to a status
+display. On DIST it stays yellow (dim OFF, bright ON):
 
 | Context | LED2 color | Meaning |
 |---|---|---|
@@ -301,7 +328,8 @@ An interval outside 100–2000 ms leaves TIME unchanged and makes the latest rel
 the starting point for the next interval. The first valid tap pair is enough;
 there is no multi-tap averaging, MIDI clock, tap-rate LED or tap subdivision control.
 
-**Bypass:** B1 toggles the effect. New input to the delayed path fades out; LED1 dims.
+**Delay bypass:** B1 on pages 1–3 toggles the delay. On DIST, B1 toggles only
+distortion. New input to the delayed path fades out in delay bypass; LED1 dims.
 With trails on, existing delayed material remains audible over the dry signal.
 With trails off, the wet contribution fades out. Bypass does not clear delay memory,
 and re-enabling the effect can reveal remaining material. Mode/config changes clear tails.
@@ -363,16 +391,20 @@ knob positions. Listening alone does not quantify timing margin, distortion or n
 
 ## 12. Version and source scope
 
-v0.3 (2026-10-07) changes only DIGI, to DIGI contract v1. TAPE, MOD, REV and FREEZE are unchanged from v0.1.
+v0.4 (2026-10-08) adds the independent DIST page and PRE distortion. Current
+host/build evidence and the unavailable ST-LINK programming connection are in
+CHECKPOINT.md. No v0.4 physical controls or listening result is claimed.
+v0.3 (2026-10-07) changed only DIGI, to DIGI contract v1. TAPE, MOD, REV and
+FREEZE algorithms remain unchanged from v0.1.
 
-This manual describes the v0.3 files `Controls.h`, `Demo.h`, `DigiMono.h` and
+This manual describes the v0.4 files `Controls.h`, `Demo.h`, `Distortion.h`, `DigiMono.h` and
 `Pod_MultiDelay.cpp`, together with the referenced `PedalDelayEngine.cpp` descriptors
 and Freeze implementation. It documents software behavior, not a later instrumented
 build or the eventual custom pedal panel. MIDI, expression, USB-audio operation,
 preset storage, screen readout and guitar-front-end electrical performance are not
 implemented or established by this adapter.
 
-### Recorded validation — 9 September 2026
+### Historical validation — 9 September 2026 (v0.1 only)
 
 | Area | Recorded result | Meaning for use |
 |---|---|---|
@@ -388,14 +420,14 @@ It is not the interactive image described here. The normal build is
 
 The [project README](README.md) contains build/dependency details.
 [HARDWARE_TEST.md](HARDWARE_TEST.md) contains measurement boundaries, logs and the
-verified backup/restore procedure. This documentation update does not reload firmware
-or add new physical-test results.
+verified backup/restore procedure. That earlier hardware evidence does not
+validate v0.4. Its current binary was built but not flashed in this run.
 
 Source fingerprints and the revision 3 documentation verification record are in
 `work_products/delay/runs/2026-09-09_pod_user_manual_update.md` in the Custom Pedals hub.
 The earlier record `2026-09-09_pod_user_manual.md` retains revisions 1 and 2 history.
 The manual remains a separate companion file; the firmware ZIP and manifest are
-not regenerated by this documentation-only update.
+not regenerated by this v0.4 firmware update; they remain v0.1 historical artifacts.
 
 Revision 3 preserves the user-confirmed LINE IN, LINE OUT, PHONES and MIDI IN labels,
 clarifies shifted pot behavior and FREEZE state selection, distinguishes MIX/bypass/

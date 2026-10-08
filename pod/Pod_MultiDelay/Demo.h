@@ -1,5 +1,6 @@
 #pragma once
 #include "DigiMono.h"
+#include "Distortion.h"
 #include "daisyhost/PedalDelayEngine.h"
 #include <atomic>
 #include <cstddef>
@@ -14,21 +15,25 @@ struct Snapshot {
     float feedbackE2 = -1; // < 0: linked to FEEDBACK (contract 5 SHIFT+FEEDBACK)
     int config = 0, ratio = kDigiDefaultRatio, command = 0;
     bool bypass = false, trails = true;
+    bool driveOn = false;
+    float drive = .4f, tone = .5f;
 };
 class Demo {
     enum Phase : uint32_t { Running, FadingOut, PausedState, FadingIn };
     std::atomic<uint32_t> phase_{PausedState};
     daisyhost::PedalDelayEngine engine_;
     DigiMono digi_;
+    Distortion distortion_;
     int mode_ = -1;
     uint32_t epoch_ = 0;
     float fade_ = 0, mix_ = 0.35f, active_ = 1;
-    float send_[kBlock]{}, wet_[kBlock]{}, unused_[kBlock]{};
+    float pre_[kBlock]{}, send_[kBlock]{}, wet_[kBlock]{}, unused_[kBlock]{};
 
   public:
     std::atomic<uint32_t> freezeStatus{0};
     static_assert(std::atomic<uint32_t>::is_always_lock_free, "32-bit atomics must be lock-free");
     void Init(float *history, float *freeze, const Snapshot &s) {
+        distortion_.Init(s.drive, s.tone, s.driveOn);
         engine_.AttachStorage(history, kHistory, freeze, kFreeze);
         engine_.Prepare(48000, kBlock);
         digi_.Attach(history, kHistory);
@@ -65,10 +70,11 @@ class Demo {
         return true;
     }
     void Process(const float *input, float *left, float *right, std::size_t n, const Snapshot &s) {
+        distortion_.Configure(s.drive, s.tone, s.driveOn);
         auto phase = phase_.load(std::memory_order_acquire);
         if (n > kBlock || phase == PausedState) {
             for (std::size_t i = 0; i < n; ++i)
-                left[i] = right[i] = std::clamp(Finite(input[i]), -1.0f, 1.0f);
+                left[i] = right[i] = distortion_.Process(input[i]);
             return;
         }
         if (s.epoch != epoch_ && phase != FadingOut) {
@@ -95,7 +101,8 @@ class Demo {
             active_ += ((s.bypass ? 0.0f : 1.0f) - active_) * 0.004158f;
             mixes[i] = mix_;
             actives[i] = active_;
-            send_[i] = std::clamp(Finite(input[i]), -1.0f, 1.0f) * active_;
+            pre_[i] = distortion_.Process(input[i]);
+            send_[i] = pre_[i] * active_;
         }
         if (mode_ == 0)
             for (std::size_t i = 0; i < n; ++i)
@@ -109,7 +116,7 @@ class Demo {
                 fade_ = std::max(0.0f, fade_ - 1.0f / 240);
             else if (phase == FadingIn)
                 fade_ = std::min(1.0f, fade_ + 1.0f / 240);
-            const float dry = std::clamp(Finite(input[i]), -1.0f, 1.0f);
+            const float dry = pre_[i];
             const float wetGain = mixes[i] * (s.trails ? 1 : actives[i]);
             // DIGI keeps Dry = 1, Wet = MIX (contract 5); the other modes keep the v0.1 blend.
             const float dryGain = mode_ == 0 ? 1.0f : 1 - actives[i] * mixes[i];

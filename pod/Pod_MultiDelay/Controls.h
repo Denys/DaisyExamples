@@ -26,6 +26,7 @@ class Controls {
     }
 
   public:
+    static constexpr int kDistPage = 3, kPages = 4;
     Snapshot s;
     int page = 0;
     void Init() {
@@ -75,7 +76,7 @@ class Controls {
                 consumed_ = true;
                 s.trails = !s.trails;
             } else {
-                page = (page + 1) % 3;
+                page = (page + 1) % kPages;
             }
             Arm(e);
         }
@@ -88,7 +89,9 @@ class Controls {
                     s.feedbackE2 = -1; // relink E2 feedback to FEEDBACK
                     Arm(e);            // a still-held SHIFT+K2 must move again to unlink
                 }
-            } else
+            } else if (page == kDistPage)
+                s.driveOn = !s.driveOn;
+            else
                 s.bypass = !s.bypass;
         }
         if (e.b2Fall && !consumed_ && e.now - pressedAt_ < 500) {
@@ -117,6 +120,15 @@ class Controls {
                 touched_[k] = true;
             if (!touched_[k])
                 continue;
+            if (page == kDistPage) {
+                if (k == 0)
+                    s.drive = value;
+                else
+                    s.tone = value;
+                if (e.b2)
+                    consumed_ = true;
+                continue;
+            }
             if (e.b2 && s.mode == 0) {
                 // Contract 5/8: SHIFT+TIME = E2 ratio, SHIFT+FEEDBACK = E2 feedback (unlinks).
                 consumed_ = true;

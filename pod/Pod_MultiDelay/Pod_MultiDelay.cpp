@@ -23,10 +23,15 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 }
 void Leds(bool shift) {
     const float colors[5][3] = {{0, 1, 0}, {1, 0.3f, 0}, {0, 0.3f, 1}, {0.7f, 0, 1}, {0, 1, 1}};
-    const float b = controls.s.bypass ? 0.025f : 0.2f;
+    float b = controls.s.bypass ? 0.025f : 0.2f;
+    if (controls.s.driveOn && (System::GetNow() / 250) % 2)
+        b *= .4f;
     const auto *c = colors[controls.s.mode];
     hw.led1.Set(c[0] * b, c[1] * b, c[2] * b);
-    if (demo.Paused())
+    if (controls.page == poddemo::Controls::kDistPage) {
+        const float d = controls.s.driveOn ? .2f : .025f;
+        hw.led2.Set(d, d, 0);
+    } else if (demo.Paused())
         hw.led2.Set(0.2f, 0, 0);
     else if (shift) {
         int n =

@@ -134,6 +134,91 @@ int main() {
     f.now = 1600;
     d.Step(f);
     check2(std::abs(DigiTimeMs(d.s.slots[0]) - 500) < 0.5f, "DIGI tap uses the contract TIME law");
+    // Navigation must never serve as an effect enable command.
+    Controls dist;
+    Events g;
+    dist.Init();
+    g.pots[0] = g.pots[1] = 0.1f;
+    dist.Step(g);
+    const auto distEpoch = dist.s.epoch;
+    for (int i = 0; i < 3; ++i) {
+        g.encClick = true;
+        dist.Step(g);
+    }
+    g.encClick = false;
+    check2(dist.page == 3, "encoder selects dedicated DIST page");
+    check2(dist.s.mode == 0 && dist.s.epoch == distEpoch && !dist.s.bypass,
+           "entering DIST preserves running delay and tails");
+    check2(!dist.s.driveOn, "entering DIST does not enable distortion");
+    const auto distTime = dist.s.slots[0], distFeedback = dist.s.slots[1];
+    g.pots[0] = 0.8f;
+    g.pots[1] = 0.7f;
+    dist.Step(g);
+    check2(dist.s.drive == 0.8f && dist.s.tone == 0.7f && !dist.s.driveOn,
+           "DIST pots edit drive and tone without enabling");
+    check2(dist.s.slots[0] == distTime && dist.s.slots[1] == distFeedback,
+           "DIST pots do not change delay parameters");
+    g.b1Rise = true;
+    dist.Step(g);
+    g.b1Rise = false;
+    check2(dist.s.driveOn && !dist.s.bypass && dist.s.epoch == distEpoch,
+           "B1 enables distortion without bypass or reconfiguration");
+    dist.Step(g);
+    check2(dist.s.driveOn, "held button without new edge cannot retrigger");
+    g.encClick = true;
+    dist.Step(g);
+    g.encClick = false;
+    check2(dist.page == 0 && dist.s.driveOn, "leaving DIST retains distortion ON");
+    dist.Step(g);
+    check2(dist.s.slots[0] == distTime, "leaving DIST rearms pot ownership");
+    g.b1Rise = true;
+    dist.Step(g);
+    g.b1Rise = false;
+    check2(dist.s.bypass && dist.s.driveOn, "delay bypass leaves distortion ON");
+    g.turn = 1;
+    dist.Step(g);
+    g.turn = 0;
+    check2(dist.s.mode == 1 && dist.s.driveOn && dist.s.drive == 0.8f,
+           "mode change preserves distortion enable and settings");
+    for (int i = 0; i < 3; ++i) {
+        g.encClick = true;
+        dist.Step(g);
+    }
+    g.encClick = false;
+    g.b1Rise = true;
+    dist.Step(g);
+    g.b1Rise = false;
+    check2(!dist.s.driveOn && dist.s.bypass, "B1 on DIST disables only distortion");
+    // SHIFT ownership in DIGI is distinct from the DIST editing page.
+    g.turn = -1;
+    dist.Step(g);
+    g.turn = 0;
+    for (int i = 0; i < 3; ++i) {
+        g.encClick = true;
+        dist.Step(g);
+    }
+    g.encClick = false;
+    g.b2 = g.b2Rise = true;
+    g.now = 3000;
+    dist.Step(g);
+    g.b2Rise = false;
+    g.pots[0] = 0.2f;
+    g.pots[1] = 0.3f;
+    dist.Step(g);
+    check2(dist.s.drive == 0.2f && dist.s.tone == 0.3f &&
+               dist.s.ratio == kDigiDefaultRatio && dist.s.feedbackE2 < 0,
+           "DIST pots keep ownership under SHIFT in DIGI");
+    // Restore the unshifted page cycle, still without any implicit enable.
+    g.b2 = false;
+    g.b2Fall = true;
+    g.now = 3600;
+    dist.Step(g);
+    g.b2Fall = false;
+    for (int i = 0; i < 8; ++i) {
+        g.encClick = true;
+        dist.Step(g);
+        check2(!dist.s.driveOn, "page cycle cannot enable distortion");
+    }
     std::printf("CONTROLS: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -1,4 +1,14 @@
-# POD MultiDelay demonstrator v0.3
+# POD MultiDelay demonstrator v0.4
+
+v0.4 (2026-10-08): independent PRE distortion. Click the encoder three times
+from page 1 to open DIST (yellow LED2). K1 = Drive, K2 = Tone; B1 toggles ON/OFF.
+Entering/leaving DIST, pot edits and mode selection preserve ON/OFF. B1 on
+delay pages still bypasses only the delay. Startup: OFF, Drive 40%, Tone 50%.
+See CONTROLS.md and USER_MANUAL.md; current validation is in CHECKPOINT.md.
+This is a Pod feature, not a sixth delay engine or a DIGI-topology change.
+
+The v0.1 packager/manifest and v0.3 diagrams are historical; neither describes
+the new distortion stage. Build v0.4 with `verify.ps1`; the DVPE contains its plan.
 
 Status (v0.3, 2026-10-07): **DIGI_CONTRACT_V1_HOST_PASS / DAFX_NODE_PARITY_BIT_EXACT / ARM_BUILD_PASS / POD_FLASH_READBACK_VERIFIED / LISTENING_NOT_RUN**.
 v0.3 changes only DIGI, to the accepted DIGI contract v1; see CONTRACT.md. The v0.1
@@ -21,7 +31,6 @@ From this directory in Windows PowerShell:
 
 ```powershell
 .\verify.ps1
-py -3 -B .\package.py
 ```
 
 Host compiler: `C:\msys64\ucrt64\bin\g++.exe` (GCC 14.2).
@@ -44,13 +53,15 @@ Wait at least 100 ms for control acquisition after audio starts.
 | Control | Action |
 |---|---|
 | Encoder turn | DIGI -> TAPE -> MOD -> REV -> FREEZE; reverse rotation wraps |
-| Encoder click | Cycle pages 1, 2, 3 |
+| Encoder click | Cycle pages 1, 2, 3, DIST |
 | Page 1: K1 / K2 | TIME / FEEDBACK |
 | Page 2: K1 / K2 | MIX / COLOR |
 | Page 3: K1 / K2 | MOTION / unused (MOTION has no effect in DIGI) |
 | Hold B2 + K1 / K2 (DIGI) | D2 ratio / D2 feedback (unlinks) |
 | Hold B2 + B1 (DIGI) | Relink D2 feedback |
-| B1 | Toggle bypass |
+| DIST: K1 / K2 | Drive / Tone; editing never enables distortion |
+| B1 on DIST | Toggle distortion ON/OFF |
+| B1 on delay pages | Toggle delay bypass; preserve distortion ON/OFF |
 | B2 short press/release | Tap time; in FREEZE, capture when idle or release when active |
 | Hold B2 + encoder turn | DIGI: Single / Series / Parallel (no pause, tails kept); FREEZE: Capture / Hold / Accumulate / Replace |
 | Hold B2 + encoder click | Toggle trails |
@@ -76,7 +87,9 @@ blend. In MOD this deliberately replaces the reference engine's internal comb
 blend with external dry/wet; the two blend laws are not claimed identical.
 
 LED1 mode colors: DIGI green, TAPE amber, MOD blue, REV purple, FREEZE cyan.
-It dims in bypass. LED2 page colors: 1 green, 2 red, 3 blue. While SHIFT is held,
+It dims in delay bypass and pulses when distortion is ON. LED2 page colors:
+1 green, 2 red, 3 blue, DIST yellow (dim OFF, bright ON). On DIST the yellow
+indicator keeps priority. On other pages while SHIFT is held,
 DIGI configuration colors are green/amber/blue; FREEZE operation colors are
 amber/blue/purple/cyan for Capture/Hold/Accumulate/Replace. Reconfiguration pause
 uses red. Color mapping and controls are source-verified, not physically observed.
@@ -84,7 +97,8 @@ Trails on may keep a frozen loop audible in bypass; turn trails off for dry bypa
 
 ## Boundaries and evidence
 
-Mode/config changes discard tails after fading to dry for 240 samples. Main then
+Mode changes discard tails after fading to the PRE path for 240 samples. DIGI
+config changes keep tails without a pause. Main then
 clears/reconfigures storage only while audio acknowledges its dry-only state;
 return to wet also fades for 240 samples. Freeze Hold/Accumulate preserve capture.
 TIME changes slew and can bend pitch. Final output is limited to +/-1; feedback
