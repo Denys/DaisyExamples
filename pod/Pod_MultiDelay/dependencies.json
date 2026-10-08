@@ -1,0 +1,912 @@
+{
+  "classification": "VERIFIED_LOCAL_INPUT_BYTES; prebuilt libdaisy.a, dependency source tree has pre-existing modifications; not a clean dependency rebuild",
+  "DaisyExamples_HEAD": "659677e61c7f6268c0d11d7c7c775806afe6be68",
+  "libDaisy_HEAD": "85172e2b5c9abea1bf56dcd5d2c7b3f5717eb66b",
+  "files": [
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/include/daisyhost/PedalDelayEngine.h",
+      "bytes": 9559,
+      "sha256": "c647b5388ecc2a31e938c1f615b490b22035fd79015fd8c499c1015c25008996"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/DaisyHost/src/PedalDelayEngine.cpp",
+      "bytes": 46202,
+      "sha256": "fb435f03fc030a0b8eede000b21eccd4c8c7d81f22366a1a4d73c09c0e13c146"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/build/libdaisy.a",
+      "bytes": 8497764,
+      "sha256": "6a8f40831139cae0af1a97a936d2a7928cab4b4bcc13f988d5ffbffb589a285e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/core/Makefile",
+      "bytes": 8953,
+      "sha256": "671b8adc064a42bd71d7f39f0e96bec4e688ecaa1526fef1965be4464b0936b7"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/core/startup_stm32h750xx.c",
+      "bytes": 59146,
+      "sha256": "97ab45b0376b0af3fc60891887ae4fc5e7c836a6de190286ec3d6f9d1db243dd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/core/STM32H750IB_flash.lds",
+      "bytes": 4937,
+      "sha256": "2b14c3c16076ae2dbb3eac3fcac9ffa306f56989a320b7a8f7020cc5fe387780"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h750xx.h",
+      "bytes": 2101924,
+      "sha256": "dfaee768a7734b0f060912af83d567840cbc93f09b1465284158c62c35bc26f2"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7xx.h",
+      "bytes": 6190,
+      "sha256": "c96f0c33147dfe1a9433f935e9c77ebe516610d5f40f4acab496a13d1a3d0742"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Device/ST/STM32H7xx/Include/system_stm32h7xx.h",
+      "bytes": 2524,
+      "sha256": "70c012b5a266d5015269f79e5e54dfa1690e39853d5e8807591b2d59597a4781"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Include/cmsis_compiler.h",
+      "bytes": 5923,
+      "sha256": "2913e33f24753e84fbc9fdc6c191031989a008571193394948a90683eaedcf15"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Include/cmsis_gcc.h",
+      "bytes": 59329,
+      "sha256": "cc6282af3b15dcba2b63026fa03180e1f5284817f3fc4028c7855df9f2ff51da"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/CMSIS/Include/core_cm7.h",
+      "bytes": 146684,
+      "sha256": "d9af7c17c86ad8e784da3642c9fec02b514fd6c48691422a92c48788a60b4d64"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h",
+      "bytes": 196421,
+      "sha256": "c4a622ab6f43e8b388a511a77a9c636a332bd9034662b3f671f1b0f88c992725"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h",
+      "bytes": 58732,
+      "sha256": "065409d24d53e81d00084d0d085539a76414e265c18ad9079be6eeaddba69293"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc.h",
+      "bytes": 120585,
+      "sha256": "25dd4e98a2813485e6ae87ac5c3ac6fe799ac36c99c292a12ef1c0074ab98922"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc_ex.h",
+      "bytes": 74990,
+      "sha256": "fe59372acccd1a3eb0863c555d597c04010601666d07c907bf266f3c9a1ba6b8"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cec.h",
+      "bytes": 36092,
+      "sha256": "576ed66ddccb4f6e5db43bfc5cadf5e268130c16ef7c9376223411c8f9f6b943"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_comp.h",
+      "bytes": 40921,
+      "sha256": "6d79ebf330c944fc2a951acb22a9999ccc64a23ba8c37d151dadb1dff243cc38"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cortex.h",
+      "bytes": 19547,
+      "sha256": "3d8b51e268a23ea738cbf0f94c0c4a4f557d6559d5158abdc048ea996d2370dd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_crc.h",
+      "bytes": 14628,
+      "sha256": "f360026bc2163c5a0d271e09f0c2ccbf7b413e9b18c8111df1dfb4102b76f17a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_crc_ex.h",
+      "bytes": 4830,
+      "sha256": "4ba665902575c95f03df28f3227f9f943eb41f22e15cbd5de99fbb6335fd9c46"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cryp.h",
+      "bytes": 19615,
+      "sha256": "2314dc7d4e2075441b7aff814482dc6491233c9773d9d79e843c5ac669d13afe"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cryp_ex.h",
+      "bytes": 3015,
+      "sha256": "307801d5cb33bf266bdae2be3eff7c5a5ab453ee7659d41b72a771a6f3067d53"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dac.h",
+      "bytes": 21489,
+      "sha256": "58a37ff34cbf593c0247ab000a990c3a6bbbd547c9c8e68811b2704c150b7229"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dac_ex.h",
+      "bytes": 12572,
+      "sha256": "108b2b62a743104ea5a89c893e9efb6054e403dd33ccb955a40c2702d977830f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dcmi.h",
+      "bytes": 28387,
+      "sha256": "13670e99f8821eed0085bdb06762f5b0eb8b13b38ac50aa9b3f38b762dd0b95b"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h",
+      "bytes": 7231,
+      "sha256": "2ab1c480ba1484321a102d1a3b21db7dde8ade33ad37e17c08f07de124f733aa"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dfsdm.h",
+      "bytes": 44617,
+      "sha256": "bb3993e3e1b7f6101c051090de047020489a9b493247820215007ff92518c0f7"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h",
+      "bytes": 59107,
+      "sha256": "3968bac3a3343632437188c3f291ff5d0b09f97831decf16d42a65df45431ba4"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma2d.h",
+      "bytes": 30584,
+      "sha256": "0e7f63395fa840d83066bbce0afa40e48527179c45ead142aef4dfe52f958272"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma_ex.h",
+      "bytes": 16367,
+      "sha256": "83c1ddd47b4384fc142bc51ad91b4a23809b2b3e307becb33ad61ed3ba1ea1aa"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dsi.h",
+      "bytes": 57347,
+      "sha256": "91fdc578366b6bf990d0c4f3f98bcde4b654f24298d0d722e0a2860137c23be0"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_eth.h",
+      "bytes": 83405,
+      "sha256": "35257cfd1bb1d989cbcbfbcffb717d85aad1591f9116c02e2403e0a376d62d78"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_eth_ex.h",
+      "bytes": 13262,
+      "sha256": "d21db6e02187ac5429227330770052defc13fa6e1a055fa38e616431fd04a947"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_exti.h",
+      "bytes": 24649,
+      "sha256": "788d234948f0ac39776b81278b5ac5a228339561ec1de876e148442e9dc48e02"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_fdcan.h",
+      "bytes": 145285,
+      "sha256": "0de798696c23af9e8e8736c6d2b596eef393e1927271bbef8978f46fded59866"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash.h",
+      "bytes": 36628,
+      "sha256": "20771793e436f80063e7da7e1a0391680be9cad85c1a298b59c3260324da845a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash_ex.h",
+      "bytes": 35050,
+      "sha256": "6db7f900795f0633c27c43d46248269ecb9bcfa6f1a46b1cdacbef91656b03ae"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h",
+      "bytes": 13692,
+      "sha256": "f493453ecd6477f04d2fa20f4224e82b5a591b5ec6711bd73e157a62971256ae"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio_ex.h",
+      "bytes": 16222,
+      "sha256": "4e4510a9f3dd9bddf4d60f63f93d05613087861c61525e0eafad786ae971f8bd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hash.h",
+      "bytes": 25286,
+      "sha256": "b2f48b25d6f62d8b776a829dcf1040dc4a8eb2ee57b4ce280f91ba259e4c9607"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hash_ex.h",
+      "bytes": 6157,
+      "sha256": "eafd09339ac379766f6f91d7ee75e3c5a656af06e4193fc3b317cc0ef2ca2b3d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hcd.h",
+      "bytes": 12737,
+      "sha256": "c48e95e5fcb5446d8ee0598d68305f68150cec2dd1c05d44b5d8773724c9c4a3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hrtim.h",
+      "bytes": 251376,
+      "sha256": "3c786bf877efcacdfff64313858fb2290bbb60d13c7f245cf79f5aa31e1effa2"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hsem.h",
+      "bytes": 7209,
+      "sha256": "b96eb328b263f6a0dec8343d380fb92d3e9a12199ad40f05327936aaa8aef052"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c.h",
+      "bytes": 37775,
+      "sha256": "0131c7ba04732376c6360cc471cff5159c2bd8bd07233ccb2845c43d929d7385"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c_ex.h",
+      "bytes": 8241,
+      "sha256": "3ca0831722d14422d75daad3f7efdb1a80a492ccadec6ea37e012edf7493cac8"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2s.h",
+      "bytes": 28717,
+      "sha256": "6f99509e5f0fb8188b70169da1f00a8f35c8c1c9e6c2fa5c20df9d8fa9b6b10c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_irda.h",
+      "bytes": 43045,
+      "sha256": "71f379e4d51fe7cdba83d0feab78063ba103e759ec4d956a4e67dc68a6f44df3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_irda_ex.h",
+      "bytes": 20628,
+      "sha256": "422857f5cddee582ffd53d320360963c569dd2c47475d24c1e1c89f5fd85574f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_iwdg.h",
+      "bytes": 7569,
+      "sha256": "2a663f995df195011f2aac215df526ea1c7f3d1825720366009621531b4713cd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_jpeg.h",
+      "bytes": 26431,
+      "sha256": "e9e0314197d8d7acded8c1c995b55df2b447890969708c59c78bac99cebdae96"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_lptim.h",
+      "bytes": 35325,
+      "sha256": "e300d6088b42c002736819ff98bc29da7c6244118dab9aceb539c62cb0d49ed5"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ltdc.h",
+      "bytes": 32235,
+      "sha256": "43a5ae6d149314e705f307b25e930829de57b447b2dafa4f8a2e296f72eacc0b"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ltdc_ex.h",
+      "bytes": 2631,
+      "sha256": "cc619c9eaf73a4d3b2fd20150ed1f4a999272fe919124f94cd8783129535d34c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mdios.h",
+      "bytes": 23274,
+      "sha256": "27f7d5dc43dec4d29c6fa23b5dcc0a3393b9322b947346d9fc70cce12e324034"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mdma.h",
+      "bytes": 45414,
+      "sha256": "f5a9dbb14c5dba9fa01d8700a29c7199168cacd627450d8c7afde734b147a3b8"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mmc.h",
+      "bytes": 40790,
+      "sha256": "5b94af9ba5f71723e8ebe6631a6f590a0ed351727f132bfedd62391b84db632f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mmc_ex.h",
+      "bytes": 3825,
+      "sha256": "24f70cb88ee32f3e3bd8e8c2b8f315dde6887c1adb40affe47e6d02ce8806f4e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_nand.h",
+      "bytes": 14166,
+      "sha256": "4183982a6ca2d5a534f155d573113ad82293544a85fedf8d4c634b8b514e6954"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_nor.h",
+      "bytes": 11346,
+      "sha256": "0976055ce7169d4398897cb5796e27c828b86461f8ec0c3afd0877c869eb6d2f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_opamp.h",
+      "bytes": 18291,
+      "sha256": "a7451249463ac9c4390a9ec6c7a7baaa3d2fd23ff40f02014747016205080fc2"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_opamp_ex.h",
+      "bytes": 2364,
+      "sha256": "1d2929239c60dfc4617e9f884451ed2ec4ebbc4da7171e0df99d8b2a59639a2e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h",
+      "bytes": 18805,
+      "sha256": "ab0b8b8de05ba8c5d5bdc076c74d5fa9cce74a34f36674e4c68ed3ed4a667425"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h",
+      "bytes": 2824,
+      "sha256": "e5f608db128c5acc49eb088501f883523f842ed971096aed176020e1b4c8d830"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr.h",
+      "bytes": 23662,
+      "sha256": "b6044a95daf851205977e4282d07d60ad014f3db2f98a35cdb6f56fe65a55dac"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h",
+      "bytes": 24260,
+      "sha256": "2448ca0acf03133aa86075ae4d106cfce6020e684e176e96dac6172b8fea28b4"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_qspi.h",
+      "bytes": 37175,
+      "sha256": "e5ef51a7f7bee45abacfdd0d25d9830697666420240446396c86a8ba77b29e34"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ramecc.h",
+      "bytes": 13102,
+      "sha256": "549265b3142b790bda49405cc7f4a164c371b7842f45f8d295d65e686acfe519"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h",
+      "bytes": 427400,
+      "sha256": "6aa96a7fe49e8e54ecc0bee10d1f8d8a494bdef6c167e342e47a7dab7f0e68c4"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc_ex.h",
+      "bytes": 159184,
+      "sha256": "8322d05e9d6ef8788a1943cd1bba71483314764bcca21fb444dda43d1b803665"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rng.h",
+      "bytes": 12659,
+      "sha256": "34f3789aa637c2870faa36420761b1158e5cbb140d9419efd554b5b96decf99d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rtc.h",
+      "bytes": 39873,
+      "sha256": "c85ac15508d0c58ed81f57e4dc7291f5398c48bbdfe1f8f9f3317ec6fa12786b"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rtc_ex.h",
+      "bytes": 53352,
+      "sha256": "8aea692b6386fbbdbb1d987fd1ff99f97a55c9584b06423e2665de358fe8b741"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sai.h",
+      "bytes": 40158,
+      "sha256": "86df0c5ff3d675b62f5642386f5f0e62ac5e6ddbfb1ebd29e9a9da46d6031238"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sai_ex.h",
+      "bytes": 3103,
+      "sha256": "4efdf9664c17a32bb6c65b875a554466ff5a7ee30f896c9172546bb2541b6383"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sd.h",
+      "bytes": 43823,
+      "sha256": "276817e172c658f66f54b3a8e493ec77c005839405ed1d17f3a3acca628e29d4"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sd_ex.h",
+      "bytes": 3788,
+      "sha256": "31fffe96a4f29b70a3aafa26d8b8f486966c2964cb4c7da1703ec8c1b36860cd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sdram.h",
+      "bytes": 9074,
+      "sha256": "d32cfd2206e60112aef81d9769bb7712cb7ce60dccb291e30ef9c81dc204e43c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smartcard.h",
+      "bytes": 67971,
+      "sha256": "a6ef21762b20a26dccb0c0b989f268f11ddaf080f25d0866db13b9b21e16c19f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smartcard_ex.h",
+      "bytes": 18930,
+      "sha256": "30e55481b760eac13de3b16b3136094f7f9c30774ee2eb90764d6eacc04a8598"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smbus.h",
+      "bytes": 36132,
+      "sha256": "090e7fdb60de63da5a5cdbc96ad9ec82da3fdc76036c4f8748d45a900ef3785f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spdifrx.h",
+      "bytes": 26332,
+      "sha256": "a65ce81f14e0ef8acb2fd868ee2aad964c30261f4fac1266bc7bf093082e0443"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi.h",
+      "bytes": 57322,
+      "sha256": "b38ae1d636ed0e3524868422898b2a22d6badbd3b37c621dba9a7228a5add33b"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi_ex.h",
+      "bytes": 2317,
+      "sha256": "9736cb613e13431bb69d7411a5b0c78f866d1a25e2cf4dbc4849a1a82357d4dc"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sram.h",
+      "bytes": 8390,
+      "sha256": "b3fa666991b1843ca356777ebf2b395aa60878dbc8a74aba2ffb56fe565c647a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_swpmi.h",
+      "bytes": 22682,
+      "sha256": "8af73c53ecd7e12a42f6db99ef6ed30c1607156f88cab8d05073b23cab8ff023"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h",
+      "bytes": 130196,
+      "sha256": "97c78c4801b51635444a8524580560739358155c775d94a887f8de4220eaf258"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h",
+      "bytes": 27684,
+      "sha256": "343c7a062e22a5ae0aa6265462ee35d414581f29e2726c15c8b578a8810c50e8"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h",
+      "bytes": 85571,
+      "sha256": "1df2273861aa90fcec2fcddfc1e250951eac375454f48983df352ea31dfb4104"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h",
+      "bytes": 29449,
+      "sha256": "629572cd5a4d07b7f5dd883acdc0b8c0f38d21fa1d88e27b10f7a2ea654322b9"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart.h",
+      "bytes": 55703,
+      "sha256": "166e51ec9aa2c242c5c709640c2a12f5d5eb21d9e0892f15d5a429e4481c0ff0"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart_ex.h",
+      "bytes": 12814,
+      "sha256": "4fd55900809bbbf47b791d468b5cbb6ffc3a7ab4ac007345f5d397d11e952c0c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_wwdg.h",
+      "bytes": 11266,
+      "sha256": "0055b8bcf54c4be3e93ae9d906aa13a89df6eadf2b339878f29db37b475251bd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_adc.h",
+      "bytes": 419475,
+      "sha256": "8e244da31e6580b27f6b9439e27fe198f6ff1bdfba417bd276cb4ef9eb4e4caf"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_delayblock.h",
+      "bytes": 2170,
+      "sha256": "f3a00d2789093c9fbb13b06d690e44151e606c47d22110cd840c2e5435767173"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_fmc.h",
+      "bytes": 52196,
+      "sha256": "82cbd783a323ff53961bc48d81b02b6b665380ff19cfaff0904ba7bda3ed832d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_sdmmc.h",
+      "bytes": 63505,
+      "sha256": "3c9707f9952509086349515565a1bcf328931bf30d9810fe76c20b3e1e203a3a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h",
+      "bytes": 20313,
+      "sha256": "1ec7f7384ec5e0ad91b922f04ff3a3bc7618b163eb2a6eadeebf6cdbed5852b3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Middlewares/Third_Party/FatFs/src/ff.h",
+      "bytes": 13741,
+      "sha256": "644ecaf33339fc46ff447386f001c0199c54213ec14ea78b0ab77bba2184841d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/Middlewares/Third_Party/FatFs/src/integer.h",
+      "bytes": 855,
+      "sha256": "20304085ec29f6cdd6218f411b134d3c677bd8eb9dd46c694871e0d88c2d2cc4"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/daisy.h",
+      "bytes": 1897,
+      "sha256": "9d69060c17e5ba63aff693392de1d3600763a0270bf27d5cf22e3c0228b34050"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/daisy_core.h",
+      "bytes": 8289,
+      "sha256": "dc92315a72afe676f1d1fd746abe77347f872e6c52a0432a1f0be61aef86aa94"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/daisy_pod.h",
+      "bytes": 3617,
+      "sha256": "5d7ddf506daca3c6df323b6994467be8df70284ca370ed5d8e46774e0639fbbd"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/daisy_seed.h",
+      "bytes": 7806,
+      "sha256": "f75b91ac5ad6d019de67635064a53d3557ec379f3e909b7e949b8056f35efaec"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/apds9960.h",
+      "bytes": 24547,
+      "sha256": "243e91cb1b56729632280679ded8211308e2a3be8ca02a544e77ab1896f6688e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/codec_pcm3060.h",
+      "bytes": 1267,
+      "sha256": "9de19fbac6e172ccbdb6b66f956a8488ff2af9897d7a2e98651b1b4b1a7062c2"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/codec_wm8731.h",
+      "bytes": 3346,
+      "sha256": "0fd24ea99491e7ab6f10cf33fd081449afab72e3a27d65e61c18933c6e1eef7f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/dotstar.h",
+      "bytes": 9140,
+      "sha256": "87cdc89f7108461c74f3b15f0609a0ad9b14b4eb0a067fc5eb2d7ce60514181c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/dps310.h",
+      "bytes": 19204,
+      "sha256": "38246ba2f1fad27a708b6800f36e5a20ecf28902a582e7c754c18245cf634d4e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/icm20948.h",
+      "bytes": 29943,
+      "sha256": "61a7d79e2404a98f83ef85a5b94c9cbe6e0e708a0e852357e8d89187f2ed5385"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/lcd_hd44780.h",
+      "bytes": 1694,
+      "sha256": "6011a7dca01c2a871c814287073bd41bf99a0c44aa79f719157565b0d837404e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/leddriver.h",
+      "bytes": 13076,
+      "sha256": "ab04eae816344c7b8018d5df038ba3ce2048dc16b4928803b68200303dc66f73"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/max11300.h",
+      "bytes": 49173,
+      "sha256": "9e6953d120c390fe13fe7522c8e734e93fca766c1fae7f4d061dc0144d0c8e59"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/mcp23x17.h",
+      "bytes": 11053,
+      "sha256": "4bed0f6606a12ecf4a67c45dbc6462e36abc79a28b74a0b5082567ee2504f4a0"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/mpr121.h",
+      "bytes": 10916,
+      "sha256": "93512ef56423b8e14dd547a92a63e1a00cb42496cbe61d6cd19f0f3cbc0cfa4d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/neopixel.h",
+      "bytes": 20186,
+      "sha256": "3fa0ad17e581c610d3c28c4baddbf4df08aa2a45094ee292f90797d1839b568d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/neotrellis.h",
+      "bytes": 14267,
+      "sha256": "f79e14ff4ce203748e0cef62da2cdf16b2e49a3dd35081657444306f222a37e5"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/sdram.h",
+      "bytes": 2555,
+      "sha256": "980d0d41ff4bdd9fe2fc81f8a9b4081cd35a649bc6d6d5e4146e90c054635a87"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/sr_4021.h",
+      "bytes": 3992,
+      "sha256": "c308b32dd4ba92a0bb3ed36149c2bc040a878ecbf2d907a61e238bb98e178387"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/sr_595.h",
+      "bytes": 1841,
+      "sha256": "06e7d126f9fd0f47ea8d79a3b72776b50f070def88e37a52d4fb0b0ca730953c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/dev/tlv493d.h",
+      "bytes": 12453,
+      "sha256": "ba544f273a5ab6a2e8c6423078aa03c48004514bed7b428f342c0ceb30f7b442"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/audio.h",
+      "bytes": 6334,
+      "sha256": "5ea2a9dc71298a8d81c8a1be80ce61b8c68ea58feb59c8e20df43ad4e8002420"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/ctrl.h",
+      "bytes": 3081,
+      "sha256": "c01f9f93f9dfb81a00a3feb4daba6441f120ee869504da0e47a27cda9490f393"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/disp/display.h",
+      "bytes": 16023,
+      "sha256": "ed47ce5d34bfc81f4fd927c3e1900d6ad6a160c2a1b745c265cd201a314cbc11"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/disp/graphics_common.h",
+      "bytes": 8448,
+      "sha256": "90b73f2b80312dbcd6d890ee5f355ad077eca844431fccd77964674767302ce3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/disp/oled_display.h",
+      "bytes": 1701,
+      "sha256": "7d7da28b39511c5d0476af57522dc1204ae645097c36cbb4d90369931460b0ca"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/encoder.h",
+      "bytes": 2053,
+      "sha256": "30bc8d6e6d27efd5ea4f3841d77bdf28a45942bbce5c37f1dbc9f32787e3c5df"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/gatein.h",
+      "bytes": 2070,
+      "sha256": "23f7751debe1d78aee001e8954fd49d10da119ac69cdbe0fb0129c7dd5ac36eb"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/led.h",
+      "bytes": 1763,
+      "sha256": "6cffd0ba906940eaca444d6a9f11ef54d66700e5cc328dec1f2310241c61b8d6"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/logger.h",
+      "bytes": 5399,
+      "sha256": "0343938d1ffe381108fadd1733e68242a3570a1fe69c0cfd2c8ae2281967c8c0"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/logger_impl.h",
+      "bytes": 2982,
+      "sha256": "8ed2599448e53b10420606517764144c1304b7d3dc9e6bf9873e679e4de99a8a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/midi.h",
+      "bytes": 8239,
+      "sha256": "394b523e6d9d53ca74307c5f4923356bc13a46eba31fcce2f6e2804bbe874af7"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/midi_parser.h",
+      "bytes": 1767,
+      "sha256": "3d255cbd7157d0b813490a2ce2884d766b36534d87842d8a50e5c16291a0bda3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/MidiEvent.h",
+      "bytes": 10469,
+      "sha256": "c30688982115bf6633ce0c55b9fa7573524875dbbfe046287d658c224fa50f2c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/parameter.h",
+      "bytes": 1739,
+      "sha256": "2870d8d43c571709858b9b8cfc74bc355b852c6f77acfac8f21af21bf8a24bbe"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/rgb_led.h",
+      "bytes": 1646,
+      "sha256": "3a96bc8b33fe9765dfc5dcef785db858c60612b753840b3840727def7e02f8a5"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/switch.h",
+      "bytes": 3323,
+      "sha256": "b21fd587fe6b064448300106c913e0f52e7268015be37dfc8ef72d7d26dc267c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/switch3.h",
+      "bytes": 993,
+      "sha256": "916c6734dedd3ef2a77bd5503badbc15da0f60d1fa6890f76b4709d2ccd1fb3c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/usb.h",
+      "bytes": 2053,
+      "sha256": "d5c69788613a044b1fb717d69cbdcde4120697b8d8ae65d2416c8bba5494364d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/usb_host.h",
+      "bytes": 3496,
+      "sha256": "da83146e353b08838c3bb847b0301ec88d8da32f0e16bd18402e5b665e91dc23"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/usb_midi.h",
+      "bytes": 1717,
+      "sha256": "f899255f5550d665094a93f85d594887cef7d5ab73d770855fd911bd23546694"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/hid/wavplayer.h",
+      "bytes": 2946,
+      "sha256": "d02dc3495a5391a07334488e6522b9de2096325d59a980b3b51428178442e67e"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/adc.h",
+      "bytes": 5194,
+      "sha256": "0663e4e2b3d2f690f6ee8dc4a6b6a1c27eea3ba94a50f8250fc4119962cf347f"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/dac.h",
+      "bytes": 3925,
+      "sha256": "3e32b1e04ce1b7c17f9bb0182f0fd2eb0fc64c51072fda38a68b8dbd4ee7e9b9"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/gpio.h",
+      "bytes": 6436,
+      "sha256": "af9518e4a0dd3fde293b8d5ed9418c7ebde1cbea7ea1463ac79edcb85127ed31"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/i2c.h",
+      "bytes": 9307,
+      "sha256": "5cd59b9b72885e2562a4ae59c56ae9a7efcc22f77708c83823ef132c044a5278"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/qspi.h",
+      "bytes": 9038,
+      "sha256": "ce17f98c3b8b9af3d28a7554f21ccaef8cfe86e47c4a2b21fb51350b27c91fb6"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/rng.h",
+      "bytes": 1688,
+      "sha256": "53257cc021d044b15a7294179faabdec36bfcd94fb17e8facb486526aaad2280"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/sai.h",
+      "bytes": 5437,
+      "sha256": "a95016cbfa54177bd442d385be2f2bb09a474051361b00c93f312439eee7f756"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/sdmmc.h",
+      "bytes": 2385,
+      "sha256": "4f3da18f0ef456057a16d86e9693ad23794b809cf67346a7a6a3835b7286b060"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/spi.h",
+      "bytes": 7425,
+      "sha256": "6d9edb304f152bac613796be59844ca6f80e8db24a3d75db9111f289f123738a"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/spiMultislave.h",
+      "bytes": 7045,
+      "sha256": "5317bebf47990ee8da3f8ad236b5f97650b2a49adcb6112c8310753f1fecec4c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/tim.h",
+      "bytes": 6299,
+      "sha256": "db4bbf04c79104ee932ad8c87cce7f499f059d8a1840dbbd4cd315df5581b116"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/per/uart.h",
+      "bytes": 7662,
+      "sha256": "4992295998ee255caf33456834f4ec07499d928942a0cd995d06a566374f6b8d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/sys/dma.h",
+      "bytes": 2162,
+      "sha256": "9d9abb317159553d801e0c39a445d89cb74db0ac34354c8e317214b86f9ea3a9"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/sys/fatfs.h",
+      "bytes": 3967,
+      "sha256": "ffd8510cffb1108ed295ae1dea683047e32fce55919d8f619f2acec029461740"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/sys/ffconf.h",
+      "bytes": 12487,
+      "sha256": "a5386205586264a158a4b767af8588e313df836bde0e42813303c7464b5e7cea"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/sys/stm32h7xx_hal_conf.h",
+      "bytes": 17198,
+      "sha256": "d0fd187a85e2dc9bd46375a18e96b9a3e0f0845978dc74bcdd903633836c62c9"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/sys/system.h",
+      "bytes": 9312,
+      "sha256": "2151cef16efc9cd86daf4d0baeb6c56045e21adb270e9897103df70d0b892767"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/AbstractMenu.h",
+      "bytes": 12642,
+      "sha256": "46fc06edaa1974d9e945bb092ca0352af68a64c2f53418264cef18e1048f6a98"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/ButtonMonitor.h",
+      "bytes": 8340,
+      "sha256": "b3d4d0059e52b98d5a7e504b95579815d53188817da7cf7be30021f242c0a979"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/FullScreenItemMenu.h",
+      "bytes": 6811,
+      "sha256": "e04531c9106a5365936d82d7146cc5ae80b5a9a305cfb845017bed4d8a669029"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/PotMonitor.h",
+      "bytes": 6975,
+      "sha256": "9984c8c2e5c79ea3d26c2bee26799c6b81879e275a370bc6b77fdc4650a810cf"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/UI.h",
+      "bytes": 20484,
+      "sha256": "a41310991ddfe0a7fad30e83178d68dd9069ee2b4c41b5dca612f3f4d93fe013"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/ui/UiEventQueue.h",
+      "bytes": 7709,
+      "sha256": "6999b8178330b785e20eab891a842b5767b090acc7a30309f766d067efe2ecea"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/bsp_sd_diskio.h",
+      "bytes": 4155,
+      "sha256": "2020090a467f988e4d9abcc2646930f7486204d1ebc1847bf4b1f561deba3f3c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/color.h",
+      "bytes": 2067,
+      "sha256": "8ffa6ea6421b51d4f257ab5c9f42dd6cf37d75d3c581cad916d7eb816a04a227"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/CpuLoadMeter.h",
+      "bytes": 3642,
+      "sha256": "c654eddd5a5533a9c620a18d753914c7cd5f3d2d4acd5ee26e967df2304b952d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/FIFO.h",
+      "bytes": 9421,
+      "sha256": "422a89abe55e0d7022e69997b60ee5157120fd246a4b8dc09007fe63404dd488"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/FixedCapStr.h",
+      "bytes": 15260,
+      "sha256": "5a2522c86553a3395ed3e66d1c1ede1406d1a0aab447a3108ea14459d4a11864"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/MappedValue.h",
+      "bytes": 8969,
+      "sha256": "264609af7da1b0ffcb1866f35ed1df54bf3572d52f501a1b45128d59685a9bc3"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/oled_fonts.h",
+      "bytes": 771,
+      "sha256": "2904dc6a430ae24e23d189d9d63190ee95b82e6f3e2d42f074a8d628dfa02ec9"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/PersistentStorage.h",
+      "bytes": 4982,
+      "sha256": "cd54e41e87728cd19aa7ed6fbae640e2f6df65fcfb34acd05b8519ddd038bd1c"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/ringbuffer.h",
+      "bytes": 5736,
+      "sha256": "6488802ed8c067acc688a36d4be12c3dfbbe750871ff2779a5d29f0cbaeef624"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/unique_id.h",
+      "bytes": 589,
+      "sha256": "b6aacfac22583989c411b1d04ea098c375201e1a77af1bacb842d353e817a760"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/VoctCalibration.h",
+      "bytes": 2631,
+      "sha256": "652ae6c0763acebfcd18c0dfdd51914aa59a1c59921033a43fc171b3232d411d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/wav_format.h",
+      "bytes": 1678,
+      "sha256": "c4a84e07b1982fb80b1c1959298f14f347815ee79a55307197d97d04737dff9d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/WaveTableLoader.h",
+      "bytes": 1799,
+      "sha256": "c2d00fed7e308666d9e6826071fec75696ea501561f1402012d30aa56351e754"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/util/WavWriter.h",
+      "bytes": 7198,
+      "sha256": "25a27d4c71a58b8b11042aa6cc130ef8ab7d7e7668245708e61bcde2defb558d"
+    },
+    {
+      "path": "C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples/libDaisy/src/version.h",
+      "bytes": 158,
+      "sha256": "2ad1e2b5684dffd6face1789ea2a456b67fdd028012cfb69369707c7f7451f8d"
+    }
+  ]
+}
