@@ -32,6 +32,13 @@ OFF. Tests establish finite/bounded output, clean identity when OFF, independent
 Drive/Tone response, pre-delay routing and continued operation in delay pause.
 Aliasing, physically pop-free switching, MCU CPU margin and listening are NOT_RUN.
 
+CI publication repair: repository clang-format 10 applied to all eleven PR C++
+files; normal and diagnostic Makefiles now default to repository-relative paths
+(verify.ps1 still passes the pinned local source root explicitly). The muted
+diagnostic's obsolete DIGI call and Series marker were aligned with contract v1.
+Diagnostic build is checked separately; no new diagnostic target run is claimed.
+Initial CI failures were formatting and a Windows-only source-root default.
+
 Reproduce from this project directory: `./verify.ps1`.
 Next physical action: reconnect the same Pod/ST-LINK, verify probe/UID and two
 matching 128 KiB backups, then use the documented guarded BOOT_NONE image route

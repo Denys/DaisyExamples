@@ -35,7 +35,9 @@ From this directory in Windows PowerShell:
 
 Host compiler: `C:\msys64\ucrt64\bin\g++.exe` (GCC 14.2).
 ARM compiler: GNU Arm Embedded 10.2.1 in DaisyToolchain.
-The default DaisyExamples location is named in Makefile and dependencies.json.
+Makefile defaults to the enclosing DaisyExamples repository. For the local
+worktree, verify.ps1 passes the pinned external library/source root explicitly;
+dependencies.json records those input paths.
 `verify_dependencies.py` rejects any changed/missing input; changing a location
 or dependency requires a deliberate new pin and rebuild, not silently bypassing it.
 The linked libDaisy archive is prebuilt; four existing dependency-source edits

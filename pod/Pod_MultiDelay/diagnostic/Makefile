@@ -1,6 +1,6 @@
 TARGET = Pod_MultiDelay_Test
 DEMO_DIR ?= ..
-DAISY_EXAMPLES_DIR ?= C:/Users/denko/Gemini/Antigravity/DVPE_Daisy-Visual-Programming-Environment/DaisyExamples
+DAISY_EXAMPLES_DIR ?= ../../..
 LIBDAISY_DIR = $(DAISY_EXAMPLES_DIR)/libDaisy
 CPP_SOURCES = Pod_MultiDelay_Test.cpp $(DAISY_EXAMPLES_DIR)/DaisyHost/src/PedalDelayEngine.cpp
 C_INCLUDES += -I$(DEMO_DIR) -I$(DAISY_EXAMPLES_DIR)/DaisyHost/include
