@@ -56,6 +56,7 @@ int main()
     e.now    = 2000;
     c.Step(e);
     e.b2Rise = false;
+    e.now = 2000 + Controls::kChordMs + 1; // SHIFT held past the chord window
     e.b1Rise = true;
     c.Step(e);
     check(c.s.command == 5 && !c.s.bypass,
@@ -98,6 +99,7 @@ int main()
            "SHIFT+K1 ratio, SHIFT+K2 E2");
     check2(d.s.slots[0] == time && d.s.slots[1] == feedback,
            "SHIFT pots leave TIME/FEEDBACK");
+    f.now    = 100 + Controls::kChordMs + 1;
     f.b1Rise = true;
     d.Step(f);
     f.b1Rise = false;
@@ -105,7 +107,7 @@ int main()
            "SHIFT+B1 relinks E2 without bypass");
     f.b2     = false;
     f.b2Fall = true;
-    f.now    = 200;
+    f.now    = 300;
     d.Step(f);
     f.b2Fall = false;
     check2(d.s.slots[0] == time && d.s.slots[1] == feedback,
@@ -146,98 +148,154 @@ int main()
     d.Step(f);
     check2(std::abs(DigiTimeMs(d.s.slots[0]) - 500) < 0.5f,
            "DIGI tap uses the contract TIME law");
-    // Navigation must never serve as an effect enable command.
-    Controls dist;
-    Events   g;
-    dist.Init();
-    g.pots[0] = g.pots[1] = 0.1f;
-    dist.Step(g);
-    const auto distEpoch = dist.s.epoch;
+    // v0.5 DRIVE: a B1+B2 chord enters from any delay page and returns to it.
+    Controls dr;
+    Events   h;
+    dr.Init();
+    h.pots[0] = h.pots[1] = 0.1f;
+    uint32_t t            = 10000;
+    auto     step         = [&](uint32_t dt) {
+        t += dt;
+        h.now = t;
+        dr.Step(h);
+        h.b1Rise = h.b1Fall = h.b2Rise = h.b2Fall = h.encClick = false;
+        h.turn                                                 = 0;
+    };
+    auto b1Down = [&](uint32_t dt) {
+        h.b1 = h.b1Rise = true;
+        step(dt);
+    };
+    auto b1Up = [&](uint32_t dt) {
+        h.b1     = false;
+        h.b1Fall = true;
+        step(dt);
+    };
+    auto b2Down = [&](uint32_t dt) {
+        h.b2 = h.b2Rise = true;
+        step(dt);
+    };
+    auto b2Up = [&](uint32_t dt) {
+        h.b2     = false;
+        h.b2Fall = true;
+        step(dt);
+    };
+    step(0);
+    h.encClick = true;
+    step(5);
+    const auto ep = dr.s.epoch;
+    const int  m0 = dr.s.mode;
+    b1Down(100);
+    b2Down(30);
+    check2(dr.inDrive && dr.drivePage == 0 && !dr.s.bypass && dr.s.epoch == ep,
+           "B1 then B2 within the window enters DRIVE without bypass");
+    b1Up(50);
+    b2Up(20);
+    check2(!dr.s.bypass && dr.tapMs == 0 && !dr.s.drive.on,
+           "chord release neither bypasses, taps nor enables DRIVE");
+    h.turn = 1;
+    step(10);
+    check2(dr.s.drive.type == 2 && dr.s.mode == m0,
+           "turn in DRIVE selects the type, not the delay mode");
+    h.turn = 1;
+    step(10);
+    check2(dr.s.drive.type == 0, "type wraps FUZZ -> OVERDRIVE");
+    b2Down(10);
+    h.turn = 1;
+    step(200);
+    check2(dr.s.drive.type == 1 && dr.s.config == 0,
+           "SHIFT+turn in DRIVE selects the type, not the DIGI config");
+    b2Up(10);
+    check2(dr.tapMs == 0, "SHIFT+turn consumes the B2 release");
+    h.pots[0] = 0.9f;
+    step(10);
+    check2(dr.s.drive.gain == 0.9f, "K1 edits GAIN of the selected type");
+    h.turn = 1;
+    step(10);
+    check2(dr.s.drive.gain == 0.6f, "each type keeps its own GAIN");
+    h.turn = -1;
+    step(10);
+    check2(dr.s.drive.gain == 0.9f, "returning restores DISTORTION GAIN");
+    h.encClick = true;
+    step(10);
+    check2(dr.drivePage == 1 && dr.inDrive, "click switches to LEVEL/BLEND");
+    h.pots[1] = 0.5f;
+    step(10);
+    check2(dr.s.drive.blend == 0.5f && dr.s.drive.tone == 0.5f,
+           "K2 on LEVEL/BLEND edits BLEND only");
+    b1Down(10);
+    check2(!dr.s.drive.on, "B1 waits for the chord window");
+    step(Controls::kChordMs);
+    check2(dr.s.drive.on && !dr.s.bypass,
+           "B1 alone toggles DRIVE after the window");
+    b1Up(10);
+    check2(dr.s.drive.on, "B1 release does not toggle again");
+    b1Down(10);
+    b1Up(20);
+    check2(!dr.s.drive.on, "a short B1 acts on release");
+    b1Down(10);
+    step(100);
+    b1Up(10);
+    b2Down(500);
+    b1Down(40);
+    check2(!dr.inDrive && dr.page == 1 && dr.s.drive.on,
+           "B2 then B1 within the window exits to the previous page, DRIVE "
+           "stays ON");
+    b1Up(10);
+    b2Up(10);
+    check2(!dr.s.bypass && dr.tapMs == 0,
+           "exit chord neither bypasses nor taps");
+    h.encClick = true;
+    step(10);
+    h.turn = 1;
+    step(10);
+    check2(dr.s.drive.on && dr.s.mode == 1,
+           "DRIVE stays ON across page and mode");
+    h.turn = -1;
+    step(10);
+    b2Down(10);
+    step(200);
+    b1Down(10);
+    check2(!dr.inDrive && !dr.s.bypass && dr.notice == Notice::Relink,
+           "B2 held past the window then B1 is SHIFT+B1, not a chord");
+    b1Up(10);
+    b2Up(10);
+    b1Down(10);
+    step(Controls::kChordMs);
+    b1Up(10);
+    check2(dr.s.bypass && dr.s.drive.on, "B1 alone toggles delay bypass only");
+    h.b1 = h.b1Rise = h.b2 = h.b2Rise = true;
+    step(10);
+    check2(dr.inDrive, "B1 and B2 in the same scan enter DRIVE");
+    h.b1 = h.b2 = false;
+    h.b1Fall = h.b2Fall = true;
+    step(10);
+    h.b1 = h.b1Rise = h.b2 = h.b2Rise = true;
+    step(10);
+    h.b1 = h.b2 = false;
+    h.b1Fall = h.b2Fall = true;
+    step(10);
+    check2(!dr.inDrive, "same-scan chord also exits");
+    h.turn = -1;
+    step(10);
+    const auto ep4 = dr.s.epoch;
+    b2Down(10);
+    b1Down(20);
+    b1Up(10);
+    b2Up(10);
+    check2(dr.s.mode == 4 && dr.inDrive && dr.s.epoch == ep4,
+           "chord in FREEZE neither captures nor reconfigures");
+    b2Down(10);
+    b1Down(20);
+    b1Up(10);
+    b2Up(10);
+    bool neverDrive = true;
     for(int i = 0; i < 3; ++i)
     {
-        g.encClick = true;
-        dist.Step(g);
+        h.encClick = true;
+        step(10);
+        neverDrive &= !dr.inDrive;
     }
-    g.encClick = false;
-    check2(dist.page == 3, "encoder selects dedicated DIST page");
-    check2(dist.s.mode == 0 && dist.s.epoch == distEpoch && !dist.s.bypass,
-           "entering DIST preserves running delay and tails");
-    check2(!dist.s.driveOn, "entering DIST does not enable distortion");
-    const auto distTime = dist.s.slots[0], distFeedback = dist.s.slots[1];
-    g.pots[0] = 0.8f;
-    g.pots[1] = 0.7f;
-    dist.Step(g);
-    check2(dist.s.drive == 0.8f && dist.s.tone == 0.7f && !dist.s.driveOn,
-           "DIST pots edit drive and tone without enabling");
-    check2(dist.s.slots[0] == distTime && dist.s.slots[1] == distFeedback,
-           "DIST pots do not change delay parameters");
-    g.b1Rise = true;
-    dist.Step(g);
-    g.b1Rise = false;
-    check2(dist.s.driveOn && !dist.s.bypass && dist.s.epoch == distEpoch,
-           "B1 enables distortion without bypass or reconfiguration");
-    dist.Step(g);
-    check2(dist.s.driveOn, "held button without new edge cannot retrigger");
-    g.encClick = true;
-    dist.Step(g);
-    g.encClick = false;
-    check2(dist.page == 0 && dist.s.driveOn,
-           "leaving DIST retains distortion ON");
-    dist.Step(g);
-    check2(dist.s.slots[0] == distTime, "leaving DIST rearms pot ownership");
-    g.b1Rise = true;
-    dist.Step(g);
-    g.b1Rise = false;
-    check2(dist.s.bypass && dist.s.driveOn,
-           "delay bypass leaves distortion ON");
-    g.turn = 1;
-    dist.Step(g);
-    g.turn = 0;
-    check2(dist.s.mode == 1 && dist.s.driveOn && dist.s.drive == 0.8f,
-           "mode change preserves distortion enable and settings");
-    for(int i = 0; i < 3; ++i)
-    {
-        g.encClick = true;
-        dist.Step(g);
-    }
-    g.encClick = false;
-    g.b1Rise   = true;
-    dist.Step(g);
-    g.b1Rise = false;
-    check2(!dist.s.driveOn && dist.s.bypass,
-           "B1 on DIST disables only distortion");
-    // SHIFT ownership in DIGI is distinct from the DIST editing page.
-    g.turn = -1;
-    dist.Step(g);
-    g.turn = 0;
-    for(int i = 0; i < 3; ++i)
-    {
-        g.encClick = true;
-        dist.Step(g);
-    }
-    g.encClick = false;
-    g.b2 = g.b2Rise = true;
-    g.now           = 3000;
-    dist.Step(g);
-    g.b2Rise  = false;
-    g.pots[0] = 0.2f;
-    g.pots[1] = 0.3f;
-    dist.Step(g);
-    check2(dist.s.drive == 0.2f && dist.s.tone == 0.3f
-               && dist.s.ratio == kDigiDefaultRatio && dist.s.feedbackE2 < 0,
-           "DIST pots keep ownership under SHIFT in DIGI");
-    // Restore the unshifted page cycle, still without any implicit enable.
-    g.b2     = false;
-    g.b2Fall = true;
-    g.now    = 3600;
-    dist.Step(g);
-    g.b2Fall = false;
-    for(int i = 0; i < 8; ++i)
-    {
-        g.encClick = true;
-        dist.Step(g);
-        check2(!dist.s.driveOn, "page cycle cannot enable distortion");
-    }
+    check2(neverDrive && dr.page == 0, "click cycles three delay pages only");
     std::printf("CONTROLS: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

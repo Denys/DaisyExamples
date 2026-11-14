@@ -1,6 +1,6 @@
 #pragma once
 #include "DigiMono.h"
-#include "Distortion.h"
+#include "Drive.h"
 #include "daisyhost/PedalDelayEngine.h"
 #include <atomic>
 #include <cstddef>
@@ -16,10 +16,9 @@ struct Snapshot
     float slots[5] = {0.620432f, 0.368421f, 0.35f, 0.554264f, 0};
     float feedbackE2
         = -1; // < 0: linked to FEEDBACK (contract 5 SHIFT+FEEDBACK)
-    int   config = 0, ratio = kDigiDefaultRatio, command = 0;
-    bool  bypass = false, trails = true;
-    bool  driveOn = false;
-    float drive = .4f, tone = .5f;
+    int         config = 0, ratio = kDigiDefaultRatio, command = 0;
+    bool        bypass = false, trails = true;
+    DriveParams drive; // v0.5 PRE drive (type, gain, tone, level, blend, on)
 };
 class Demo
 {
@@ -33,7 +32,7 @@ class Demo
     std::atomic<uint32_t>       phase_{PausedState};
     daisyhost::PedalDelayEngine engine_;
     DigiMono                    digi_;
-    Distortion                  distortion_;
+    Drive                       distortion_;
     int                         mode_  = -1;
     uint32_t                    epoch_ = 0;
     float                       fade_ = 0, mix_ = 0.35f, active_ = 1;
@@ -45,7 +44,7 @@ class Demo
                   "32-bit atomics must be lock-free");
     void Init(float *history, float *freeze, const Snapshot &s)
     {
-        distortion_.Init(s.drive, s.tone, s.driveOn);
+        distortion_.Init(s.drive);
         engine_.AttachStorage(history, kHistory, freeze, kFreeze);
         engine_.Prepare(48000, kBlock);
         digi_.Attach(history, kHistory);
@@ -95,7 +94,7 @@ class Demo
                  std::size_t     n,
                  const Snapshot &s)
     {
-        distortion_.Configure(s.drive, s.tone, s.driveOn);
+        distortion_.Configure(s.drive);
         auto phase = phase_.load(std::memory_order_acquire);
         if(n > kBlock || phase == PausedState)
         {

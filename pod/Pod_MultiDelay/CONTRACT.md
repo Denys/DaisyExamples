@@ -42,6 +42,12 @@ the captured loop. No pop-free or target timing claim follows from this policy.
 
 ## Controls
 
+v0.5 (2026-11-14): PRE DRIVE (OVERDRIVE/DISTORTION/FUZZ, Drive.h) is edited on a
+DRIVE page entered and left with a B1+B2 chord (80 ms window); B1 alone then acts
+after the window. An optional SSD1306/SSD1315 OLED on I2C1 (D11/D12, 0x3C) shows
+navigation; display I/O runs in main only, never in the audio callback. CONTROLS.md
+is the current gesture table; the v0.3 text below remains for the delay pages.
+
 Encoder turn: mode. Encoder click: page (TIME/FEEDBACK, MIX/COLOR, MOTION/RATIO).
 K1/K2: selected page, with 0.012 movement threshold after entry; values remain
 stored per mode until a knob moves. Ratio is DIGI-only.
