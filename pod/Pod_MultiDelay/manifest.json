@@ -1,0 +1,232 @@
+{
+  "version": "0.1.0",
+  "board": "DaisyPod",
+  "sample_rate": 48000,
+  "block_size": 48,
+  "app_type": "BOOT_NONE",
+  "hardware_validation": "POD_DIGITAL_SCREEN_PASS",
+  "normal_image": "FLASH_READBACK_VERIFIED_CALLBACK_REACHED",
+  "physical_audio_controls": "NOT_RUN",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 6858,
+      "sha256": "ade5fe76410f755fd971413b946d85bf04eec7a1539481f14e64131fa1cc7138"
+    },
+    {
+      "path": "CONTRACT.md",
+      "bytes": 6135,
+      "sha256": "49811f71d5c1f4ffd49091a58778eaaf0bc76a7bd88993ed87299086f6f974c2"
+    },
+    {
+      "path": "Pod_MultiDelay.dvpe",
+      "bytes": 2106,
+      "sha256": "e2b2d3690ede4a9f20a5a1ef489f89d6244a92273e684c7f2b517bd77e99ee37"
+    },
+    {
+      "path": "Pod_MultiDelay.cpp",
+      "bytes": 2921,
+      "sha256": "0e2bb705c8de037e248bc7df62147408ef396cd23485897c9f2b694eddf3d980"
+    },
+    {
+      "path": "Demo.h",
+      "bytes": 5894,
+      "sha256": "4a5740f6a47e170cc38d88eadb430feb3a01d1ee818268a6058e807847dd076a"
+    },
+    {
+      "path": "Controls.h",
+      "bytes": 4101,
+      "sha256": "631576ab729cc752937151893a91301d5ca1d4b5ca58dc24bafa5b481d6c1c2f"
+    },
+    {
+      "path": "DigiMono.h",
+      "bytes": 2862,
+      "sha256": "88c70207032104d4c5c9d0c7221ec4c82dcfcd1853ac2fae3d127ca5df44290b"
+    },
+    {
+      "path": "Makefile",
+      "bytes": 684,
+      "sha256": "88aa59c5cdd4b3f7abd73ba90fc7e50d2b0452c1568b3eb38c959cc8b09ea865"
+    },
+    {
+      "path": "test_digi.cpp",
+      "bytes": 2821,
+      "sha256": "16d9a04a02cfe58ea4d28c026aacfe447e92b0a7416ec296ff1a7f4808c05ab8"
+    },
+    {
+      "path": "test_demo.cpp",
+      "bytes": 4352,
+      "sha256": "8478ba341c97de2840fe95a0898e59b704dbf287d8144338ffde0771f52ba2c9"
+    },
+    {
+      "path": "test_controls.cpp",
+      "bytes": 1815,
+      "sha256": "18af7c4745d09e8a9aeaf1d3a4cf877ad0fe79e7745f8650c4f4ba00ad5a7c86"
+    },
+    {
+      "path": "verify.ps1",
+      "bytes": 1496,
+      "sha256": "2c85bc1337354ae01eb3b07fc71bfaac2e7ba525cba961e6bc46d7979a5338ef"
+    },
+    {
+      "path": "verify_dependencies.py",
+      "bytes": 558,
+      "sha256": "851e4e0bf1b6c5e00a6293283154b412b504a808cc6aba9cf506ce35e803c42f"
+    },
+    {
+      "path": "package.py",
+      "bytes": 2201,
+      "sha256": "1ef2374244a4361f540aaf4424e6fa8dfd37df52899476b786aa643a877c2627"
+    },
+    {
+      "path": "dependencies.json",
+      "bytes": 50297,
+      "sha256": "56cfbd26635f1a014e687b22b4413b631a046701cf3aeed435b3689b45396123"
+    },
+    {
+      "path": "verification.log",
+      "bytes": 8989,
+      "sha256": "1cba7ebe697538d3864a8effa5be8c3e8178a53e4e26d15273484e3e19df38d8"
+    },
+    {
+      "path": "qae.log",
+      "bytes": 366,
+      "sha256": "d3f2586aaec90a13d3a34f37ebfe8cf3059eabf70481d72ea17241fc2fe9476d"
+    },
+    {
+      "path": "build/Pod_MultiDelay.bin",
+      "bytes": 102832,
+      "sha256": "17924fb0991b2e572dc87027d9b925bda07ba9e92fcfe49e390c48087d435a03"
+    },
+    {
+      "path": "build/Pod_MultiDelay.elf",
+      "bytes": 1875676,
+      "sha256": "5c4d6fab5429123e1eecbb88925f0417664d07a88e6605e9f3c196d35371204c"
+    },
+    {
+      "path": "build/Pod_MultiDelay.map",
+      "bytes": 1100384,
+      "sha256": "5fd5d236442d232a1c97c3517bdeb3a6ef5e7aff154ceb0317bb175c8ef92432"
+    },
+    {
+      "path": "build/Pod_MultiDelay.hex",
+      "bytes": 289322,
+      "sha256": "77c73e2a4c8bbad65a3df8cfe23442008536825c48b7a87a33533e8a7a5043be"
+    },
+    {
+      "path": "HARDWARE_TEST.md",
+      "bytes": 7939,
+      "sha256": "e812b9731c5519d7b71f6c60ddfe5cafaa88c7c4f39a1c07586e507016f1bf11"
+    },
+    {
+      "path": "diagnostic/Makefile",
+      "bytes": 504,
+      "sha256": "6290a2e9d5e11e098ba31e0086a5136bb36fe634ee702067dd636cae91eaebec"
+    },
+    {
+      "path": "diagnostic/Pod_MultiDelay_Test.cpp",
+      "bytes": 7464,
+      "sha256": "e60ae330f4f2ee2914e91958b97d732d6a808bd09056dc7b6d5e3298459bda64"
+    },
+    {
+      "path": "diagnostic/Pod_MultiDelay_Test.dvpe",
+      "bytes": 1053,
+      "sha256": "fad9839cb61f913ffe2c12a3597729759ccc5dc05ed477cce660cad68141b52b"
+    },
+    {
+      "path": "diagnostic/build/Pod_MultiDelay_Test.bin",
+      "bytes": 104564,
+      "sha256": "f2dc2a18a3b0b368b003942ca8f7357cc3b4edad78f0869cfd067bc23b470121"
+    },
+    {
+      "path": "diagnostic/build/Pod_MultiDelay_Test.elf",
+      "bytes": 1901520,
+      "sha256": "f0d4abd5906ad94efe634321ab98e0268cb6f68a0f7113b7286c1e841422b3da"
+    },
+    {
+      "path": "diagnostic/build/Pod_MultiDelay_Test.hex",
+      "bytes": 294203,
+      "sha256": "3329d0b2b36b3a04c8e018790a2cb90e792683a082975183c8f69a9f04fed932"
+    },
+    {
+      "path": "diagnostic/build/Pod_MultiDelay_Test.map",
+      "bytes": 1105006,
+      "sha256": "741044c41e24e8c51ea99bc8e123be8829b0019ae9f29648efdf39d127f782b5"
+    },
+    {
+      "path": "hardware_evidence/20260909/TESTPLAN.md",
+      "bytes": 1768,
+      "sha256": "cfc1f10770b9616e0760fd7af28addef1515336d45af6c8957a3fc237b697345"
+    },
+    {
+      "path": "hardware_evidence/20260909/telemetry.bin",
+      "bytes": 384,
+      "sha256": "3249b27e99c547e77c91867472290e83d2ce18931245ada71f4a0078e8c54e12"
+    },
+    {
+      "path": "hardware_evidence/20260909/telemetry.json",
+      "bytes": 3411,
+      "sha256": "99592e0edfaae47dfbda440111a49e12decd98be11bbda5777243d11e39cd3f3"
+    },
+    {
+      "path": "hardware_evidence/20260909/telemetry_liveness.bin",
+      "bytes": 384,
+      "sha256": "40888e74cfde97000d13acd73dd2a57bddea142531fc4edd6ac4554f52eed33e"
+    },
+    {
+      "path": "hardware_evidence/20260909/telemetry_liveness.json",
+      "bytes": 3415,
+      "sha256": "cee557a2f6d8d02650c32eebafd58be8cdfa6a3f6210f67e3ad5ae6f16ad587e"
+    },
+    {
+      "path": "hardware_evidence/20260909/timings.bin",
+      "bytes": 57344,
+      "sha256": "b56f9d0f683d4d662b51a65e97e424e2c9d9a605abf88bca8ae5587add53633c"
+    },
+    {
+      "path": "hardware_evidence/20260909/parse_telemetry.py",
+      "bytes": 1933,
+      "sha256": "6dc8c02ab5b4e9bf38be18526ec7dd3afcaf82e44b3378fcfa06540f447aa6ba"
+    },
+    {
+      "path": "hardware_evidence/20260909/verify_evidence.py",
+      "bytes": 1956,
+      "sha256": "657655a8bae524270686682681608d1da594055a76019ff31c236c77b38aa124"
+    },
+    {
+      "path": "hardware_evidence/20260909/diagnostic_build.log",
+      "bytes": 4074,
+      "sha256": "bcccf1d5d55ac4a7503db8e45c4f292426020d17d59005a928119d57320f08d2"
+    },
+    {
+      "path": "hardware_evidence/20260909/diagnostic_flash.log",
+      "bytes": 1477,
+      "sha256": "dba4f879ed0cc05e4bff90f1dbcffeed92392561fdd61b9c6218ef9765109ded"
+    },
+    {
+      "path": "hardware_evidence/20260909/normal_flash.log",
+      "bytes": 1477,
+      "sha256": "d67b0267350d95bffd8b7e7ce9b74ed4bf752576b74c6f7d7870814c29dcb659"
+    },
+    {
+      "path": "hardware_evidence/20260909/normal_boot.log",
+      "bytes": 964,
+      "sha256": "93f08cea8322f4f3a50f3a0f30ce326abc311782eda9ec16ad8dd5c20485a69d"
+    },
+    {
+      "path": "hardware_evidence/20260909/normal_boot_verified.log",
+      "bytes": 1165,
+      "sha256": "ea1af1770070721c4bb5e0804a795e51d39dee3f00bcdc056a8d4da72e511d39"
+    },
+    {
+      "path": "hardware_evidence/20260909/capture.log",
+      "bytes": 895,
+      "sha256": "25ebb69c41798c85287ab34caa39643eda718c636ff8c3d001d6bf4995e7b643"
+    },
+    {
+      "path": "hardware_evidence/20260909/capture_liveness.log",
+      "bytes": 845,
+      "sha256": "2db2b5a2338aca4c71badd4feb236c36c5f0cf9215bb33a052ea634756c20c63"
+    }
+  ]
+}

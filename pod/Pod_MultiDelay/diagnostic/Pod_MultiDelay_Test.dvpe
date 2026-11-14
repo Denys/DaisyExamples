@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "patch": {
+    "metadata": {
+      "name": "Pod MultiDelay muted diagnostic",
+      "targetHardware": "pod",
+      "sampleRate": 48000,
+      "blockSize": 48
+    },
+    "blocks": [
+      {
+        "id": "synthetic",
+        "definitionId": "custom_dsp",
+        "label": "Digital stimulus only, amplitude 0.05"
+      },
+      {
+        "id": "demo",
+        "definitionId": "custom_dsp",
+        "label": "Unchanged Demo.h, DIGI 3 configs + TAPE MOD REV FREEZE"
+      },
+      {
+        "id": "timing",
+        "definitionId": "custom_control",
+        "label": "DWT callback bracket and 2048 samples per cell in DTCM"
+      },
+      {
+        "id": "output",
+        "definitionId": "audio_output",
+        "label": "Both DAC outputs forced to zero"
+      }
+    ],
+    "connections": [
+      {
+        "from": "synthetic",
+        "to": "demo",
+        "type": "audio"
+      },
+      {
+        "from": "demo",
+        "to": "timing",
+        "type": "diagnostic"
+      }
+    ]
+  }
+}
