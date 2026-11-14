@@ -1,3 +1,7 @@
+> v0.5 (2026-11-14): DIST became DRIVE (OVERDRIVE/DISTORTION/FUZZ) on a page entered with
+> B1+B2 together, and an OLED shows navigation. CONTROLS.md is current; this manual
+> still describes v0.4 where they differ.
+
 # POD MultiDelay v0.4 — User manual
 
 **Five-mode mono delay demonstrator · Manual revision 5 · 8 October 2026**

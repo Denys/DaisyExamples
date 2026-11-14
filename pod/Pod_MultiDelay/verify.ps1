@@ -19,9 +19,10 @@ foreach($h in @('dsp_contract.hpp','digital_delay_node.hpp')) {
  if($LASTEXITCODE -ne 0){throw "Cannot read $h at DAFX $DafxPin"}
  Set-Content -LiteralPath (Join-Path $dafxOut $h) -Value $text -Encoding utf8
 }
-foreach($name in @('test_digi','test_parity','test_demo','test_controls','test_distortion')) {
+New-Item -ItemType Directory -Force (Join-Path $PSScriptRoot 'build\ui') | Out-Null
+foreach($name in @('test_digi','test_parity','test_demo','test_controls','test_drive','test_ui')) {
  $arguments=@('-std=c++17','-O2','-Wall','-Wextra','-Werror',$include,('-I'+(Join-Path $PSScriptRoot 'build\dafx')),($name+'.cpp'))
- if($name -in @('test_demo','test_controls','test_distortion')){$arguments+=$engine}
+ if($name -in @('test_demo','test_controls','test_drive','test_ui')){$arguments+=$engine}
  $arguments+=@('-o',($name+'.exe'))
  & $hostCompiler @arguments
  if($LASTEXITCODE -ne 0){throw "Compilation failed: $name"}
