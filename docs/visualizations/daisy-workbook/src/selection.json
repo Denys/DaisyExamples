@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "artifact": "Daisy repository documentation reference workbook",
+  "navigation_required": true,
+  "base": {
+    "template": "docs-page",
+    "capability": "long-form technical document grammar",
+    "reason": "documentation/reference cue"
+  },
+  "donors": [
+    {
+      "template": "dashboard",
+      "capability": "landing-page current-state metrics and status overview"
+    },
+    {
+      "template": "data-report",
+      "capability": "dense evidence tables and verification summaries"
+    }
+  ],
+  "constraints": {
+    "base_count": 1,
+    "maximum_donors": 2,
+    "templates_vendored": false
+  },
+  "inventory": {
+    "distinct_template_count": 82,
+    "available_selected_templates": [
+      "docs-page",
+      "dashboard",
+      "data-report"
+    ]
+  },
+  "html_sak": {
+    "status": "NOT_USED",
+    "reason": "HTML-SAK selector not found",
+    "advisory_only": true,
+    "agrees_with_base": null
+  }
+}

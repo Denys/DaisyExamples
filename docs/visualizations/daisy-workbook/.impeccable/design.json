@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T12:08:43.249Z",
+  "title": "Design System: Daisy Workbook",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Terracotta"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Light paper"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Reading ink"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted ink"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Warm divider"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White surface"
+      },
+      "inline-code": {
+        "role": "neutral",
+        "displayName": "Inline code surface"
+      },
+      "code-ink": {
+        "role": "neutral",
+        "displayName": "Pale code ink"
+      },
+      "code-surface": {
+        "role": "neutral",
+        "displayName": "Dark source surface"
+      },
+      "verified": {
+        "role": "semantic",
+        "displayName": "Verified evidence"
+      },
+      "derived": {
+        "role": "semantic",
+        "displayName": "Derived evidence"
+      },
+      "unverified": {
+        "role": "semantic",
+        "displayName": "Unverified and not run evidence"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page title",
+        "purpose": "Ordinary reading-page titles; source filenames use the smaller monospace title."
+      },
+      "body": {
+        "displayName": "Reading body",
+        "purpose": "Repository explanations and controls."
+      },
+      "code": {
+        "displayName": "Source code",
+        "purpose": "Preformatted original source and excerpts."
+      },
+      "label": {
+        "displayName": "Evidence label",
+        "purpose": "Written evidence states paired with semantic color."
+      }
+    },
+    "shadows": [
+      {
+        "name": "search-overlay",
+        "value": "0 14px 24px rgb(40 40 35 / 10%)",
+        "purpose": "Separates global search results from the reading surface."
+      },
+      {
+        "name": "mobile-sidebar",
+        "value": "6px 12px 24px rgb(30 30 25 / 15%)",
+        "purpose": "Separates the open mobile chapter drawer from the body."
+      }
+    ],
+    "motion": [
+      {
+        "name": "anchor-scroll",
+        "value": "smooth",
+        "purpose": "HTML anchor navigation; becomes auto with prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "without-right-toc",
+        "value": "1150px"
+      },
+      {
+        "name": "mobile-drawer",
+        "value": "720px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Reference Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Copy source, close search, or open the mobile index.",
+      "html": "<button class=\"ds-button\" type=\"button\">Copia contenuto</button>",
+      "css": ".ds-button{font:15px/1.65 Segoe UI,system-ui,sans-serif;background:var(--surface,#fff);color:var(--fg,#292825);border:1px solid var(--border,#dedbd4);border-radius:6px;padding:7px 12px;cursor:pointer}.ds-button:hover{background:#f2ede6}.ds-button:focus-visible{outline:3px solid var(--accent,#a34228);outline-offset:4px}.ds-button:disabled{color:var(--muted,#625e57);cursor:default}"
+    },
+    {
+      "name": "Inline Search",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "Persistent local search field in the header.",
+      "html": "<label class=\"ds-search-label\" for=\"ds-query\">Cerca nel workbook</label><input class=\"ds-search\" id=\"ds-query\" type=\"search\" placeholder=\"Progetto, modulo, simbolo…\" autocomplete=\"off\">",
+      "css": ".ds-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.ds-search{font:15px/1.65 Segoe UI,system-ui,sans-serif;width:clamp(200px,29vw,420px);max-width:100%;min-width:0;padding:8px 12px;border:1px solid var(--border,#dedbd4);border-radius:6px;background:var(--bg,#fafaf9);color:var(--fg,#292825);caret-color:var(--accent,#a34228)}.ds-search:focus-visible{outline:3px solid var(--accent,#a34228);outline-offset:4px}"
+    },
+    {
+      "name": "Chapter Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-current",
+      "description": "Current chapter and neighboring chapter links in the sidebar.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Capitoli\"><a href=\"#catalogo\" aria-current=\"page\">Catalogo</a><a href=\"#guida\">Guida e copertura</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:3px;font:14px/1.65 Segoe UI,system-ui,sans-serif}.ds-nav a{display:block;color:var(--fg,#292825);text-decoration:none;padding:6px 10px;border-radius:5px}.ds-nav a:hover{background:#eeeae3}.ds-nav a[aria-current=page]{background:var(--accent,#a34228);color:#fff}.ds-nav a:focus-visible{outline:3px solid var(--accent,#a34228);outline-offset:4px}"
+    },
+    {
+      "name": "Evidence Labels",
+      "kind": "chip",
+      "refersTo": "evidence-label",
+      "description": "Written states accompany source claims; these are labels rather than action controls.",
+      "html": "<span class=\"ds-label ds-verified\">VERIFIED</span><span class=\"ds-label ds-derived\">DERIVED</span><span class=\"ds-label ds-not-run\">NOT_RUN</span>",
+      "css": ".ds-label{display:inline-block;padding:2px 6px;border:1px solid currentColor;border-radius:4px;font:11px/1.7 Segoe UI,system-ui,sans-serif;letter-spacing:.02em;vertical-align:middle;margin-right:6px;white-space:nowrap}.ds-verified{color:#326b53}.ds-derived{color:#245b89}.ds-not-run{color:#9b3928}"
+    },
+    {
+      "name": "Reference Container",
+      "kind": "card",
+      "refersTo": "reference-container",
+      "description": "Flat bounded explanation with adjacent scope boundary.",
+      "html": "<section class=\"ds-callout\"><p>Descrizioni collegate ai sorgenti originali.</p><p class=\"ds-boundary\">Build e hardware: NOT_RUN.</p></section>",
+      "css": ".ds-callout{font:15px/1.65 Segoe UI,system-ui,sans-serif;color:var(--fg,#292825);border:1px solid var(--border,#dedbd4);padding:18px;border-radius:var(--radius,8px);background:var(--surface,#fff);margin:20px 0}.ds-callout p{margin:12px 0;max-width:74ch}.ds-callout .ds-boundary{font-size:12px;color:var(--muted,#625e57)}"
+    },
+    {
+      "name": "Catalog Table",
+      "kind": "custom",
+      "description": "Compact repository facts inside a local horizontal scroll container.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Progetto / modulo</th><th>Target</th><th>Descrizione dalle fonti</th></tr></thead><tbody><tr><th><a href=\"#seed\">Seed</a></th><td>Firmware</td><td>Descrizione collegata al sorgente congelato.</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap{overflow:auto;max-width:100%;background:var(--surface,#fff);border:1px solid var(--border,#dedbd4);border-radius:var(--radius,8px)}.ds-table{border-collapse:collapse;width:100%;font:13px/1.65 Segoe UI,system-ui,sans-serif;color:var(--fg,#292825);table-layout:auto}.ds-table th,.ds-table td{text-align:left;vertical-align:top;padding:13px 14px;border-bottom:1px solid var(--border,#dedbd4);overflow-wrap:anywhere}.ds-table th{font-weight:600}.ds-table thead{background:#efede7}.ds-table tbody tr:last-child>*{border-bottom:0}.ds-table tbody tr:hover{background:#faf7f1}.ds-table a{color:var(--accent,#a34228);text-underline-offset:.2em}.ds-table a:hover{text-decoration-thickness:2px}.ds-table a:focus-visible{outline:3px solid var(--accent,#a34228);outline-offset:4px}@media(max-width:720px){.ds-table{min-width:630px}.ds-table-wrap{touch-action:pan-x pan-y}}"
+    },
+    {
+      "name": "Source Lines",
+      "kind": "custom",
+      "refersTo": "code-block",
+      "description": "Original whitespace with linked line numbers and local overflow.",
+      "html": "<pre class=\"ds-source\"><code><span class=\"ds-code-line\" id=\"ds-L1\"><a class=\"ds-line-number\" href=\"#ds-L1\">1</a><span>void AudioCallback()</span></span><span class=\"ds-code-line\" id=\"ds-L2\"><a class=\"ds-line-number\" href=\"#ds-L2\">2</a><span>{</span></span></code></pre>",
+      "css": ".ds-source{overflow:auto;max-width:100%;max-height:75vh;background:#282825;color:var(--code-ink,#ece9e2);padding:16px 0;border-radius:var(--radius,8px);font:12px/1.7 Consolas,ui-monospace,monospace;tab-size:4}.ds-source code{background:none;padding:0;color:inherit;font:inherit}.ds-code-line{display:flex;min-height:20px;white-space:pre;min-width:max-content}.ds-code-line:target{background:#59482b}.ds-code-line:hover{background:#33332e}.ds-line-number{width:70px;flex-shrink:0;text-align:right;padding-right:20px;padding-left:12px;text-decoration:none;color:#b1ada2;font:11px/20px Consolas,ui-monospace,monospace;user-select:none}.ds-line-number:focus-visible{outline:3px solid var(--accent,#a34228);outline-offset:4px}.ds-code-line>span{padding-right:25px;line-height:20px}@media(max-width:720px){.ds-line-number{width:49px;padding-right:10px;padding-left:6px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Inherited docs-page reference",
+    "overview": "This is a record of the implemented reading interface, not a new visual identity. Its authority is the existing docs-page template at `C:/Users/denko/Claude/Projects/html-report-kit/templates/docs-page/example.html`, adapted by this folder's `theme.css`, `build.py`, and `app.js`.\n\nThe quiet paper surface, restrained terracotta links, serif page titles, and compact sans-serif navigation support complete repository consultation. The document body carries the reading; the two side rails provide orientation. Source paths, evidence labels, and hashes stay visually legible without competing with the content.",
+    "keyCharacteristics": [
+      "Light paper and white surfaces with thin warm dividers.",
+      "Georgia page titles, Segoe UI reading text, and Consolas source code.",
+      "Sidebar, body, and right-hand table of contents on wide screens.",
+      "Read-oriented tables, original file snapshots, and explicit source labels."
+    ],
+    "rules": [
+      {
+        "name": "The Contained Reading Rule",
+        "body": "Long tables, diagrams, and source lines scroll inside their own containers. They must not widen the document viewport.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Do preserve the inherited light docs-page world and its reading hierarchy.",
+      "Do keep tables, diagrams, and unwrapped source lines inside local scroll containers.",
+      "Do pair every evidence color with its written source state and nearby provenance.",
+      "Do preserve the final print type overrides and single-column reading flow."
+    ],
+    "donts": [
+      "Don't introduce a new palette, decorative card grid, or marketing surface into this reference.",
+      "Don't treat snapshot hashes or inventory labels as evidence of firmware execution.",
+      "Don't replace original source formatting with wrapped screen code that obscures line identity."
+    ]
+  }
+}
